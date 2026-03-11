@@ -61,3 +61,4 @@ flask_jwt_extended
 flask_sqlalchemy
 flask_admin
 
+flask-cors==4.0.0
