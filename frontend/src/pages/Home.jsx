@@ -1,10 +1,9 @@
+// Home.jsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { Link } from 'react-router-dom';
-
-// 引入对应的 CSS
-import '../styles/home/home.css';
+import styles from '../styles/home/home.module.css';
 
 const WelcomeBanner = () => {
     const titleRef = useRef(null);
@@ -44,7 +43,7 @@ const WelcomeBanner = () => {
     }, []);
 
     return (
-        <section className="welcome-banner" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+        <section className={styles['welcome-banner']} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
             <h1 ref={titleRef}>Welcome to HKU Educational Tools Platform</h1>
             <p ref={descRef}>Your gateway to intelligent learning and educational resources</p>
         </section>
@@ -100,18 +99,18 @@ const ToolCard = ({ title, desc, icon, url }) => {
     }, []);
 
     return (
-        <div className="card" ref={cardRef} onMouseMove={handleMouseMove} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-            <div className="card-sheen" ref={sheenRef} style={{
+        <div className={styles.card} ref={cardRef} onMouseMove={handleMouseMove} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+            <div className={styles['card-sheen']} ref={sheenRef} style={{
                 position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
                 background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4), transparent 60%)',
                 opacity: '0', pointerEvents: 'none', zIndex: '3', mixBlendMode: 'overlay', transition: 'opacity 0.4s ease'
             }}></div>
-            <div className="card-content">
-                <div className="card-icon"><i className={`fas ${icon}`}></i></div>
-                <h3 className="card-title">{title}</h3>
-                <p className="card-description">{desc}</p>
-                {/* 【重点修改】：使用 Link 替代 a 标签 */}
-                <Link to={url} className="card-link">Enter</Link>
+            <div className={styles['card-content']}>
+                {/* 外部图标库类名保持普通字符串，不使用 styles */}
+                <div className={styles['card-icon']}><i className={`fas ${icon}`}></i></div>
+                <h3 className={styles['card-title']}>{title}</h3>
+                <p className={styles['card-description']}>{desc}</p>
+                <Link to={url} className={styles['card-link']}>Enter</Link>
             </div>
         </div>
     );
@@ -176,7 +175,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: text }]);
         setIsLoading(true);
 
-        // TODO: 之后接真实的 /api/ai/chat 接口
         setTimeout(() => {
             setIsLoading(false);
             setMessages(prev => [...prev, {
@@ -194,7 +192,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [handleSend]);
 
-    // 这里保留你原来又长又帅的全屏动画逻辑
     const toggleFullscreen = useCallback(() => {
         if (isAnimatingRef.current) return;
         isAnimatingRef.current = true;
@@ -254,8 +251,10 @@ const GeminiChat = ({ aiInteractUrl }) => {
             container.style.height = (window.innerHeight / scaleY) + 'px';
             container.style.borderRadius = '0px';
 
-            container.classList.add('is-fullscreen-layout');
+            // 【重点修改】：DOM 操作使用 styles 对象获取哈希类名
+            container.classList.add(styles['is-fullscreen-layout']);
             document.body.style.overflow = 'hidden';
+            // body 上的全局类名保持普通字符串，不要用 module
             document.body.classList.add('chat-fullscreen-active');
 
             setTimeout(() => {
@@ -270,8 +269,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const targetRect = spacer.getBoundingClientRect();
             const { offsetX, offsetY, scaleX, scaleY } = probeDataRef.current;
 
-            container.classList.add('is-animating-to-small');
-            container.classList.remove('is-fullscreen-layout');
+            container.classList.add(styles['is-animating-to-small']);
+            container.classList.remove(styles['is-fullscreen-layout']);
 
             container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
             container.style.left = ((targetRect.left - offsetX) / scaleX) + 'px';
@@ -287,7 +286,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
             setTimeout(() => {
                 container.style.cssText = '';
                 spacer.style.display = 'none';
-                container.classList.remove('is-animating-to-small');
+                container.classList.remove(styles['is-animating-to-small']);
+                // 移除全局类名
                 document.body.classList.remove('chat-fullscreen-active');
                 isAnimatingRef.current = false;
                 setIsFull(false);
@@ -299,29 +299,27 @@ const GeminiChat = ({ aiInteractUrl }) => {
     }, [isFull]);
 
     return (
-        <section className="ai-interaction-section">
+        <section className={styles['ai-interaction-section']}>
             <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
 
-            {/* 移除了 locked class 和 overlay */}
-            <div ref={chatContainerRef} className="chat-interface-container">
-                <div className="chat-header">
-                    <div className="ai-badge">
+            <div ref={chatContainerRef} className={styles['chat-interface-container']}>
+                <div className={styles['chat-header']}>
+                    <div className={styles['ai-badge']}>
                         <i className="fas fa-sparkles"></i>
-                        <Link to={aiInteractUrl} className="powered-by-link"><span>AI Fullscreen Workspace</span></Link>
+                        <Link to={aiInteractUrl} className={styles['powered-by-link']}><span>AI Fullscreen Workspace</span></Link>
                     </div>
-                    {/* 移除了 disabled */}
-                    <button onClick={toggleFullscreen} className="fullscreen-btn" title="Toggle Fullscreen">
+                    <button onClick={toggleFullscreen} className={styles['fullscreen-btn']} title="Toggle Fullscreen">
                         <i className={isFull ? "fas fa-compress-arrows-alt" : "fas fa-expand-arrows-alt"}></i>
                     </button>
                 </div>
 
-                <div ref={messagesContainerRef} className={`chat-messages ${(messages.length > 0 || isLoading) ? 'has-interaction' : ''}`}>
+                <div ref={messagesContainerRef} className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}>
                     {messages.map(msg => (
-                        <div key={msg.id} className={`message ${msg.sender}-message`}>
-                            <div className="avatar">
+                        <div key={msg.id} className={`${styles.message} ${styles[`${msg.sender}-message`]}`}>
+                            <div className={styles.avatar}>
                                 {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
                             </div>
-                            <div className="bubble">
+                            <div className={styles.bubble}>
                                 {msg.sender === 'ai' ? (
                                     <ReactMarkdown components={markdownComponents}>
                                         {msg.text}
@@ -331,27 +329,26 @@ const GeminiChat = ({ aiInteractUrl }) => {
                         </div>
                     ))}
                     {isLoading && (
-                        <div className="message ai-message">
-                            <div className="avatar"><i className="fas fa-sparkles"></i></div>
-                            <div className="bubble typing-bubble">
-                                <div className="typing-indicator"><span></span><span></span><span></span></div>
+                        <div className={`${styles.message} ${styles['ai-message']}`}>
+                            <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
+                            <div className={`${styles.bubble} ${styles['typing-bubble']}`}>
+                                <div className={styles['typing-indicator']}><span></span><span></span><span></span></div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                <div className="input-area">
-                    <div className="input-wrapper">
-                        {/* 移除了 disabled */}
+                <div className={styles['input-area']}>
+                    <div className={styles['input-wrapper']}>
                         <textarea
                             id="geminiInput"
+                            className={styles.geminiInput}
                             ref={inputAreaRef}
                             rows="1" placeholder="Ask anything..."
                             value={input} onChange={handleInput}
                             onKeyDown={handleKeyDown}
                         ></textarea>
-                        {/* 移除了 disabled 的判断 */}
-                        <button className="send-btn" disabled={!input.trim()} onClick={handleSend}>
+                        <button className={styles['send-btn']} disabled={!input.trim()} onClick={handleSend}>
                             <i className="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -372,27 +369,26 @@ export default function Home({ config }) {
     return (
         <>
             <WelcomeBanner />
-            {/* 移除了 isAuthenticated 和 loginUrl */}
             <GeminiChat aiInteractUrl={config.urls.aiInteract} />
 
-            <div className="mailbox-section">
-                <Link to={config.urls.mailbox} className="mailbox-banner-card">
-                    <div className="mailbox-left">
-                        <div className="mailbox-icon-wrapper">
-                            <i className="fas fa-inbox"></i><span className="notification-dot"></span>
+            <div className={styles['mailbox-section']}>
+                <Link to={config.urls.mailbox} className={styles['mailbox-banner-card']}>
+                    <div className={styles['mailbox-left']}>
+                        <div className={styles['mailbox-icon-wrapper']}>
+                            <i className="fas fa-inbox"></i><span className={styles['notification-dot']}></span>
                         </div>
-                        <div className="mailbox-text">
+                        <div className={styles['mailbox-text']}>
                             <h3>Grading Mailbox</h3><p>Review and grade pending student assignments</p>
                         </div>
                     </div>
-                    <div className="mailbox-right">
-                        <div className="pending-badge"><i className="fas fa-bell"></i> <span>3 Pending</span></div>
-                        <span className="btn-enter-mailbox">Enter Workspace <i className="fas fa-arrow-right"></i></span>
+                    <div className={styles['mailbox-right']}>
+                        <div className={styles['pending-badge']}><i className="fas fa-bell"></i> <span>3 Pending</span></div>
+                        <span className={styles['btn-enter-mailbox']}>Enter Workspace <i className="fas fa-arrow-right"></i></span>
                     </div>
                 </Link>
             </div>
 
-            <div className="cards-container">
+            <div className={styles['cards-container']}>
                 {toolCardsData.map((card, index) => (
                     <ToolCard key={index} {...card} />
                 ))}

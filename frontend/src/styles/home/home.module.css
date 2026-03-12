@@ -551,12 +551,12 @@ main {
     transform: translateY(-1px);
 }
 
-#geminiInput {
+.geminiInput {
     flex: 1; border: none; background: transparent; outline: none;
     font-family: inherit; font-size: 1rem; resize: none; color: var(--text-main);
     padding: 10px 0; max-height: 120px; margin-bottom: 2px;
 }
-#geminiInput::placeholder { color: #A0AABF; }
+.geminiInput::placeholder { color: #A0AABF; }
 
 .send-btn {
     width: 44px; height: 44px; border: none; border-radius: 50%;
@@ -793,10 +793,12 @@ main {
 }
 
 
-body.chat-fullscreen-active .navbar {
+/* 修改 home.module.css 最底部： */
+
+:global(body.chat-fullscreen-active .navbar) {
     z-index: 1 !important;
 }
 
-body.chat-fullscreen-active .ai-interaction-section {
+:global(body.chat-fullscreen-active) .ai-interaction-section {
     z-index: 9999 !important;
 }
