@@ -33,7 +33,7 @@ export default function Register({
                                     <div className="input-icon"><i className={`fas ${field === 'username' ? 'fa-user' : 'fa-envelope'}`}></i></div>
                                     <input
                                         type={field === 'email' ? 'email' : 'text'}
-                                        id={field} name={field} placeholder=" " required
+                                        id={field} name={field} autoComplete="off" placeholder=" " required
                                         value={formData[field]} onChange={handleChange}
                                     />
                                     <label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</label>
@@ -48,7 +48,7 @@ export default function Register({
                                     <div className="input-icon"><i className="fas fa-lock"></i></div>
                                     <input
                                         type={item.show ? "text" : "password"}
-                                        id={item.key} name={item.key} placeholder=" " required
+                                        id={item.key} name={item.key} autoComplete="new-password" placeholder=" " required
                                         value={formData[item.key]} onChange={handleChange}
                                     />
                                     <i className={`fas ${item.show ? 'fa-eye-slash' : 'fa-eye'} toggle-password`}

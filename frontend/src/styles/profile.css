@@ -1,0 +1,360 @@
+:root {
+    --primary-color: #007B55;
+    --primary-dark: #005F41;
+    --primary-gradient-animated: linear-gradient(120deg, #007B55, #004D40, #008f66, #004D40);
+    --text-main: #212B36;
+    --text-sub: #637381;
+    --bg-input: #E2E8F0;
+    --radius-lg: 24px;
+    --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --card-bg: rgba(255, 255, 255, 0.95);
+}
+
+/* 覆盖默认的 main 容器限制，实现全屏背景 */
+main:has(.profile-wrapper) {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+
+/* --- 全屏渐变背景与光球 (Register 同款) --- */
+.profile-wrapper {
+    min-height: calc(100vh - 70px);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    animation: gradientFlow 15s ease infinite;
+    position: relative;
+    overflow: hidden;
+    padding: 4rem 2rem;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.bg-orb {
+    position: absolute;
+    top: -10%; left: -10%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: floatOrb 12s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes floatOrb {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(50px, 50px); }
+}
+
+.profile-container {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    position: relative;
+    z-index: 1; /* 确保在光球之上 */
+}
+
+/* --- 卡片通用样式 (毛玻璃效果 + 3D动画) --- */
+.profile-header-card,
+.profile-edit-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transform-style: preserve-3d;
+    opacity: 0;
+}
+
+.profile-header-card {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    animation: cardEntrance 0.8s var(--ease-out-back) forwards 0.1s;
+}
+
+.profile-edit-card {
+    animation: cardEntrance 0.8s var(--ease-out-back) forwards 0.2s;
+}
+
+@keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- 顶部卡片：头像与信息 --- */
+.avatar-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #00d2ff);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    box-shadow: 0 10px 20px rgba(0, 123, 85, 0.3);
+    border: 4px solid #fff;
+    flex-shrink: 0;
+}
+
+.profile-info h2 {
+    margin: 0 0 8px 0;
+    color: var(--text-main);
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.profile-info p {
+    color: var(--text-sub);
+    font-size: 1rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-badge.admin { background-color: #ffe5e5; color: #cc0000; }
+.role-badge.teacher { background-color: #e5f0ff; color: #004085; }
+.role-badge.student { background-color: #e6f9f0; color: #007B55; }
+
+/* --- 底部编辑卡片 --- */
+.card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.profile-edit-card h3 {
+    margin: 0 0 8px 0;
+    color: var(--text-main);
+    font-size: 1.5rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.edit-subtitle {
+    color: var(--text-sub);
+    font-size: 0.95rem;
+    margin: 0;
+}
+/* --- 静态固定标签输入框组 (取消悬浮动效) --- */
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* 保证强制左侧留48px给图标，右侧留45px给小眼睛 */
+.input-with-icon input,
+.input-with-icon input[type="text"],
+.input-with-icon input[type="email"],
+.input-with-icon input[type="password"] {
+    width: 100%;
+    padding: 14px 45px 14px 48px !important;
+    font-size: 1rem;
+    color: var(--text-main);
+    background: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+/* 内部左侧图标 */
+.input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    font-size: 1.1rem;
+    transition: color 0.3s;
+    pointer-events: none; /* 防止点击图标时无法聚焦输入框 */
+    z-index: 2;
+}
+
+/* 内部右侧小眼睛 (仅密码框有) */
+.toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    cursor: pointer;
+    z-index: 10;
+    transition: color 0.3s;
+    font-size: 1rem;
+}
+
+.toggle-password:hover {
+    color: var(--primary-color);
+}
+
+/* 输入框聚焦状态：高亮边框和左侧图标 */
+.input-with-icon input:focus {
+    background: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.1);
+}
+
+.input-with-icon input:focus ~ .input-icon {
+    color: var(--primary-color);
+}
+
+/* 保存按钮 */
+.btn-save {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.btn-save:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 123, 85, 0.3);
+}
+
+.btn-save:disabled {
+    background: #a0c4b6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 表单内部警告提示 */
+.alert {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+.alert.hidden { display: none; }
+.alert.success { background: #e6f9f0; color: #0c8c56; border: 1px solid #b8e6d2; }
+.alert.error { background: #fde8e8; color: #c81e1e; border: 1px solid #fbd5d5; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 自定义 Modal (弹窗) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    padding: 30px;
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.modal-overlay.active .modal-box {
+    transform: scale(1);
+}
+
+.modal-icon {
+    width: 60px; height: 60px;
+    background: #fff3cd; color: #ffc107;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    margin: 0 auto 20px;
+}
+
+.modal-box h3 { margin-bottom: 10px; color: var(--text-main); font-weight: 800; }
+.modal-box p { color: var(--text-sub); margin-bottom: 30px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 12px; }
+
+.btn-modal {
+    flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.btn-cancel { background: var(--bg-input); color: var(--text-main); }
+.btn-cancel:hover { background: #d1d8e0; }
+.btn-confirm { background: var(--primary-color); color: white; }
+.btn-confirm:hover { background: var(--primary-dark); }
+
+/* 响应式调整 */
+@media (max-width: 600px) {
+    .profile-wrapper { padding: 2rem 1rem; }
+    .profile-header-card { flex-direction: column; text-align: center; padding: 30px 20px; }
+    .profile-edit-card { padding: 30px 20px; }
+}
+
+
