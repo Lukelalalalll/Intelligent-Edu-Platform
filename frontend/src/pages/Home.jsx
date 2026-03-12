@@ -117,7 +117,7 @@ const ToolCard = ({ title, desc, icon, url }) => {
     );
 };
 
-const GeminiChat = ({ isAuthenticated, loginUrl, aiInteractUrl }) => {
+const GeminiChat = ({ aiInteractUrl }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -176,13 +176,13 @@ const GeminiChat = ({ isAuthenticated, loginUrl, aiInteractUrl }) => {
         setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: text }]);
         setIsLoading(true);
 
-        // TODO: 之后可以在这里接真实后端的 /api/ai/chat 接口
+        // TODO: 之后接真实的 /api/ai/chat 接口
         setTimeout(() => {
             setIsLoading(false);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 sender: 'ai',
-                text: `You asked: "${text}".\n\nHere is a snippet:\n\`\`\`javascript\nconsole.log("Animation completely fixed!");\n\`\`\``
+                text: `You asked: "${text}".\n\nI am ready to assist!`
             }]);
         }, 1500);
     }, [input, isLoading]);
@@ -194,8 +194,8 @@ const GeminiChat = ({ isAuthenticated, loginUrl, aiInteractUrl }) => {
         }
     }, [handleSend]);
 
+    // 这里保留你原来又长又帅的全屏动画逻辑
     const toggleFullscreen = useCallback(() => {
-        // ... (全屏动画逻辑保持不变，太长省略以确保回复不超字数，你可以直接把原来那一大段 toggleFullscreen 粘贴回来)
         if (isAnimatingRef.current) return;
         isAnimatingRef.current = true;
 
@@ -302,31 +302,15 @@ const GeminiChat = ({ isAuthenticated, loginUrl, aiInteractUrl }) => {
         <section className="ai-interaction-section">
             <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
 
-            <div ref={chatContainerRef} className={`chat-interface-container ${!isAuthenticated ? 'locked' : ''}`}>
-                {!isAuthenticated && (
-                    <div className="ai-locked-overlay">
-                        <div className="overlay-content">
-                            <div className="lock-icon-wrapper">
-                                <i className="fas fa-lock"></i>
-                                <i className="fas fa-sparkles sparkle-1"></i>
-                                <i className="fas fa-sparkles sparkle-2"></i>
-                            </div>
-                            <h3>Unlock Premium AI Experience</h3>
-                            <p>Please log in to chat with the HKU Gemini Assistant and elevate your learning journey.</p>
-                            {/* 【修改】：用 Link 替代 a */}
-                            <Link to={loginUrl} className="btn-unlock">
-                                Log in to Unlock <i className="fas fa-arrow-right"></i>
-                            </Link>
-                        </div>
-                    </div>
-                )}
-
+            {/* 移除了 locked class 和 overlay */}
+            <div ref={chatContainerRef} className="chat-interface-container">
                 <div className="chat-header">
                     <div className="ai-badge">
                         <i className="fas fa-sparkles"></i>
                         <Link to={aiInteractUrl} className="powered-by-link"><span>AI Fullscreen Workspace</span></Link>
                     </div>
-                    <button onClick={toggleFullscreen} className="fullscreen-btn" disabled={!isAuthenticated} title="Toggle Fullscreen">
+                    {/* 移除了 disabled */}
+                    <button onClick={toggleFullscreen} className="fullscreen-btn" title="Toggle Fullscreen">
                         <i className={isFull ? "fas fa-compress-arrows-alt" : "fas fa-expand-arrows-alt"}></i>
                     </button>
                 </div>
@@ -358,14 +342,16 @@ const GeminiChat = ({ isAuthenticated, loginUrl, aiInteractUrl }) => {
 
                 <div className="input-area">
                     <div className="input-wrapper">
+                        {/* 移除了 disabled */}
                         <textarea
                             id="geminiInput"
                             ref={inputAreaRef}
                             rows="1" placeholder="Ask anything..."
-                            disabled={!isAuthenticated} value={input} onChange={handleInput}
+                            value={input} onChange={handleInput}
                             onKeyDown={handleKeyDown}
                         ></textarea>
-                        <button className="send-btn" disabled={!isAuthenticated || !input.trim()} onClick={handleSend}>
+                        {/* 移除了 disabled 的判断 */}
+                        <button className="send-btn" disabled={!input.trim()} onClick={handleSend}>
                             <i className="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -386,7 +372,8 @@ export default function Home({ config }) {
     return (
         <>
             <WelcomeBanner />
-            <GeminiChat isAuthenticated={config.isAuthenticated} loginUrl={config.urls.login} aiInteractUrl={config.urls.aiInteract} />
+            {/* 移除了 isAuthenticated 和 loginUrl */}
+            <GeminiChat aiInteractUrl={config.urls.aiInteract} />
 
             <div className="mailbox-section">
                 <Link to={config.urls.mailbox} className="mailbox-banner-card">

@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify
 from backend.config import Config
-from backend.extensions import db, jwt, cors
+from backend.extensions import db, jwt, cors, mongo
 from backend.routes.auth_routes import auth_bp
 from backend.routes.admin_routes import admin_bp
 from backend.routes.ai_routes import ai_bp
@@ -12,6 +12,7 @@ def create_app():
 
     db.init_app(app)
     jwt.init_app(app)
+    mongo.init_app(app)
     cors.init_app(app, supports_credentials=True, origins=["http://localhost:5173"])
 
     @jwt.unauthorized_loader
@@ -27,7 +28,6 @@ def create_app():
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
 
     with app.app_context():
-        db.create_all()
         for folder in app.config['ALL_FOLDERS']:
             os.makedirs(folder, exist_ok=True)
 

@@ -17,7 +17,7 @@ export default function MdProcessor({
     handleUpload, handleCheckboxChange, combineSections
 }) {
     return (
-        <div className="container">
+        <div className="container md-processor-container">
             {/* Page Header */}
             <header className="page-header">
                 <h1><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</h1>

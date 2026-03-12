@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, \
     get_jwt_identity
+from werkzeug.security import check_password_hash
+
 from backend.models import User
 from backend.extensions import db
 
@@ -10,34 +12,40 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def api_register():
     data = request.get_json()
-    username, email, password = data.get('username'), data.get('email'), data.get('password')
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
     if not username or not email or not password:
         return jsonify({'message': 'Missing fields'}), 400
-    if User.query.filter_by(username=username).first():
-        return jsonify({'message': 'Username already exists'}), 409
-    if User.query.filter_by(email=email).first():
-        return jsonify({'message': 'Email already exists'}), 409
 
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'message': 'Account created successfully'}), 201
+    if User.get_by_username(username):
+        return jsonify({'message': 'Username already exists'}), 409
+
+    try:
+        User.create_user(username, email, password)
+        return jsonify({'message': 'Account created successfully'}), 201
+    except Exception as e:
+        return jsonify({'message': f'Error: {str(e)}'}), 500
 
 
 @auth_bp.route('/login', methods=['POST'])
 def api_login():
     data = request.get_json()
-    user = User.query.filter_by(username=data.get('username')).first()
+    user = User.get_by_username(data.get('username'))
 
-    if not user or not user.check_password(data.get('password')):
+    if not user or not check_password_hash(user['password_hash'], data.get('password')):
         return jsonify({'message': 'Account not exist or wrong password'}), 401
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user['_id']))
+
     resp = jsonify({
         'message': 'Login successful',
-        'user': {'id': user.id, 'username': user.username, 'role': user.role, 'is_admin': user.is_admin}
+        'user': {
+            'id': str(user['_id']),
+            'username': user['username'],
+            'role': user.get('role', 'teacher')
+        }
     })
     set_access_cookies(resp, access_token)
     return resp, 200

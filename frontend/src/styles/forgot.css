@@ -1,0 +1,21 @@
+.forgot-wrapper {
+    --primary-gradient-animated: linear-gradient(120deg, #007B55, #005A8C, #007B55, #004D40);
+}
+
+.forgot-orb {
+    top: -15%;
+    left: -10%;
+    right: auto;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    animation: floatOrbForgot 15s ease-in-out infinite;
+}
+
+@keyframes floatOrbForgot {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, 60px) scale(1.1); }
+}
+
+.forgot-wrapper .auth-card {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}

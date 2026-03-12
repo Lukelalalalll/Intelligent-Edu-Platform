@@ -7,7 +7,6 @@
     --transition: all 0.4s var(--ease-smooth) !important;
 }
 
-/* 基础设置 */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {

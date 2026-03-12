@@ -256,3 +256,59 @@
     .header-item.header-level-4 { margin-left: 36px; }
     .header-item::before { display: none; } /* 移动端隐藏过长的数字前缀 */
 }
+
+/* md_processor.css */
+
+/* 1. 使用命名空间，确保样式只作用于 md-processor-container 内部 */
+.md-processor-container .card-body {
+    padding: 1.5rem !important; /* 强制覆盖，确保有边距 */
+}
+
+/* 2. 修正上传区域的样式，防止被全局输入框样式污染 */
+.md-processor-container .file-drop-area {
+    padding: 2rem;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    text-align: center;
+    background: #f9f9f9;
+}
+
+/* 3. 修正卡片间距 */
+/* =========================================
+   修正与覆盖 (解决 Bootstrap 样式冲突导致间距过小)
+   ========================================= */
+
+/* 1. 修正卡片内部的整体 Padding，让视野更开阔 (从 1.5rem 增加到 2.5rem) */
+.md-processor-container .card-body {
+    padding: 2.0rem !important;
+}
+
+/* 2. 强制保证两个卡片之间的垂直间距 (使用 !important 击穿 Bootstrap 默认的 margin: 0) */
+.md-processor-container .card {
+    margin-bottom: 3rem !important;
+    border-radius: var(--radius-md) !important;
+}
+
+/* 3. 增大上传拖拽区域的空间，让用户感觉更容易点击/拖拽 */
+.md-processor-container .file-drop-area {
+    padding: 3.5rem 2rem !important;
+    border: 2px dashed rgba(0, 123, 85, 0.3) !important;
+    border-radius: var(--radius-md) !important;
+    text-align: center;
+    background: rgba(0, 123, 85, 0.02) !important;
+    transition: var(--transition);
+}
+
+/* 4. 给提取出来的标题列表盒子多一点内部呼吸感 */
+.md-processor-container #headersList {
+    padding: 1.5rem !important;
+}
+
+/* 5. 确保按钮不受其他样式污染 */
+.md-processor-container .btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.2rem !important;
+    cursor: pointer;
+}
