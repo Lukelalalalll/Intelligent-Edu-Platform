@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/base.css';
-import '../../styles/sub1/md_processor.css';
 
+import styles from '../../styles/sub1/md_processor.module.css';
 
 const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -17,28 +17,28 @@ export default function MdProcessor({
     handleUpload, handleCheckboxChange, combineSections
 }) {
     return (
-        <div className="container md-processor-container">
+        <div className="container">
             {/* Page Header */}
-            <header className="page-header">
+            <header className={`page-header ${styles.pageHeader}`}>
                 <h1><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</h1>
                 <p>Process and enhance your PDF and Markdown files with intelligent section extraction</p>
             </header>
 
             {/* File Upload Section */}
-            <section className="card" aria-labelledby="upload-title">
-                <div className="card-body">
+            <section className={`card ${styles.card}`} aria-labelledby="upload-title">
+                <div className={`card-body ${styles.cardBody}`}>
                     <h5 id="upload-title" className="card-title">
                         <i className="fas fa-upload" aria-hidden="true"></i> Upload File
                     </h5>
 
-                    <div id="fileInfo" className="file-info mb-3" style={{ display: file ? 'block' : 'none' }}>
-                        <div className="file-info-content">
+                    <div id="fileInfo" className={`mb-3 ${styles.fileInfo}`} style={{ display: file ? 'block' : 'none' }}>
+                        <div className={styles.fileInfoContent}>
                             <i className="fas fa-file-alt"></i>
-                            <div className="file-details">
-                                <span id="fileName" className="file-name">{file?.name}</span>
-                                <span id="fileSize" className="file-size">{file ? formatFileSize(file.size) : ''}</span>
+                            <div className={styles.fileDetails}>
+                                <span id="fileName" className={styles.fileName}>{file?.name}</span>
+                                <span id="fileSize" className={styles.fileSize}>{file ? formatFileSize(file.size) : ''}</span>
                             </div>
-                            <button type="button" id="clearFileBtn" className="btn btn-sm btn-outline-danger" onClick={clearFile}>
+                            <button type="button" id="clearFileBtn" className={`btn btn-sm btn-outline-danger ${styles.clearFileBtn}`} onClick={clearFile}>
                                 <i className="fas fa-times"></i>
                             </button>
                         </div>
@@ -61,17 +61,17 @@ export default function MdProcessor({
 
                     <form id="uploadForm" className="mt-4" onSubmit={handleUpload}>
                         <div className="mb-4">
-                            <div className="file-input-container">
+                            <div className={styles.fileInputContainer}>
                                 <input
                                     type="file"
-                                    className="form-control"
+                                    className={`form-control ${styles.fileInput}`}
                                     id="fileInput"
                                     accept=".pdf,.md"
                                     onChange={onFileChange}
                                     ref={fileInputRef}
                                 />
                                 <div
-                                    className={`file-drop-area ${isDragging ? 'active' : ''}`}
+                                    className={`${styles.fileDropArea} ${isDragging ? styles.active : ''}`}
                                     id="fileDropArea"
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleDragOver}
@@ -80,25 +80,25 @@ export default function MdProcessor({
                                 >
                                     <i className="fas fa-cloud-upload-alt" aria-hidden="true"></i>
                                     <p>Drag & drop your file here or click to browse</p>
-                                    <span className="file-types">Supports PDF and Markdown files (Max: 10MB)</span>
+                                    <span className={styles.fileTypes}>Supports PDF and Markdown files (Max: 10MB)</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="mb-4 form-check">
+                        <div className={`mb-4 form-check ${styles.formCheck}`}>
                             <input
                                 type="checkbox"
-                                className="form-check-input"
+                                className={`form-check-input ${styles.formCheckInput}`}
                                 id="useLLMCheckbox"
                                 checked={useLLM}
                                 onChange={(e) => setUseLLM(e.target.checked)}
                             />
-                            <label className="form-check-label" htmlFor="useLLMCheckbox">
+                            <label className={`form-check-label ${styles.formCheckLabel}`} htmlFor="useLLMCheckbox">
                                 <i className="fas fa-robot" aria-hidden="true"></i> Fetch enhanced headers using LLM
                             </label>
                         </div>
                         <button
                             type="submit"
-                            className={`btn btn-primary ${uploadStatus === 'start' ? 'processing' : ''}`}
+                            className={`btn btn-primary ${styles.btn} ${styles.btnPrimary} ${uploadStatus === 'start' ? styles.processing : ''}`}
                             id="uploadBtn"
                             disabled={!file || uploadStatus === 'start'}
                         >
@@ -109,22 +109,22 @@ export default function MdProcessor({
             </section>
 
             {/* Headers List Section */}
-            <section id="headersSection" className="card" aria-labelledby="headers-title">
-                <div className="card-body">
+            <section id="headersSection" className={`card ${styles.card}`} aria-labelledby="headers-title">
+                <div className={`card-body ${styles.cardBody}`}>
                     <h5 id="headers-title" className="card-title">
                         <i className="fas fa-list-ul" aria-hidden="true"></i> Select Required Sections
                     </h5>
 
-                    <div id="headersList" className="mt-4" aria-live="polite">
+                    <div id="headersList" className={`mt-4 ${styles.headersList}`} aria-live="polite">
                         {!file && headers.length === 0 && (
-                            <div className="empty-state">
+                            <div className={styles.emptyState}>
                                 <i className="fas fa-file-alt" aria-hidden="true"></i>
                                 <p>No file uploaded yet. Upload a file to see available sections.</p>
                             </div>
                         )}
 
                         {file && headers.length === 0 && uploadStatus === 'success' && (
-                            <div className="empty-state text-center py-4">
+                            <div className={`text-center py-4 ${styles.emptyState}`}>
                                 <i className="fas fa-info-circle mb-3" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
                                 <p className="text-muted">No headers found in the document.</p>
                             </div>
@@ -133,7 +133,7 @@ export default function MdProcessor({
                         {headers.length > 0 && (
                             <div className="headers-container">
                                 {headers.map(header => (
-                                    <div key={header.index} className={`header-item header-level-${header.level}`}>
+                                    <div key={header.index} className={`${styles.headerItem} ${styles['headerLevel' + header.level]}`}>
                                         <input
                                             type="checkbox"
                                             className="form-check-input me-2"
@@ -152,14 +152,14 @@ export default function MdProcessor({
                     </div>
 
                     {headers.length > 0 && (
-                        <div className="mt-4" id="actionButtons" style={{ display: 'flex' }}>
-                            <button id="combineBtn" className="btn btn-success" onClick={() => combineSections('/sub1/index')}>
+                        <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
+                            <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/sub1/index')}>
                                 <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
                             </button>
-                            <button id="highlightBtn" className="btn btn-primary" onClick={() => combineSections('/sub1/index')}>
+                            <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/index')}>
                                 <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
                             </button>
-                            <button id="quickProceedBtn" className="btn btn-secondary" onClick={() => combineSections('/sub1/processor')}>
+                            <button id="quickProceedBtn" className={`btn btn-secondary ${styles.btn} ${styles.btnSecondary}`} onClick={() => combineSections('/sub1/processor')}>
                                 <i className="fas fa-bolt" aria-hidden="true"></i> Quick Proceed
                             </button>
                         </div>
@@ -168,9 +168,9 @@ export default function MdProcessor({
             </section>
 
             {loading && (
-                <div id="loading" className="card mt-3" aria-live="polite" aria-atomic="true">
+                <div id="loading" className={`card mt-3 ${styles.loading}`} aria-live="polite" aria-atomic="true">
                     <div className="card-body text-center">
-                        <div className="spinner-border" role="status">
+                        <div className={`spinner-border ${styles.spinnerBorder}`} role="status">
                             <span className="visually-hidden">Loading...</span>
                         </div>
                         <p className="mt-3 mb-0">Processing request, please wait...</p>
@@ -185,7 +185,7 @@ export default function MdProcessor({
             )}
 
             {errorMsg && (
-                <div id="errorAlert" className="alert alert-danger mt-3" role="alert" aria-live="polite">
+                <div id="errorAlert" className={`alert alert-danger mt-3 ${styles.alert} ${styles.alertDanger}`} role="alert" aria-live="polite">
                     {errorMsg}
                 </div>
             )}
