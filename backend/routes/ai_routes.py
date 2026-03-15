@@ -1,4 +1,3 @@
-# backend/routes/ai_routes.py
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 from backend.config import Config
 import requests
@@ -6,38 +5,94 @@ import json
 
 ai_bp = Blueprint('ai', __name__)
 
+
+# ================= 新增：文件上传接口 =================
+@ai_bp.route('/upload', methods=['POST'])
+def api_ai_upload():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # Coze API 的文件上传地址
+    upload_url = "https://api.coze.com/v1/files/upload"
+
+    headers = {
+        'Authorization': f'Bearer {Config.COZE_TOKEN}'
+    }
+
+    try:
+        # 封装为 multipart/form-data 格式传给 Coze
+        files = {'file': (file.filename, file.stream, file.mimetype)}
+        response = requests.post(upload_url, headers=headers, files=files)
+        data = response.json()
+
+        # 检查 Coze API 返回的成功标志 (code 0)
+        if response.status_code == 200 and data.get('code') == 0:
+            return jsonify({
+                "file_id": data['data']['id'],
+                "file_name": file.filename,
+                "mime_type": file.mimetype
+            }), 200
+        else:
+            return jsonify({"error": f"Coze upload failed: {data.get('msg', 'Unknown error')}"}), 400
+
+    except Exception as e:
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+
+
+# ================= 修改：支持附件的多模态聊天接口 =================
 @ai_bp.route('/chat', methods=['POST'])
-# 暂时注释掉鉴权，方便测试
-# @jwt_required()
 def api_ai_chat():
     data = request.get_json()
     messages = data.get('messages', [])
+
     if not messages:
         return jsonify({"error": "No messages"}), 400
 
-    print(f"\n[Backend Log] 收到前端请求，消息数量: {len(messages)}")
-
-    # 1. 构造 Coze V3 要求的 messages 格式
     coze_messages = []
     for msg in messages:
-        # Coze 的附加消息通常不需要 system 角色 (system人设在网页端配置)
         if msg['role'] == 'system':
             continue
-        coze_messages.append({
-            "role": msg['role'],
-            "content": msg['content'],
-            "content_type": "text"
-        })
 
-    # 2. Coze API 请求参数
+        # 提取前端传来的附件
+        files = msg.get('files', [])
+
+        if files:
+            # 如果带有文件，必须转换成 Coze 的 object_string 格式
+            content_list = [{"type": "text", "text": msg.get('content', '')}]
+
+            for f in files:
+                file_type = "image" if f.get('mime_type', '').startswith('image/') else "file"
+                content_list.append({
+                    "type": file_type,
+                    "file_id": f['file_id']
+                })
+
+            coze_messages.append({
+                "role": msg['role'],
+                "content": json.dumps(content_list),
+                "content_type": "object_string"
+            })
+        else:
+            # 纯文本消息保持原样
+            coze_messages.append({
+                "role": msg['role'],
+                "content": msg['content'],
+                "content_type": "text"
+            })
+
     url = Config.COZE_API_BASE
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {Config.COZE_TOKEN}'
     }
+
     payload = {
         'bot_id': Config.COZE_BOT_ID,
-        'user_id': 'hku_user_001',  # Coze V3 必填字段，标识具体用户，可暂时写死
+        'user_id': 'hku_user_001',
         'stream': True,
         'additional_messages': coze_messages
     }
@@ -45,15 +100,18 @@ def api_ai_chat():
     def generate():
         try:
             with requests.post(url, headers=headers, json=payload, stream=True) as response:
-                print(f"[Backend Log] Coze 返回状态码: {response.status_code}")
+                content_type = response.headers.get('Content-Type', '')
 
-                if response.status_code != 200:
-                    error_msg = response.text
-                    print(f"[Backend Log] Coze 报错: {error_msg}")
-                    yield f"data: {json.dumps({'error': f'Coze API Error ({response.status_code})'})}\n\n"
+                if 'application/json' in content_type:
+                    error_json = response.json()
+                    api_msg = error_json.get('msg', str(error_json))
+                    yield f"data: {json.dumps({'error': f'Coze API Error: {api_msg}'})}\n\n"
                     return
 
-                # 解析 Coze 的 SSE 数据流 (event / data)
+                if response.status_code != 200:
+                    yield f"data: {json.dumps({'error': f'HTTP Error {response.status_code}'})}\n\n"
+                    return
+
                 current_event = None
                 for line in response.iter_lines():
                     if not line:
@@ -71,29 +129,22 @@ def api_ai_chat():
                             yield "data: [DONE]\n\n"
                             break
 
-                        # Coze 的增量文本在 conversation.message.delta 事件里
                         if current_event == 'conversation.message.delta':
                             try:
                                 data_json = json.loads(data_str)
-                                # 确保只提取机器人的回答 (type == 'answer')
                                 if data_json.get('type') == 'answer':
                                     content = data_json.get('content', '')
                                     if content:
-                                        # 【关键适配】将 Coze 的数据伪装成 DeepSeek/OpenAI 格式返回给前端！
-                                        fake_deepseek_chunk = {
-                                            "choices": [{"delta": {"content": content}}]
-                                        }
-                                        yield f"data: {json.dumps(fake_deepseek_chunk)}\n\n"
-                            except Exception as e:
-                                print(f"[Backend Log] 解析 JSON 失败: {e}")
+                                        fake_chunk = {"choices": [{"delta": {"content": content}}]}
+                                        yield f"data: {json.dumps(fake_chunk)}\n\n"
+                            except Exception:
+                                pass
 
-                        # 如果生成失败
-                        elif current_event == 'conversation.chat.failed':
-                            yield f"data: {json.dumps({'error': 'Coze Bot generation failed.'})}\n\n"
+                        elif current_event in ['conversation.chat.failed', 'error']:
+                            yield f"data: {json.dumps({'error': 'Coze API Generation Failed'})}\n\n"
                             break
 
         except Exception as e:
-            print(f"[Backend Log] 服务器内部错误: {str(e)}")
-            yield f"data: {json.dumps({'error': f'Server Error: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'error': f'Server Exception: {str(e)}'})}\n\n"
 
     return Response(stream_with_context(generate()), content_type='text/event-stream')
