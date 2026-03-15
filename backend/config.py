@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -14,9 +15,14 @@ class Config:
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'users.db')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    SERP_API_KEY = '6c5d8d8c5955aa47a3b5b008d34d83fa3e752cc9c6ffc995b712ebbfc7dd34f9'
-    DEEPSEEK_API_KEY = 'sk-08b1b30e64944eb09250517419284fac'
+    SERP_API_KEY = os.getenv('SERP_API_KEY')
+    DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
     MONGO_URI = "mongodb://localhost:27017/intelligent_edu"
+
+    COZE_TOKEN = os.getenv('COZE_TOKEN')
+    COZE_BOT_ID = os.getenv('COZE_BOT_ID')
+    COZE_API_BASE = os.getenv('COZE_API_BASE', 'https://api.coze.com/v3/chat')
+
 
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = 200 * 1024 * 1024
