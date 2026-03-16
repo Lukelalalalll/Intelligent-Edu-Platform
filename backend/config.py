@@ -29,9 +29,14 @@ class Config:
     MAX_CONTENT_LENGTH = 200 * 1024 * 1024
     MARKDOWN_FOLDER = os.path.join(BASE_DIR, 'md')
     HIGHLIGHTS_FOLDER = os.path.join(BASE_DIR, 'highlights')
+
+    SUB1_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, 'sub1')
+    SUB1_MD_FOLDER = os.path.join(MARKDOWN_FOLDER, 'sub1')
+    SUB1_HIGHLIGHTS_FOLDER = os.path.join(HIGHLIGHTS_FOLDER, 'sub1')
+
     PPT_TEMPLATES_FOLDER = os.path.join(BASE_DIR, 'static/ppt_templates')
-    PPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/ppt_results')
-    SCRIPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/script_results')
+    PPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/ppt_results/sub1')
+    SCRIPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/script_results/sub1')
 
     ALL_FOLDERS = [
         UPLOAD_FOLDER, MARKDOWN_FOLDER, HIGHLIGHTS_FOLDER, PPT_TEMPLATES_FOLDER,
