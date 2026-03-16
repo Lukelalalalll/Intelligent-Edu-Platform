@@ -1,3 +1,4 @@
+// MdProcessor.jsx
 import React from 'react';
 import '../../styles/base.css';
 
@@ -153,10 +154,10 @@ export default function MdProcessor({
 
                     {headers.length > 0 && (
                         <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                            <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/sub1/index')}>
+                            <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/sub1/highlighter')}>
                                 <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
                             </button>
-                            <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/index')}>
+                            <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/highlighter')}>
                                 <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
                             </button>
                             <button id="quickProceedBtn" className={`btn btn-secondary ${styles.btn} ${styles.btnSecondary}`} onClick={() => combineSections('/sub1/processor')}>
