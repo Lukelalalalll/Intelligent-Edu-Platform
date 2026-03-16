@@ -117,7 +117,10 @@ const ToolCard = ({ title, desc, icon, url }) => {
 };
 
 const GeminiChat = ({ aiInteractUrl }) => {
-    const [messages, setMessages] = useState([]);
+    // 调整初始消息格式，增加 role 属性以便 API 调用
+    const [messages, setMessages] = useState([
+        { id: 'welcome', sender: 'ai', role: 'assistant', text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?" }
+    ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isFull, setIsFull] = useState(false);
@@ -133,22 +136,14 @@ const GeminiChat = ({ aiInteractUrl }) => {
         code({node, inline, className, children, ...props}) {
             const match = /language-(\w+)/.exec(className || '')
             return !inline && match ? (
-                <SyntaxHighlighter language={match[1]} PreTag="div" {...props}>
+                <SyntaxHighlighter language={match[1]} style={undefined} PreTag="div" {...props}>
                     {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
             ) : (<code className={className} {...props}>{children}</code>)
         }
     }), []);
 
-    useEffect(() => {
-        setIsLoading(true);
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-            setMessages([{ id: 'welcome', sender: 'ai', text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?" }]);
-        }, 1200);
-        return () => clearTimeout(timer);
-    }, []);
-
+    // 自动滚动
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -163,27 +158,79 @@ const GeminiChat = ({ aiInteractUrl }) => {
         if(target.value === '') target.style.height = 'auto';
     }, []);
 
-    const handleSend = useCallback(() => {
+    const handleSend = useCallback(async () => {
         if (!input.trim() || isLoading) return;
-        const text = input.trim();
+
+        const userText = input.trim();
         setInput('');
+        if (inputAreaRef.current) inputAreaRef.current.style.height = 'auto';
 
-        if (inputAreaRef.current) {
-            inputAreaRef.current.style.height = 'auto';
-        }
+        // 1. 添加用户消息，并预留一个空的 AI 消息位
+        const userMsg = { id: Date.now(), sender: 'user', role: 'user', text: userText };
+        const aiPlaceholderId = Date.now() + 1;
+        const aiMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '' };
 
-        setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: text }]);
+        setMessages(prev => [...prev, userMsg, aiMsg]);
         setIsLoading(true);
 
-        setTimeout(() => {
+        try {
+            // 准备给 API 的历史记录
+            // 过滤掉当前还没填内容的 AI 占位符，只发送之前的历史
+            const historyForAPI = messages
+                .concat(userMsg)
+                .map(m => ({ role: m.role, content: m.text }));
+
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: historyForAPI }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let accumulatedText = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+
+                    try {
+                        const dataObj = JSON.parse(dataStr);
+                        if (dataObj.choices?.[0]?.delta?.content !== undefined) {
+                            accumulatedText += dataObj.choices[0].delta.content;
+
+                            // 实时更新最后一条 AI 消息的内容
+                            setMessages(prev => prev.map(m =>
+                                m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
+                            ));
+                        }
+                    } catch (e) {
+                        console.error("Parse error", e);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Chat Error:", error);
+            setMessages(prev => prev.map(m =>
+                m.id === aiPlaceholderId ? { ...m, text: "Sorry, I encountered an error connecting to the AI server." } : m
+            ));
+        } finally {
             setIsLoading(false);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                sender: 'ai',
-                text: `You asked: "${text}".\n\nI am ready to assist!`
-            }]);
-        }, 1500);
-    }, [input, isLoading]);
+        }
+    }, [input, isLoading, messages]);
 
     const handleKeyDown = useCallback((e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -298,6 +345,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [isFull]);
 
+    const lastMessage = messages[messages.length - 1];
+
     return (
         <section className={styles['ai-interaction-section']}>
             <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
@@ -314,21 +363,25 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 </div>
 
                 <div ref={messagesContainerRef} className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}>
-                    {messages.map(msg => (
-                        <div key={msg.id} className={`${styles.message} ${styles[`${msg.sender}-message`]}`}>
-                            <div className={styles.avatar}>
-                                {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                    {messages.map(msg => {
+                        if (msg.sender === 'ai' && !msg.text) return null;
+                        return (
+                            <div key={msg.id} className={`${styles.message} ${styles[`${msg.sender}-message`]}`}>
+                                <div className={styles.avatar}>
+                                    {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                                </div>
+                                <div className={styles.bubble}>
+                                    {msg.sender === 'ai' ? (
+                                        <ReactMarkdown components={markdownComponents}>
+                                            {msg.text}
+                                        </ReactMarkdown>
+                                    ) : (msg.text)}
+                                </div>
                             </div>
-                            <div className={styles.bubble}>
-                                {msg.sender === 'ai' ? (
-                                    <ReactMarkdown components={markdownComponents}>
-                                        {msg.text}
-                                    </ReactMarkdown>
-                                ) : (msg.text)}
-                            </div>
-                        </div>
-                    ))}
-                    {isLoading && (
+                        );
+
+                })}
+                    {isLoading && (!lastMessage || lastMessage.sender !== 'ai' || !lastMessage.text) && (
                         <div className={`${styles.message} ${styles['ai-message']}`}>
                             <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
                             <div className={`${styles.bubble} ${styles['typing-bubble']}`}>
