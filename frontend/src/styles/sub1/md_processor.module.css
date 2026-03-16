@@ -1,8 +1,5 @@
 /* md_processor.module.css */
 
-/* =========================================
-   1. Cards
-   ========================================= */
 .card {
     margin-bottom: 3rem !important;
     border-radius: var(--radius-md) !important;
@@ -16,9 +13,6 @@
     padding: 2.0rem !important;
 }
 
-/* =========================================
-   2. File Upload Area
-   ========================================= */
 .fileInputContainer {
     position: relative;
     margin-bottom: 1.5rem;
@@ -58,9 +52,6 @@
     z-index: 10;
 }
 
-/* =========================================
-   3. Checkbox & Forms
-   ========================================= */
 .formCheck {
     margin: 1.5rem 0;
     display: flex;
@@ -88,9 +79,6 @@
     color: var(--primary-color);
 }
 
-/* =========================================
-   4. Buttons (覆盖/补充)
-   ========================================= */
 .btn {
     display: inline-flex !important;
     align-items: center;
@@ -117,9 +105,7 @@
     box-shadow: 0 8px 20px rgba(99, 115, 129, 0.3);
 }
 
-/* =========================================
-   5. Headers List Section
-   ========================================= */
+
 .headersList {
     max-height: 450px;
     overflow-y: auto;
@@ -267,9 +253,7 @@
     animation: spin 1s linear infinite;
 }
 
-/* =========================================
-   8. Responsive
-   ========================================= */
+
 .pageHeader {} /* 定义占位符以便在 JS 中引入不报 undef 错 */
 
 @media (max-width: 768px) {
