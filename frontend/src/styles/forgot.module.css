@@ -1,8 +1,10 @@
-.forgot-wrapper {
+/* forgot.module.css */
+
+.forgotWrapper {
     --primary-gradient-animated: linear-gradient(120deg, #007B55, #005A8C, #007B55, #004D40);
 }
 
-.forgot-orb {
+.forgotOrb {
     top: -15%;
     left: -10%;
     right: auto;
@@ -15,7 +17,8 @@
     50% { transform: translate(40px, 60px) scale(1.1); }
 }
 
-.forgot-wrapper .auth-card {
+/* 使用 :global 穿透，选中全局的 auth-card 进行覆盖 */
+.forgotWrapper :global(.auth-card) {
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
