@@ -6,6 +6,8 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 load_dotenv()
 
 class Config:
+    BASE_DIR = BASE_DIR
+
     SECRET_KEY = 'your-secret-key'
 
     JWT_SECRET_KEY = 'jwt-secret-key-change-this-in-prod'
