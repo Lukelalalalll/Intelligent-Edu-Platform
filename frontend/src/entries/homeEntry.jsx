@@ -6,9 +6,9 @@ export default function HomeEntry() {
     const config = {
         urls: {
             sub1: '/sub1/md-processor',
-            sub3: '/sub3',
-            sub4: '/sub4',
-            sub5: '/sub5',
+            sub3: '/sub2',
+            sub4: '/sub3',
+            sub5: '/sub4',
             mailbox: '/mailbox',
             aiInteract: '/ai-interaction'
         }
