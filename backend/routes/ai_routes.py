@@ -1,3 +1,4 @@
+# backend/routes/ai_routes.py
 from flask import Blueprint, request, jsonify, Response, stream_with_context
 from backend.config import Config
 import requests
@@ -6,7 +7,6 @@ import json
 ai_bp = Blueprint('ai', __name__)
 
 
-# ================= 新增：文件上传接口 =================
 @ai_bp.route('/upload', methods=['POST'])
 def api_ai_upload():
     if 'file' not in request.files:
