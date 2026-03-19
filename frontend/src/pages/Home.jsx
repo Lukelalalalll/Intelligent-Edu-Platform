@@ -3,7 +3,34 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion'; // 👈 引入 Framer Motion
 import styles from '../styles/home/home.module.css';
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.2,
+            delayChildren: 0.2
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { type: "spring", stiffness: 300, damping: 24 } // 使用弹簧物理效果，更高级
+    }
+};
+
+const messageVariants = {
+    hidden: { opacity: 0, y: 15, scale: 0.98 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
+};
+
 
 const WelcomeBanner = () => {
     const titleRef = useRef(null);
@@ -20,8 +47,6 @@ const WelcomeBanner = () => {
             if (titleRef.current && descRef.current) {
                 titleRef.current.style.transform = `translate(${x}px, ${y}px)`;
                 descRef.current.style.transform = `translate(${x * 0.5}px, ${y * 0.5}px)`;
-                titleRef.current.style.transition = 'none';
-                descRef.current.style.transition = 'none';
             }
         });
     }, []);
@@ -43,10 +68,19 @@ const WelcomeBanner = () => {
     }, []);
 
     return (
-        <section className={styles['welcome-banner']} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
-            <h1 ref={titleRef}>Welcome to HKU Educational Tools Platform</h1>
-            <p ref={descRef}>Your gateway to intelligent learning and educational resources</p>
-        </section>
+        <motion.section
+            variants={itemVariants}
+            className={styles['welcome-banner']}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+        >
+            <motion.h1 ref={titleRef} variants={itemVariants}>
+                Welcome to HKU Educational Tools Platform
+            </motion.h1>
+            <motion.p ref={descRef} variants={itemVariants}>
+                Your gateway to intelligent learning and educational resources
+            </motion.p>
+        </motion.section>
     );
 };
 
@@ -78,7 +112,7 @@ const ToolCard = ({ title, desc, icon, url }) => {
             const rotateX = ((y - centerY) / centerY) * -8;
             const rotateY = ((x - centerX) / centerX) * 8;
 
-            cardRef.current.style.transform = `perspective(1000px) translateY(-15px) scale(1.05) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            cardRef.current.style.transform = `perspective(1000px) translateY(-15px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
             sheenRef.current.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.3), transparent 50%)`;
             sheenRef.current.style.opacity = '1';
         });
@@ -106,7 +140,6 @@ const ToolCard = ({ title, desc, icon, url }) => {
                 opacity: '0', pointerEvents: 'none', zIndex: '3', mixBlendMode: 'overlay', transition: 'opacity 0.4s ease'
             }}></div>
             <div className={styles['card-content']}>
-                {/* 外部图标库类名保持普通字符串，不使用 styles */}
                 <div className={styles['card-icon']}><i className={`fas ${icon}`}></i></div>
                 <h3 className={styles['card-title']}>{title}</h3>
                 <p className={styles['card-description']}>{desc}</p>
@@ -117,7 +150,6 @@ const ToolCard = ({ title, desc, icon, url }) => {
 };
 
 const GeminiChat = ({ aiInteractUrl }) => {
-    // 调整初始消息格式，增加 role 属性以便 API 调用
     const [messages, setMessages] = useState([
         { id: 'welcome', sender: 'ai', role: 'assistant', text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?" }
     ]);
@@ -143,7 +175,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }), []);
 
-    // 自动滚动
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -165,7 +196,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setInput('');
         if (inputAreaRef.current) inputAreaRef.current.style.height = 'auto';
 
-        // 1. 添加用户消息，并预留一个空的 AI 消息位
         const userMsg = { id: Date.now(), sender: 'user', role: 'user', text: userText };
         const aiPlaceholderId = Date.now() + 1;
         const aiMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '' };
@@ -174,8 +204,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setIsLoading(true);
 
         try {
-            // 准备给 API 的历史记录
-            // 过滤掉当前还没填内容的 AI 占位符，只发送之前的历史
             const historyForAPI = messages
                 .concat(userMsg)
                 .map(m => ({ role: m.role, content: m.text }));
@@ -203,7 +231,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 for (const line of lines) {
                     const trimmed = line.trim();
                     if (!trimmed || !trimmed.startsWith('data: ')) continue;
-
                     const dataStr = trimmed.replace('data: ', '');
                     if (dataStr === '[DONE]') continue;
 
@@ -211,8 +238,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
                         const dataObj = JSON.parse(dataStr);
                         if (dataObj.choices?.[0]?.delta?.content !== undefined) {
                             accumulatedText += dataObj.choices[0].delta.content;
-
-                            // 实时更新最后一条 AI 消息的内容
                             setMessages(prev => prev.map(m =>
                                 m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
                             ));
@@ -223,7 +248,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 }
             }
         } catch (error) {
-            console.error("Chat Error:", error);
             setMessages(prev => prev.map(m =>
                 m.id === aiPlaceholderId ? { ...m, text: "Sorry, I encountered an error connecting to the AI server." } : m
             ));
@@ -239,6 +263,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [handleSend]);
 
+    // 原生全屏动画逻辑保留，但外部包裹 motion
     const toggleFullscreen = useCallback(() => {
         if (isAnimatingRef.current) return;
         isAnimatingRef.current = true;
@@ -262,10 +287,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const probe = document.createElement('div');
             probe.style.cssText = `
                 position: fixed; top: 0; left: 0;
-                width: 100px; height: 100px;
-                margin: 0; padding: 0; border: none;
-                min-width: 0; min-height: 0; max-width: none; max-height: none;
-                visibility: hidden; pointer-events: none; transform: none;
+                width: 100px; height: 100px; visibility: hidden; pointer-events: none;
             `;
             container.parentNode.appendChild(probe);
 
@@ -298,10 +320,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
             container.style.height = (window.innerHeight / scaleY) + 'px';
             container.style.borderRadius = '0px';
 
-            // 【重点修改】：DOM 操作使用 styles 对象获取哈希类名
             container.classList.add(styles['is-fullscreen-layout']);
             document.body.style.overflow = 'hidden';
-            // body 上的全局类名保持普通字符串，不要用 module
             document.body.classList.add('chat-fullscreen-active');
 
             setTimeout(() => {
@@ -316,7 +336,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const targetRect = spacer.getBoundingClientRect();
             const { offsetX, offsetY, scaleX, scaleY } = probeDataRef.current;
 
-            container.classList.add(styles['is-animating-to-small']);
             container.classList.remove(styles['is-fullscreen-layout']);
 
             container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
@@ -333,8 +352,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
             setTimeout(() => {
                 container.style.cssText = '';
                 spacer.style.display = 'none';
-                container.classList.remove(styles['is-animating-to-small']);
-                // 移除全局类名
                 document.body.classList.remove('chat-fullscreen-active');
                 isAnimatingRef.current = false;
                 setIsFull(false);
@@ -348,7 +365,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const lastMessage = messages[messages.length - 1];
 
     return (
-        <section className={styles['ai-interaction-section']}>
+        <motion.section variants={itemVariants} className={styles['ai-interaction-section']}>
             <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
 
             <div ref={chatContainerRef} className={styles['chat-interface-container']}>
@@ -363,32 +380,45 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 </div>
 
                 <div ref={messagesContainerRef} className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}>
-                    {messages.map(msg => {
-                        if (msg.sender === 'ai' && !msg.text) return null;
-                        return (
-                            <div key={msg.id} className={`${styles.message} ${styles[`${msg.sender}-message`]}`}>
-                                <div className={styles.avatar}>
-                                    {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                    <AnimatePresence>
+                        {messages.map(msg => {
+                            if (msg.sender === 'ai' && !msg.text) return null;
+                            return (
+                                <motion.div
+                                    key={msg.id}
+                                    variants={messageVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    className={`${styles.message} ${styles[`${msg.sender}-message`]}`}
+                                >
+                                    <div className={styles.avatar}>
+                                        {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                                    </div>
+                                    <div className={styles.bubble}>
+                                        {msg.sender === 'ai' ? (
+                                            <ReactMarkdown components={markdownComponents}>
+                                                {msg.text}
+                                            </ReactMarkdown>
+                                        ) : (msg.text)}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                        {isLoading && (!lastMessage || lastMessage.sender !== 'ai' || !lastMessage.text) && (
+                            <motion.div
+                                variants={messageVariants}
+                                initial="hidden"
+                                animate="show"
+                                exit={{ opacity: 0, y: -10 }} // 打字动画消失时的效果
+                                className={`${styles.message} ${styles['ai-message']}`}
+                            >
+                                <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
+                                <div className={`${styles.bubble} ${styles['typing-bubble']}`}>
+                                    <div className={styles['typing-indicator']}><span></span><span></span><span></span></div>
                                 </div>
-                                <div className={styles.bubble}>
-                                    {msg.sender === 'ai' ? (
-                                        <ReactMarkdown components={markdownComponents}>
-                                            {msg.text}
-                                        </ReactMarkdown>
-                                    ) : (msg.text)}
-                                </div>
-                            </div>
-                        );
-
-                })}
-                    {isLoading && (!lastMessage || lastMessage.sender !== 'ai' || !lastMessage.text) && (
-                        <div className={`${styles.message} ${styles['ai-message']}`}>
-                            <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
-                            <div className={`${styles.bubble} ${styles['typing-bubble']}`}>
-                                <div className={styles['typing-indicator']}><span></span><span></span><span></span></div>
-                            </div>
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 <div className={styles['input-area']}>
@@ -407,7 +437,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
                     </div>
                 </div>
             </div>
-        </section>
+        </motion.section>
     );
 };
 
@@ -420,11 +450,16 @@ export default function Home({ config }) {
     ], [config.urls]);
 
     return (
-        <>
+        // 👈 最外层包裹 motion.div，控制所有子组件的入场时机
+        <motion.div
+            initial="hidden"
+            animate="show"
+            variants={containerVariants}
+        >
             <WelcomeBanner />
             <GeminiChat aiInteractUrl={config.urls.aiInteract} />
 
-            <div className={styles['mailbox-section']}>
+            <motion.div variants={itemVariants} className={styles['mailbox-section']}>
                 <Link to={config.urls.mailbox} className={styles['mailbox-banner-card']}>
                     <div className={styles['mailbox-left']}>
                         <div className={styles['mailbox-icon-wrapper']}>
@@ -439,13 +474,16 @@ export default function Home({ config }) {
                         <span className={styles['btn-enter-mailbox']}>Enter Workspace <i className="fas fa-arrow-right"></i></span>
                     </div>
                 </Link>
-            </div>
+            </motion.div>
 
-            <div className={styles['cards-container']}>
+            {/* 这里的容器不再需要 CSS grid gap 外的其他入场动画了 */}
+            <motion.div variants={containerVariants} className={styles['cards-container']}>
                 {toolCardsData.map((card, index) => (
-                    <ToolCard key={index} {...card} />
+                    <motion.div key={index} variants={itemVariants}>
+                        <ToolCard {...card} />
+                    </motion.div>
                 ))}
-            </div>
-        </>
+            </motion.div>
+        </motion.div>
     );
 }
