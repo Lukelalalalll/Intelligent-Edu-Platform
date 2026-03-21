@@ -1,97 +1,63 @@
-from flask import Blueprint, request, jsonify, make_response
-from flask_jwt_extended import create_access_token, set_access_cookies, unset_jwt_cookies, jwt_required, \
-    get_jwt_identity
-from werkzeug.security import check_password_hash
+# backend/routes/auth_routes.py
+from fastapi import APIRouter, Depends, HTTPException, Response
+from werkzeug.security import generate_password_hash, check_password_hash
+from backend.core.database import db
+from backend.core.security import create_access_token, get_current_user
+from backend.schemas import AuthSchema, UpdateProfileSchema
+from backend.config import Config
 
-from backend.models import User
-from backend.extensions import db
-
-auth_bp = Blueprint('auth', __name__)
-
-
-@auth_bp.route('/register', methods=['POST'])
-def api_register():
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-
-    if not username or not email or not password:
-        return jsonify({'message': 'Missing fields'}), 400
-
-    if User.get_by_username(username):
-        return jsonify({'message': 'Username already exists'}), 409
-
-    try:
-        User.create_user(username, email, password)
-        return jsonify({'message': 'Account created successfully'}), 201
-    except Exception as e:
-        return jsonify({'message': f'Error: {str(e)}'}), 500
+auth_router = APIRouter(prefix="/api", tags=["Auth"])
 
 
-@auth_bp.route('/login', methods=['POST'])
-def api_login():
-    data = request.get_json()
-    user = User.get_by_username(data.get('username'))
+@auth_router.post("/register")
+async def register(req: AuthSchema):
+    if await db.users.find_one({"username": req.username}):
+        raise HTTPException(status_code=409, detail="Username already exists")
 
-    if not user or not check_password_hash(user['password_hash'], data.get('password')):
-        return jsonify({'message': 'Account not exist or wrong password'}), 401
-
-    access_token = create_access_token(identity=str(user['_id']))
-
-    resp = jsonify({
-        'message': 'Login successful',
-        'user': {
-            'id': str(user['_id']),
-            'username': user['username'],
-            'role': user.get('role', 'teacher')
-        }
-    })
-    set_access_cookies(resp, access_token)
-    return resp, 200
+    user_doc = {
+        "username": req.username,
+        "email": req.email,
+        "password_hash": generate_password_hash(req.password),
+        "role": "student"
+    }
+    await db.users.insert_one(user_doc)
+    return {"message": "Account created successfully"}
 
 
-@auth_bp.route('/logout', methods=['POST'])
-def api_logout():
-    resp = jsonify({'message': 'Logout successful'})
-    unset_jwt_cookies(resp)
-    return resp, 200
+@auth_router.post("/login")
+async def login(req: AuthSchema, response: Response):
+    user = await db.users.find_one({"username": req.username})
+    if not user or not check_password_hash(user['password_hash'], req.password):
+        raise HTTPException(status_code=401, detail="Wrong username or password")
+
+    access_token = create_access_token(data={"sub": str(user["_id"])})
+
+    # 设置 HttpOnly Cookie
+    response.set_cookie(
+        key=Config.JWT_ACCESS_COOKIE_NAME, value=access_token,
+        httponly=True, samesite="lax"
+    )
+
+    return {
+        "message": "Login successful",
+        "user": {"id": str(user["_id"]), "username": user["username"], "email": user.get("email"),
+                 "role": user.get("role", "teacher")}
+    }
 
 
-@auth_bp.route('/reset-password', methods=['POST'])
-def api_reset_password():
-    data = request.get_json()
-    user = User.query.filter_by(username=data.get('username'), email=data.get('email')).first()
-    if not user:
-        return jsonify({'message': 'Username and Email do not match our records.'}), 404
-
-    user.set_password(data.get('new_password'))
-    db.session.commit()
-    return jsonify({'message': 'Password reset successfully'}), 200
+@auth_router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(Config.JWT_ACCESS_COOKIE_NAME)
+    return {"message": "Logout successful"}
 
 
-@auth_bp.route('/profile/update', methods=['POST'])
-@jwt_required()
-def update_profile():
-    user = db.session.get(User, int(get_jwt_identity()))
-    if not user: return jsonify({'message': 'User not found'}), 404
+@auth_router.post("/profile/update")
+async def update_profile(req: UpdateProfileSchema, current_user: dict = Depends(get_current_user)):
+    update_data = {}
+    if req.username: update_data["username"] = req.username
+    if req.email: update_data["email"] = req.email
+    if req.password: update_data["password_hash"] = generate_password_hash(req.password)
 
-    data = request.get_json()
-    new_username, new_email, new_password = data.get('username'), data.get('email'), data.get('password')
-
-    try:
-        if new_username and new_username != user.username:
-            if User.query.filter_by(username=new_username).first(): return jsonify(
-                {'message': 'Username already exists'}), 409
-            user.username = new_username
-        if new_email and new_email != user.email:
-            if User.query.filter_by(email=new_email).first(): return jsonify({'message': 'Email already exists'}), 409
-            user.email = new_email
-        if new_password and new_password.strip() != "":
-            user.set_password(new_password)
-
-        db.session.commit()
-        return jsonify({'message': 'Profile updated successfully'}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': str(e)}), 500
+    if update_data:
+        await db.users.update_one({"_id": current_user["_id"]}, {"$set": update_data})
+    return {"message": "Profile updated successfully"}

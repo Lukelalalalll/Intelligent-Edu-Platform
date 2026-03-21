@@ -1,8 +1,4 @@
-/* ==========================================================================
-   auth.css - 登录与注册页通用及专属合并样式 (已修复全局污染问题)
-   ========================================================================== */
-
-/* 将变量作用域限制在 auth-wrapper 内，防止污染 base.css 和其他页面 */
+/*auth.css*/
 .auth-wrapper {
     --auth-bg-input: #E2E8F0;
     --auth-radius-lg: 24px;
@@ -28,8 +24,7 @@
     100% { background-position: 0% 50%; }
 }
 
-/* ================= 通用背景 & 光球 ================= */
-/* 默认光球 (针对 Register 页，居左) */
+
 .auth-wrapper .bg-orb {
     position: absolute;
     top: -10%;
@@ -200,8 +195,6 @@
 
 .auth-form .toggle-password:hover { color: var(--primary-color); }
 
-
-/* ================= 按钮与底部链接通用 ================= */
 .auth-form .form-options {
     text-align: right;
     margin-top: -0.5rem;
@@ -467,11 +460,6 @@
     .auth-header .header-icon { font-size: 2.5rem; }
 }
 
-
-
-/* ==========================================================================
-   修复：消除 Auth 页面 Footer 和绿色背景之间的白色缝隙
-   ========================================================================== */
 
 /* 1. 当页面处于 Auth 状态时，清除 Footer 顶部的 4rem margin */
 body:has(.auth-wrapper) .footer {
