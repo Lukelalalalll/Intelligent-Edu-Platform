@@ -59,7 +59,8 @@ export default function LoginEntry() {
 
         } catch (error) {
             // 捕获后端的报错信息
-            setErrorMsg(error.response?.data?.message || 'Login failed');
+            const errorDetail = error.response?.data?.detail || error.response?.data?.message || 'Login failed';
+            setErrorMsg(errorDetail);
             setIsLoading(false);
         }
     };

@@ -11,6 +11,9 @@ import AIInteractEntry from './entries/aiInteractEntry';
 import HighlighterEntry from './entries/sub1/highlighterEntry';
 import AdminDashboardEntry from './entries/adminDashboardEntry';
 import DiagramToolEntry from './entries/sub4/diagramToolEntry';
+import QuestionGeneratorEntry from './entries/sub2/questionGeneratorEntry';
+import SpecifyEntry from './entries/sub1/specifyEntry';
+import QuickProcessEntry from './entries/sub1/quickProcessEntry';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -43,6 +46,10 @@ function App() {
           <Route path="forgot-password" element={<PublicRoute><ForgotEntry /></PublicRoute>} />
 
           <Route path="sub1/highlighter" element={<ProtectedRoute><HighlighterEntry /></ProtectedRoute>} />
+          <Route path="sub1/specify" element={<ProtectedRoute><SpecifyEntry /></ProtectedRoute>} />
+          <Route path="sub1/quick-process" element={<ProtectedRoute><QuickProcessEntry /></ProtectedRoute>} />
+
+          <Route path="sub2" element={<ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute>} />
           <Route path="admin/dashboard" element={<ProtectedRoute><AdminDashboardEntry /></ProtectedRoute>} />
 
           <Route path="sub4" element={<ProtectedRoute><DiagramToolEntry /></ProtectedRoute>} />

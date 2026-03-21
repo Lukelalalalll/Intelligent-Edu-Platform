@@ -178,7 +178,7 @@ function AIInteract({
                             {currentSession?.messages.length === 1 && (
                                 <div className={`${styles.message} ${styles['ai-message']}`}>
                                     <div className={styles.avatar}><i className="fas fa-robot"></i></div>
-                                    <div className={styles.bubble}>Hello! I'm your HKU AI Assistant. I can help you with academic research, code explanation, or generating course materials. You can also upload Images, PDFs, or DOCX files. What would you like to explore today?</div>
+                                    <div className={styles.bubble}>Hello! I'm your HKU AI Assistant. I can help you with academic research, code explanation, or generating course materials. What would you like to explore today?</div>
                                 </div>
                             )}
 

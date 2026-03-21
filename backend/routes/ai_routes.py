@@ -21,7 +21,7 @@ def ai_chat(req: AiChatSchema, user: dict = Depends(get_current_user)):
         try:
             with requests.post(url, headers=headers, json=payload, stream=True) as response:
                 response.raise_for_status()
-                for chunk in response.iter_content(chunk_size=1024):
+                for chunk in response.iter_content(chunk_size=128):
                     if chunk: yield chunk
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n".encode('utf-8')

@@ -20,14 +20,21 @@ class MarkdownViewer:
         """Load and analyze a markdown file"""
         try:
             # 设置输出路径
+            from backend.config import Config
             base_name = os.path.splitext(os.path.basename(filepath))[0]
-            os.makedirs('md/json', exist_ok=True)
-            os.makedirs('md/csv', exist_ok=True)
-            json_output = f"md/json/{base_name}_tables.json"
-            csv_output = f"md/csv/{base_name}_tables.csv"
+
+            # 使用 Config 定义的目录
+            json_dir = os.path.join(Config.MARKDOWN_FOLDER, 'json')
+            csv_dir = os.path.join(Config.MARKDOWN_FOLDER, 'csv')
+            os.makedirs(json_dir, exist_ok=True)
+            os.makedirs(csv_dir, exist_ok=True)
+
+            json_output = os.path.join(json_dir, f"{base_name}_tables.json")
+            csv_output = os.path.join(csv_dir, f"{base_name}_tables.csv")
 
             self.analyzer = MarkdownAnalyzer(filepath)
             self.headers = self._get_headers_with_lines(use_llm)
+            # 🌟 这里会调用下面的 _load_full_content
             self.full_content = self._load_full_content(filepath)
             self.header_sections = self._map_header_sections()
             self.headers_count = len(self.headers)
@@ -56,12 +63,10 @@ class MarkdownViewer:
                         base_name = os.path.splitext(csv_output)[0]
                         csv_file = f"{base_name}_{i}.csv"
                         
-                        # 保存为CSV
                         df.to_csv(csv_file, index=False, encoding='utf-8')
                         print(f"CSV file generated: {csv_file}")
             except Exception as e:
                 print("No tables found!")
-                # 创建空的表格数据结构
                 tables_data = {"Table": []}
 
         except Exception as e:
@@ -100,7 +105,7 @@ class MarkdownViewer:
 
     def _load_full_content(self, filepath):
         """Load file content"""
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
             return f.read().split('\n')
 
     def _map_header_sections(self):
