@@ -135,19 +135,26 @@ export default function MdProcessorEntry() {
         setErrorMsg('');
 
         try {
-            // 使用 axios 替代 fetch
+            // 🌟 核心修复：把 useLLM 传给后端，确保解析逻辑跟上传时完全一致
             const response = await client.post('/sub1/combine', {
                 filename: currentFilename,
-                selected_indices: selectedIndices
+                selected_indices: selectedIndices,
+                use_llm: useLLM  // <--- 关键参数：同步 LLM 状态
             });
 
             const data = response.data;
             if (data.filename) {
+                // 存储合并后的文件名
                 localStorage.setItem('combinedFilename', data.filename);
-                localStorage.setItem('currentFilename', JSON.stringify(data.filename));
+                // 同时也记录下当前是否是 LLM 模式，方便后续页面判断
+                localStorage.setItem('useLLM', JSON.stringify(useLLM));
+
                 if (redirectUrl.includes('processor')) {
                     localStorage.setItem('chapterData', JSON.stringify([]));
                 }
+
+                // 建议使用 navigate 而不是 window.location.href 以保持 SPA 状态
+                // 这里暂时沿用你的逻辑
                 if (redirectUrl) {
                     setTimeout(() => { window.location.href = redirectUrl; }, 300);
                 }

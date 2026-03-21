@@ -1,6 +1,7 @@
 // MdProcessor.jsx
 import React from 'react';
 import '../../styles/base.css';
+import { useNavigate } from 'react-router-dom';
 
 import styles from '../../styles/sub1/md_processor.module.css';
 
@@ -17,6 +18,7 @@ export default function MdProcessor({
     fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
     handleUpload, handleCheckboxChange, combineSections
 }) {
+    const navigate = useNavigate();
     return (
         <div className="container">
             {/* Page Header */}
@@ -160,8 +162,9 @@ export default function MdProcessor({
                             <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/highlighter')}>
                                 <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
                             </button>
-                            <button id="quickProceedBtn" className={`btn btn-secondary ${styles.btn} ${styles.btnSecondary}`} onClick={() => combineSections('/sub1/processor')}>
-                                <i className="fas fa-bolt" aria-hidden="true"></i> Quick Proceed
+                            <button id="quickProceedBtn" className="btn btn-secondary"
+                                    onClick={() => navigate('/sub1/quick-process')}>
+                                <i className="fas fa-bolt"></i> Quick Proceed
                             </button>
                         </div>
                     )}
