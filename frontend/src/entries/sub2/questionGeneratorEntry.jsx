@@ -1,0 +1,193 @@
+import React, { useState, useEffect } from 'react';
+import html2canvas from 'html2canvas';
+import client from '../../api/client';
+import QuestionGeneratorPage from '../../pages/sub2/QuestionGenerator';
+
+export default function QuestionGeneratorEntry() {
+    // --- Step 1 State ---
+    const [file, setFile] = useState(null);
+    const [fileName, setFileName] = useState('');
+    const [fileType, setFileType] = useState('');
+    const [totalPages, setTotalPages] = useState(0);
+    const [selectedPages, setSelectedPages] = useState([]);
+    const [uploadLoading, setUploadLoading] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+
+    // --- Step 2 State ---
+    const [extractPrompt, setExtractPrompt] = useState('exercise');
+    const [apiType, setApiType] = useState('textin');
+    const [extractLoading, setExtractLoading] = useState(false);
+    const [exercises, setExercises] = useState([]);
+    const [rawExtractText, setRawExtractText] = useState('');
+    const [selectedExercises, setSelectedExercises] = useState([]);
+    const [savedScreenshots, setSavedScreenshots] = useState([]);
+
+    // --- Step 3 State ---
+    const [subject, setSubject] = useState('Mathematics');
+    const [questionType, setQuestionType] = useState('Multiple choice');
+    const [numQuestions, setNumQuestions] = useState(5);
+    const [difficulty, setDifficulty] = useState(3);
+    const [constraints, setConstraints] = useState('');
+    const [questionBasis, setQuestionBasis] = useState('');
+    const [knowledgePoints, setKnowledgePoints] = useState('');
+    const [generateLoading, setGenerateLoading] = useState(false);
+    const [generatedQuestions, setGeneratedQuestions] = useState(null);
+
+    // --- Effect: Handle Question Type changes ---
+    useEffect(() => {
+        if (questionType === 'Quiz') setNumQuestions(10);
+        else if (questionType === 'Exam Paper') setNumQuestions(15);
+    }, [questionType]);
+
+    // --- Effect: Trigger MathJax after extract data changes ---
+    useEffect(() => {
+        if ((exercises.length > 0 || generatedQuestions) && window.MathJax) {
+            // 当数据变化时，通知 MathJax 重新扫描页面把 $ 代码转成公式图形
+            window.MathJax.typesetPromise().catch(err => console.log('MathJax error:', err));
+        }
+    }, [exercises, generatedQuestions]); // 监听提取的题和生成的题
+
+    // --- Format Helper ---
+    const formatContent = (content) => {
+        if (!content) return '<p>No content</p>';
+        let cleaned = content.replace(/\*\*(\w+)\*\*/g, '$1').replace(/\\mathbf\{(\w+)\}/g, '$1');
+        let formatted = cleaned.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        try {
+            formatted = formatted.replace(/\$\$(.*?)\$\$/g, '<span class="math">$$$$$1$$$$</span>');
+            formatted = formatted.replace(/\$(.*?)\$/g, '<span class="math">$$$1$$</span>');
+        } catch (e) {}
+        return formatted;
+    };
+
+    // --- Upload Handlers ---
+    const handleFile = async (selectedFile) => {
+        if (!selectedFile) return;
+        setFile(selectedFile);
+        setUploadLoading(true);
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        try {
+            // ⚠️ 注意：这里假设后端的 API 对应改为了 /sub2
+            const res = await client.post('/sub2/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' }});
+            if (res.data.success) {
+                setFileName(res.data.filename);
+                setFileType(res.data.file_type);
+                if (res.data.file_type === 'pdf') {
+                    setTotalPages(res.data.total_pages);
+                    setSelectedPages([]);
+                }
+            } else {
+                alert(res.data.error);
+            }
+        } catch (err) {
+            alert('Upload failed: ' + err.message);
+        } finally {
+            setUploadLoading(false);
+        }
+    };
+
+    // --- Extract Handlers ---
+    const extractContent = async () => {
+        if (fileType === 'pdf' && selectedPages.length === 0) { alert('Please select at least one page'); return; }
+        setExtractLoading(true); setExercises([]); setRawExtractText('');
+        try {
+            const res = await client.post('/sub2/extract_questions', {
+                api_type: apiType, page_numbers: selectedPages, prompt: extractPrompt
+            });
+            if (res.data.success) {
+                if (res.data.data?.result?.llm_json?.exercises) {
+                    const formattedEx = res.data.data.result.llm_json.exercises.map(ex => ({ ...ex, formattedText: formatContent(ex.text) }));
+                    setExercises(formattedEx);
+                } else if (res.data.text) {
+                    setRawExtractText(res.data.text);
+                }
+            } else { alert(res.data.error); }
+        } catch (error) { alert('Extraction failed: ' + error.message); }
+        finally { setExtractLoading(false); }
+    };
+
+    // --- Screenshot Handlers ---
+    const captureElement = async (index, suppressAlert = false) => {
+        const element = document.getElementById(`exercise-card-${index}`);
+        if (!element) return;
+
+        const clone = element.cloneNode(true);
+        document.body.appendChild(clone);
+        clone.style.cssText = 'position:absolute; left:-9999px; top:0; width:' + element.offsetWidth + 'px; background:#fff; color:#000; z-index:9999;';
+        clone.querySelectorAll('button, input[type="checkbox"]').forEach(el => el.remove());
+
+        try {
+            const canvas = await html2canvas(clone, { backgroundColor: '#ffffff', useCORS: true, scale: 2 });
+            document.body.removeChild(clone);
+            const imgData = canvas.toDataURL('image/png');
+
+            const res = await client.post('/sub2/upload_screenshot', {
+                image: imgData,
+                chapter_number: element.dataset.chapter,
+                sub_chapter_number: element.dataset.sub,
+                exercise_number: element.dataset.q
+            });
+
+            if (res.data.success) {
+                setSavedScreenshots(prev => [...prev, res.data.filename]);
+                if (!suppressAlert) alert(`Screenshot saved: ${res.data.filename}`);
+            } else { throw new Error(res.data.error); }
+        } catch (err) {
+            if (!suppressAlert) alert('Failed: ' + err.message);
+        }
+    };
+
+    const takeBatchScreenshots = async () => {
+        if (selectedExercises.length === 0) { alert('Please select exercises first.'); return; }
+        for (const idx of selectedExercises) { await captureElement(idx, true); }
+        alert(`Batch processing complete. Images saved.`);
+    };
+
+    // --- Generate & Export ---
+    const generateQuestions = async () => {
+        setGenerateLoading(true); setGeneratedQuestions(null);
+        try {
+            const res = await client.post('/sub2/generate_questions', {
+                subject, question_type: questionType, num_questions: Number(numQuestions), difficulty: Number(difficulty),
+                constraints: constraints.split('\n').filter(c => c.trim()), question_basis: questionBasis,
+                knowledge_points: knowledgePoints, saved_screenshots: savedScreenshots
+            });
+            if (res.data.success) {
+                setGeneratedQuestions(res.data.questions.replace(/\n/g, '<br>'));
+            } else { alert(res.data.error); }
+        } catch (err) { alert('Generation error: ' + err.message); }
+        finally { setGenerateLoading(false); }
+    };
+
+    const exportQuestions = async (format) => {
+        try {
+            const res = await client.post('/sub2/export_questions', { format }, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(res.data);
+            const a = document.createElement('a'); a.href = url;
+            a.download = `questions.${format === 'word' ? 'docx' : 'pptx'}`;
+            a.click(); window.URL.revokeObjectURL(url);
+        } catch (err) { alert('Export failed'); }
+    };
+
+    // --- Bundle States & Handlers ---
+    const states = { file, fileName, fileType, totalPages, selectedPages, uploadLoading, extractPrompt, apiType, extractLoading, exercises, selectedExercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging };
+    const handlers = {
+        setExtractPrompt, setApiType, setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setQuestionBasis, setKnowledgePoints,
+        handleFileChange: e => handleFile(e.target.files[0]),
+        handleDragOver: e => { e.preventDefault(); setIsDragging(true); },
+        handleDragLeave: () => setIsDragging(false),
+        handleDrop: e => { e.preventDefault(); setIsDragging(false); handleFile(e.dataTransfer.files[0]); },
+        togglePage: i => setSelectedPages(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i].sort((a,b)=>a-b)),
+        selectAllPages: () => setSelectedPages(Array.from({length: totalPages}, (_, i) => i)),
+        clearPageSelection: () => setSelectedPages([]),
+        extractContent,
+        toggleExercise: i => setSelectedExercises(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]),
+        toggleAllExercises: checked => setSelectedExercises(checked ? exercises.map((_, i) => i) : []),
+        clearExerciseSelection: () => setSelectedExercises([]),
+        takeSingleScreenshot: i => captureElement(i, false),
+        takeBatchScreenshots, generateQuestions, exportQuestions
+    };
+
+    return <QuestionGeneratorPage states={states} handlers={handlers} />;
+}
