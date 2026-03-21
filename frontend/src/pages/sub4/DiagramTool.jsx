@@ -177,7 +177,7 @@ export default function DiagramTool({
                 <div className={styles.modalContent}>
                     <button className={styles.modalClose} onClick={modalHandlers.closeModal}><i className="fas fa-times"></i></button>
                     <div className={styles.modalPreview}>
-                        <img src={modalState.imgSrc} alt="Preview" />
+                        {modalState.imgSrc ? <img src={modalState.imgSrc} alt="Preview" /> : null}
                     </div>
                     <div className={styles.modalActions}>
                         <h4>Diagram Preview</h4>
