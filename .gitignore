@@ -1,7 +1,7 @@
 # ==========================================
 # Intelligent-Edu-Platform .gitignore
 # ==========================================
-
+.idea
 # 1. Python & 虚拟环境
 __pycache__/
 *.py[cod]
