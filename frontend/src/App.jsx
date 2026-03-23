@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import HomeEntry from './entries/homeEntry';
 import MdProcessorEntry from './entries/sub1/mdProcessorEntry';
@@ -31,6 +32,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* 所有页面都继承 Layout (导航栏) */}
         <Route path="/" element={<Layout />}>
