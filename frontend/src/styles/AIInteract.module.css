@@ -61,7 +61,7 @@
     /* iOS 级毛玻璃质感：增加 saturate 让透过去的颜色更鲜艳 */
     backdrop-filter: blur(32px) saturate(150%);
     -webkit-backdrop-filter: blur(32px) saturate(150%);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     /* 稍微增大圆角，配合大屏占比 */
 
     /* 核心升级：复合阴影结构 (底层大阴影制造空间感，中层阴影制造轮廓，内阴影做高光) */
@@ -145,7 +145,7 @@
     justify-content: space-between;
     /* 两端对齐 */
     padding: 12px 14px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     color: #4B5563;
     font-size: 0.95rem;
     cursor: pointer;
@@ -343,7 +343,7 @@
 
 .message .bubble {
     padding: 14px 20px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     color: #1a1a1a;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     max-width: 85%;
@@ -480,7 +480,7 @@
 /* 1. 气泡整体边距，让文字不贴边 */
 .bubble {
     padding: 16px 24px !important;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     max-width: 80%;
     /* 防止气泡太长 */
 }
@@ -704,7 +704,7 @@
 /* 1. 最外层容器：强制深色背景和圆角 */
 .code-block-wrapper {
     background-color: #1e1e1e !important;
-    border-radius: var(--radius-pill) !important;
+    border-radius: var(--radius-md) !important;
     margin: 16px 0 !important;
     overflow: hidden !important;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
@@ -840,7 +840,7 @@
 .custom-modal-box {
     background: #ffffff;
     width: 340px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     padding: 24px 24px 20px;
     text-align: center;
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
@@ -1011,7 +1011,7 @@
 
 :global(.code-block-wrapper) {
     background-color: #1e1e1e !important;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     /* ... 其他样式 ... */
 }
 

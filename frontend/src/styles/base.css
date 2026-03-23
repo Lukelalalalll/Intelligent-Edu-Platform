@@ -605,7 +605,7 @@ main:has([class*="ai-workspace-wrapper"]) {
     background-color: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-md) !important;
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: var(--shadow-sm);
     padding: 2.5rem;
@@ -694,7 +694,7 @@ main:has([class*="ai-workspace-wrapper"]) {
 .upload-area,
 .file-drop-area {
     border: 2px dashed rgba(0, 123, 85, 0.2);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-md) !important;
     background-color: rgba(255, 255, 255, 0.5);
     padding: 3rem 2rem;
     text-align: center;

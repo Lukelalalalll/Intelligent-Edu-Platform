@@ -185,10 +185,10 @@
 
 .exerciseHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
 .exerciseMeta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.85rem; margin-top: 8px; }
-.metaItem { background: var(--bg-input); padding: 4px 10px; border-radius: 4px; color: var(--text-sub); font-weight: 500; }
+.metaItem { background: var(--bg-input); padding: 4px 10px; border-radius: var(--radius-sm); color: var(--text-sub); font-weight: 500; }
 
 .exerciseContent {
-    background: var(--bg-body); padding: 1rem; border-radius: 6px;
+    background: var(--bg-body); padding: 1rem; border-radius: var(--radius-sm);
     border: 1px solid rgba(0,0,0,0.05); white-space: pre-wrap;
     font-family: 'Consolas', 'Monaco', monospace; font-size: 0.95rem; color: var(--text-main); line-height: 1.6;
 }
@@ -196,7 +196,7 @@
 .loadingWrapper { text-align: center; padding: 3rem; color: var(--primary-color); }
 .exportOptions { display: flex; gap: 16px; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(0,0,0,0.05); }
 
-.btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s;}
+.btn { padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s;}
 .btnPrimary { background: var(--primary-color); color: white; }
 .btnPrimary:hover:not(:disabled) { background: var(--primary-dark, #005c43); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,123,85,0.3);}
 .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }

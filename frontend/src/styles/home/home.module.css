@@ -199,7 +199,7 @@ main {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 24px !important;
+    border-radius: var(--radius-md) !important;
     background: rgba(0, 123, 85, 0.04);
     border: 1px solid rgba(0, 123, 85, 0.1) !important;
     color: var(--primary-color);
@@ -212,7 +212,7 @@ main {
     position: absolute;
     inset: -4px !important;
     background: var(--primary-color);
-    border-radius: 28px !important;
+    border-radius: var(--radius-md) !important;
     opacity: 0;
     filter: blur(12px);
     z-index: -1;
@@ -271,7 +271,7 @@ main {
     background: transparent;
     color: var(--primary-color);
     border: 2px solid rgba(0, 123, 85, 0.15);
-    border-radius: 50px;
+    border-radius: var(--radius-md);
     text-decoration: none;
     font-weight: 700;
     font-size: 0.9rem;
@@ -329,7 +329,7 @@ main {
     bottom: -20px;
     background: radial-gradient(circle at 50% 50%, rgba(0, 123, 85, 0.15), transparent 70%);
     z-index: -1;
-    border-radius: 40px;
+    border-radius: var(--radius-md);
     filter: blur(20px);
     opacity: 0;
     transition: opacity 0.5s ease;
@@ -463,7 +463,7 @@ main {
 
 .chat-messages::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
@@ -700,7 +700,7 @@ main {
 .is-fullscreen-layout .input-wrapper {
     width: 100%;
     max-width: 800px;
-    border-radius: 30px;
+    border-radius: var(--radius-md);
 }
 
 /* --- Mailbox Banner Section --- */
@@ -742,7 +742,7 @@ main {
 .mailbox-icon-wrapper {
     width: 56px;
     height: 56px;
-    border-radius: 16px;
+    border-radius: var(--radius-md);
     background: linear-gradient(135deg, rgba(0, 123, 85, 0.1), rgba(0, 77, 64, 0.05));
     color: #007B55;
     font-size: 1.6rem;
@@ -830,7 +830,7 @@ main {
     font-weight: 600;
     font-size: 0.95rem;
     padding: 10px 24px;
-    border-radius: 50px;
+    border-radius: var(--radius-md);
     background: transparent;
     border: 2px solid rgba(0, 123, 85, 0.15);
     transition: all 0.3s ease;
