@@ -14,7 +14,19 @@ export default function Specify({
                 <p className="subtitle">Customize bullet points, and generate talking scripts</p>
             </div>
 
-            {results && results.length > 0 ? (
+            {loading ? (
+                /* Loading Overlay takes full place */
+                <div className={styles.elegantLoadingContainer}>
+                    <div className={styles.spinnerCore}>
+                        <div className={`${styles.ring} ${styles.ring1}`}></div>
+                        <div className={`${styles.ring} ${styles.ring2}`}></div>
+                        <div className={`${styles.ring} ${styles.ring3}`}></div>
+                        <i className={`fas fa-brain ${styles.aiIcon}`}></i>
+                    </div>
+                    <h3 className={styles.loadingText}>AI is crafting your slides...</h3>
+                    <p className={styles.loadingSubtext}>Structuring logic, extracting core values, and formatting content.</p>
+                </div>
+            ) : results && results.length > 0 ? (
                 <div className={`card ${styles.resultsWrapper}`}>
                     <div className="card-header">
                         <div className="card-icon" style={{color: '#FFC107', background: 'rgba(255, 193, 7, 0.1)'}}>
@@ -199,20 +211,6 @@ export default function Specify({
                             </form>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Loading Overlay */}
-            {loading && (
-                <div className={styles.elegantLoadingContainer}>
-                    <div className={styles.spinnerCore}>
-                        <div className={`${styles.ring} ${styles.ring1}`}></div>
-                        <div className={`${styles.ring} ${styles.ring2}`}></div>
-                        <div className={`${styles.ring} ${styles.ring3}`}></div>
-                        <i className={`fas fa-brain ${styles.aiIcon}`}></i>
-                    </div>
-                    <h3 className={styles.loadingText}>AI is crafting your slides...</h3>
-                    <p className={styles.loadingSubtext}>Structuring logic, extracting core values, and formatting content.</p>
                 </div>
             )}
         </div>

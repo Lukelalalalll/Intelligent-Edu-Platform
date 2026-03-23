@@ -19,6 +19,8 @@ export default function MdProcessor({
     handleUpload, handleCheckboxChange, combineSections
 }) {
     const navigate = useNavigate();
+    const showUploadCard = headers.length === 0;
+
     return (
         <div className="container">
             {/* Page Header */}
@@ -28,148 +30,167 @@ export default function MdProcessor({
             </header>
 
             {/* File Upload Section */}
-            <section className={`card ${styles.card}`} aria-labelledby="upload-title">
-                <div className={`card-body ${styles.cardBody}`}>
-                    <h5 id="upload-title" className="card-title">
-                        <i className="fas fa-upload" aria-hidden="true"></i> Upload File
-                    </h5>
+            {showUploadCard && (
+                <section className={`card ${styles.card}`} aria-labelledby="upload-title">
+                    <div className={`card-body ${styles.cardBody}`}>
+                        <h5 id="upload-title" className="card-title">
+                            <i className="fas fa-upload" aria-hidden="true"></i> Upload File
+                        </h5>
 
-                    <div id="fileInfo" className={`mb-3 ${styles.fileInfo}`} style={{ display: file ? 'block' : 'none' }}>
-                        <div className={styles.fileInfoContent}>
-                            <i className="fas fa-file-alt"></i>
-                            <div className={styles.fileDetails}>
-                                <span id="fileName" className={styles.fileName}>{file?.name}</span>
-                                <span id="fileSize" className={styles.fileSize}>{file ? formatFileSize(file.size) : ''}</span>
+                        <div id="fileInfo" className={`mb-3 ${styles.fileInfo}`} style={{ display: file ? 'block' : 'none' }}>
+                            <div className={styles.fileInfoContent}>
+                                <i className="fas fa-file-alt"></i>
+                                <div className={styles.fileDetails}>
+                                    <span id="fileName" className={styles.fileName}>{file?.name}</span>
+                                    <span id="fileSize" className={styles.fileSize}>{file ? formatFileSize(file.size) : ''}</span>
+                                </div>
+                                <button type="button" id="clearFileBtn" className={`btn btn-sm btn-outline-danger ${styles.clearFileBtn}`} onClick={clearFile}>
+                                    <i className="fas fa-times"></i>
+                                </button>
                             </div>
-                            <button type="button" id="clearFileBtn" className={`btn btn-sm btn-outline-danger ${styles.clearFileBtn}`} onClick={clearFile}>
-                                <i className="fas fa-times"></i>
-                            </button>
+                            {(uploadStatus === 'start' || uploadStatus === 'success') && (
+                                <div id="uploadProgress" className="progress mt-2" style={{ display: 'flex', height: '6px' }}>
+                                    <div id="uploadProgressBar"
+                                        className="progress-bar progress-bar-striped progress-bar-animated"
+                                        role="progressbar"
+                                        style={{
+                                            width: `${uploadProgress}%`,
+                                            background: uploadStatus === 'success' ? 'linear-gradient(90deg, #4CAF50, #45a049)' : ''
+                                        }}
+                                        aria-valuenow={uploadProgress}
+                                        aria-valuemin="0"
+                                        aria-valuemax="100">
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        {(uploadStatus === 'start' || uploadStatus === 'success') && (
-                            <div id="uploadProgress" className="progress mt-2" style={{ display: 'flex', height: '6px' }}>
-                                <div id="uploadProgressBar"
-                                     className="progress-bar progress-bar-striped progress-bar-animated"
-                                     role="progressbar"
-                                     style={{
-                                         width: `${uploadProgress}%`,
-                                         background: uploadStatus === 'success' ? 'linear-gradient(90deg, #4CAF50, #45a049)' : ''
-                                     }}
-                                     aria-valuenow={uploadProgress}
-                                     aria-valuemin="0"
-                                     aria-valuemax="100">
+
+                        <form id="uploadForm" className="mt-4" onSubmit={handleUpload}>
+                            <div className="mb-4">
+                                <div className={styles.fileInputContainer}>
+                                    <input
+                                        type="file"
+                                        className={`form-control ${styles.fileInput}`}
+                                        id="fileInput"
+                                        accept=".pdf,.md"
+                                        onChange={onFileChange}
+                                        ref={fileInputRef}
+                                    />
+                                    <div
+                                        className={`${styles.fileDropArea} ${isDragging ? styles.active : ''}`}
+                                        id="fileDropArea"
+                                        onDragOver={handleDragOver}
+                                        onDragEnter={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                    >
+                                        <i className="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                                        <p>Drag & drop your file here or click to browse</p>
+                                        <span className={styles.fileTypes}>Supports PDF and Markdown files (Max: 10MB)</span>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
-
-                    <form id="uploadForm" className="mt-4" onSubmit={handleUpload}>
-                        <div className="mb-4">
-                            <div className={styles.fileInputContainer}>
+                            <div className={`mb-4 form-check ${styles.formCheck}`}>
                                 <input
-                                    type="file"
-                                    className={`form-control ${styles.fileInput}`}
-                                    id="fileInput"
-                                    accept=".pdf,.md"
-                                    onChange={onFileChange}
-                                    ref={fileInputRef}
+                                    type="checkbox"
+                                    className={`form-check-input ${styles.formCheckInput}`}
+                                    id="useLLMCheckbox"
+                                    checked={useLLM}
+                                    onChange={(e) => setUseLLM(e.target.checked)}
                                 />
-                                <div
-                                    className={`${styles.fileDropArea} ${isDragging ? styles.active : ''}`}
-                                    id="fileDropArea"
-                                    onDragOver={handleDragOver}
-                                    onDragEnter={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                >
-                                    <i className="fas fa-cloud-upload-alt" aria-hidden="true"></i>
-                                    <p>Drag & drop your file here or click to browse</p>
-                                    <span className={styles.fileTypes}>Supports PDF and Markdown files (Max: 10MB)</span>
-                                </div>
+                                <label className={`form-check-label ${styles.formCheckLabel}`} htmlFor="useLLMCheckbox">
+                                    <i className="fas fa-robot" aria-hidden="true"></i> Fetch enhanced headers using LLM
+                                </label>
                             </div>
-                        </div>
-                        <div className={`mb-4 form-check ${styles.formCheck}`}>
-                            <input
-                                type="checkbox"
-                                className={`form-check-input ${styles.formCheckInput}`}
-                                id="useLLMCheckbox"
-                                checked={useLLM}
-                                onChange={(e) => setUseLLM(e.target.checked)}
-                            />
-                            <label className={`form-check-label ${styles.formCheckLabel}`} htmlFor="useLLMCheckbox">
-                                <i className="fas fa-robot" aria-hidden="true"></i> Fetch enhanced headers using LLM
-                            </label>
-                        </div>
-                        <button
-                            type="submit"
-                            className={`btn btn-primary ${styles.btn} ${styles.btnPrimary} ${uploadStatus === 'start' ? styles.processing : ''}`}
-                            id="uploadBtn"
-                            disabled={!file || uploadStatus === 'start'}
-                        >
-                            <i className="fas fa-cloud-upload-alt" aria-hidden="true"></i> Process
-                        </button>
-                    </form>
-                </div>
-            </section>
+                            <button
+                                type="submit"
+                                className={`btn btn-primary ${styles.btn} ${styles.btnPrimary} ${uploadStatus === 'start' ? styles.processing : ''}`}
+                                id="uploadBtn"
+                                disabled={!file || uploadStatus === 'start'}
+                            >
+                                <i className="fas fa-cloud-upload-alt" aria-hidden="true"></i> Process
+                            </button>
+                        </form>
+                    </div>
+                </section>
+            )}
 
             {/* Headers List Section */}
-            <section id="headersSection" className={`card ${styles.card}`} aria-labelledby="headers-title">
-                <div className={`card-body ${styles.cardBody}`}>
-                    <h5 id="headers-title" className="card-title">
-                        <i className="fas fa-list-ul" aria-hidden="true"></i> Select Required Sections
-                    </h5>
+            {!showUploadCard && (
+                <section id="headersSection" className={`card ${styles.card}`} aria-labelledby="headers-title">
+                    <div className={`card-body ${styles.cardBody}`}>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h5 id="headers-title" className="card-title mb-0">
+                                <i className="fas fa-list-ul" aria-hidden="true"></i> Select Required Sections
+                            </h5>
+                            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={clearFile}>
+                                <i className="fas fa-arrow-left"></i> Re-upload
+                            </button>
+                        </div>
 
-                    <div id="headersList" className={`mt-4 ${styles.headersList}`} aria-live="polite">
-                        {!file && headers.length === 0 && (
-                            <div className={styles.emptyState}>
-                                <i className="fas fa-file-alt" aria-hidden="true"></i>
-                                <p>No file uploaded yet. Upload a file to see available sections.</p>
+                        <div id="fileInfo" className={`mb-3 ${styles.fileInfo}`}>
+                            <div className={styles.fileInfoContent}>
+                                <i className="fas fa-file-alt"></i>
+                                <div className={styles.fileDetails}>
+                                    <span id="fileName" className={styles.fileName}>{file?.name}</span>
+                                    <span id="fileSize" className={styles.fileSize}>{file ? formatFileSize(file.size) : ''}</span>
+                                </div>
                             </div>
-                        )}
+                        </div>
 
-                        {file && headers.length === 0 && uploadStatus === 'success' && (
-                            <div className={`text-center py-4 ${styles.emptyState}`}>
-                                <i className="fas fa-info-circle mb-3" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
-                                <p className="text-muted">No headers found in the document.</p>
-                            </div>
-                        )}
+                        <div id="headersList" className={`mt-4 ${styles.headersList}`} aria-live="polite">
+                            {!file && headers.length === 0 && (
+                                <div className={styles.emptyState}>
+                                    <i className="fas fa-file-alt" aria-hidden="true"></i>
+                                    <p>No file uploaded yet. Upload a file to see available sections.</p>
+                                </div>
+                            )}
+
+                            {file && headers.length === 0 && uploadStatus === 'success' && (
+                                <div className={`text-center py-4 ${styles.emptyState}`}>
+                                    <i className="fas fa-info-circle mb-3" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
+                                    <p className="text-muted">No headers found in the document.</p>
+                                </div>
+                            )}
+
+                            {headers.length > 0 && (
+                                <div className="headers-container">
+                                    {headers.map(header => (
+                                        <div key={header.index} className={`${styles.headerItem} ${styles['headerLevel' + header.level]}`}>
+                                            <input
+                                                type="checkbox"
+                                                className="form-check-input me-2"
+                                                value={header.index}
+                                                id={`header-${header.index}`}
+                                                checked={selectedIndices.includes(header.index)}
+                                                onChange={() => handleCheckboxChange(header.index)}
+                                            />
+                                            <label className="form-check-label" htmlFor={`header-${header.index}`}>
+                                                {header.text}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {headers.length > 0 && (
-                            <div className="headers-container">
-                                {headers.map(header => (
-                                    <div key={header.index} className={`${styles.headerItem} ${styles['headerLevel' + header.level]}`}>
-                                        <input
-                                            type="checkbox"
-                                            className="form-check-input me-2"
-                                            value={header.index}
-                                            id={`header-${header.index}`}
-                                            checked={selectedIndices.includes(header.index)}
-                                            onChange={() => handleCheckboxChange(header.index)}
-                                        />
-                                        <label className="form-check-label" htmlFor={`header-${header.index}`}>
-                                            {header.text}
-                                        </label>
-                                    </div>
-                                ))}
+                            <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
+                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/sub1/highlighter')}>
+                                    <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
+                                </button>
+                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/highlighter')}>
+                                    <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
+                                </button>
+                                <button id="quickProceedBtn" className="btn btn-secondary"
+                                    onClick={() => navigate('/sub1/quick-process')}>
+                                    <i className="fas fa-bolt"></i> Quick Proceed
+                                </button>
                             </div>
                         )}
                     </div>
-
-                    {headers.length > 0 && (
-                        <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                            <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/sub1/highlighter')}>
-                                <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
-                            </button>
-                            <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/sub1/highlighter')}>
-                                <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
-                            </button>
-                            <button id="quickProceedBtn" className="btn btn-secondary"
-                                    onClick={() => navigate('/sub1/quick-process')}>
-                                <i className="fas fa-bolt"></i> Quick Proceed
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </section>
+                </section>
+            )}
 
             {loading && (
                 <div id="loading" className={`card mt-3 ${styles.loading}`} aria-live="polite" aria-atomic="true">
@@ -181,8 +202,8 @@ export default function MdProcessor({
                         <small className="text-muted">This may take a few moments</small>
                         <div className="progress mt-3" style={{ height: '6px' }}>
                             <div className="progress-bar progress-bar-striped progress-bar-animated"
-                                 role="progressbar" style={{ width: '100%' }} aria-valuenow="100"
-                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                role="progressbar" style={{ width: '100%' }} aria-valuenow="100"
+                                aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                     </div>
                 </div>
