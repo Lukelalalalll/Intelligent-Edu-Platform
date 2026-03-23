@@ -114,8 +114,8 @@ const MessageItem = memo(({ msg, isUser, onCopy }) => {
     );
 }, (prevProps, nextProps) => {
     return prevProps.msg.content === nextProps.msg.content &&
-           prevProps.msg.role === nextProps.msg.role &&
-           JSON.stringify(prevProps.msg.files) === JSON.stringify(nextProps.msg.files);
+        prevProps.msg.role === nextProps.msg.role &&
+        JSON.stringify(prevProps.msg.files) === JSON.stringify(nextProps.msg.files);
 });
 
 // --- 主 UI 组件 ---
@@ -131,7 +131,7 @@ function AIInteract({
 
     return (
         <>
-            <div className={styles['ai-workspace-wrapper']}>
+            <div className={`global-ai-wrapper ${styles['ai-workspace-wrapper']}`}>
                 <div className={styles['workspace-glow']}></div>
 
                 <div className={styles['ai-workspace-container']}>
@@ -226,9 +226,9 @@ function AIInteract({
                                                 {file.file_name}
                                             </span>
                                             <i className="fas fa-times"
-                                               style={{ cursor: 'pointer', color: '#868e96', marginLeft: '4px' }}
-                                               onClick={() => removeAttachedFile(idx)}
-                                               title="Remove attachment"
+                                                style={{ cursor: 'pointer', color: '#868e96', marginLeft: '4px' }}
+                                                onClick={() => removeAttachedFile(idx)}
+                                                title="Remove attachment"
                                             ></i>
                                         </div>
                                     ))}
@@ -487,7 +487,7 @@ export default function AIInteractEntry() {
             });
 
             if (!response.ok) {
-                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0,-1), { role: "assistant", content: `API Error: ${response.status}` }] } : s));
+                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0, -1), { role: "assistant", content: `API Error: ${response.status}` }] } : s));
                 setIsTyping(false);
                 return;
             }
@@ -528,7 +528,7 @@ export default function AIInteractEntry() {
                 }
             }
         } catch (error) {
-            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0,-1), { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
+            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0, -1), { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
         } finally {
             setIsTyping(false);
         }
