@@ -1,116 +1,22 @@
-// Home.jsx
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion'; // 👈 引入 Framer Motion
-import styles from '../styles/home/home.module.css';
-
-const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.2,
-            delayChildren: 0.2
-        }
-    }
-};
+import { motion, AnimatePresence } from 'framer-motion';
+import styles from '../../../styles/home/home.module.css';
 
 const itemVariants = {
     hidden: { opacity: 0, y: 30 },
     show: {
         opacity: 1,
         y: 0,
-        transition: { type: "spring", stiffness: 300, damping: 24 } // 使用弹簧物理效果，更高级
+        transition: { type: "spring", stiffness: 300, damping: 24 }
     }
 };
 
 const messageVariants = {
     hidden: { opacity: 0, y: 15, scale: 0.98 },
     show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
-};
-
-
-const WelcomeBanner = () => {
-    return (
-        <motion.section
-            variants={itemVariants}
-            className={styles['welcome-banner']}
-        >
-            <motion.h1 variants={itemVariants}>
-                Welcome to HKU Educational Tools Platform
-            </motion.h1>
-            <motion.p variants={itemVariants}>
-                Your gateway to intelligent learning and educational resources
-            </motion.p>
-        </motion.section>
-    );
-};
-
-const ToolCard = ({ title, desc, icon, url }) => {
-    const cardRef = useRef(null);
-    const sheenRef = useRef(null);
-    const rectRef = useRef(null);
-    const rafRef = useRef(null);
-
-    const handleMouseEnter = () => {
-        if (cardRef.current) {
-            cardRef.current.style.transition = 'transform 0.2s ease-out';
-            rectRef.current = cardRef.current.getBoundingClientRect();
-        }
-    };
-
-    const handleMouseMove = (e) => {
-        if (!cardRef.current || !sheenRef.current || !rectRef.current) return;
-        const { clientX, clientY } = e;
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-        rafRef.current = requestAnimationFrame(() => {
-            const rect = rectRef.current;
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-
-            const rotateX = ((y - centerY) / centerY) * -8;
-            const rotateY = ((x - centerX) / centerX) * 8;
-
-            cardRef.current.style.transform = `perspective(1000px) translateY(-15px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-            sheenRef.current.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.3), transparent 50%)`;
-            sheenRef.current.style.opacity = '1';
-        });
-    };
-
-    const handleMouseLeave = () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rectRef.current = null;
-        if (cardRef.current) {
-            cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
-            cardRef.current.style.transform = '';
-        }
-        if (sheenRef.current) sheenRef.current.style.opacity = '0';
-    };
-
-    useEffect(() => {
-        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    }, []);
-
-    return (
-        <div className={styles.card} ref={cardRef} onMouseMove={handleMouseMove} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-            <div className={styles['card-sheen']} ref={sheenRef} style={{
-                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4), transparent 60%)',
-                opacity: '0', pointerEvents: 'none', zIndex: '3', mixBlendMode: 'overlay', transition: 'opacity 0.4s ease'
-            }}></div>
-            <div className={styles['card-content']}>
-                <div className={styles['card-icon']}><i className={`fas ${icon}`}></i></div>
-                <h3 className={styles['card-title']}>{title}</h3>
-                <p className={styles['card-description']}>{desc}</p>
-                <Link to={url} className={styles['card-link']}>Enter</Link>
-            </div>
-        </div>
-    );
 };
 
 const GeminiChat = ({ aiInteractUrl }) => {
@@ -129,7 +35,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const probeDataRef = useRef({ offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
 
     const markdownComponents = useMemo(() => ({
-        code({node, inline, className, children, ...props}) {
+        code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
             return !inline && match ? (
                 <SyntaxHighlighter language={match[1]} style={undefined} PreTag="div" {...props}>
@@ -150,7 +56,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setInput(target.value);
         target.style.height = 'auto';
         target.style.height = target.scrollHeight + 'px';
-        if(target.value === '') target.style.height = 'auto';
+        if (target.value === '') target.style.height = 'auto';
     }, []);
 
     const handleSend = useCallback(async () => {
@@ -227,7 +133,6 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [handleSend]);
 
-    // 原生全屏动画逻辑保留，但外部包裹 motion
     const toggleFullscreen = useCallback(() => {
         if (isAnimatingRef.current) return;
         isAnimatingRef.current = true;
@@ -319,7 +224,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 document.body.classList.remove('chat-fullscreen-active');
                 isAnimatingRef.current = false;
                 setIsFull(false);
-                if(messagesContainerRef.current) {
+                if (messagesContainerRef.current) {
                     messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
                 }
             }, animDuration);
@@ -373,7 +278,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
                                 variants={messageVariants}
                                 initial="hidden"
                                 animate="show"
-                                exit={{ opacity: 0, y: -10 }} // 打字动画消失时的效果
+                                exit={{ opacity: 0, y: -10 }}
                                 className={`${styles.message} ${styles['ai-message']}`}
                             >
                                 <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
@@ -405,49 +310,4 @@ const GeminiChat = ({ aiInteractUrl }) => {
     );
 };
 
-export default function Home({ config }) {
-    const toolCardsData = useMemo(() => [
-        { title: "AI Slides Generator", desc: "Intelligent document processing and presentation generation", icon: "fa-book-open", url: config.urls.sub1 },
-        { title: "AI Question Generator", desc: "Smart question extraction and automated generation", icon: "fa-users", url: config.urls.sub3 },
-        { title: "AI Image Extract System", desc: "PDF image extraction and AI generation tool", icon: "fa-tasks", url: config.urls.sub4 },
-        { title: "AI Diagram Tool", desc: "Extract from word/PDF, Search and Edit SVG, AI Generate", icon: "fa-cog", url: config.urls.sub5 },
-    ], [config.urls]);
-
-    return (
-        // 👈 最外层包裹 motion.div，控制所有子组件的入场时机
-        <motion.div
-            initial="hidden"
-            animate="show"
-            variants={containerVariants}
-        >
-            <WelcomeBanner />
-            <GeminiChat aiInteractUrl={config.urls.aiInteract} />
-
-            <motion.div variants={itemVariants} className={styles['mailbox-section']}>
-                <Link to={config.urls.mailbox} className={styles['mailbox-banner-card']}>
-                    <div className={styles['mailbox-left']}>
-                        <div className={styles['mailbox-icon-wrapper']}>
-                            <i className="fas fa-inbox"></i><span className={styles['notification-dot']}></span>
-                        </div>
-                        <div className={styles['mailbox-text']}>
-                            <h3>Grading Mailbox</h3><p>Review and grade pending student assignments</p>
-                        </div>
-                    </div>
-                    <div className={styles['mailbox-right']}>
-                        <div className={styles['pending-badge']}><i className="fas fa-bell"></i> <span>3 Pending</span></div>
-                        <span className={styles['btn-enter-mailbox']}>Enter Workspace <i className="fas fa-arrow-right"></i></span>
-                    </div>
-                </Link>
-            </motion.div>
-
-            {/* 这里的容器不再需要 CSS grid gap 外的其他入场动画了 */}
-            <motion.div variants={containerVariants} className={styles['cards-container']}>
-                {toolCardsData.map((card, index) => (
-                    <motion.div key={index} variants={itemVariants}>
-                        <ToolCard {...card} />
-                    </motion.div>
-                ))}
-            </motion.div>
-        </motion.div>
-    );
-}
+export default GeminiChat;
