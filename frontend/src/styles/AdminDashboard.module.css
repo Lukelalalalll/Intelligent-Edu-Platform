@@ -30,7 +30,7 @@
 .statCard:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 .statInfo h3 { font-size: 0.9rem; color: var(--text-sub); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
 .count { font-size: 2rem; font-weight: 800; color: var(--text-main); }
-.statIcon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.statIcon { width: 50px; height: 50px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
 
 .cardTotal .statIcon { background: rgba(0, 123, 85, 0.1); color: var(--primary-color); }
 .cardAdmin .statIcon { background: rgba(0, 122, 255, 0.1); color: var(--admin-color); }
@@ -102,7 +102,7 @@
     box-sizing: border-box !important;
     width: 100%;
     padding: 12px 15px 12px 48px !important;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid #e0e0e0;
     background: #fff;
     outline: none;
@@ -129,10 +129,10 @@
 .customTable tbody tr:hover { background: #f8fcfb; }
 
 .userCell { display: flex; align-items: center; gap: 15px; }
-.avatarCircle { width: 40px; height: 40px; border-radius: 12px; background: #eee; color: #555; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8); }
+.avatarCircle { width: 40px; height: 40px; border-radius: var(--radius-md); background: #eee; color: #555; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8); }
 
 /* 角色标签 */
-.badge { padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.3px; text-transform: uppercase; }
+.badge { padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.3px; text-transform: uppercase; }
 .badgeAdmin { background: #eef7ff; color: #0066cc; border: 1px solid rgba(0, 102, 204, 0.15); }
 .badgeTeacher { background: #eef2ff; color: #4f46e5; border: 1px solid rgba(79, 70, 229, 0.15); }
 .badgeStudent { background: #eefdf5; color: #007b55; border: 1px solid rgba(0, 123, 85, 0.15); }
@@ -148,7 +148,7 @@
 
 .btnAction {
     width: 34px; height: 34px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     border: none;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -206,7 +206,7 @@
 .formLabel { display: block; margin-bottom: 8px; font-weight: 600; color: #555; font-size: 0.85rem; text-align: left;}
 .formInput {
     width: 100%; padding: 12px 16px;
-    border: 2px solid #f0f0f0; border-radius: 12px;
+    border: 2px solid #f0f0f0; border-radius: var(--radius-md);
     font-size: 0.95rem; outline: none; transition: all 0.2s;
     background: #f9f9f9;
 }
@@ -230,7 +230,7 @@
     padding: 12px 16px;
     padding-right: 40px;
     border: 2px solid #f0f0f0;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: 0.95rem;
     outline: none;
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);

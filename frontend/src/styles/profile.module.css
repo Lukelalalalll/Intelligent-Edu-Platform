@@ -132,7 +132,7 @@
     align-items: center;
     gap: 8px;
     padding: 6px 16px;
-    border-radius: 50px;
+    border-radius: var(--radius-pill);
     font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -193,7 +193,7 @@
     color: var(--text-main);
     background: var(--bg-input);
     border: 2px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     outline: none;
     transition: all 0.3s ease;
 }
@@ -243,7 +243,7 @@
     background: var(--primary-color);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     font-size: 1.05rem;
     font-weight: 700;
     cursor: pointer;
@@ -270,7 +270,7 @@
 
 .alert {
     padding: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     margin-bottom: 24px;
     font-size: 0.95rem;
     display: flex;
@@ -310,7 +310,7 @@
 
 .modalBox {
     background: #fff;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     width: 90%;
     max-width: 400px;
     padding: 30px;
@@ -338,7 +338,7 @@
 .modalActions { display: flex; gap: 12px; }
 
 .btnModal {
-    flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    flex: 1; padding: 12px; border-radius: var(--radius-pill); border: none; font-weight: 700; cursor: pointer; transition: all 0.2s;
 }
 .btnCancel { background: var(--bg-input); color: var(--text-main); }
 .btnCancel:hover { background: #d1d8e0; }

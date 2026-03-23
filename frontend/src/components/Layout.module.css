@@ -65,7 +65,7 @@
     background: rgba(0, 122, 255, 0.1);
     color: var(--admin-color);
     padding: 6px 14px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
     font-size: 0.9rem;
     text-decoration: none;
@@ -75,7 +75,7 @@
     background: rgba(0, 123, 85, 0.1);
     color: var(--primary-color);
     padding: 6px 14px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
     text-decoration: none;
 }
@@ -84,7 +84,7 @@
     background: rgba(255, 171, 0, 0.1);
     color: #e67e22;
     padding: 6px 14px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
     text-decoration: none;
 }
@@ -96,7 +96,7 @@
     background: rgba(0, 123, 85, 0.1);
     color: var(--primary-color);
     padding: 6px 14px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-weight: 700;
     text-decoration: none;
 }

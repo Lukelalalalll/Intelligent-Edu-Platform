@@ -32,7 +32,7 @@
 .cardTitle i {
     width: 48px;
     height: 48px;
-    border-radius: 14px;
+    border-radius: var(--radius-pill);
     background: rgba(0, 123, 85, 0.1);
     color: var(--primary-color);
     display: flex;
@@ -111,7 +111,7 @@
     padding: 14px 20px;
     background-color: var(--bg-input);
     border: 2px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     font-size: 1.05rem;
     transition: var(--transition);
     color: var(--text-main);
@@ -127,7 +127,7 @@
     margin-top: 10px;
     padding: 12px 16px;
     background: rgba(0, 123, 85, 0.05);
-    border-radius: 10px;
+    border-radius: var(--radius-pill);
     font-size: 0.85rem;
     color: var(--primary-dark);
     line-height: 1.6;
@@ -154,7 +154,7 @@
 
 .slideCard {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: var(--radius-pill);
     padding: 35px;
     border: 1px solid rgba(0, 0, 0, 0.06);
     position: relative;
@@ -204,7 +204,7 @@
 
 .markdownContent::-webkit-scrollbar-thumb {
     background: rgba(0, 123, 85, 0.2);
-    border-radius: 10px;
+    border-radius: var(--radius-pill);
 }
 
 .markdownContent::-webkit-scrollbar-thumb:hover {
@@ -335,14 +335,14 @@
     }
 }
 /* --- Elegant Script Area & Buttons --- */
-.talkingScriptElegant { background: linear-gradient(to right, rgba(0, 184, 217, 0.04), rgba(32, 101, 209, 0.04)); border: 1px solid rgba(32, 101, 209, 0.15); border-radius: 16px; padding: 30px; margin-top: 2.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; animation: slideUpFade 0.6s var(--ease-spring) backwards 0.3s; }
+.talkingScriptElegant { background: linear-gradient(to right, rgba(0, 184, 217, 0.04), rgba(32, 101, 209, 0.04)); border: 1px solid rgba(32, 101, 209, 0.15); border-radius: var(--radius-pill); padding: 30px; margin-top: 2.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; animation: slideUpFade 0.6s var(--ease-spring) backwards 0.3s; }
 .scriptInfo h4 { color: #00B8D9; font-weight: 800; margin-bottom: 10px; font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
 .scriptInfo p { margin: 0; color: var(--text-sub); font-size: 1.05rem; }
 
-.btnDownloadWord { background: white; border: 2px solid #00B8D9; color: #00B8D9; padding: 14px 28px; border-radius: 50px; font-weight: 700; font-size: 1.1rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 184, 217, 0.1); }
+.btnDownloadWord { background: white; border: 2px solid #00B8D9; color: #00B8D9; padding: 14px 28px; border-radius: var(--radius-pill); font-weight: 700; font-size: 1.1rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 184, 217, 0.1); }
 .btnDownloadWord:hover { background: #00B8D9; color: white !important; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 184, 217, 0.2); }
 
-.btnProceed { background: var(--text-main); color: white; padding: 14px 34px; border-radius: 50px; font-size: 1.15rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.15); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; }
+.btnProceed { background: var(--text-main); color: white; padding: 14px 34px; border-radius: var(--radius-pill); font-size: 1.15rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.15); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; }
 .btnProceed:hover { background: #000; transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.25); color: white !important; }
 
 @media (max-width: 768px) {

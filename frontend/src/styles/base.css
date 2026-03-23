@@ -34,9 +34,10 @@
     --shadow-hover: 0 20px 40px rgba(0, 123, 85, 0.12), 0 12px 20px rgba(0, 0, 0, 0.03);
 
     /* 圆角变量 */
-    --radius-sm: 8px;
-    --radius-md: 16px;
-    --radius-pill: 50px;
+    --radius-sm: 14px;
+    --radius-md: 24px;
+    --radius-lg: 38px;
+    --radius-pill: 9999px;
     /* 胶囊圆角 */
 
     /* 尺寸变量 */
@@ -550,7 +551,7 @@ main:has([class*="ai-workspace-wrapper"]) {
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: 0 15px 30px -5px rgba(0, 123, 85, 0.25);
     color: white;
     position: relative;

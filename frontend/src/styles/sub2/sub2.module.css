@@ -224,7 +224,7 @@
 .markdownContainer {
     background-color: #fcfcfc;
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     border: 1px solid #eee;
     color: #333;
     line-height: 1.7;

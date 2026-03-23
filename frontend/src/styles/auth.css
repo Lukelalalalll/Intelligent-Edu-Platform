@@ -142,7 +142,7 @@
     color: var(--text-main);
     background: var(--auth-bg-input) !important;
     border: 2px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     outline: none;
     transition: all 0.3s ease;
 }
@@ -216,7 +216,7 @@
     background: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -317,7 +317,7 @@
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: 12px;
+    border-radius: var(--radius-pill);
     padding: 16px 24px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
     display: flex;

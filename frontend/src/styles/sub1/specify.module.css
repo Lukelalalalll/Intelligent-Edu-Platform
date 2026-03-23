@@ -68,22 +68,22 @@
 .loadingSubtext { color: var(--text-sub); font-size: 1.15rem; font-weight: 500; }
 
 .slidesGridLayout { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 2.5rem; margin-top: 1rem; }
-.slideCardElegant { background: #ffffff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 35px 30px; position: relative; display: flex; flex-direction: column; transition: var(--transition); overflow: hidden; animation: slideUpFade 0.6s var(--ease-spring) backwards; }
+.slideCardElegant { background: #ffffff; border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 35px 30px; position: relative; display: flex; flex-direction: column; transition: var(--transition); overflow: hidden; animation: slideUpFade 0.6s var(--ease-spring) backwards; }
 .slideCardElegant:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 123, 85, 0.15); border-color: rgba(0, 123, 85, 0.4); }
 .slideCardElegant::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, var(--aurora-blue), var(--aurora-cyan)); }
 .slideCardElegant:nth-child(even)::before { background: linear-gradient(90deg, var(--primary-color), #00B8D9); }
-.slideNumberBadge { position: absolute; top: 20px; right: 20px; background: rgba(0, 123, 85, 0.08); color: var(--primary-color); font-size: 0.85rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; letter-spacing: 1px; }
+.slideNumberBadge { position: absolute; top: 20px; right: 20px; background: rgba(0, 123, 85, 0.08); color: var(--primary-color); font-size: 0.85rem; font-weight: 800; padding: 4px 12px; border-radius: var(--radius-pill); letter-spacing: 1px; }
 .slideCardElegant h4 { color: var(--text-main); font-size: 1.5rem; font-weight: 800; margin-top: 10px; margin-bottom: 24px; padding-bottom: 16px; line-height: 1.4; border-bottom: 2px solid rgba(0,0,0,0.04); }
 .slideBulletsList { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
 .slideBulletsList li { position: relative; padding-left: 32px; margin-bottom: 18px; color: #333; font-size: 1.1rem; line-height: 1.8; }
 .slideBulletsList li::before { content: ""; position: absolute; left: 0; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--primary-color); box-shadow: 0 0 8px rgba(0, 123, 85, 0.5); }
 
-.talkingScriptElegant { background: linear-gradient(to right, rgba(0, 184, 217, 0.03), rgba(32, 101, 209, 0.03)); border: 1px solid rgba(32, 101, 209, 0.15); border-radius: 16px; padding: 30px; margin-top: 2.5rem; display: flex; align-items: center; justify-content: space-between; animation: slideUpFade 0.6s var(--ease-spring) backwards 0.3s; }
+.talkingScriptElegant { background: linear-gradient(to right, rgba(0, 184, 217, 0.03), rgba(32, 101, 209, 0.03)); border: 1px solid rgba(32, 101, 209, 0.15); border-radius: var(--radius-md); padding: 30px; margin-top: 2.5rem; display: flex; align-items: center; justify-content: space-between; animation: slideUpFade 0.6s var(--ease-spring) backwards 0.3s; }
 .scriptInfo h4 { color: var(--aurora-blue); font-weight: 800; margin-bottom: 10px; font-size: 1.4rem; }
 .scriptInfo p { margin: 0; color: var(--text-sub); font-size: 1.05rem; }
-.btnDownloadWord { background: white; border: 2px solid var(--aurora-blue); color: var(--aurora-blue); padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 1.05rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; }
+.btnDownloadWord { background: white; border: 2px solid var(--aurora-blue); color: var(--aurora-blue); padding: 12px 24px; border-radius: var(--radius-pill); font-weight: 700; font-size: 1.05rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; }
 .btnDownloadWord:hover { background: var(--aurora-blue); color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(32, 101, 209, 0.2); }
-.btnProceed { background: var(--text-main); color: white; padding: 18px 45px; border-radius: 40px; font-size: 1.25rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; margin-top: 2rem; }
+.btnProceed { background: var(--text-main); color: white; padding: 18px 45px; border-radius: var(--radius-pill); font-size: 1.25rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.2); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; margin-top: 2rem; }
 .btnProceed:hover { background: #000; transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
 
 .customScrollbar::-webkit-scrollbar { width: 6px; }
