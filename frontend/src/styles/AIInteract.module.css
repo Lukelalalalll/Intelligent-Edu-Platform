@@ -1,11 +1,10 @@
 .ai-workspace-wrapper {
     position: relative;
-    max-width: 2000px; /* 进一步放宽最大宽度，适配超宽屏 */
-    width: calc(100% - 40px); /* 左右仅保留 20px 的极致呼吸感 */
+    max-width: 2000px;
+    width: calc(100% - 40px);
     margin: 10px auto 0;
-    height: calc(100vh - 100px);
-    min-height: 700px;
 
+    /* These top styles are overridden by the bottom, keeping for animation */
     animation: premiumEntrance 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transform-origin: center bottom;
 }
@@ -13,9 +12,12 @@
 @keyframes premiumEntrance {
     0% {
         opacity: 0;
-        transform: translateY(40px) scale(0.97); /* 从下方升起并带有极其轻微的缩放 */
-        filter: blur(8px); /* 入场时带有轻微模糊，极具高级感 */
+        transform: translateY(40px) scale(0.97);
+        /* 从下方升起并带有极其轻微的缩放 */
+        filter: blur(8px);
+        /* 入场时带有轻微模糊，极具高级感 */
     }
+
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -26,28 +28,41 @@
 /* 沉浸式背景光晕 - 扩大光晕范围使其更融合 */
 .workspace-glow {
     position: absolute;
-    top: -100px; left: 5%; right: 5%; bottom: -100px;
+    top: -100px;
+    left: 5%;
+    right: 5%;
+    bottom: -100px;
     background: radial-gradient(ellipse at 50% 50%, rgba(0, 123, 85, 0.12), transparent 70%);
     z-index: -1;
     border-radius: 50%;
     filter: blur(60px);
     pointer-events: none;
-    animation: glowPulse 4s ease-in-out infinite alternate; /* 光晕呼吸效果 */
+    animation: glowPulse 4s ease-in-out infinite alternate;
+    /* 光晕呼吸效果 */
 }
 
 @keyframes glowPulse {
-    0% { opacity: 0.7; transform: scale(0.95); }
-    100% { opacity: 1; transform: scale(1.05); }
+    0% {
+        opacity: 0.7;
+        transform: scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
 }
 
 .ai-workspace-container {
     display: flex;
     height: 100%;
-    background: rgba(255, 255, 255, 0.75); /* 稍微降低白底透明度，让毛玻璃更透 */
+    background: rgba(255, 255, 255, 0.75);
+    /* 稍微降低白底透明度，让毛玻璃更透 */
     /* iOS 级毛玻璃质感：增加 saturate 让透过去的颜色更鲜艳 */
     backdrop-filter: blur(32px) saturate(150%);
     -webkit-backdrop-filter: blur(32px) saturate(150%);
-    border-radius: 28px; /* 稍微增大圆角，配合大屏占比 */
+    border-radius: 28px;
+    /* 稍微增大圆角，配合大屏占比 */
 
     /* 核心升级：复合阴影结构 (底层大阴影制造空间感，中层阴影制造轮廓，内阴影做高光) */
     box-shadow:
@@ -56,14 +71,16 @@
         inset 0 1px 1px rgba(255, 255, 255, 0.9),
         inset 0 0 0 1px rgba(255, 255, 255, 0.5);
     overflow: hidden;
-    border: 1px solid rgba(0, 123, 85, 0.15); /* 加深一点点边缘轮廓光 */
+    border: 1px solid rgba(0, 123, 85, 0.15);
+    /* 加深一点点边缘轮廓光 */
 }
 
 /* =========================================
    Sidebar (History)
    ========================================= */
 .chat-sidebar {
-    width: 300px; /* 原为 280px，加宽一点 */
+    width: 300px;
+    /* 原为 280px，加宽一点 */
     background: #F9FAFB;
     border-right: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
@@ -112,14 +129,21 @@
 }
 
 /* 隐藏滚动条 */
-.history-list::-webkit-scrollbar { width: 4px; }
-.history-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+.history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
 
 /* 修改 history-item 的基础对齐 */
 .history-item {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* 两端对齐 */
+    justify-content: space-between;
+    /* 两端对齐 */
     padding: 12px 14px;
     border-radius: 10px;
     color: #4B5563;
@@ -134,8 +158,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    flex: 1; /* 占据剩余全部空间 */
-    overflow: hidden; /* 保证省略号生效 */
+    flex: 1;
+    /* 占据剩余全部空间 */
+    overflow: hidden;
+    /* 保证省略号生效 */
 }
 
 .history-item-content i {
@@ -169,7 +195,7 @@
 .sidebar-footer {
     margin-top: auto;
     padding-top: 20px;
-    border-top: 1px solid rgba(0,0,0,0.05);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .user-status {
@@ -181,7 +207,8 @@
 }
 
 .status-dot {
-    width: 8px; height: 8px;
+    width: 8px;
+    height: 8px;
     background-color: #00e676;
     border-radius: 50%;
     box-shadow: 0 0 8px #00e676;
@@ -202,8 +229,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    background: rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .header-info h2 {
@@ -231,7 +258,7 @@
     font-weight: 600;
     padding: 8px 16px;
     border-radius: 20px;
-    background: rgba(0,0,0,0.04);
+    background: rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
 }
 
@@ -248,11 +275,18 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 将消息容器居中 */
+    align-items: center;
+    /* 将消息容器居中 */
 }
 
-.chat-messages::-webkit-scrollbar { width: 6px; }
-.chat-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
 
 /* 气泡样式 */
 .message {
@@ -270,38 +304,58 @@
 }
 
 @keyframes slideIn {
-    to { opacity: 1; transform: translateY(0); }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* AI和User的对齐方式重构，适应居中的 max-width 容器 */
 .message.ai-message {
     flex-direction: row;
 }
+
 .message.user-message {
     flex-direction: row-reverse;
 }
 
 .message .avatar {
-    width: 38px; height: 38px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 1rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-.ai-message .avatar { background: linear-gradient(135deg, #007B55, #004D40); color: white; }
-.user-message .avatar { background: #f0f2f5; color: #555; }
+
+.ai-message .avatar {
+    background: linear-gradient(135deg, #007B55, #004D40);
+    color: white;
+}
+
+.user-message .avatar {
+    background: #f0f2f5;
+    color: #555;
+}
 
 .message .bubble {
     padding: 14px 20px;
     border-radius: 20px;
     color: #1a1a1a;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    max-width: 85%; /* 气泡最多占据所在行的 85% */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-width: 85%;
+    /* 气泡最多占据所在行的 85% */
 }
+
 .ai-message .bubble {
     background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.04);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     border-top-left-radius: 4px;
 }
+
 .user-message .bubble {
     background: linear-gradient(120deg, #007B55, #004D40);
     color: white;
@@ -314,16 +368,19 @@
     padding: 0 10px 10px;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 居中对齐 */
+    align-items: center;
+    /* 居中对齐 */
 }
 
 .input-wrapper {
-    display: flex; align-items: flex-end;
-    background: #ffffff; border-radius: 24px;
+    display: flex;
+    align-items: flex-end;
+    background: #ffffff;
+    border-radius: 24px;
     padding: 10px 10px 10px 24px;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 
     /* 核心修改：与对话区域宽度保持一致 */
     width: 100%;
@@ -332,27 +389,43 @@
 
 .input-wrapper:focus-within {
     border-color: rgba(0, 123, 85, 0.4);
-    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1), 0 8px 24px rgba(0,0,0,0.06);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
     transform: translateY(-2px);
 }
 
 .workspace-input {
-    flex: 1; border: none; background: transparent; outline: none;
-    font-family: inherit; font-size: 1rem; resize: none; color: #1a1a1a;
-    padding: 12px 0; max-height: 150px;
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 1rem;
+    resize: none;
+    color: #1a1a1a;
+    padding: 12px 0;
+    max-height: 150px;
 }
 
 .send-btn {
-    width: 46px; height: 46px; border: none; border-radius: 50%;
-    background: #007B55; color: white; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    margin-left: 12px; transition: all 0.3s ease;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: #007B55;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 12px;
+    transition: all 0.3s ease;
     box-shadow: 0 4px 10px rgba(0, 123, 85, 0.2);
     flex-shrink: 0;
 }
 
 .send-btn:hover {
-    background: #004D40; transform: scale(1.08) rotate(-5deg);
+    background: #004D40;
+    transform: scale(1.08) rotate(-5deg);
     box-shadow: 0 6px 14px rgba(0, 123, 85, 0.3);
 }
 
@@ -364,25 +437,31 @@
     width: 100%;
     max-width: 900px;
 }
+
 /* 移动端适配 */
 /* 移动端适配 */
 @media (max-width: 900px) {
     .ai-workspace-wrapper {
-        width: 100%; /* 移动端完全贴边 */
+        width: 100%;
+        /* 移动端完全贴边 */
         margin: 0;
-        height: calc(100vh - 60px); /* 视顶部导航栏调整 */
-        padding: 0; /* 移除外边距 */
+        height: calc(100vh - 60px);
+        /* 视顶部导航栏调整 */
+        padding: 0;
+        /* 移除外边距 */
     }
 
     .ai-workspace-container {
-        border-radius: 0; /* 移动端全屏铺满时取消圆角更自然 */
+        border-radius: 0;
+        /* 移动端全屏铺满时取消圆角更自然 */
         border-left: none;
         border-right: none;
         border-bottom: none;
     }
 
     .chat-sidebar {
-        display: none; /* 移动端暂时隐藏侧边栏 */
+        display: none;
+        /* 移动端暂时隐藏侧边栏 */
     }
 
     .chat-main-header,
@@ -402,24 +481,30 @@
 .bubble {
     padding: 16px 24px !important;
     border-radius: 12px;
-    max-width: 80%; /* 防止气泡太长 */
+    max-width: 80%;
+    /* 防止气泡太长 */
 }
 
 /* 2. 专门针对 Markdown 渲染出来的容器做微调 */
 .markdown-body {
-    padding-left: 10px !important; /* 微调左侧边距 */
+    padding-left: 10px !important;
+    /* 微调左侧边距 */
     font-size: 15px;
     line-height: 1.6;
 }
 
 /* 3. 🔴 修复多行代码块 (```代码```)：浅灰背景 + 深色文字 */
 .markdown-body pre {
-    background-color: #f6f8fa !important; /* GitHub 风格浅灰色背景 */
-    border: 1px solid #e1e4e8 !important; /* 加上极其细微的边框，质感更好 */
-    color: #24292e !important; /* 基础文字颜色改为深色 */
+    background-color: #f6f8fa !important;
+    /* GitHub 风格浅灰色背景 */
+    border: 1px solid #e1e4e8 !important;
+    /* 加上极其细微的边框，质感更好 */
+    color: #24292e !important;
+    /* 基础文字颜色改为深色 */
     padding: 16px !important;
     border-radius: 8px;
-    overflow-x: auto; /* 代码太长时允许横向滚动 */
+    overflow-x: auto;
+    /* 代码太长时允许横向滚动 */
     margin: 14px 0;
 }
 
@@ -433,9 +518,11 @@
 }
 
 /* 4. 🔴 修复行内代码 (比如包裹着的一个单词 `React`) */
-.markdown-body :not(pre) > code {
-    background-color: rgba(0, 0, 0, 0.06) !important; /* 极其浅的灰色底 */
-    color: #d63384 !important; /* 醒目的紫红色，和普通文字区分开 */
+.markdown-body :not(pre)>code {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+    /* 极其浅的灰色底 */
+    color: #d63384 !important;
+    /* 醒目的紫红色，和普通文字区分开 */
     padding: 3px 6px;
     border-radius: 4px;
     font-size: 0.9em;
@@ -446,16 +533,21 @@
 .markdown-body p {
     margin: 0 0 12px 0;
 }
+
 .markdown-body p:last-child {
     margin-bottom: 0;
 }
 
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
     margin: 18px 0 10px 0;
     color: #1a1a1a;
 }
 
-.markdown-body ul, .markdown-body ol {
+.markdown-body ul,
+.markdown-body ol {
     padding-left: 24px;
     margin: 10px 0 10px 10px;
 }
@@ -472,25 +564,33 @@
 .delete-chat-btn {
     background: rgba(0, 0, 0, 0.04);
     border: none;
-    color: #a0a0a0; /* 默认使用低调的灰色，避免视觉干扰 */
+    color: #a0a0a0;
+    /* 默认使用低调的灰色，避免视觉干扰 */
     cursor: pointer;
-    opacity: 1; /* 移除隐藏，常驻显示 */
+    opacity: 1;
+    /* 移除隐藏，常驻显示 */
     width: 28px;
     height: 28px;
-    border-radius: 8px; /* 优雅的微圆角矩形 */
+    border-radius: 8px;
+    /* 优雅的微圆角矩形 */
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 弹簧动画曲线 */
-    transform: scale(1); /* 默认正常大小 */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* 弹簧动画曲线 */
+    transform: scale(1);
+    /* 默认正常大小 */
     flex-shrink: 0;
 }
 
 .delete-chat-btn:hover {
     color: #ffffff;
-    background: #ff4d4f; /* 悬浮时变成醒目的红色 */
-    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3); /* 危险操作的高光阴影 */
-    transform: scale(1.08); /* 悬浮微动放大 */
+    background: #ff4d4f;
+    /* 悬浮时变成醒目的红色 */
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+    /* 危险操作的高光阴影 */
+    transform: scale(1.08);
+    /* 悬浮微动放大 */
 }
 
 .delete-chat-btn:active {
@@ -503,8 +603,10 @@
    效果：常驻显示，半透明毛玻璃质感，融入极客黑底，悬浮时提亮并轻微上移
    ========================================= */
 .code-copy-btn {
-    background: rgba(255, 255, 255, 0.08); /* 微微的透明白底 */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* 极细的高光边框 */
+    background: rgba(255, 255, 255, 0.08);
+    /* 微微的透明白底 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* 极细的高光边框 */
     border-radius: 6px;
     color: #b0b0b0;
     cursor: pointer;
@@ -515,8 +617,10 @@
     font-weight: 500;
     padding: 6px 10px;
     transition: all 0.25s ease;
-    backdrop-filter: blur(4px); /* 背景微毛玻璃 */
-    opacity: 1; /* 常驻显示 */
+    backdrop-filter: blur(4px);
+    /* 背景微毛玻璃 */
+    opacity: 1;
+    /* 常驻显示 */
 }
 
 .code-copy-btn:hover {
@@ -540,14 +644,18 @@
     display: flex;
     justify-content: flex-end;
     margin-top: 14px;
-    opacity: 1; /* 移除隐藏，常驻显示 */
-    transform: translateY(0); /* 移除默认位移 */
+    opacity: 1;
+    /* 移除隐藏，常驻显示 */
+    transform: translateY(0);
+    /* 移除默认位移 */
 }
 
 .msg-action-btn {
     background: #ffffff;
-    border: 1px solid rgba(0, 123, 85, 0.25); /* 使用HKU绿色的透明边框 */
-    border-radius: 20px; /* 药丸形状 */
+    border: 1px solid rgba(0, 123, 85, 0.25);
+    /* 使用HKU绿色的透明边框 */
+    border-radius: 20px;
+    /* 药丸形状 */
     padding: 6px 14px;
     font-size: 0.8rem;
     font-weight: 500;
@@ -557,15 +665,19 @@
     align-items: center;
     gap: 6px;
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.05); /* 淡淡的底阴影 */
+    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.05);
+    /* 淡淡的底阴影 */
 }
 
 .msg-action-btn:hover {
-    background: linear-gradient(120deg, #007B55, #006042); /* 悬浮变成带质感的实心绿 */
+    background: linear-gradient(120deg, #007B55, #006042);
+    /* 悬浮变成带质感的实心绿 */
     color: #ffffff;
     border-color: transparent;
-    box-shadow: 0 4px 14px rgba(0, 123, 85, 0.25); /* 光晕扩散 */
-    transform: translateY(-2px); /* 悬浮升起 */
+    box-shadow: 0 4px 14px rgba(0, 123, 85, 0.25);
+    /* 光晕扩散 */
+    transform: translateY(-2px);
+    /* 悬浮升起 */
 }
 
 .msg-action-btn:active {
@@ -576,6 +688,7 @@
 .msg-action-btn i {
     transition: color 0.3s;
 }
+
 .msg-action-btn:hover i {
     color: #ffffff !important;
 }
@@ -627,16 +740,25 @@
     display: inline-block !important;
 }
 
-.code-block-mac-dots span:nth-child(1) { background-color: #ff5f56 !important; }
-.code-block-mac-dots span:nth-child(2) { background-color: #ffbd2e !important; }
-.code-block-mac-dots span:nth-child(3) { background-color: #27c93f !important; }
+.code-block-mac-dots span:nth-child(1) {
+    background-color: #ff5f56 !important;
+}
+
+.code-block-mac-dots span:nth-child(2) {
+    background-color: #ffbd2e !important;
+}
+
+.code-block-mac-dots span:nth-child(3) {
+    background-color: #27c93f !important;
+}
 
 /* 修复语言文字 (如 screenshot 里的 python) 的颜色和排版 */
 .code-lang-text {
     text-transform: lowercase !important;
     font-weight: 600 !important;
     font-size: 0.85rem !important;
-    color: #a0a0a0 !important; /* 浅灰色，适应深色头部 */
+    color: #a0a0a0 !important;
+    /* 浅灰色，适应深色头部 */
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
     margin: 0 !important;
 }
@@ -646,7 +768,8 @@
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 6px !important;
-    color: #e0e0e0 !important; /* 强制浅色，防止看不清 */
+    color: #e0e0e0 !important;
+    /* 强制浅色，防止看不清 */
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
@@ -681,6 +804,7 @@
     line-height: 1.6 !important;
     text-shadow: none !important;
 }
+
 .markdown-body pre code.hljs {
     color: #abb2bf !important;
 }
@@ -692,7 +816,10 @@
    ========================================= */
 .custom-modal-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
@@ -727,11 +854,14 @@
 }
 
 .modal-icon {
-    width: 52px; height: 52px;
+    width: 52px;
+    height: 52px;
     background: rgba(255, 77, 79, 0.1);
     color: #ff4d4f;
     border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.5rem;
     margin: 0 auto 16px;
 }
@@ -786,6 +916,7 @@
     box-shadow: 0 6px 16px rgba(255, 77, 79, 0.3);
     transform: translateY(-2px);
 }
+
 .confirm-btn:active {
     transform: translateY(0);
 }
@@ -822,6 +953,7 @@
 .markdown-body pre code .hljs-selector-class {
     color: #61aeee !important;
 }
+
 .markdown-body pre code .hljs-built_in,
 .markdown-body pre code .hljs-title.class_,
 .markdown-body pre code .hljs-class .hljs-title {
@@ -860,9 +992,11 @@
 .markdown-body pre code .hljs-subst {
     color: #e06c75 !important;
 }
+
 .markdown-body pre code .hljs-emphasis {
     font-style: italic !important;
 }
+
 .markdown-body pre code .hljs-strong {
     font-weight: bold !important;
 }
@@ -886,18 +1020,34 @@
     flex: 1 !important;
     display: flex !important;
     flex-direction: column !important;
-    max-height: none !important; /* 覆盖 home.css 的 0 */
-    opacity: 1 !important;        /* 覆盖 home.css 的 0 */
+    max-height: none !important;
+    /* 覆盖 home.css 的 0 */
+    opacity: 1 !important;
+    /* 覆盖 home.css 的 0 */
 }
 
 /* AIInteract.module.css 最底部 */
 
 .ai-workspace-wrapper {
-    margin: 20px auto !important;
-    max-width: 1200px; /* 这里的数值可以根据你想要的卡片宽度调整 */
-    width: 95%;        /* 保证在小屏幕上不会贴死边框 */
+    margin: 10px auto !important;
+    /* 缩小间距，整体往上提 */
+    max-width: 1200px;
+    width: 98%;
+    /* 屏幕较小时间距更少一点 */
 
-    height: calc(100vh - 100px); /* 保持高度 */
+    height: calc(100vh - var(--nav-height, 72px) - 20px) !important;
+    /* 精确计算不引起滚动条 */
+    min-height: 600px !important;
+    /* 防止硬编码700px过大导致小屏滚动 */
     display: flex;
     flex-direction: column;
+}
+
+@media (max-width: 900px) {
+    .ai-workspace-wrapper {
+        width: 100% !important;
+        margin: 0 !important;
+        height: calc(100vh - var(--nav-height, 60px)) !important;
+        padding: 0 !important;
+    }
 }
