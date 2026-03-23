@@ -33,51 +33,15 @@ const messageVariants = {
 
 
 const WelcomeBanner = () => {
-    const titleRef = useRef(null);
-    const descRef = useRef(null);
-    const rafRef = useRef(null);
-
-    const handleMouseMove = useCallback((e) => {
-        const { clientX, clientY } = e;
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-        rafRef.current = requestAnimationFrame(() => {
-            const x = (window.innerWidth / 2 - clientX) / 50;
-            const y = (window.innerHeight / 2 - clientY) / 50;
-            if (titleRef.current && descRef.current) {
-                titleRef.current.style.transform = `translate(${x}px, ${y}px)`;
-                descRef.current.style.transform = `translate(${x * 0.5}px, ${y * 0.5}px)`;
-            }
-        });
-    }, []);
-
-    const handleMouseLeave = useCallback(() => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        if (titleRef.current && descRef.current) {
-            titleRef.current.style.transform = `translate(0, 0)`;
-            descRef.current.style.transform = `translate(0, 0)`;
-            titleRef.current.style.transition = 'transform 0.5s ease-out';
-            descRef.current.style.transition = 'transform 0.5s ease-out';
-        }
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        };
-    }, []);
-
     return (
         <motion.section
             variants={itemVariants}
             className={styles['welcome-banner']}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
         >
-            <motion.h1 ref={titleRef} variants={itemVariants}>
+            <motion.h1 variants={itemVariants}>
                 Welcome to HKU Educational Tools Platform
             </motion.h1>
-            <motion.p ref={descRef} variants={itemVariants}>
+            <motion.p variants={itemVariants}>
                 Your gateway to intelligent learning and educational resources
             </motion.p>
         </motion.section>
