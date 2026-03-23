@@ -26,7 +26,7 @@ export default function QuickProcess({
                                 sections.map((sec, i) => (
                                     <div key={i} className={styles.sectionItem}>
                                         <h4>{sec.title}</h4>
-                                        <div dangerouslySetInnerHTML={{__html: sec.content}}/>
+                                        <div dangerouslySetInnerHTML={{ __html: sec.content }} />
                                     </div>
                                 ))
                             )}
@@ -42,9 +42,9 @@ export default function QuickProcess({
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Total Pages</label>
                                 <input type="number" className={styles.formControl} value={formState.totalPages}
-                                    onChange={e => setFormState({...formState, totalPages: e.target.value})} required />
+                                    onChange={e => setFormState({ ...formState, totalPages: e.target.value })} required />
                                 <div className={styles.formText}>
-                                    • Found Chapters: <strong>{totalChapters}</strong><br/>
+                                    • Found Chapters: <strong>{totalChapters}</strong><br />
                                     • Range: <strong>{totalChapters} - {maxAllowedPages}</strong> pages
                                 </div>
                             </div>
@@ -52,15 +52,15 @@ export default function QuickProcess({
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>Bullets per Slide</label>
                                 <input type="number" className={styles.formControl} min="1" max="5" value={formState.numOfBullets}
-                                    onChange={e => setFormState({...formState, numOfBullets: e.target.value})} required />
+                                    onChange={e => setFormState({ ...formState, numOfBullets: e.target.value })} required />
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label className={styles.customCheckbox}>
                                     <input type="checkbox" checked={formState.generateTalkingScript}
-                                        onChange={e => setFormState({...formState, generateTalkingScript: e.target.checked})} />
+                                        onChange={e => setFormState({ ...formState, generateTalkingScript: e.target.checked })} />
                                     <span className="checkmark"></span>
-                                    <span style={{marginLeft: '30px'}}>Generate Talking Script</span>
+                                    <span style={{ marginLeft: '30px' }}>Generate Talking Script</span>
                                 </label>
                             </div>
 
@@ -68,7 +68,7 @@ export default function QuickProcess({
                                 <div className={styles.scriptOptionsPanel}>
                                     <div className={styles.formGroup}>
                                         <label className={styles.formLabel}>Script Style</label>
-                                        <select className={styles.formControl} value={formState.scriptStyle} onChange={e => setFormState({...formState, scriptStyle: e.target.value})}>
+                                        <select className={styles.formControl} value={formState.scriptStyle} onChange={e => setFormState({ ...formState, scriptStyle: e.target.value })}>
                                             <option value="academic">Academic</option>
                                             <option value="business">Business</option>
                                             <option value="casual">Casual</option>
@@ -76,14 +76,14 @@ export default function QuickProcess({
                                     </div>
                                     <div className={styles.formGroup}>
                                         <label className={styles.formLabel}>Doc Title</label>
-                                        <input type="text" className={styles.formControl} value={formState.presentationTitle} onChange={e => setFormState({...formState, presentationTitle: e.target.value})} />
+                                        <input type="text" className={styles.formControl} value={formState.presentationTitle} onChange={e => setFormState({ ...formState, presentationTitle: e.target.value })} />
                                     </div>
                                 </div>
                             )}
 
                             {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
 
-                            <button type="submit" className="btn btn-primary w-100" disabled={loading || contentLoading}>
+                            <button type="submit" className="btn btn-primary w-100" style={{ marginTop: '20px' }} disabled={loading || contentLoading}>
                                 {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> Generate PPT Content</>}
                             </button>
                         </form>
@@ -93,7 +93,7 @@ export default function QuickProcess({
 
             {/* Results Area */}
             {(loading || results) && (
-                <div className="card mt-5" style={{padding: '40px'}}>
+                <div className="card mt-5" style={{ padding: '40px' }}>
                     <h2 className={styles.cardTitle}><i className="fas fa-list-check"></i> Generated Results</h2>
 
                     {loading ? (
@@ -113,14 +113,14 @@ export default function QuickProcess({
                             <div className={styles.slidesGridLayout}>
                                 {results.map((slide, i) => (
                                     <div key={i} className={styles.slideCard}>
-                                        <div style={{position: 'absolute', top: '15px', right: '20px', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: 800, opacity: 0.5}}>
+                                        <div style={{ position: 'absolute', top: '15px', right: '20px', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: 800, opacity: 0.5 }}>
                                             SLIDE {i + 1}
                                         </div>
                                         <h4>{slide.title}</h4>
-                                        <ul style={{listStyle: 'none', padding: 0}}>
+                                        <ul style={{ listStyle: 'none', padding: 0 }}>
                                             {slide.content.map((b, j) => (
-                                                <li key={j} style={{position: 'relative', paddingLeft: '25px', marginBottom: '10px', fontSize: '1.05rem'}}>
-                                                    <span style={{position: 'absolute', left: 0, color: 'var(--aurora-cyan)'}}>•</span> {b}
+                                                <li key={j} style={{ position: 'relative', paddingLeft: '25px', marginBottom: '10px', fontSize: '1.05rem' }}>
+                                                    <span style={{ position: 'absolute', left: 0, color: 'var(--aurora-cyan)' }}>•</span> {b}
                                                 </li>
                                             ))}
                                         </ul>
@@ -137,16 +137,15 @@ export default function QuickProcess({
                                     </div>
                                     <button
                                         onClick={(e) => handleDownloadScript(e, talkingScriptResult.word_document.download_url, talkingScriptResult.word_document.filename)}
-                                        className="btn btn-success"
-                                        style={{padding: '14px 28px', borderRadius: '12px', fontSize: '1.1rem', background: 'var(--aurora-blue)'}}
+                                        className={styles.btnDownloadWord}
                                     >
                                         <i className="fas fa-file-word"></i> Download .docx
                                     </button>
                                 </div>
                             )}
 
-                            <div className="text-center mt-5">
-                                <button className="btn btn-primary btn-lg" style={{padding: '20px 60px', borderRadius: '50px', fontSize: '1.3rem'}} onClick={handleProceed}>
+                            <div className="text-center" style={{ marginTop: '2.5rem', marginBottom: '3rem' }}>
+                                <button className={styles.btnProceed} onClick={handleProceed}>
                                     Confirm & Proceed to Templates <i className="fas fa-arrow-right"></i>
                                 </button>
                             </div>
