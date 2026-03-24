@@ -353,6 +353,224 @@ main {
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
+/* ================================
+   Gemini chat: user edit + actions
+   ================================ */
+.edit-box textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.edit-actions button {
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.edit-actions button:nth-child(1) {
+    background: #f1f3f5;
+    color: #555;
+}
+
+.edit-actions button:nth-child(2) {
+    background: #007B55;
+    color: #fff;
+}
+
+.user-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.user-actions button {
+    background: #eef2ff;
+    border: 1px solid #dfe3f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: #1e293b;
+}
+
+.message-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.msg-action-btn {
+    background: #ffffff;
+    border: 1px solid rgba(0, 123, 85, 0.25);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #007B55;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.08);
+}
+
+.msg-action-btn:hover {
+    background: linear-gradient(120deg, #007B55, #006042);
+    color: #fff;
+    border-color: transparent;
+    transform: translateY(-1px);
+}
+
+.stop-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #f0ad4e;
+    background: #fff7ed;
+    color: #f59e0b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
+}
+
+.stop-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.stop-btn:hover:not(:disabled) {
+    background: #fef3c7;
+    transform: translateY(-1px);
+}
+
+/* ================================
+   Markdown code block (dark, Mac style)
+   ================================ */
+:global(.code-block-wrapper) {
+    background-color: #1e1e1e !important;
+    border-radius: 12px !important;
+    margin: 16px 0 !important;
+    overflow: hidden !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+:global(.code-block-header) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background-color: #2d2d2d !important;
+    padding: 10px 16px !important;
+    border-bottom: 1px solid #444 !important;
+}
+
+:global(.code-header-left) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+:global(.code-block-mac-dots) {
+    display: flex !important;
+    gap: 6px !important;
+}
+
+:global(.code-block-mac-dots span) {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(1)) {
+    background-color: #ff5f56 !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(2)) {
+    background-color: #ffbd2e !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(3)) {
+    background-color: #27c93f !important;
+}
+
+:global(.code-lang-text) {
+    text-transform: lowercase !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #a0a0a0 !important;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+    margin: 0 !important;
+}
+
+:global(.code-copy-btn) {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    color: #e5e5e5 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding: 7px 12px !important;
+    transition: all 0.25s ease !important;
+    opacity: 1 !important;
+    backdrop-filter: blur(4px);
+}
+
+:global(.code-copy-btn:hover) {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28) !important;
+}
+
+:global(.code-copy-btn:active) {
+    transform: translateY(0) !important;
+}
+
+:global(.markdown-body pre) {
+    background-color: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    overflow-x: auto !important;
+}
+
+:global(.markdown-body pre code) {
+    background-color: transparent !important;
+    color: #abb2bf !important;
+    font-family: 'Fira Code', ui-monospace, Consolas, monospace !important;
+    font-size: 14.5px !important;
+    line-height: 1.6 !important;
+    text-shadow: none !important;
+}
+
+:global(.markdown-body pre code.hljs) {
+    color: #abb2bf !important;
+}
+
 .chat-interface-container:focus-within:not(.locked) {
     box-shadow: 0 12px 48px rgba(0, 123, 85, 0.12), inset 0 0 0 1px rgba(0, 123, 85, 0.2);
     transform: translateY(-2px);

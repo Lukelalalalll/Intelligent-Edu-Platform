@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import hljs from 'highlight.js';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../../../styles/home/home.module.css';
+import 'highlight.js/styles/github-dark.css';
 
 const itemVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -19,6 +21,38 @@ const messageVariants = {
     show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
 };
 
+// --- Markdown 渲染配置，复用 AIInteract 的代码块格式 ---
+const renderer = new marked.Renderer();
+renderer.code = function (token) {
+    const codeText = typeof token === 'object' ? token.text : token;
+    const langText = typeof token === 'object' ? token.lang : arguments[1];
+    const safeCode = codeText || '';
+    const validLang = langText && hljs.getLanguage(langText) ? langText : 'plaintext';
+    let highlighted = '';
+    try {
+        highlighted = validLang === 'plaintext'
+            ? hljs.highlightAuto(safeCode).value
+            : hljs.highlight(safeCode, { language: validLang }).value;
+    } catch (e) {
+        highlighted = safeCode;
+    }
+    return `
+        <div class="code-block-wrapper">
+            <div class="code-block-header">
+                <div class="code-header-left">
+                    <div class="code-block-mac-dots"><span></span><span></span><span></span></div>
+                    <span class="code-lang-text">${validLang}</span>
+                </div>
+                <button class="code-copy-btn js-code-copy-btn" data-code="${encodeURIComponent(safeCode)}">
+                    <i class="far fa-copy"></i> Copy code
+                </button>
+            </div>
+            <pre><code class="hljs language-${validLang}">${highlighted}</code></pre>
+        </div>
+    `;
+};
+marked.setOptions({ breaks: true, renderer });
+
 const GeminiChat = ({ aiInteractUrl }) => {
     const [messages, setMessages] = useState([
         { id: 'welcome', sender: 'ai', role: 'assistant', text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?" }
@@ -26,6 +60,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isFull, setIsFull] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [editingVal, setEditingVal] = useState('');
 
     const messagesContainerRef = useRef(null);
     const chatContainerRef = useRef(null);
@@ -33,17 +69,39 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const inputAreaRef = useRef(null);
     const isAnimatingRef = useRef(false);
     const probeDataRef = useRef({ offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
+    const abortControllerRef = useRef(null);
 
-    const markdownComponents = useMemo(() => ({
-        code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '')
-            return !inline && match ? (
-                <SyntaxHighlighter language={match[1]} style={undefined} PreTag="div" {...props}>
-                    {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
-            ) : (<code className={className} {...props}>{children}</code>)
+    const renderContent = useCallback((content) => {
+        if (!content) return { __html: '' };
+        try {
+            const rawHtml = typeof marked.parse === 'function' ? marked.parse(content) : marked(content);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ADD_ATTR: ['class', 'data-code'],
+                ADD_TAGS: ['button', 'i', 'span']
+            });
+            return { __html: cleanHtml };
+        } catch (err) {
+            return { __html: `<p style="color:red">Render Error: ${content}</p>` };
         }
-    }), []);
+    }, []);
+
+    const copyToClipboard = useCallback((text, buttonEl = null) => {
+        navigator.clipboard.writeText(text).catch(() => {
+            const area = document.createElement('textarea');
+            area.value = text; document.body.appendChild(area); area.select();
+            document.execCommand('copy'); document.body.removeChild(area);
+        });
+        if (buttonEl) {
+            const original = buttonEl.innerHTML;
+            buttonEl.innerHTML = '<i class="fas fa-check" style="color:#27c93f;"></i> Copied!';
+            setTimeout(() => { if (buttonEl) buttonEl.innerHTML = original; }, 1800);
+        }
+    }, []);
+
+    const handleChatAreaClick = useCallback((e) => {
+        const copyBtn = e.target.closest('.js-code-copy-btn');
+        if (copyBtn) copyToClipboard(decodeURIComponent(copyBtn.getAttribute('data-code')), copyBtn);
+    }, [copyToClipboard]);
 
     useEffect(() => {
         if (messagesContainerRef.current) {
@@ -61,6 +119,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
     const handleSend = useCallback(async () => {
         if (!input.trim() || isLoading) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
 
         const userText = input.trim();
         setInput('');
@@ -82,7 +142,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: historyForAPI }),
-                credentials: 'include'
+                credentials: 'include',
+                signal: abortControllerRef.current.signal,
             });
 
             if (!response.ok) throw new Error('Network response was not ok');
@@ -90,13 +151,15 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
             let accumulatedText = "";
+            let buffer = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
 
                 for (const line of lines) {
                     const trimmed = line.trim();
@@ -106,25 +169,117 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
                     try {
                         const dataObj = JSON.parse(dataStr);
-                        if (dataObj.choices?.[0]?.delta?.content !== undefined) {
+                        if (dataObj.error) accumulatedText += `\n\n**[Error]**: ${dataObj.error}`;
+                        else if (dataObj.choices?.[0]?.delta?.content !== undefined) {
                             accumulatedText += dataObj.choices[0].delta.content;
-                            setMessages(prev => prev.map(m =>
-                                m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
-                            ));
                         }
+
+                        setMessages(prev => prev.map(m =>
+                            m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
+                        ));
                     } catch (e) {
-                        console.error("Parse error", e);
+                        // ignore partial JSON until buffer completes
                     }
                 }
             }
         } catch (error) {
+            if (error.name === 'AbortError') return;
             setMessages(prev => prev.map(m =>
                 m.id === aiPlaceholderId ? { ...m, text: "Sorry, I encountered an error connecting to the AI server." } : m
             ));
         } finally {
             setIsLoading(false);
+            abortControllerRef.current = null;
         }
     }, [input, isLoading, messages]);
+
+    const handleStop = useCallback(() => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setIsLoading(false);
+    }, []);
+
+    const streamFromHistory = useCallback(async (history) => {
+        if (!history.length) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        const targetAssistantId = Date.now();
+        setMessages(historyWithAssistant => {
+            return [...history, { id: targetAssistantId, sender: 'ai', role: 'assistant', text: '' }];
+        });
+        setIsLoading(true);
+
+        try {
+            const apiMessages = history.map(m => ({ role: m.role, content: m.text }));
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: apiMessages }),
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let fullText = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+                    try {
+                        const obj = JSON.parse(dataStr);
+                        if (obj.choices?.[0]?.delta?.content !== undefined) {
+                            fullText += obj.choices[0].delta.content;
+                            setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: fullText } : m));
+                        }
+                    } catch (err) { /* ignore */ }
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: `Network Error: ${error.message}` } : m));
+        } finally {
+            setIsLoading(false);
+            abortControllerRef.current = null;
+        }
+    }, []);
+
+    const handleRegenerate = useCallback((idx) => {
+        if (isLoading) return;
+        const msg = messages[idx];
+        if (!msg || msg.sender !== 'ai') return;
+        const history = messages.slice(0, idx);
+        streamFromHistory(history);
+    }, [isLoading, messages, streamFromHistory]);
+
+    const handleEditUserMsg = useCallback((idx, newVal) => {
+        if (isLoading) return;
+        const msg = messages[idx];
+        if (!msg || msg.sender !== 'user') return;
+        const trimmed = newVal.trim();
+        if (!trimmed) return;
+        const updatedUser = { ...msg, text: trimmed };
+        const history = [...messages.slice(0, idx), updatedUser];
+        streamFromHistory(history);
+        setEditingId(null);
+        setEditingVal('');
+    }, [isLoading, messages, streamFromHistory]);
 
     const handleKeyDown = useCallback((e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -248,9 +403,13 @@ const GeminiChat = ({ aiInteractUrl }) => {
                     </button>
                 </div>
 
-                <div ref={messagesContainerRef} className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}>
+                <div
+                    ref={messagesContainerRef}
+                    className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}
+                    onClick={handleChatAreaClick}
+                >
                     <AnimatePresence>
-                        {messages.map(msg => {
+                        {messages.map((msg, idx) => {
                             if (msg.sender === 'ai' && !msg.text) return null;
                             return (
                                 <motion.div
@@ -265,10 +424,39 @@ const GeminiChat = ({ aiInteractUrl }) => {
                                     </div>
                                     <div className={styles.bubble}>
                                         {msg.sender === 'ai' ? (
-                                            <ReactMarkdown components={markdownComponents}>
-                                                {msg.text}
-                                            </ReactMarkdown>
-                                        ) : (msg.text)}
+                                            <div className="markdown-body" dangerouslySetInnerHTML={renderContent(msg.text)} />
+                                        ) : (
+                                            editingId === msg.id ? (
+                                                <div className={styles['edit-box']}>
+                                                    <textarea
+                                                        value={editingVal}
+                                                        onChange={e => setEditingVal(e.target.value)}
+                                                        autoFocus
+                                                        rows={Math.max(2, editingVal.split('\n').length)}
+                                                    />
+                                                    <div className={styles['edit-actions']}>
+                                                        <button onClick={() => { setEditingId(null); setEditingVal(''); }}>Cancel</button>
+                                                        <button onClick={() => handleEditUserMsg(idx, editingVal)} disabled={!editingVal.trim()}>Save &amp; Resend</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {msg.text}
+                                                    {!isLoading && (
+                                                        <div className={styles['user-actions']}>
+                                                            <button onClick={() => { setEditingId(msg.id); setEditingVal(msg.text); }}><i className="fas fa-edit"></i></button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )
+                                        )}
+                                        {msg.sender === 'ai' && !isLoading && msg.id === messages[messages.length - 1]?.id && (
+                                            <div className={styles['message-actions']}>
+                                                <button onClick={() => handleRegenerate(idx)} className={styles['msg-action-btn']}>
+                                                    <i className="fas fa-sync-alt"></i> Regenerate
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             );
@@ -300,7 +488,10 @@ const GeminiChat = ({ aiInteractUrl }) => {
                             value={input} onChange={handleInput}
                             onKeyDown={handleKeyDown}
                         ></textarea>
-                        <button className={styles['send-btn']} disabled={!input.trim()} onClick={handleSend}>
+                        <button className={styles['stop-btn']} onClick={handleStop} disabled={!isLoading} title="Stop">
+                            <i className="fas fa-stop"></i>
+                        </button>
+                        <button className={styles['send-btn']} disabled={!input.trim() || isLoading} onClick={handleSend}>
                             <i className="fas fa-paper-plane"></i>
                         </button>
                     </div>
