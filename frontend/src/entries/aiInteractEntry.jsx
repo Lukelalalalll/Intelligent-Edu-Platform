@@ -11,8 +11,10 @@ export default function AIInteractEntry() {
     });
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const abortControllerRef = useRef(null);
     const [modalConfig, setModalConfig] = useState({ show: false, sessionId: null });
     const [toastVisible, setToastVisible] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
 
     const chatMessagesRef = useRef(null);
     const inputRef = useRef(null);
@@ -53,18 +55,26 @@ export default function AIInteractEntry() {
 
     const confirmDelete = () => {
         const idToDelete = modalConfig.sessionId;
-        const newSessions = sessions.filter(s => s.id !== idToDelete);
-        if (newSessions.length === 0) createNewSession(true);
-        else {
-            setSessions(newSessions);
-            if (currentSessionId === idToDelete) setCurrentSessionId(newSessions[0].id);
-        }
         setModalConfig({ show: false, sessionId: null });
+        setDeletingId(idToDelete);
+
+        setTimeout(() => {
+            const newSessions = sessions.filter(s => s.id !== idToDelete);
+            if (newSessions.length === 0) createNewSession(true);
+            else {
+                setSessions(newSessions);
+                if (currentSessionId === idToDelete) setCurrentSessionId(newSessions[0].id);
+            }
+            setDeletingId(null);
+        }, 300); // Wait for the slide-out animation to finish
     };
 
     const handleSend = async () => {
         // 🚨 修复：防止双重触发（回车+点击）导致状态错乱
         if (isTyping) return;
+        // Abort any previous in-flight request before starting a new one
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
 
         let targetId = currentSessionId;
         if (!targetId && sessions.length > 0) {
@@ -98,11 +108,12 @@ export default function AIInteractEntry() {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: messagesForAPI.filter(m => m.role !== 'system' || messagesForAPI.length < 5) })
+                body: JSON.stringify({ messages: messagesForAPI.filter(m => m.role !== 'system' || messagesForAPI.length < 5) }),
+                signal: abortControllerRef.current.signal,
             });
 
             if (!response.ok) {
-                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0,-1), { role: "assistant", content: `API Error: ${response.status}` }] } : s));
+                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0, -1), { role: "assistant", content: `API Error: ${response.status}` }] } : s));
                 setIsTyping(false);
                 return;
             }
@@ -144,11 +155,26 @@ export default function AIInteractEntry() {
                 }
             }
         } catch (error) {
-            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0,-1), { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
+            if (error.name === 'AbortError') {
+                // User stopped the stream
+                return;
+            }
+            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...s.messages.slice(0, -1), { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
         } finally {
             setIsTyping(false);
+            abortControllerRef.current = null;
         }
     };
+
+    const handleStop = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setIsTyping(false);
+    };
+
+    // handleRegenerate and handleEditUserMsg moved to UI page logic
 
     const handleInput = (e) => {
         setInputText(e.target.value);
@@ -184,9 +210,10 @@ export default function AIInteractEntry() {
     }, [copyToClipboard]);
 
     const pageProps = {
-        sessions, currentSessionId, inputText, isTyping, modalConfig, toastVisible,
+        sessions, setSessions, currentSessionId, inputText, setIsTyping, isTyping, modalConfig, toastVisible,
         chatMessagesRef, inputRef, createNewSession, deleteSession, confirmDelete,
-        setModalConfig, handleInput, handleKeyDown, handleSend, copyToClipboard, handleChatAreaClick
+        setModalConfig, handleInput, handleKeyDown, handleSend, copyToClipboard, handleChatAreaClick,
+        deletingId, abortControllerRef, handleStop,
     };
 
     return <AIInteract {...pageProps} />;

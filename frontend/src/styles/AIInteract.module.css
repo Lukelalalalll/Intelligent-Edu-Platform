@@ -493,27 +493,17 @@
     line-height: 1.6;
 }
 
-/* 3. 🔴 修复多行代码块 (```代码```)：浅灰背景 + 深色文字 */
+/* 3. 🔴 多行代码块：统一交给下方深色版覆盖 */
 .markdown-body pre {
-    background-color: #f6f8fa !important;
-    /* GitHub 风格浅灰色背景 */
-    border: 1px solid #e1e4e8 !important;
-    /* 加上极其细微的边框，质感更好 */
-    color: #24292e !important;
-    /* 基础文字颜色改为深色 */
-    padding: 16px !important;
-    border-radius: 8px;
-    overflow-x: auto;
-    /* 代码太长时允许横向滚动 */
-    margin: 14px 0;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* 确保 pre 里面的 code 继承样式 */
 .markdown-body pre code {
-    font-family: ui-monospace, SFMono-Regular, Consolas, 'Courier New', monospace;
-    font-size: 14px;
-    background-color: transparent !important;
-    padding: 0;
+    background: transparent !important;
+    padding: 0 !important;
     white-space: pre;
 }
 
@@ -701,94 +691,93 @@
    完美深色 Mac 风格代码框 (强制修复排版与颜色)
    ========================================= */
 
-/* 1. 最外层容器：强制深色背景和圆角 */
-.code-block-wrapper {
+:global(.code-block-wrapper) {
     background-color: #1e1e1e !important;
     border-radius: var(--radius-md) !important;
     margin: 16px 0 !important;
     overflow: hidden !important;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-/* 2. 顶部工具栏：深灰底色，左右排布，包裹文字和按钮 */
-.code-block-header {
+:global(.code-block-header) {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     background-color: #2d2d2d !important;
-    padding: 8px 16px !important;
+    padding: 10px 16px !important;
     border-bottom: 1px solid #444 !important;
 }
 
-/* 3. 左侧控制区 (Mac红黄绿圆点 + 语言名称如 python) */
-.code-header-left {
+:global(.code-header-left) {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
 }
 
-.code-block-mac-dots {
+:global(.code-block-mac-dots) {
     display: flex !important;
     gap: 6px !important;
 }
 
-.code-block-mac-dots span {
+:global(.code-block-mac-dots span) {
     width: 12px !important;
     height: 12px !important;
     border-radius: 50% !important;
     display: inline-block !important;
 }
 
-.code-block-mac-dots span:nth-child(1) {
+:global(.code-block-mac-dots span:nth-child(1)) {
     background-color: #ff5f56 !important;
 }
 
-.code-block-mac-dots span:nth-child(2) {
+:global(.code-block-mac-dots span:nth-child(2)) {
     background-color: #ffbd2e !important;
 }
 
-.code-block-mac-dots span:nth-child(3) {
+:global(.code-block-mac-dots span:nth-child(3)) {
     background-color: #27c93f !important;
 }
 
-/* 修复语言文字 (如 screenshot 里的 python) 的颜色和排版 */
-.code-lang-text {
+:global(.code-lang-text) {
     text-transform: lowercase !important;
     font-weight: 600 !important;
     font-size: 0.85rem !important;
     color: #a0a0a0 !important;
-    /* 浅灰色，适应深色头部 */
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
     margin: 0 !important;
 }
 
-/* 4. 修复复制按钮 (常驻显示，强制白色字体适应深色背景) */
-.code-copy-btn {
+:global(.code-copy-btn) {
     background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 6px !important;
-    color: #e0e0e0 !important;
-    /* 强制浅色，防止看不清 */
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    color: #e5e5e5 !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
-    font-size: 0.75rem !important;
-    font-weight: 500 !important;
-    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding: 7px 12px !important;
     transition: all 0.25s ease !important;
     opacity: 1 !important;
+    backdrop-filter: blur(4px);
 }
 
-.code-copy-btn:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
+:global(.code-copy-btn:hover) {
+    background: rgba(255, 255, 255, 0.16) !important;
     color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
     transform: translateY(-1px) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28) !important;
 }
 
-/* 5. 强制清空旧的丑陋灰色背景，依附于新容器的深色 */
-.markdown-body pre {
+:global(.code-copy-btn:active) {
+    transform: translateY(0) !important;
+}
+
+:global(.markdown-body pre) {
     background-color: transparent !important;
     border: none !important;
     margin: 0 !important;
@@ -796,16 +785,16 @@
     overflow-x: auto !important;
 }
 
-.markdown-body pre code {
+:global(.markdown-body pre code) {
     background-color: transparent !important;
-    /* 注意：这里不写 color !important 了，让插件自己去上色 */
+    color: #abb2bf !important;
     font-family: 'Fira Code', ui-monospace, Consolas, monospace !important;
     font-size: 14.5px !important;
     line-height: 1.6 !important;
     text-shadow: none !important;
 }
 
-.markdown-body pre code.hljs {
+:global(.markdown-body pre code.hljs) {
     color: #abb2bf !important;
 }
 
