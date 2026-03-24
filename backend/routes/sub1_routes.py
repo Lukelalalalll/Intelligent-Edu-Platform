@@ -8,10 +8,77 @@ from backend.config import Config
 from backend.core.security import get_current_user
 from backend.schemas import CombineSchema, SaveHighlightsSchema
 import traceback
-from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema
+from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema, PptProcessSchema
+from backend.utils.sub1.list_plsholders import PPTTemplateManager
 
 
 sub1_router = APIRouter(prefix="/api/sub1", tags=["Sub1"])
+public_sub1_router = APIRouter(prefix="/sub1", tags=["Sub1Public"])
+
+
+@sub1_router.get("/get_themes")
+@public_sub1_router.get("/get_themes", include_in_schema=False)
+def get_themes():
+    try:
+        manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
+        return manager.get_available_themes()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.get("/get_placeholders/{theme_name}")
+@public_sub1_router.get("/get_placeholders/{theme_name}", include_in_schema=False)
+def get_placeholders(theme_name: str):
+    try:
+        manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
+        return manager.get_placeholders(theme_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.post("/process-ppt")
+@sub1_router.post("/generate_ppt")
+@public_sub1_router.post("/generate_ppt", include_in_schema=False)
+def process_ppt(req: PptProcessSchema):
+    try:
+        if not req.ppt_schema:
+            raise ValueError("ppt_schema is required")
+
+        filename = Sub1Service.create_ppt(req.ppt_schema)
+        return {
+            "status": "success",
+            "filename": filename,
+            "download_url": f"/sub1/download_ppt/{filename}"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print("🚨 PPT PROCESS ERROR OCCURRED:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.get("/download_ppt/{filename}")
+@public_sub1_router.get("/download_ppt/{filename}", include_in_schema=False)
+def download_ppt(filename: str):
+    from fastapi.responses import FileResponse
+
+    search_paths = [
+        os.path.join(Config.PPT_RESULTS_FOLDER, filename),
+        os.path.join(Config.PPT_RESULTS_FOLDER, 'sub1', filename)
+    ]
+
+    for path in search_paths:
+        if os.path.exists(path):
+            return FileResponse(
+                path,
+                media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                filename=filename
+            )
+
+    raise HTTPException(status_code=404, detail="File not found")
 
 @sub1_router.post("/parse-md")
 def parse_md(

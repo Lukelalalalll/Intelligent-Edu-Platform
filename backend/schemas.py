@@ -69,3 +69,8 @@ class SummarizeChaptersSchema(BaseModel):
     total_pages: int
     num_of_bullets: int
     words_each_bullet: int
+
+
+# === Sub1 PPT Generation ===
+class PptProcessSchema(BaseModel):
+    ppt_schema: dict

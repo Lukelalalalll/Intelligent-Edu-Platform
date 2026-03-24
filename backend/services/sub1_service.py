@@ -26,7 +26,7 @@ class Sub1Service:
     def create_ppt(ppt_schema):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"presentation_{timestamp}.pptx"
-        output_path = os.path.join(Config.PPT_RESULTS_FOLDER, 'sub1', filename)
+        output_path = os.path.join(Config.PPT_RESULTS_FOLDER, filename)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         creator = PPTCreator(Config.PPT_TEMPLATES_FOLDER)

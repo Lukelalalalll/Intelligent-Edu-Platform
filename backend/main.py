@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from backend.routes.auth_routes import auth_router
 from backend.routes.admin_routes import admin_router
 from backend.routes.ai_routes import ai_router
-from backend.routes.sub1_routes import sub1_router
+from backend.routes.sub1_routes import sub1_router, public_sub1_router
 from backend.routes.sub2_routes import sub2_router
 from backend.routes.sub3_routes import sub3_router
 from backend.routes.sub4_routes import sub4_router
@@ -33,6 +33,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ai_router)
 app.include_router(sub1_router)
+app.include_router(public_sub1_router)
 app.include_router(sub2_router)
 app.include_router(sub3_router)
 app.include_router(sub4_router)

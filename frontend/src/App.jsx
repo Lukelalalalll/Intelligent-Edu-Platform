@@ -16,6 +16,7 @@ import QuestionGeneratorEntry from './entries/sub2/questionGeneratorEntry';
 import SpecifyEntry from './entries/sub1/specifyEntry';
 import QuickProcessEntry from './entries/sub1/quickProcessEntry';
 import ImageExtractorEntry from './entries/sub3/imageExtractorEntry';
+import PptTemplateEntry from './entries/sub1/pptTemplateEntry';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +52,7 @@ function App() {
           <Route path="sub1/highlighter" element={<ProtectedRoute><HighlighterEntry /></ProtectedRoute>} />
           <Route path="sub1/specify" element={<ProtectedRoute><SpecifyEntry /></ProtectedRoute>} />
           <Route path="sub1/quick-process" element={<ProtectedRoute><QuickProcessEntry /></ProtectedRoute>} />
+          <Route path="sub1/ppt-template" element={<ProtectedRoute><PptTemplateEntry /></ProtectedRoute>} />
 
           <Route path="sub3" element={<ProtectedRoute><ImageExtractorEntry /></ProtectedRoute>} />
           <Route path="sub2" element={<ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute>} />
