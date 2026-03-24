@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import AIInteract from '../pages/AIInteract'; // 确保路径对应你的 UI 组件
+import AIInteract from '../pages/AIInteract/index'; // 确保路径对应你的 UI 组件
 
 export default function AIInteractEntry() {
     const [sessions, setSessions] = useState(() => {
@@ -166,6 +166,168 @@ export default function AIInteractEntry() {
         }
     };
 
+    // Regenerate the selected assistant message (idx points to an assistant message)
+    const handleRegenerate = async (msgIndex) => {
+        if (isTyping) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        const targetId = currentSessionId || sessions[0]?.id;
+        if (!targetId) return;
+        const currentSess = sessions.find(s => s.id === targetId);
+        if (!currentSess) return;
+
+        // Use history up to the assistant slot, then stream a fresh assistant reply
+        const history = currentSess.messages.slice(0, msgIndex);
+
+        setIsTyping(true);
+        setSessions(prev => prev.map(s => {
+            if (s.id !== targetId) return s;
+            return { ...s, messages: [...history, { role: "assistant", content: "" }] };
+        }));
+
+        try {
+            const apiMessages = history.filter(m => m.role !== 'system' || history.length < 5);
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: apiMessages }),
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) {
+                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: "assistant", content: `API Error: ${response.status}` }] } : s));
+                setIsTyping(false);
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let aiFullResponse = "";
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+
+                    try {
+                        const dataObj = JSON.parse(dataStr);
+                        if (dataObj.error) aiFullResponse += `\n\n**[Error]**: ${dataObj.error}`;
+                        else if (dataObj.choices?.[0]?.delta?.content !== undefined) {
+                            aiFullResponse += dataObj.choices[0].delta.content;
+                        }
+
+                        setSessions(prevSessions => prevSessions.map(s => {
+                            if (s.id !== targetId) return s;
+                            const newMsgs = [...s.messages];
+                            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: aiFullResponse };
+                            return { ...s, messages: newMsgs };
+                        }));
+                    } catch (e) { /* ignore parse error */ }
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
+        } finally {
+            setIsTyping(false);
+            abortControllerRef.current = null;
+        }
+    };
+
+    // Edit a user message and resend from that point
+    const handleEditUserMsg = async (msgIndex, newVal) => {
+        if (isTyping) return;
+        if (!newVal?.trim()) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        const targetId = currentSessionId || sessions[0]?.id;
+        if (!targetId) return;
+        const currentSess = sessions.find(s => s.id === targetId);
+        if (!currentSess) return;
+        if (!currentSess.messages[msgIndex] || currentSess.messages[msgIndex].role !== 'user') return;
+
+        const updatedUserMsg = { ...currentSess.messages[msgIndex], content: newVal.trim() };
+        const history = [...currentSess.messages.slice(0, msgIndex), updatedUserMsg];
+
+        setIsTyping(true);
+        setSessions(prev => prev.map(s => {
+            if (s.id !== targetId) return s;
+            return { ...s, messages: [...history, { role: "assistant", content: "" }] };
+        }));
+
+        try {
+            const apiMessages = history.filter(m => m.role !== 'system' || history.length < 5);
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: apiMessages }),
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) {
+                setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: "assistant", content: `API Error: ${response.status}` }] } : s));
+                setIsTyping(false);
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let aiFullResponse = "";
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+
+                    try {
+                        const dataObj = JSON.parse(dataStr);
+                        if (dataObj.error) aiFullResponse += `\n\n**[Error]**: ${dataObj.error}`;
+                        else if (dataObj.choices?.[0]?.delta?.content !== undefined) {
+                            aiFullResponse += dataObj.choices[0].delta.content;
+                        }
+
+                        setSessions(prevSessions => prevSessions.map(s => {
+                            if (s.id !== targetId) return s;
+                            const newMsgs = [...s.messages];
+                            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: aiFullResponse };
+                            return { ...s, messages: newMsgs };
+                        }));
+                    } catch (e) { /* ignore parse error */ }
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: "assistant", content: `Network Error: ${error.message}` }] } : s));
+        } finally {
+            setIsTyping(false);
+            abortControllerRef.current = null;
+        }
+    };
+
     const handleStop = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
@@ -213,7 +375,7 @@ export default function AIInteractEntry() {
         sessions, setSessions, currentSessionId, inputText, setIsTyping, isTyping, modalConfig, toastVisible,
         chatMessagesRef, inputRef, createNewSession, deleteSession, confirmDelete,
         setModalConfig, handleInput, handleKeyDown, handleSend, copyToClipboard, handleChatAreaClick,
-        deletingId, abortControllerRef, handleStop,
+        deletingId, abortControllerRef, handleStop, handleRegenerate, handleEditUserMsg,
     };
 
     return <AIInteract {...pageProps} />;
