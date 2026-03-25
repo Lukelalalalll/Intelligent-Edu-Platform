@@ -1,12 +1,12 @@
 main {
-    padding: 5px;
+    padding: 25px;
 }
 
 :root {
     --primary-color: #007B55;
     --primary-dark: #004D40;
     --primary-light: #C8E6C9;
-    --primary-gradient-animated: linear-gradient(fdeg, #007B55, #004D40, #008f66, #004D40);
+    --primary-gradient-animated: linear-gradient(120deg, #007B55, #004D40, #008f66, #004D40);
 
     --aurora-cyan: #00B8D9;
     --aurora-blue: #2065D1;
@@ -252,6 +252,7 @@ main {
     padding: 24px;
     display: flex;
     flex-direction: column;
+    height: 100%;
     min-height: 500px;
     overflow: hidden;
 }
@@ -261,6 +262,10 @@ main {
     flex-direction: column;
     height: 100%;
     min-height: 0;
+}
+
+.chatPane {
+    min-height: calc(100vh - 125px);
 }
 
 /* 🌟 恢复内部元素的排版 */
@@ -304,6 +309,7 @@ main {
 .chatArea {
     margin-top: 12px;
     flex: 1;
+    min-height: 0;
     background: rgba(255, 255, 255, 0.88);
     border-radius: 12px;
     padding: 20px;
@@ -458,6 +464,10 @@ main {
     .grid> :first-child {
         grid-column: 1 / -1;
     }
+
+    .chatPane {
+        min-height: 560px;
+    }
 }
 
 @media (max-width: 1024px) {
@@ -470,5 +480,9 @@ main {
     .grid {
         grid-template-columns: 1fr;
         min-height: auto;
+    }
+
+    .chatPane {
+        min-height: 480px;
     }
 }

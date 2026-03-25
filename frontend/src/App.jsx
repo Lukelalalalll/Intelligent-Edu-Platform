@@ -17,6 +17,9 @@ import SpecifyEntry from './entries/sub1/specifyEntry';
 import QuickProcessEntry from './entries/sub1/quickProcessEntry';
 import ImageExtractorEntry from './entries/sub3/imageExtractorEntry';
 import PptTemplateEntry from './entries/sub1/pptTemplateEntry';
+import HomeStudentEntry from './entries/homeStudentEntry';
+import MailboxEntry from './entries/mailboxEntry';
+import GradingWorkbenchEntry from './entries/gradingWorkbenchEntry';
 
 
 const ProtectedRoute = ({ children }) => {
@@ -39,6 +42,7 @@ function App() {
         {/* 所有页面都继承 Layout (导航栏) */}
         <Route path="/" element={<Layout />}>
           <Route index element={<ProtectedRoute><HomeEntry /></ProtectedRoute>} />
+          <Route path="home_student" element={<ProtectedRoute><HomeStudentEntry /></ProtectedRoute>} />
           <Route path="sub1/md-processor" element={<ProtectedRoute><MdProcessorEntry /></ProtectedRoute>} />
           <Route path="profile" element={<ProtectedRoute><ProfileEntry /></ProtectedRoute>} />
 
@@ -59,6 +63,9 @@ function App() {
           <Route path="admin/dashboard" element={<ProtectedRoute><AdminDashboardEntry /></ProtectedRoute>} />
 
           <Route path="sub4" element={<ProtectedRoute><DiagramToolEntry /></ProtectedRoute>} />
+          <Route path="home-student" element={<ProtectedRoute><HomeStudentEntry /></ProtectedRoute>} />
+          <Route path="mailbox" element={<ProtectedRoute><MailboxEntry /></ProtectedRoute>} />
+          <Route path="mailbox/grade_workbench/:submissionId" element={<ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute>} />
 
         </Route>
       </Routes>

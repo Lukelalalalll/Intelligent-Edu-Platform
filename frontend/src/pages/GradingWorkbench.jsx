@@ -91,11 +91,6 @@ export default function GradingWorkbench() {
         }
     };
 
-    const handleAiAnnotation = (suggestion) => {
-        if (!selectedAnnotation) return;
-        handleAddAnnotation({ ...selectedAnnotation, comment: suggestion, aiSuggestion: suggestion });
-    };
-
     return (
         <div className={styles.page}>
             {error && <div className={styles.alertDanger} style={{ margin: '0 auto 12px', maxWidth: 1600 }}>{error}</div>}
@@ -145,8 +140,6 @@ export default function GradingWorkbench() {
                             submissionId={submissionId}
                             assignment={detail?.assignment}
                             rubric={detail?.assignment?.rubric}
-                            selectedText={selectedAnnotation?.comment}
-                            onAnnotationSuggestion={handleAiAnnotation}
                             onAnalysis={() => { }}
                             className={styles}
                         />

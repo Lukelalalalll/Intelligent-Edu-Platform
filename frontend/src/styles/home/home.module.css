@@ -36,17 +36,17 @@ main {
 /* --- Welcome Banner --- */
 .welcome-banner {
     text-align: center;
-    margin-bottom: 5.5rem;
+    margin-bottom: 3.5rem;
     padding: 4rem 2rem;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite;
-    /* 循环背景保留在 CSS */
     border-radius: var(--radius-lg);
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
+    border-radius: 50px;
 }
 
 @keyframes gradientFlow {
@@ -103,6 +103,60 @@ main {
     margin: 0 auto;
     font-weight: 400;
     /* 移除了 opacity 和 animation */
+}
+
+/* Tab switcher under banner */
+@keyframes tabPopIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.tab-switcher {
+    display: flex;
+    width: fit-content;
+    justify-content: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 999px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+    margin: -30px auto 40px auto;
+    position: relative;
+    z-index: 30;
+    animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.3s;
+    opacity: 0;
+}
+
+.tab-btn {
+    border: none;
+    background: transparent;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-weight: 700;
+    color: var(--text-sub);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.tab-active {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(0, 123, 85, 0.25);
+}
+
+.tab-btn:hover:not(.tab-active) {
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.04);
 }
 
 /* --- Cards Container --- */
@@ -314,7 +368,7 @@ main {
 /* --- AI Interaction Section --- */
 .ai-interaction-section {
     max-width: 800px;
-    margin: -3rem auto 3rem auto;
+    margin: -0.5rem auto 3rem auto;
     position: relative;
     z-index: 20;
     /* 移除了 opacity 和 animation */
