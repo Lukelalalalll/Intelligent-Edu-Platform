@@ -3,6 +3,7 @@ import os
 import json
 import time
 import traceback
+import re
 from fastapi import APIRouter, Depends, Request, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from werkzeug.utils import secure_filename
@@ -90,10 +91,24 @@ def generate_questions_route(req: GenerateQuestionsSchema, request: Request, use
         with open(cache_path, 'r', encoding='utf-8') as f:
             extracted_data = json.load(f)
 
-        base_content = json.dumps(extracted_data['result']['llm_json'].get('exercises', []))
-        user_reqs = f"Subject: {req.subject}, Type: {req.question_type}, Count: {req.num_questions}, Difficulty: {req.difficulty}"
+        base_content = json.dumps(extracted_data['result']['llm_json'].get('exercises', []), ensure_ascii=False)
+        difficulty_label = Config.DIFFICULTY_MAP.get(int(req.difficulty), str(req.difficulty)) if str(req.difficulty).isdigit() else str(req.difficulty)
+        constraint_text = "; ".join(req.constraints) if req.constraints else "None"
+        user_reqs = (
+            f"Subject: {req.subject}, "
+            f"Type: {req.question_type}, "
+            f"Count: {req.num_questions}, "
+            f"Difficulty: {difficulty_label}, "
+            f"Constraints: {constraint_text}"
+        )
 
-        result_text = call_coze_generate(base_content, user_reqs)
+        result_text = call_coze_generate(
+            base_content,
+            user_reqs,
+            question_basis=req.question_basis,
+            knowledge_points=req.knowledge_points,
+            saved_screenshots=req.saved_screenshots,
+        )
 
         request.session['generated_questions'] = result_text
         return {'success': True, 'questions': result_text}
@@ -125,8 +140,24 @@ def export_questions_route(req: ExportQuestionsSchema, request: Request, user: d
 def upload_screenshot(req: UploadScreenshotSchema, user: dict = Depends(get_current_user)):
     try:
         img_data = base64.b64decode(req.image.split(',')[1])
-        filename = f"snap_{int(time.time())}.png"
+
+        def _safe_token(raw: str) -> str:
+            token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(raw or "unknown").strip())
+            return token.strip("._-") or "unknown"
+
+        chapter = _safe_token(req.chapter_number)
+        sub_chapter = _safe_token(req.sub_chapter_number)
+        exercise_no = _safe_token(req.exercise_number)
+
+        base_name = f"{chapter}-{sub_chapter}-{exercise_no}"
+        filename = f"{base_name}.png"
         filepath = os.path.join(Config.SCREENSHOTS_FOLDER_SUB2, filename)
+
+        suffix = 2
+        while os.path.exists(filepath):
+            filename = f"{base_name}_{suffix}.png"
+            filepath = os.path.join(Config.SCREENSHOTS_FOLDER_SUB2, filename)
+            suffix += 1
 
         with open(filepath, 'wb') as f:
             f.write(img_data)

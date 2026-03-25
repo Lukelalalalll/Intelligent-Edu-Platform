@@ -123,21 +123,36 @@ def call_zhipu_ocr(file_path):
 
 # backend/services/sub2_service.py
 
-def call_coze_generate(base_content, user_requirements):
+def call_coze_generate(base_content, user_requirements, question_basis=None, knowledge_points="", saved_screenshots=None):
     """调用 Coze 生成新题目 (标准 V3 轮询逻辑)"""
-    chat_url = f"{Config['COZE_API_ROOT']}/v3/chat"
+    chat_url = f"{Config.COZE_API_ROOT}/v3/chat"
     headers = {
-        "Authorization": f"Bearer {Config['COZE_TOKEN']}",
+        "Authorization": f"Bearer {Config.COZE_TOKEN}",
         "Content-Type": "application/json"
     }
+
+    saved_screenshots = saved_screenshots or []
+    basis_hint = ""
+    if question_basis == "knowledge_points" and knowledge_points.strip():
+        basis_hint = f"\n【知识点约束】\n{knowledge_points.strip()}\n请严格围绕这些知识点出题。"
+    elif question_basis == "example_images" and saved_screenshots:
+        basis_hint = (
+            "\n【截图参考】\n"
+            f"共提供 {len(saved_screenshots)} 张截图作为题型参考：{', '.join(saved_screenshots[:12])}\n"
+            "请基于这些题型风格裂变，不要照抄原题。"
+        )
 
     prompt = f"""你是出题专家。请基于以下原始题目内容进行裂变，生成全新的题目：
     【原始题目内容】：{base_content}
     【生成要求】：{user_requirements}
-    【强制要求】：包含详细的选项、答案和解析，所有数学公式必须使用 LaTeX (用 $ 包裹)。"""
+    {basis_hint}
+    【强制要求】：
+    1) 包含详细的选项、答案和解析。
+    2) 所有数学公式必须使用 LaTeX (用 $ 包裹)。
+    3) 严禁与原题文字重复；应保持同知识点但换叙述与数据。"""
 
     payload = {
-        "bot_id": Config['COZE_BOT_ID'],
+        "bot_id": Config.COZE_BOT_ID,
         "user_id": "sub2_user",
         "stream": False,
         "additional_messages": [{"role": "user", "content": prompt, "content_type": "text"}]
@@ -156,7 +171,7 @@ def call_coze_generate(base_content, user_requirements):
     conversation_id = res_data['data']['conversation_id']
 
     # 2. 轮询查询状态 (注意 URL 里拼上了 conversation_id)
-    status_url = f"{Config['COZE_API_ROOT']}/v3/chat/retrieve?chat_id={chat_id}&conversation_id={conversation_id}"
+    status_url = f"{Config.COZE_API_ROOT}/v3/chat/retrieve?chat_id={chat_id}&conversation_id={conversation_id}"
 
     for _ in range(40):  # 给它 60 秒的时间（40 * 1.5s）
         status_res = requests.get(status_url, headers=headers, proxies=get_proxies())
@@ -167,7 +182,7 @@ def call_coze_generate(base_content, user_requirements):
 
         if status == 'completed':
             # 3. 状态完成后，获取消息列表 (注意：获取列表是 GET 请求，也要带上 conversation_id)
-            msg_url = f"{Config['COZE_API_ROOT']}/v3/chat/message/list?chat_id={chat_id}&conversation_id={conversation_id}"
+            msg_url = f"{Config.COZE_API_ROOT}/v3/chat/message/list?chat_id={chat_id}&conversation_id={conversation_id}"
             msg_res = requests.get(msg_url, headers=headers, proxies=get_proxies())
             msg_data = msg_res.json()
 
