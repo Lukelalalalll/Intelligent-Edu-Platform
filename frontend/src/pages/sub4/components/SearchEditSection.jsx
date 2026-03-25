@@ -18,6 +18,12 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
 
                 {searchState.error && <p style={{ color: 'red' }}>{searchState.error}</p>}
 
+                {!editorState.isVisible && Array.isArray(searchState.results) && searchState.results.length > 0 && (
+                    <div style={{ margin: '8px 0 10px', opacity: 0.85, fontSize: 13 }}>
+                        Found {searchState.results.length} SVG candidates
+                    </div>
+                )}
+
                 {!editorState.isVisible && (
                     <div className={styles.resultsContainer}>
                         {searchState.results === null ? null : searchState.results.length > 0 ? (

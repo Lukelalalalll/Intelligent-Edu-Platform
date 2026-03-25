@@ -5,6 +5,17 @@ import client from '../../api/client';
 import DiagramToolPage from '../../pages/sub4/DiagramTool';
 
 export default function DiagramToolEntry() {
+    const extractErrorMessage = (err) => {
+        const detail = err?.response?.data?.detail;
+        if (Array.isArray(detail)) {
+            return detail.map((d) => `${(d.loc || []).join('.')}: ${d.msg}`).join('; ');
+        }
+        if (typeof detail === 'string' && detail.trim()) {
+            return detail;
+        }
+        return err?.response?.data?.error || err?.message || 'Unknown error';
+    };
+
     // === 1. Extract State ===
     const [extractFile, setExtractFile] = useState(null);
     const [isExtractDragging, setIsExtractDragging] = useState(false);
@@ -39,6 +50,61 @@ export default function DiagramToolEntry() {
     // === 5. Modal State ===
     const [modal, setModal] = useState({ isOpen: false, imgSrc: '', pageNum: '' });
 
+    const normalizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+    const isVisibleSvgNode = (el) => {
+        let current = el;
+        while (current && current.getAttribute) {
+            const display = (current.getAttribute('display') || '').toLowerCase();
+            const visibility = (current.getAttribute('visibility') || '').toLowerCase();
+            const opacity = (current.getAttribute('opacity') || '').toLowerCase();
+            const style = (current.getAttribute('style') || '').toLowerCase();
+            if (
+                display === 'none' ||
+                visibility === 'hidden' ||
+                opacity === '0' ||
+                style.includes('display:none') ||
+                style.includes('visibility:hidden')
+            ) {
+                return false;
+            }
+            current = current.parentNode;
+        }
+        return true;
+    };
+
+    const collectEditableTextNodes = (doc) => {
+        const isBlocked = (el) => !!el.closest('defs, symbol, clipPath, mask, pattern, style, script, metadata');
+        const picked = [];
+        const seen = new Set();
+
+        const maybePush = (el) => {
+            if (!el || seen.has(el)) return;
+            const text = normalizeText(el.textContent);
+            if (!text || isBlocked(el) || !isVisibleSvgNode(el)) return;
+            seen.add(el);
+            picked.push(el);
+        };
+
+        // Primary path: most diagrams keep labels in tspan/textPath leaves.
+        Array.from(doc.querySelectorAll('tspan, textPath')).forEach((el) => {
+            if (Array.from(el.children).length === 0) maybePush(el);
+        });
+
+        // Fallback path: plain <text> nodes.
+        if (picked.length === 0) {
+            Array.from(doc.querySelectorAll('text')).forEach((el) => maybePush(el));
+        }
+
+        // HTML-in-SVG path used by tools like Lucidchart (foreignObject labels).
+        Array.from(doc.querySelectorAll('foreignObject *')).forEach((el) => {
+            const hasElementChildren = Array.from(el.children).length > 0;
+            if (!hasElementChildren) maybePush(el);
+        });
+
+        return picked;
+    };
+
     // --- Helpers ---
     const handleDrag = (e, setDrag) => { e.preventDefault(); e.stopPropagation(); setDrag(true); };
     const handleLeave = (e, setDrag) => { e.preventDefault(); e.stopPropagation(); setDrag(false); };
@@ -51,10 +117,10 @@ export default function DiagramToolEntry() {
         formData.append('file', extractFile);
         try {
             // 注意：这里需要你后端的 API 对应为 /sub4/upload_document
-            const res = await client.post('/sub4/upload_document', formData, { headers: { 'Content-Type': 'multipart/form-data' }});
+            const res = await client.post('/sub4/upload_document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             setExtractData(res.data);
         } catch (err) {
-            setExtractError(err.response?.data?.error || err.message);
+            setExtractError(extractErrorMessage(err));
         } finally {
             setExtractLoading(false);
         }
@@ -62,12 +128,16 @@ export default function DiagramToolEntry() {
 
     // --- Search & Editor Logic ---
     const handleSearch = async () => {
+        if (!String(searchQuery || '').trim()) {
+            setSearchError('Please enter a search prompt.');
+            return;
+        }
         setSearchLoading(true); setSearchError(''); setIsEditorVisible(false);
         try {
             const res = await client.post('/sub4/search_svg', { prompt: searchQuery });
             setSearchResults(res.data);
         } catch (err) {
-            setSearchError(err.response?.data?.error || err.message);
+            setSearchError(extractErrorMessage(err));
         } finally {
             setSearchLoading(false);
         }
@@ -82,33 +152,16 @@ export default function DiagramToolEntry() {
 
             if (doc.querySelector('parsererror')) throw new Error('Failed to parse SVG file');
 
-            const isVisible = (el) => {
-                let current = el;
-                while (current && current.getAttribute) {
-                    if (current.getAttribute('display') === 'none' || current.getAttribute('visibility') === 'hidden' || current.getAttribute('opacity') === '0') return false;
-                    current = current.parentNode;
-                }
-                return true;
-            };
-
-            const candidates = Array.from(doc.querySelectorAll('text, tspan, textPath'));
-            const validNodes = candidates.filter(el => {
-                const cleanText = (el.textContent || '').trim();
-                if (!cleanText || !isVisible(el) || el.closest('defs, symbol, clipPath, mask, pattern, style')) return false;
-                if (cleanText.length === 1 && cleanText.charCodeAt(0) > 126) return false; // 排除图标
-                const hasTextChildren = Array.from(el.children).some(child => ['tspan', 'text', 'textPath'].includes(child.tagName.toLowerCase()));
-                if (hasTextChildren) return false;
-                return true;
-            });
+            const validNodes = collectEditableTextNodes(doc);
 
             svgDocRef.current = doc;
             textNodesRef.current = validNodes;
 
-            const fields = validNodes.map((n, i) => ({ id: i, value: n.textContent }));
+            const fields = validNodes.map((n, i) => ({ id: i, value: normalizeText(n.textContent) }));
             setEditorFields(fields);
             updatePreviewHtml();
         } catch (err) {
-            setEditorError(err.response?.data?.error || err.message);
+            setEditorError(extractErrorMessage(err));
         } finally {
             setEditorLoading(false);
         }
@@ -160,10 +213,10 @@ export default function DiagramToolEntry() {
         const formData = new FormData();
         formData.append('promptFile', genFile);
         try {
-            const res = await client.post('/sub4/generate_diagram', formData, { headers: { 'Content-Type': 'multipart/form-data' }});
+            const res = await client.post('/sub4/generate_diagram', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             setGenData(res.data);
         } catch (err) {
-            setGenError(err.response?.data?.error || err.message);
+            setGenError(extractErrorMessage(err));
         } finally {
             setGenLoading(false);
         }
