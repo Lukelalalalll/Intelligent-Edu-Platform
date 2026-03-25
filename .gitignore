@@ -66,6 +66,12 @@ backend/sub4/results/
 # 如果你不需要提交评测数据，也可以取消下面这行的注释
 # evaluations/
 
+# 5.1 文档与图片导出文件
+*.docx
+*.pdf
+*.png
+*.pptx
+
 # 6. IDE 与系统文件
 .idea/
 .vscode/
