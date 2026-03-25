@@ -1,0 +1,17 @@
+{
+    "submissionId": "sub_002",
+    "studentName": "Bob Wang",
+    "assignmentId": "hw1",
+    "gradedBy": "teacher@school.edu",
+    "gradedAt": "2026-03-24T16:30:00Z",
+    "totalScore": 72,
+    "rubricScores": {
+        "correctness": 30,
+        "codeStyle": 12,
+        "completeness": 15,
+        "explanation": 15
+    },
+    "annotations": [],
+    "overallFeedback": "Needs better explanation and consistent indentation.",
+    "cozeAiResponses": []
+}

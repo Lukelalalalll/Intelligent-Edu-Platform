@@ -31,6 +31,16 @@ class Config:
     COZE_BOT_ID = os.getenv('COZE_BOT_ID')
     COZE_API_BASE = os.getenv('COZE_API_BASE', 'https://api.coze.com/v3/chat')
     COZE_API_ROOT = "https://api.coze.com"
+    COZE_REQUEST_TIMEOUT_SECONDS = float(os.getenv('COZE_REQUEST_TIMEOUT_SECONDS', '90'))
+    COZE_POLL_INTERVAL_SECONDS = float(os.getenv('COZE_POLL_INTERVAL_SECONDS', '1.2'))
+    COZE_POLL_MAX_ATTEMPTS = int(os.getenv('COZE_POLL_MAX_ATTEMPTS', '50'))
+
+    # RAG / Vector Store
+    RAG_VECTORSTORE_DIR = os.getenv(
+        'RAG_VECTORSTORE_DIR',
+        os.path.join(BASE_DIR, 'generated', 'vectorstore'),
+    )
+    RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
 
 
     # ==========================
@@ -97,4 +107,5 @@ class Config:
 
         os.path.join(BASE_DIR, 'uploads/sub5'),
         os.path.join(BASE_DIR, 'generated/sub5'),
+        RAG_VECTORSTORE_DIR,
     ]

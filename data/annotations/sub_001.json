@@ -1,0 +1,152 @@
+{
+  "submissionId": "sub_001",
+  "studentName": "Alice Chen",
+  "assignmentId": "hw1",
+  "gradedBy": "teacher@school.edu",
+  "gradedAt": "2026-03-24T15:30:00Z",
+  "totalScore": 85,
+  "rubricScores": {
+    "correctness": 35,
+    "codeStyle": 18,
+    "completeness": 20,
+    "explanation": 12
+  },
+  "annotations": [
+    {
+      "pageNumber": 6,
+      "x": 0.19412434895833333,
+      "y": 0.3779465663580247,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:50.795Z",
+      "id": "ann_4496e14f"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.19412434895833333,
+      "y": 0.3779465663580247,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:50.963Z",
+      "id": "ann_6b20bcb7"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.19412434895833333,
+      "y": 0.3779465663580247,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:51.477Z",
+      "id": "ann_9d567da1"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.1344021267361111,
+      "y": 0.365600887345679,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:52.209Z",
+      "id": "ann_807c7dd0"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.1621799045138889,
+      "y": 0.2711564429012346,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:53.509Z",
+      "id": "ann_e5eba13a"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.248291015625,
+      "y": 0.6713107638888889,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:56.776Z",
+      "id": "ann_92bcc1a1"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.21912434895833333,
+      "y": 0.8182243441358025,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:57.743Z",
+      "id": "ann_c54a4e5f"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.7663465711805556,
+      "y": 0.8506317515432099,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:36:59.027Z",
+      "id": "ann_e99d4040"
+    },
+    {
+      "pageNumber": 6,
+      "x": 0.660791015625,
+      "y": 0.7407552083333333,
+      "width": 0.18,
+      "height": 0.08,
+      "comment": "",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:37:00.014Z",
+      "id": "ann_defdba89"
+    },
+    {
+      "pageNumber": 1,
+      "x": 0.31912434895833336,
+      "y": 0.1251808449074074,
+      "title": "hi",
+      "comment": "test",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:40:31.025Z",
+      "id": "ann_8b33c93f"
+    },
+    {
+      "pageNumber": 1,
+      "x": 0.5205132378472223,
+      "y": 0.17672405478395062,
+      "title": "rw",
+      "comment": "rw",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T02:40:46.475Z",
+      "id": "ann_236f6476"
+    },
+    {
+      "pageNumber": 1,
+      "x": 0.5052354600694444,
+      "y": 0.8225405092592593,
+      "title": "test",
+      "comment": "tttt",
+      "aiSuggestion": "",
+      "timestamp": "2026-03-25T03:00:41.725Z",
+      "id": "draft_1774407646424_ylmyra"
+    }
+  ],
+  "overallFeedback": "Great effort! Your code works correctly but could be more efficient.",
+  "cozeAiResponses": [
+    {
+      "query": "Analyze the code structure",
+      "response": "The code is well-organized but missing error handling."
+    }
+  ]
+}

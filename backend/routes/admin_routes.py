@@ -11,7 +11,8 @@ admin_router = APIRouter(prefix="/api/admin", tags=["Admin"])
 @admin_router.get("/users")
 async def get_users(admin: dict = Depends(get_admin_user)):
     users = await db.users.find().to_list(1000)
-    return [{"id": str(u["_id"]), "username": u["username"], "email": u["email"], "role": u.get("role", "student")} for
+    return [{"id": str(u["_id"]), "username": u["username"], "email": u["email"], "role": u.get("role", "student"),
+             "teacherCourseIds": u.get("teacherCourseIds", [])} for
             u in users]
 
 
@@ -22,7 +23,8 @@ async def add_user(req: AuthSchema, admin: dict = Depends(get_admin_user)):
     user_doc = {
         "username": req.username, "email": req.email,
         "password_hash": generate_password_hash(req.password or '123456'),
-        "role": req.role
+        "role": req.role,
+        "teacherCourseIds": req.teacherCourseIds or []
     }
     await db.users.insert_one(user_doc)
     return {"message": "User created successfully"}

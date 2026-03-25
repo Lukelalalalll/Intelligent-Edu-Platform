@@ -1,17 +1,19 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 class AuthSchema(BaseModel):
     username: str
     password: str
     email: Optional[str] = None
-    role: Optional[str] = 'student'
+    role: Optional[Literal['student', 'teacher', 'admin']] = 'student'
+    teacherCourseIds: Optional[List[str]] = None
 
 class UpdateProfileSchema(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[Literal['student', 'teacher', 'admin']] = None
+    teacherCourseIds: Optional[List[str]] = None
 
 class CombineSchema(BaseModel):
     filename: str
@@ -52,7 +54,11 @@ class GenerateQuestionsSchema(BaseModel):
     subject: str
     question_type: str
     num_questions: int
-    difficulty: str
+    difficulty: int | str
+    constraints: List[str] = []
+    question_basis: Optional[str] = None
+    knowledge_points: str = ""
+    saved_screenshots: List[str] = []
 
 class ExportQuestionsSchema(BaseModel):
     format: str = "word"
@@ -74,3 +80,46 @@ class SummarizeChaptersSchema(BaseModel):
 # === Sub1 PPT Generation ===
 class PptProcessSchema(BaseModel):
     ppt_schema: dict
+
+
+# === Teacher Grading ===
+class AnnotationPayload(BaseModel):
+    submissionId: str
+    annotation: dict
+
+
+class SubmissionScoreSchema(BaseModel):
+    submissionId: str
+    totalScore: int
+    rubricScores: dict
+    overallFeedback: str = ""
+    gradedBy: str | None = None
+
+
+class FinalizeAnnotationsSchema(BaseModel):
+    submissionId: str
+    annotations: List[dict]
+
+
+class AnalyzeSubmissionSchema(BaseModel):
+    submissionId: str
+
+
+class FeedbackSchema(BaseModel):
+    submissionId: str
+    selectedText: str
+    assignment: str | None = None
+    rubric: dict | None = None
+    messages: List[dict] | None = None
+    useRag: bool = True
+    ragTopK: int = 4
+
+
+class AnnotateSchema(BaseModel):
+    submissionId: str
+    selectedText: str
+    assignment: str | None = None
+    rubric: dict | None = None
+    messages: List[dict] | None = None
+    useRag: bool = True
+    ragTopK: int = 4

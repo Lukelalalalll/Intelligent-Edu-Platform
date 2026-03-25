@@ -1,0 +1,114 @@
+{
+    "courses": [
+        {
+            "id": "comp1001",
+            "courseId": "comp1001",
+            "name": "Introduction to Programming",
+            "teacherId": "teacher_demo_001",
+            "degreeLevel": "bachelor",
+            "semester": "2026-Spring",
+            "studentList": [
+                {
+                    "studentId": "2024001"
+                },
+                {
+                    "studentId": "2024002"
+                },
+                {
+                    "studentId": "2024003"
+                }
+            ],
+            "assignments": [
+                {
+                    "id": "hw1",
+                    "title": "Week 1: Variables and Loops",
+                    "description": "Write a program that prints numbers 1-100 and identifies if each is odd or even.",
+                    "dueDate": "2026-03-25",
+                    "rubric": {
+                        "correctness": 40,
+                        "codeStyle": 20,
+                        "completeness": 20,
+                        "explanation": 20
+                    },
+                    "submissions": [
+                        {
+                            "id": "sub_001",
+                            "studentName": "Alice Chen",
+                            "studentId": "2024001",
+                            "pdfPath": "data/submissions/hw1_alice.pdf",
+                            "status": "pending",
+                            "submittedAt": "2026-03-24 14:30:00"
+                        },
+                        {
+                            "id": "sub_002",
+                            "studentName": "Bob Wang",
+                            "studentId": "2024002",
+                            "pdfPath": "data/submissions/hw1_bob.pdf",
+                            "status": "grading",
+                            "submittedAt": "2026-03-24 10:15:00"
+                        }
+                    ]
+                },
+                {
+                    "id": "hw2",
+                    "title": "Week 2: Conditionals",
+                    "description": "Write a program that simulates a basic ATM menu.",
+                    "dueDate": "2026-04-02",
+                    "rubric": {
+                        "correctness": 50,
+                        "codeStyle": 20,
+                        "completeness": 15,
+                        "explanation": 15
+                    },
+                    "submissions": [
+                        {
+                            "id": "sub_003",
+                            "studentName": "Chris Lee",
+                            "studentId": "2024003",
+                            "pdfPath": "data/submissions/hw2_chris.pdf",
+                            "status": "pending",
+                            "submittedAt": "2026-03-24 18:15:00"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "comp2001",
+            "courseId": "comp2001",
+            "name": "Data Structures",
+            "teacherId": "teacher_demo_002",
+            "degreeLevel": "master",
+            "semester": "2026-Spring",
+            "studentList": [
+                {
+                    "studentId": "2024004"
+                }
+            ],
+            "assignments": [
+                {
+                    "id": "hw_ds1",
+                    "title": "Linked Lists",
+                    "description": "Implement singly and doubly linked lists with tests.",
+                    "dueDate": "2026-03-30",
+                    "rubric": {
+                        "correctness": 45,
+                        "codeStyle": 20,
+                        "completeness": 20,
+                        "explanation": 15
+                    },
+                    "submissions": [
+                        {
+                            "id": "sub_004",
+                            "studentName": "Dana Xu",
+                            "studentId": "2024004",
+                            "pdfPath": "data/submissions/hw_ds1_dana.pdf",
+                            "status": "pending",
+                            "submittedAt": "2026-03-24 09:05:00"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
