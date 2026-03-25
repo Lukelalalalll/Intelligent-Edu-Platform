@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import client from '../api/client';
 import Profile from '../pages/Profile';
 
@@ -14,9 +14,12 @@ export default function ProfileEntry() {
     const [alert, setAlert] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [profileCourses, setProfileCourses] = useState([]);
+    const [courseSemester, setCourseSemester] = useState('');
+    const [isCoursesLoading, setIsCoursesLoading] = useState(true);
 
     const getRoleInfo = (role) => {
-        switch(role) {
+        switch (role) {
             case 'admin': return { icon: 'fa-shield-alt', text: 'Administrator' };
             case 'teacher': return { icon: 'fa-chalkboard-teacher', text: 'Teacher' };
             default: return { icon: 'fa-user-graduate', text: 'Student' };
@@ -55,6 +58,30 @@ export default function ProfileEntry() {
         }
     };
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadProfileCourses = async () => {
+            try {
+                setIsCoursesLoading(true);
+                const response = await client.get('/profile/courses');
+                if (!isMounted) return;
+                setProfileCourses(response.data?.courses || []);
+                setCourseSemester(response.data?.semester || '');
+            } catch (error) {
+                if (!isMounted) return;
+                setProfileCourses([]);
+            } finally {
+                if (isMounted) setIsCoursesLoading(false);
+            }
+        };
+
+        loadProfileCourses();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     return (
         <Profile
             user={storedUser}
@@ -69,6 +96,9 @@ export default function ProfileEntry() {
             handleFormSubmit={handleFormSubmit}
             handleSaveProfile={handleSaveProfile}
             roleInfo={getRoleInfo(storedUser?.role)}
+            profileCourses={profileCourses}
+            courseSemester={courseSemester}
+            isCoursesLoading={isCoursesLoading}
             handleModalBackgroundClick={(e) => e.target.classList.contains('modal-overlay') && setShowModal(false)}
         />
     );

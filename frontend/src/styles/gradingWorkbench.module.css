@@ -46,22 +46,31 @@ main {
 .contentShell {
     max-width: 1920px;
     width: 100%;
+    height: calc(100vh - 110px);
+    min-height: 680px;
     margin: 0 auto;
     padding: 0;
     box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: minmax(0, 2.05fr) minmax(0, 1.25fr) minmax(380px, 1fr);
+    grid-template-columns: minmax(900px, 2.2fr) minmax(620px, 1.4fr) minmax(400px, 1fr);
     gap: 18px;
     align-items: stretch;
-    min-height: calc(100vh - 120px);
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    min-width: 0;
 }
 
 .pane {
     height: 100%;
     min-height: 0;
+    min-width: 0;
 }
 
 .pdfPane,
@@ -71,6 +80,14 @@ main {
 }
 
 .pdfPane> :nth-child(2) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.scorePane> :first-child {
     flex: 1;
     min-height: 0;
 }
@@ -153,6 +170,8 @@ main {
     border: 1px solid rgba(0, 0, 0, 0.08);
     position: relative;
     overflow: hidden;
+    height: 100%;
+    min-height: 0;
     transition: var(--transition);
 }
 
@@ -255,6 +274,19 @@ main {
     height: 100%;
     min-height: 500px;
     overflow: hidden;
+    position: relative;
+}
+
+.cozeWrapper::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    opacity: 0.9;
+    pointer-events: none;
 }
 
 .cozeCard {
@@ -262,10 +294,11 @@ main {
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    min-width: 0;
 }
 
 .chatPane {
-    min-height: calc(100vh - 125px);
+    min-height: 0;
 }
 
 /* 🌟 恢复内部元素的排版 */
@@ -310,6 +343,7 @@ main {
     margin-top: 12px;
     flex: 1;
     min-height: 0;
+    min-width: 0;
     background: rgba(255, 255, 255, 0.88);
     border-radius: 12px;
     padding: 20px;
@@ -326,9 +360,13 @@ main {
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    max-width: 85%;
+    width: min(560px, 85%);
+    max-width: 100%;
     line-height: 1.6;
     font-size: 0.95rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .msgAuthor {
@@ -456,17 +494,19 @@ main {
         padding: 16px 14px 18px;
     }
 
-    .grid {
-        grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-        min-height: auto;
+    .contentShell {
+        height: calc(100vh - 102px);
+        min-height: 620px;
     }
 
-    .grid> :first-child {
-        grid-column: 1 / -1;
+    .grid {
+        grid-template-columns: minmax(860px, 1.95fr) minmax(580px, 1.25fr) minmax(380px, 1fr);
+        min-height: 0;
+        width: 100%;
     }
 
     .chatPane {
-        min-height: 560px;
+        min-height: 0;
     }
 }
 
@@ -477,9 +517,16 @@ main {
         padding: 14px 10px 16px;
     }
 
+    .contentShell {
+        height: auto;
+        min-height: 0;
+        overflow-y: visible;
+    }
+
     .grid {
         grid-template-columns: 1fr;
         min-height: auto;
+        width: 100%;
     }
 
     .chatPane {

@@ -16,7 +16,9 @@ export default function GradingWorkbench() {
 
     const [detail, setDetail] = useState(null);
     const [annotations, setAnnotations] = useState([]);
-    const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+    const [isFinalSaving, setIsFinalSaving] = useState(false);
+    const [hasUnsavedLabelChanges, setHasUnsavedLabelChanges] = useState(false);
+    const [pdfVersion, setPdfVersion] = useState(Date.now());
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -32,6 +34,8 @@ export default function GradingWorkbench() {
                     annotationsStore: data.annotations,
                 });
                 setAnnotations(data.annotations?.annotations || []);
+                setHasUnsavedLabelChanges(false);
+                setPdfVersion(Date.now());
             } catch (err) {
                 setError('Failed to load submission');
             } finally {
@@ -43,38 +47,60 @@ export default function GradingWorkbench() {
 
     const pdfUrl = useMemo(() => {
         if (!detail?.submission?.pdfPath) return '';
-        const path = detail.submission.pdfPath.startsWith('http')
+        const rawPath = detail.submission.pdfPath.startsWith('http')
             ? detail.submission.pdfPath
             : `${apiRoot}/${detail.submission.pdfPath}`;
-        return path;
-    }, [detail]);
+        const path = encodeURI(rawPath);
+        return `${path}${path.includes('?') ? '&' : '?'}v=${pdfVersion}`;
+    }, [detail, pdfVersion]);
 
-    const handleAddAnnotation = async (annotation) => {
-        try {
-            const res = await teacherApi.saveAnnotation(submissionId, annotation);
-            const updated = res.annotation;
-            setAnnotations((prev) => {
-                const existingIdx = prev.findIndex((a) => a.id === updated.id);
-                if (existingIdx >= 0) {
-                    const next = [...prev];
-                    next[existingIdx] = updated;
-                    return next;
-                }
-                return [...prev, updated];
-            });
-            setSelectedAnnotation(updated);
-        } catch (err) {
-            setError('Failed to save annotation');
-        }
+    const handleSaveAnnotation = async (annotation) => {
+        const updated = {
+            ...annotation,
+            id: annotation.id || `draft_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            timestamp: annotation.timestamp || new Date().toISOString(),
+        };
+        setAnnotations((prev) => {
+            const existingIdx = prev.findIndex((a) => a.id === updated.id);
+            if (existingIdx >= 0) {
+                const next = [...prev];
+                next[existingIdx] = updated;
+                return next;
+            }
+            return [...prev, updated];
+        });
+        setHasUnsavedLabelChanges(true);
+        return updated;
     };
 
-    const handleDeleteAnnotation = async (ann) => {
+    const handleDeleteAnnotation = async (annotationId) => {
+        setAnnotations((prev) => prev.filter((a) => a.id !== annotationId));
+        setHasUnsavedLabelChanges(true);
+    };
+
+    const handleFinalizeAnnotations = async () => {
         try {
-            await teacherApi.deleteAnnotation(submissionId, ann.id);
-            setAnnotations((prev) => prev.filter((a) => a.id !== ann.id));
-            setSelectedAnnotation(null);
+            setIsFinalSaving(true);
+            setError('');
+            const res = await teacherApi.finalizeAnnotations(submissionId, annotations);
+            setAnnotations(res.annotations || []);
+            setHasUnsavedLabelChanges(false);
+            setPdfVersion(Date.now());
+            setDetail((prev) => {
+                if (!prev) return prev;
+                const nextPath = res.pdfPath || prev.submission?.pdfPath;
+                return {
+                    ...prev,
+                    submission: {
+                        ...prev.submission,
+                        pdfPath: nextPath,
+                    },
+                };
+            });
         } catch (err) {
-            setError('Failed to delete annotation');
+            setError('Failed to finalize annotations to PDF');
+        } finally {
+            setIsFinalSaving(false);
         }
     };
 
@@ -106,33 +132,33 @@ export default function GradingWorkbench() {
                     <div className={`${styles.card} ${styles.pane} ${styles.pdfPane} ${styles.animatedElement} ${styles.delay1}`}>
                         <div className={styles.cardHeader}>
                             <div className={styles.tag}><i className="fas fa-file-pdf" /> PDF Viewer</div>
-                            <div className={styles.tag}><i className="fas fa-map-marker-alt" /> {detail?.submission?.studentName || 'Student'}</div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                {hasUnsavedLabelChanges && <div className={styles.tag} style={{ background: 'rgba(245,158,11,0.15)', color: '#92400e' }}>Draft Labels</div>}
+                                <button
+                                    type="button"
+                                    onClick={handleFinalizeAnnotations}
+                                    disabled={isFinalSaving || !hasUnsavedLabelChanges}
+                                    style={{
+                                        padding: '8px 14px',
+                                        borderRadius: 999,
+                                        border: 'none',
+                                        background: isFinalSaving || !hasUnsavedLabelChanges ? '#94a3b8' : '#0f766e',
+                                        color: '#fff',
+                                        fontWeight: 700,
+                                        cursor: isFinalSaving || !hasUnsavedLabelChanges ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
+                                    {isFinalSaving ? 'Saving To PDF...' : 'Finalize Save To PDF'}
+                                </button>
+                                <div className={styles.tag}><i className="fas fa-map-marker-alt" /> {detail?.submission?.studentName || 'Student'}</div>
+                            </div>
                         </div>
                         <PDFViewer
                             file={pdfUrl}
                             annotations={annotations}
-                            onAddAnnotation={handleAddAnnotation}
-                            onSelectAnnotation={setSelectedAnnotation}
+                            onSaveAnnotation={handleSaveAnnotation}
+                            onDeleteAnnotation={handleDeleteAnnotation}
                         />
-                        {selectedAnnotation && (
-                            <div className={`${styles.card} ${styles.subCard}`}>
-                                <div className={styles.cardHeader}>
-                                    <div style={{ fontWeight: 700 }}>Selected Annotation</div>
-                                    <button onClick={() => handleDeleteAnnotation(selectedAnnotation)} className={styles.ghostBtn} style={{ color: '#b91c1c' }}>Delete</button>
-                                </div>
-                                <div className={styles.annotationBox}>
-                                    <textarea
-                                        value={selectedAnnotation.comment || ''}
-                                        rows={3}
-                                        onChange={(e) => setSelectedAnnotation({ ...selectedAnnotation, comment: e.target.value })}
-                                        onBlur={() => handleAddAnnotation(selectedAnnotation)}
-                                    />
-                                    {selectedAnnotation.aiSuggestion && (
-                                        <div className={styles.annotationFooter}>AI: {selectedAnnotation.aiSuggestion}</div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     <div className={`${styles.cozeWrapper} ${styles.pane} ${styles.chatPane} ${styles.animatedElement} ${styles.delay2}`}>

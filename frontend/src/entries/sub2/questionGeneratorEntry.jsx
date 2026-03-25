@@ -55,7 +55,7 @@ export default function QuestionGeneratorEntry() {
         try {
             formatted = formatted.replace(/\$\$(.*?)\$\$/g, '<span class="math">$$$$$1$$$$</span>');
             formatted = formatted.replace(/\$(.*?)\$/g, '<span class="math">$$$1$$</span>');
-        } catch (e) {}
+        } catch (e) { }
         return formatted;
     };
 
@@ -69,7 +69,7 @@ export default function QuestionGeneratorEntry() {
 
         try {
             // ⚠️ 注意：这里假设后端的 API 对应改为了 /sub2
-            const res = await client.post('/sub2/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' }});
+            const res = await client.post('/sub2/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             if (res.data.success) {
                 setFileName(res.data.filename);
                 setFileType(res.data.file_type);
@@ -130,7 +130,7 @@ export default function QuestionGeneratorEntry() {
             });
 
             if (res.data.success) {
-                setSavedScreenshots(prev => [...prev, res.data.filename]);
+                setSavedScreenshots(prev => (prev.includes(res.data.filename) ? prev : [...prev, res.data.filename]));
                 if (!suppressAlert) alert(`Screenshot saved: ${res.data.filename}`);
             } else { throw new Error(res.data.error); }
         } catch (err) {
@@ -146,17 +146,49 @@ export default function QuestionGeneratorEntry() {
 
     // --- Generate & Export ---
     const generateQuestions = async () => {
+        if (questionBasis === 'example_images' && savedScreenshots.length === 0) {
+            alert('Please capture at least one screenshot before using Example images basis.');
+            return;
+        }
+
+        const parsedCount = parseInt(String(numQuestions), 10);
+        const safeNumQuestions = Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 5;
+        const parsedDifficulty = parseInt(String(difficulty), 10);
+        const safeDifficulty = Number.isFinite(parsedDifficulty) && parsedDifficulty > 0 ? parsedDifficulty : 3;
+        const safeConstraints = String(constraints || '')
+            .split('\n')
+            .map((c) => c.trim())
+            .filter(Boolean);
+
+        const payload = {
+            subject: String(subject || 'Mathematics').trim() || 'Mathematics',
+            question_type: String(questionType || 'Multiple choice').trim() || 'Multiple choice',
+            num_questions: safeNumQuestions,
+            difficulty: safeDifficulty,
+            constraints: safeConstraints,
+            question_basis: questionBasis || null,
+            knowledge_points: String(knowledgePoints || ''),
+            saved_screenshots: Array.isArray(savedScreenshots) ? savedScreenshots.filter(Boolean) : [],
+        };
+
         setGenerateLoading(true); setGeneratedQuestions(null);
         try {
-            const res = await client.post('/sub2/generate_questions', {
-                subject, question_type: questionType, num_questions: Number(numQuestions), difficulty: Number(difficulty),
-                constraints: constraints.split('\n').filter(c => c.trim()), question_basis: questionBasis,
-                knowledge_points: knowledgePoints, saved_screenshots: savedScreenshots
-            });
+            const res = await client.post('/sub2/generate_questions', payload);
             if (res.data.success) {
                 setGeneratedQuestions(res.data.questions.replace(/\n/g, '<br>'));
             } else { alert(res.data.error); }
-        } catch (err) { alert('Generation error: ' + err.message); }
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            let detailText = '';
+            if (Array.isArray(detail)) {
+                detailText = detail.map((d) => `${(d.loc || []).join('.')}: ${d.msg}`).join('; ');
+            } else if (typeof detail === 'string') {
+                detailText = detail;
+            } else if (err?.response?.data?.error) {
+                detailText = String(err.response.data.error);
+            }
+            alert('Generation error: ' + (detailText || err.message));
+        }
         finally { setGenerateLoading(false); }
     };
 
@@ -178,8 +210,8 @@ export default function QuestionGeneratorEntry() {
         handleDragOver: e => { e.preventDefault(); setIsDragging(true); },
         handleDragLeave: () => setIsDragging(false),
         handleDrop: e => { e.preventDefault(); setIsDragging(false); handleFile(e.dataTransfer.files[0]); },
-        togglePage: i => setSelectedPages(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i].sort((a,b)=>a-b)),
-        selectAllPages: () => setSelectedPages(Array.from({length: totalPages}, (_, i) => i)),
+        togglePage: i => setSelectedPages(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i].sort((a, b) => a - b)),
+        selectAllPages: () => setSelectedPages(Array.from({ length: totalPages }, (_, i) => i)),
         clearPageSelection: () => setSelectedPages([]),
         extractContent,
         toggleExercise: i => setSelectedExercises(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]),

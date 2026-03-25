@@ -1,23 +1,114 @@
 import { useEffect, useState } from 'react';
 
-export default function RubricPanel({ rubric = {}, existingScores = {}, onSave }) {
-    const [scores, setScores] = useState(existingScores || {});
+export default function RubricPanel({ rubric = {}, existingScores, onSave }) {
+    const [scores, setScores] = useState(existingScores?.rubricScores || {});
     const [total, setTotal] = useState(existingScores?.totalScore || '');
     const [note, setNote] = useState(existingScores?.overallFeedback || '');
+    const [customRows, setCustomRows] = useState([]);
 
     useEffect(() => {
-        setScores(existingScores?.rubricScores || {});
+        const nextScores = existingScores?.rubricScores || {};
+        setScores(nextScores);
         setTotal(existingScores?.totalScore || '');
         setNote(existingScores?.overallFeedback || '');
-    }, [existingScores]);
+
+        const builtInKeys = new Set(Object.keys(rubric || {}));
+        const extras = Object.entries(nextScores)
+            .filter(([key]) => !builtInKeys.has(key))
+            .map(([key, value], idx) => ({
+                id: `custom_${Date.now()}_${idx}`,
+                question: key,
+                score: value === undefined || value === null ? '' : String(value),
+            }));
+        setCustomRows(extras);
+    }, [existingScores, rubric]);
 
     const handleChange = (key, value) => {
-        setScores((prev) => ({ ...prev, [key]: Number(value) }));
+        setScores((prev) => ({ ...prev, [key]: value === '' ? '' : Number(value) }));
+    };
+
+    const handleAddCustomRow = () => {
+        setCustomRows((prev) => [
+            ...prev,
+            {
+                id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                question: '',
+                score: '',
+            },
+        ]);
+    };
+
+    const handleCustomRowChange = (id, field, value) => {
+        setCustomRows((prev) =>
+            prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+        );
+    };
+
+    const handleRemoveCustomRow = (id) => {
+        setCustomRows((prev) => prev.filter((row) => row.id !== id));
+    };
+
+    const handleSave = () => {
+        const builtInKeys = Object.keys(rubric || {});
+        const normalizedScores = {};
+
+        builtInKeys.forEach((key) => {
+            const value = scores[key];
+            if (value !== '' && value !== undefined && value !== null) {
+                normalizedScores[key] = Number(value);
+            }
+        });
+
+        customRows.forEach((row) => {
+            const question = row.question.trim();
+            if (!question) return;
+            if (row.score === '' || row.score === undefined || row.score === null) return;
+            normalizedScores[question] = Number(row.score);
+        });
+
+        onSave?.({
+            totalScore: Number(total),
+            rubricScores: normalizedScores,
+            overallFeedback: note,
+        });
     };
 
     return (
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, display: 'grid', gap: 10 }}>
-            <div style={{ fontWeight: 700 }}>Rubric Scores</div>
+        <div
+            style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: 10,
+                padding: 12,
+                display: 'grid',
+                gap: 10,
+                height: '100%',
+                minHeight: 0,
+                overflowY: 'auto',
+                alignContent: 'start',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>Rubric Scores</div>
+                <button
+                    type="button"
+                    onClick={handleAddCustomRow}
+                    title="Add custom score row"
+                    style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        border: '1px solid #16a34a',
+                        background: '#ecfdf3',
+                        color: '#15803d',
+                        fontSize: 18,
+                        lineHeight: '1',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                    }}
+                >
+                    +
+                </button>
+            </div>
             {Object.entries(rubric).map(([key, max]) => (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 140, textTransform: 'capitalize' }}>{key}</div>
@@ -30,6 +121,50 @@ export default function RubricPanel({ rubric = {}, existingScores = {}, onSave }
                         style={{ flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #e5e7eb' }}
                     />
                     <span style={{ fontSize: 12, color: '#6b7280' }}>/ {max}</span>
+                </div>
+            ))}
+            {customRows.map((row) => (
+                <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                        type="text"
+                        value={row.question}
+                        onChange={(e) => handleCustomRowChange(row.id, 'question', e.target.value)}
+                        placeholder="Question number (e.g. Q1 / Problem 1)"
+                        style={{
+                            width: 160,
+                            padding: '8px',
+                            borderRadius: 8,
+                            border: '1px solid #e5e7eb',
+                        }}
+                    />
+                    <input
+                        type="number"
+                        value={row.score}
+                        onChange={(e) => handleCustomRowChange(row.id, 'score', e.target.value)}
+                        placeholder="Score"
+                        style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: 8,
+                            border: '1px solid #e5e7eb',
+                        }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => handleRemoveCustomRow(row.id)}
+                        title="Remove row"
+                        style={{
+                            border: '1px solid #fecaca',
+                            background: '#fff1f2',
+                            color: '#be123c',
+                            borderRadius: 8,
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                        }}
+                    >
+                        x
+                    </button>
                 </div>
             ))}
             <div>
@@ -51,7 +186,7 @@ export default function RubricPanel({ rubric = {}, existingScores = {}, onSave }
                 />
             </div>
             <button
-                onClick={() => onSave?.({ totalScore: Number(total), rubricScores: scores, overallFeedback: note })}
+                onClick={handleSave}
                 style={{ padding: '10px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', cursor: 'pointer' }}
             >
                 Save Scores

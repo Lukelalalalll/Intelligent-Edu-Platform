@@ -35,39 +35,72 @@
 }
 
 @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 .bgOrb {
     position: absolute;
-    top: -10%; left: -10%;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    top: -10%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
     border-radius: 50%;
     animation: floatOrb 12s ease-in-out infinite;
     pointer-events: none;
 }
 
 @keyframes floatOrb {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(50px, 50px); }
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(50px, 50px);
+    }
 }
 
 .profileContainer {
     width: 100%;
-    max-width: 800px;
+    max-width: 1220px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 24px;
     position: relative;
-    z-index: 1; /* 确保在光球之上 */
+    z-index: 1;
+    /* 确保在光球之上 */
+}
+
+.profileGrid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.25fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.leftColumn,
+.rightColumn {
+    display: grid;
+    gap: 24px;
 }
 
 /* --- 卡片通用样式 (毛玻璃效果 + 3D动画) --- */
 .profileHeaderCard,
-.profileEditCard {
+.profileEditCard,
+.profileCoursesCard {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -90,9 +123,20 @@
     animation: cardEntrance 0.8s var(--ease-out-back) forwards 0.2s;
 }
 
+.profileCoursesCard {
+    animation: cardEntrance 0.8s var(--ease-out-back) forwards 0.15s;
+}
+
 @keyframes cardEntrance {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* --- 顶部卡片：头像与信息 --- */
@@ -127,6 +171,69 @@
     gap: 8px;
 }
 
+.courseList {
+    display: grid;
+    gap: 12px;
+}
+
+.courseItem {
+    border: 1px solid rgba(99, 115, 129, 0.2);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    display: grid;
+    gap: 8px;
+}
+
+.courseMainInfo {
+    display: grid;
+    gap: 6px;
+}
+
+.courseCode {
+    display: inline-block;
+    width: fit-content;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    letter-spacing: 0.4px;
+    font-weight: 800;
+    background: rgba(0, 123, 85, 0.12);
+    color: var(--primary-dark);
+    text-transform: uppercase;
+}
+
+.courseName {
+    font-size: 0.98rem;
+    color: var(--text-main);
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.courseMeta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.courseMeta span {
+    font-size: 0.78rem;
+    color: var(--text-sub);
+    border: 1px solid rgba(99, 115, 129, 0.25);
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: capitalize;
+}
+
+.courseState {
+    font-size: 0.95rem;
+    color: var(--text-sub);
+    padding: 12px;
+    border: 1px dashed rgba(99, 115, 129, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
 .roleBadge {
     display: inline-flex;
     align-items: center;
@@ -139,9 +246,20 @@
     letter-spacing: 0.5px;
 }
 
-.admin { background-color: #ffe5e5; color: #cc0000; }
-.teacher { background-color: #e5f0ff; color: #004085; }
-.student { background-color: #e6f9f0; color: #007B55; }
+.admin {
+    background-color: #ffe5e5;
+    color: #cc0000;
+}
+
+.teacher {
+    background-color: #e5f0ff;
+    color: #004085;
+}
+
+.student {
+    background-color: #e6f9f0;
+    color: #007B55;
+}
 
 /* --- 底部编辑卡片 --- */
 .cardHeader {
@@ -232,7 +350,7 @@
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.1);
 }
 
-.inputWithIcon input:focus ~ .inputIcon {
+.inputWithIcon input:focus~.inputIcon {
     color: var(--primary-color);
 }
 
@@ -279,19 +397,40 @@
     animation: fadeIn 0.3s ease;
 }
 
-.hidden { display: none; }
-.success { background: #e6f9f0; color: #0c8c56; border: 1px solid #b8e6d2; }
-.error { background: #fde8e8; color: #c81e1e; border: 1px solid #fbd5d5; }
+.hidden {
+    display: none;
+}
+
+.success {
+    background: #e6f9f0;
+    color: #0c8c56;
+    border: 1px solid #b8e6d2;
+}
+
+.error {
+    background: #fde8e8;
+    color: #c81e1e;
+    border: 1px solid #fbd5d5;
+}
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modalOverlay {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
@@ -316,7 +455,7 @@
     padding: 30px;
     transform: scale(0.9);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
     text-align: center;
 }
 
@@ -325,28 +464,87 @@
 }
 
 .modalIcon {
-    width: 60px; height: 60px;
-    background: #fff3cd; color: #ffc107;
+    width: 60px;
+    height: 60px;
+    background: #fff3cd;
+    color: #ffc107;
     border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.8rem;
     margin: 0 auto 20px;
 }
 
-.modalBox h3 { margin-bottom: 10px; color: var(--text-main); font-weight: 800; }
-.modalBox p { color: var(--text-sub); margin-bottom: 30px; line-height: 1.5; }
-.modalActions { display: flex; gap: 12px; }
+.modalBox h3 {
+    margin-bottom: 10px;
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.modalBox p {
+    color: var(--text-sub);
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.modalActions {
+    display: flex;
+    gap: 12px;
+}
 
 .btnModal {
-    flex: 1; padding: 12px; border-radius: var(--radius-pill); border: none; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    flex: 1;
+    padding: 12px;
+    border-radius: var(--radius-pill);
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
 }
-.btnCancel { background: var(--bg-input); color: var(--text-main); }
-.btnCancel:hover { background: #d1d8e0; }
-.btnConfirm { background: var(--primary-color); color: white; }
-.btnConfirm:hover { background: var(--primary-dark); }
+
+.btnCancel {
+    background: var(--bg-input);
+    color: var(--text-main);
+}
+
+.btnCancel:hover {
+    background: #d1d8e0;
+}
+
+.btnConfirm {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btnConfirm:hover {
+    background: var(--primary-dark);
+}
 
 @media (max-width: 600px) {
-    .profileWrapper { padding: 2rem 1rem; }
-    .profileHeaderCard { flex-direction: column; text-align: center; padding: 30px 20px; }
-    .profileEditCard { padding: 30px 20px; }
+    .profileWrapper {
+        padding: 2rem 1rem;
+    }
+
+    .profileHeaderCard {
+        flex-direction: column;
+        text-align: center;
+        padding: 30px 20px;
+    }
+
+    .profileEditCard {
+        padding: 30px 20px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .profileGrid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .leftColumn,
+    .rightColumn {
+        gap: 18px;
+    }
 }
