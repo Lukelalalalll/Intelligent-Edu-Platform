@@ -76,29 +76,34 @@
     opacity: 0;
 }
 
-.tabBtn {
+.tabSwitcher button.tabBtn {
     border: none;
-    background: transparent;
+    background: transparent !important;
     padding: 12px 20px;
     border-radius: 999px;
     font-weight: 700;
-    color: var(--text-sub);
+    color: var(--text-sub) !important;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 10px;
     transition: var(--transition);
+    box-shadow: none !important;
+    transform: none !important;
 }
 
-.tabActive {
-    background: var(--primary-color);
-    color: #fff;
-    box-shadow: 0 12px 28px rgba(0, 123, 85, 0.25);
+.tabSwitcher button.tabBtn.tabActive {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    box-shadow: 0 12px 28px rgba(0, 123, 85, 0.25) !important;
+    transform: none !important;
 }
 
-.tabBtn:hover:not(.tabActive) {
-    color: var(--text-main);
-    background: rgba(0, 0, 0, 0.04);
+.tabSwitcher button.tabBtn:hover:not(.tabActive) {
+    color: var(--text-main) !important;
+    background: rgba(0, 0, 0, 0.04) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Chat wrapper spacing to mirror home page feel */
