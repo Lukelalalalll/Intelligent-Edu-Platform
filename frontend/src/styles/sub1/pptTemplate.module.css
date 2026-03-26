@@ -1,5 +1,9 @@
 /* frontend/src/styles/sub1/pptTemplate.module.css */
 
+.pageShell {
+    animation: pageFadeIn 0.55s ease-out both;
+}
+
 .workflowHint {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
@@ -22,6 +26,33 @@
     font-size: 1.5rem;
 }
 
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.2rem;
+}
+
+.cardIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(0, 123, 85, 0.12);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(0, 123, 85, 0.2);
+}
+
+.sectionTitle {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
 .themeGrid,
 .layoutGrid {
     display: grid;
@@ -40,6 +71,27 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    animation: tileIn 0.5s ease both;
+}
+
+.themeGrid .themeCard:nth-child(1),
+.layoutGrid .layoutCard:nth-child(1) {
+    animation-delay: 0.02s;
+}
+
+.themeGrid .themeCard:nth-child(2),
+.layoutGrid .layoutCard:nth-child(2) {
+    animation-delay: 0.06s;
+}
+
+.themeGrid .themeCard:nth-child(3),
+.layoutGrid .layoutCard:nth-child(3) {
+    animation-delay: 0.10s;
+}
+
+.themeGrid .themeCard:nth-child(4),
+.layoutGrid .layoutCard:nth-child(4) {
+    animation-delay: 0.14s;
 }
 
 .themeCard:hover,
@@ -99,10 +151,25 @@
     flex-grow: 1;
 }
 
-.cardInfo h5 {
+.themeName {
     font-size: 1.15rem;
     font-weight: 700;
     margin-bottom: 0.4rem;
+    color: var(--text-main);
+}
+
+.themeDesc {
+    margin: 0;
+    color: var(--text-sub);
+    font-size: 0.94rem;
+    line-height: 1.45;
+}
+
+.layoutName {
+    margin: 0;
+    font-size: 0.98rem;
+    color: var(--text-main);
+    font-weight: 700;
 }
 
 .progressWrapper {
@@ -110,6 +177,15 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
+}
+
+.progressText {
+    color: var(--text-sub);
+    font-weight: 600;
+}
+
+.progressText strong {
+    color: var(--text-main);
 }
 
 .customProgress {
@@ -167,6 +243,17 @@
     margin-bottom: 1.5rem;
 }
 
+.slideMetaPanel h4 {
+    margin: 0 0 0.5rem;
+    color: var(--text-main);
+    font-size: 1.15rem;
+}
+
+.slideMetaTags {
+    display: flex;
+    flex-wrap: wrap;
+}
+
 .metaTag {
     display: inline-flex;
     align-items: center;
@@ -194,6 +281,13 @@
     padding: 2rem;
 }
 
+.summaryTitle {
+    margin: 0 0 1rem;
+    color: var(--text-main);
+    font-size: 1.08rem;
+    font-weight: 700;
+}
+
 .statItem {
     display: flex;
     flex-direction: column;
@@ -205,6 +299,17 @@
     margin-bottom: 1rem;
 }
 
+.statItem span {
+    color: var(--text-sub);
+    font-size: 0.86rem;
+    letter-spacing: 0.01em;
+}
+
+.statItem strong {
+    color: var(--text-main);
+    font-size: 1.02rem;
+}
+
 .btnApplyAll {
     background: var(--accent-yellow);
     color: #212B36;
@@ -213,6 +318,35 @@
     border-radius: var(--radius-sm);
     font-weight: 700;
     cursor: pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+}
+
+.btnApplyAll:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 184, 0, 0.25);
+    filter: saturate(1.02);
+}
+
+.generateBtn {
+    width: 100%;
+    min-height: 80px;
+    font-size: 1.28rem;
+    border-radius: 16px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 14px 30px rgba(0, 123, 85, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: pulseSoft 2.1s ease-in-out infinite;
+}
+
+.generateBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 38px rgba(0, 123, 85, 0.3);
+}
+
+.infoBlock {
+    border-radius: 12px;
+    font-weight: 500;
 }
 
 .glassLoadingOverlay {
@@ -229,4 +363,116 @@
     z-index: 9999;
     color: white;
     text-align: center;
+    animation: fadeOverlayIn 0.28s ease-out both;
+}
+
+.loadingCard {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    padding: 1.5rem 1.8rem;
+    min-width: 290px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    animation: slideUpFade 0.36s ease-out both;
+}
+
+.loadingTitle {
+    margin: 0.9rem 0 0.35rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.loadingHint {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.95rem;
+}
+
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes tileIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes fadeOverlayIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulseSoft {
+    0% {
+        box-shadow: 0 14px 30px rgba(0, 123, 85, 0.20);
+    }
+
+    50% {
+        box-shadow: 0 18px 38px rgba(0, 123, 85, 0.32);
+    }
+
+    100% {
+        box-shadow: 0 14px 30px rgba(0, 123, 85, 0.20);
+    }
+}
+
+@media (max-width: 992px) {
+    .actionGrid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .customProgress {
+        width: 48%;
+        min-width: 170px;
+    }
+}
+
+@media (max-width: 768px) {
+    .workflowHint {
+        font-size: 0.95rem;
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .customTabContent {
+        padding: 1.2rem;
+    }
+
+    .generateBtn {
+        min-height: 66px;
+        font-size: 1.08rem;
+    }
 }

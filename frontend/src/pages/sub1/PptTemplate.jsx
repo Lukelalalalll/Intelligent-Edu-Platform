@@ -4,15 +4,24 @@ import styles from '../../styles/sub1/pptTemplate.module.css';
 export default function PptTemplate({
     states, handlers
 }) {
-    const { themes, selectedTheme, pptSchema, currentSlideIndex, layouts, isGenerating } = states;
+    const { themes, selectedTheme, pptSchema, currentSlideIndex, layouts, isGenerating, errorMsg } = states;
     const { selectTheme, setCurrentSlideIndex, selectLayout, applyLayoutToAll, generatePpt } = handlers;
 
     const currentSlide = pptSchema?.slides[currentSlideIndex];
     const configuredCount = pptSchema?.slides.filter(s => s.layout?.name).length || 0;
     const totalSlides = pptSchema?.slides.length || 0;
+    const backendStaticBase = 'http://localhost:5009/static';
+
+    const getThemePreviewSrc = (themeName) => (
+        `${backendStaticBase}/img/${encodeURIComponent(themeName.toLowerCase())}-theme.png`
+    );
+
+    const getLayoutPreviewSrc = (themeName, layoutName) => (
+        `${backendStaticBase}/img/${encodeURIComponent(themeName)}/${encodeURIComponent(layoutName)}.png`
+    );
 
     return (
-        <div className="container">
+        <div className={`container ${styles.pageShell}`}>
             <header className="page-header">
                 <h1><i className="fas fa-palette"></i> PowerPoint Template Selection</h1>
                 <p className="subtitle">Design your presentation by selecting a theme and layouts</p>
@@ -23,11 +32,17 @@ export default function PptTemplate({
                 <span><strong>Workflow:</strong> 1. Select a theme &rarr; 2. Navigate through slides &rarr; 3. Choose layout</span>
             </div>
 
+            {errorMsg && (
+                <div className="alert alert-warning" role="alert">
+                    {errorMsg}
+                </div>
+            )}
+
             {/* Step 1: Theme */}
             <div className="card">
                 <div className={styles.cardHeader}>
                     <div className={styles.cardIcon}><i className="fas fa-paint-brush"></i></div>
-                    <h2>1. Choose Presentation Theme</h2>
+                    <h2 className={styles.sectionTitle}>1. Choose Presentation Theme</h2>
                 </div>
                 <div className={styles.themeGrid}>
                     {themes.map(theme => (
@@ -37,15 +52,20 @@ export default function PptTemplate({
                             onClick={() => selectTheme(theme.name)}
                         >
                             <div className={styles.previewBox}>
-                                <img src={`/static/img/${theme.name.toLowerCase()}-theme.png`} alt={theme.name} />
+                                <img src={getThemePreviewSrc(theme.name)} alt={theme.name} />
                             </div>
                             <div className={styles.cardInfo}>
-                                <h5>{theme.name}</h5>
-                                <p>{theme.description || 'Professional theme'}</p>
+                                <h5 className={styles.themeName}>{theme.name}</h5>
+                                <p className={styles.themeDesc}>{theme.description || 'Professional theme'}</p>
                             </div>
                         </div>
                     ))}
                 </div>
+                {themes.length === 0 && (
+                    <div className={`alert alert-info ${styles.infoBlock}`} role="alert">
+                        No PPT themes were found. Please place template files (.pptx) in backend/static/ppt_templates and refresh.
+                    </div>
+                )}
             </div>
 
             {/* Step 2: Layouts */}
@@ -53,7 +73,7 @@ export default function PptTemplate({
                 <div className="card">
                     <div className={styles.cardHeader}>
                         <div className={styles.cardIcon}><i className="fas fa-th-large"></i></div>
-                        <h2>2. Customize Slide Layouts</h2>
+                        <h2 className={styles.sectionTitle}>2. Customize Slide Layouts</h2>
                     </div>
 
                     <div className={styles.progressWrapper}>
@@ -94,12 +114,17 @@ export default function PptTemplate({
                                     onClick={() => selectLayout(layout)}
                                 >
                                     <div className={styles.previewBox}>
-                                        <img src={`/static/img/${selectedTheme}/${layout.name}.png`} alt={layout.name} />
+                                        <img src={getLayoutPreviewSrc(selectedTheme, layout.name)} alt={layout.name} />
                                     </div>
-                                    <div className={styles.cardInfo}><h6>{layout.name}</h6></div>
+                                    <div className={styles.cardInfo}><h6 className={styles.layoutName}>{layout.name}</h6></div>
                                 </div>
                             ))}
                         </div>
+                        {layouts.length === 0 && (
+                            <div className={`alert alert-info ${styles.infoBlock}`} role="alert" style={{ marginTop: '1rem' }}>
+                                No available layouts were found for this theme.
+                            </div>
+                        )}
 
                         <div style={{ textAlign: 'right', marginTop: '2rem' }}>
                             <button className={styles.btnApplyAll} onClick={applyLayoutToAll}>
@@ -115,12 +140,12 @@ export default function PptTemplate({
                 <div className="card">
                     <div className={styles.actionGrid}>
                         <div className={styles.summaryBox}>
-                            <h5>Configuration Summary</h5>
+                            <h5 className={styles.summaryTitle}>Configuration Summary</h5>
                             <div className={styles.statItem}><span>Theme</span><strong>{selectedTheme}</strong></div>
                             <div className={styles.statItem}><span>Status</span><strong>Ready to Generate</strong></div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <button className="btn btn-primary" style={{ width: '100%', height: '80px', fontSize: '1.5rem' }} onClick={generatePpt}>
+                            <button className={`btn btn-primary ${styles.generateBtn}`} onClick={generatePpt}>
                                 <i className="fas fa-file-powerpoint"></i> Generate PPT
                             </button>
                         </div>
@@ -130,10 +155,10 @@ export default function PptTemplate({
 
             {isGenerating && (
                 <div className={styles.glassLoadingOverlay}>
-                    <div>
+                    <div className={styles.loadingCard}>
                         <div className="spinner-border text-light"></div>
-                        <h4 className="mt-3">Generating PowerPoint...</h4>
-                        <p>AI is composing your slides, please wait</p>
+                        <h4 className={styles.loadingTitle}>Generating PowerPoint...</h4>
+                        <p className={styles.loadingHint}>AI is composing your slides, please wait</p>
                     </div>
                 </div>
             )}
