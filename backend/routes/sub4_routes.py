@@ -10,7 +10,7 @@ import fitz
 from io import BytesIO
 from docx import Document
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from werkzeug.utils import secure_filename
 from backend.core.security import get_current_user
 from backend.schemas import SearchSvgSchema, DownloadSvgSchema
@@ -63,14 +63,53 @@ def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(get_curr
 
 @sub4_router.post("/search_svg")
 def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
-    if not Config.SERP_API_KEY: raise HTTPException(status_code=500, detail='SERP_API_KEY missing')
-    params = {'engine': 'google', 'q': req.prompt + ' filetype:svg', 'tbm': 'isch', 'api_key': Config.SERP_API_KEY}
+    if not Config.SERP_API_KEY:
+        raise HTTPException(status_code=500, detail='SERP_API_KEY missing')
+
+    query = (req.prompt or '').strip()
+    if not query:
+        raise HTTPException(status_code=400, detail='Prompt is required')
+
+    query_variants = [
+        f"{query} filetype:svg",
+        f"{query} vector diagram svg",
+        f"{query} site:lucid.co svg",
+    ]
+
+    dedup = {}
     try:
-        data = requests.get('https://serpapi.com/search', params=params).json()
-        if data.get('error'): raise HTTPException(status_code=400, detail=data['error'])
-        return [{'thumb': i.get('thumbnail'), 'svg': i.get('original'), 'title': i.get('title', '')} for i in
-                data.get('images_results', [])[:5]]
+        for q in query_variants:
+            params = {'engine': 'google', 'q': q, 'tbm': 'isch', 'api_key': Config.SERP_API_KEY}
+            data = requests.get('https://serpapi.com/search', params=params, timeout=20).json()
+            if data.get('error'):
+                continue
+
+            for item in data.get('images_results', [])[:25]:
+                svg_url = item.get('original') or ''
+                if not svg_url:
+                    continue
+                normalized = svg_url.lower()
+                if '.svg' not in normalized and 'svg' not in normalized:
+                    continue
+
+                if svg_url in dedup:
+                    continue
+                dedup[svg_url] = {
+                    'thumb': item.get('thumbnail') or svg_url,
+                    'svg': svg_url,
+                    'title': item.get('title', ''),
+                }
+
+            if len(dedup) >= 18:
+                break
+
+        results = list(dedup.values())[:18]
+        if not results:
+            raise HTTPException(status_code=404, detail='No SVG diagrams found for this query')
+        return results
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -124,8 +163,27 @@ def download_svg(req: DownloadSvgSchema, user: dict = Depends(get_current_user))
 @sub4_router.get("/fetch_external_svg")
 def fetch_external_svg(url: str, user: dict = Depends(get_current_user)):
     try:
-        resp = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        if not isinstance(url, str) or not re.match(r"^https?://", url.strip(), re.IGNORECASE):
+            raise HTTPException(status_code=400, detail="Invalid URL")
+
+        resp = requests.get(
+            url,
+            headers={
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'image/svg+xml,text/xml;q=0.9,*/*;q=0.8',
+            },
+            timeout=20,
+        )
         resp.raise_for_status()
-        return Response(content=resp.text, media_type="image/svg+xml")
+
+        content_type = (resp.headers.get('content-type') or '').lower()
+        raw = resp.content or b''
+        text = raw.decode(resp.encoding or 'utf-8', errors='replace')
+        if '<svg' not in text.lower() and 'image/svg+xml' not in content_type:
+            raise HTTPException(status_code=400, detail="Target URL did not return SVG content")
+
+        return Response(content=text, media_type="image/svg+xml")
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e))

@@ -15,6 +15,21 @@ from backend.utils.sub1.list_plsholders import PPTTemplateManager
 sub1_router = APIRouter(prefix="/api/sub1", tags=["Sub1"])
 public_sub1_router = APIRouter(prefix="/sub1", tags=["Sub1Public"])
 
+# Parse cache: {(filepath, use_llm): {"mtime": float, "data": dict}}
+_SUB1_PARSE_CACHE = {}
+
+
+def _get_parsed_data_with_cache(filepath: str, use_llm: bool):
+    cache_key = (filepath, bool(use_llm))
+    file_mtime = os.path.getmtime(filepath)
+    cached = _SUB1_PARSE_CACHE.get(cache_key)
+    if cached and cached.get("mtime") == file_mtime:
+        return cached["data"]
+
+    parsed = Sub1Service.parse_md(filepath, use_llm)
+    _SUB1_PARSE_CACHE[cache_key] = {"mtime": file_mtime, "data": parsed}
+    return parsed
+
 
 @sub1_router.get("/get_themes")
 @public_sub1_router.get("/get_themes", include_in_schema=False)
@@ -40,6 +55,7 @@ def get_placeholders(theme_name: str):
 
 @sub1_router.post("/process-ppt")
 @sub1_router.post("/generate_ppt")
+@public_sub1_router.post("/process-ppt", include_in_schema=False)
 @public_sub1_router.post("/generate_ppt", include_in_schema=False)
 def process_ppt(req: PptProcessSchema):
     try:
@@ -106,7 +122,7 @@ def parse_md(
         else:
             parsing_path = upload_path
 
-        result = Sub1Service.parse_md(parsing_path, use_llm)
+        result = _get_parsed_data_with_cache(parsing_path, use_llm)
 
         return {
             'status': 'success',
@@ -128,11 +144,15 @@ def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user))
         if not os.path.exists(filepath):
             filepath = os.path.join(Config.UPLOAD_FOLDER, req.filename)
 
+        if req.filename.lower().endswith('.pdf'):
+            md_filename = req.filename.rsplit('.', 1)[0] + ".md"
+            filepath = os.path.join(Config.SUB1_MD_FOLDER, md_filename)
+
         if not os.path.exists(filepath):
             raise Exception(f"File not found: {filepath}")
 
         # 2. 重新解析文件 (调用 Service)
-        parsed_data = Sub1Service.parse_md(filepath, use_llm=req.use_llm)
+        parsed_data = _get_parsed_data_with_cache(filepath, req.use_llm)
         full_content = parsed_data['full_content']
         all_sections = parsed_data['sections']
         all_headers = parsed_data['headers']

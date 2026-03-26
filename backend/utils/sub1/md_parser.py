@@ -16,6 +16,49 @@ class MarkdownViewer:
         self.headers_count = 0
         self.table_sections = []
 
+    def _extract_outline_depth(self, text):
+        """Infer heading depth from numbering like `2`, `2.1`, `2.1.3`."""
+        if not text:
+            return None
+
+        match = re.match(r'^\s*(\d+(?:\.\d+)*)\b', text)
+        if not match:
+            return None
+
+        depth = len(match.group(1).split('.'))
+        return max(1, min(depth, 4))
+
+    def _normalize_header_levels(self, headers):
+        """
+        Normalize heading levels for UI indentation.
+
+        Priority:
+        1) Use numbering depth from heading text (e.g. `2.1` -> level 2)
+        2) Fallback to rank of raw parser level
+        3) Clamp to [1, 4] to match frontend style classes
+        """
+        if not headers:
+            return []
+
+        raw_levels = sorted({int(item['level']) for item in headers})
+        raw_level_rank = {lvl: idx + 1 for idx, lvl in enumerate(raw_levels)}
+
+        normalized = []
+        for item in headers:
+            inferred_depth = self._extract_outline_depth(item.get('text', ''))
+            if inferred_depth is not None:
+                normalized_level = inferred_depth
+            else:
+                normalized_level = raw_level_rank.get(int(item['level']), 1)
+
+            normalized.append({
+                'level': max(1, min(int(normalized_level), 4)),
+                'text': item['text'],
+                'line': item['line']
+            })
+
+        return normalized
+
     def load_file(self, filepath, use_llm=True):
         """Load and analyze a markdown file"""
         try:
@@ -76,6 +119,12 @@ class MarkdownViewer:
     def _get_headers_with_lines(self, use_llm=True):
         """Identify and correct headers"""
         raw_headers_data = self.analyzer.identify_headers()
+        raw_headers = [{
+            'level': item['level'],
+            'text': item['text'],
+            'line': item['line']
+        } for item in raw_headers_data['Header']]
+
         if use_llm:
             print("\033[93m Fetching corrected headers from LLM...\033[0m")
             # headers_data = header_correction(raw_headers_data)
@@ -83,25 +132,18 @@ class MarkdownViewer:
             if isinstance(headers_data, str) and headers_data != str(raw_headers_data):
                 print("\033[92m✓ Corrected headers fetched!\033[0m")
                 headers_data = eval(headers_data)
-                return [{
+                corrected_headers = [{
                     'level': item['level'],
                     'text': item['text'],
                     'line': item['line']
                 } for item in headers_data['Header']]
+                return self._normalize_header_levels(corrected_headers)
             else:
                 print("\033[91m Failed to fetch corrected headers from LLM, the raw headers are used\033[0m")
-                return [{
-                    'level': item['level'],
-                    'text': item['text'],
-                    'line': item['line']
-                } for item in raw_headers_data['Header']]
+                return self._normalize_header_levels(raw_headers)
         else:
             print("\033[93m User chose to use raw headers.\033[0m")
-            return [{
-                'level': item['level'],
-                'text': item['text'],
-                'line': item['line']
-            } for item in raw_headers_data['Header']]
+            return self._normalize_header_levels(raw_headers)
 
     def _load_full_content(self, filepath):
         """Load file content"""

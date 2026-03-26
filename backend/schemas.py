@@ -1,5 +1,30 @@
-from pydantic import BaseModel
 from typing import List, Optional, Literal
+
+from pydantic import BaseModel, Field, JsonValue
+
+
+class ChatMessageSchema(BaseModel):
+    role: Literal['user', 'assistant', 'system']
+    content: str = ""
+
+
+class RagChunkSchema(BaseModel):
+    chunk_id: int | None = None
+    score: float | None = None
+    text: str = ""
+
+
+class RagContextSchema(BaseModel):
+    retrieved_count: int = 0
+    retrieved_chunks: List[RagChunkSchema] = Field(default_factory=list)
+
+
+class GradingContextSchema(BaseModel):
+    assignment: str = ""
+    rubric: dict[str, JsonValue] = Field(default_factory=dict)
+    selected_text: str = ""
+    chat_history: List[ChatMessageSchema] = Field(default_factory=list)
+    rag: RagContextSchema = Field(default_factory=RagContextSchema)
 
 class AuthSchema(BaseModel):
     username: str
@@ -49,6 +74,8 @@ class GenerateScriptSchema(BaseModel):
 # === Sub2 (Question Generator) Schemas ===
 class ExtractQuestionsSchema(BaseModel):
     page_numbers: List[int] = []
+    api_type: Optional[str] = None
+    prompt: Optional[str] = None
 
 class GenerateQuestionsSchema(BaseModel):
     subject: str
@@ -56,6 +83,7 @@ class GenerateQuestionsSchema(BaseModel):
     num_questions: int
     difficulty: int | str
     constraints: List[str] = []
+    output_language: str = "Chinese"
     question_basis: Optional[str] = None
     knowledge_points: str = ""
     saved_screenshots: List[str] = []
@@ -109,8 +137,8 @@ class FeedbackSchema(BaseModel):
     submissionId: str
     selectedText: str
     assignment: str | None = None
-    rubric: dict | None = None
-    messages: List[dict] | None = None
+    rubric: dict[str, JsonValue] | None = None
+    messages: List[ChatMessageSchema] | None = None
     useRag: bool = True
     ragTopK: int = 4
 
@@ -119,7 +147,7 @@ class AnnotateSchema(BaseModel):
     submissionId: str
     selectedText: str
     assignment: str | None = None
-    rubric: dict | None = None
-    messages: List[dict] | None = None
+    rubric: dict[str, JsonValue] | None = None
+    messages: List[ChatMessageSchema] | None = None
     useRag: bool = True
     ragTopK: int = 4

@@ -10,8 +10,9 @@ from werkzeug.utils import secure_filename
 
 # 引入你的 Service 层工具
 from backend.services.sub2_service import (
-    allowed_file, extract_pdf_pages, call_zhipu_ocr,
-    call_coze_generate, create_word_document, create_powerpoint
+    allowed_file, call_zhipu_ocr,
+    call_coze_generate, create_word_document, create_powerpoint,
+    extract_pdf_text_with_loader, call_zhipu_layout_from_text
 )
 from backend.core.security import get_current_user
 from backend.schemas import (
@@ -62,11 +63,10 @@ def extract_questions_route(req: ExtractQuestionsSchema, request: Request, user:
             return JSONResponse(content={'error': 'File expired, please re-upload'}, status_code=400)
 
         if uploaded_file.lower().endswith('.pdf'):
-            work_file = extract_pdf_pages(uploaded_file, req.page_numbers)
+            extracted_markdown = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
+            structured_data = call_zhipu_layout_from_text(extracted_markdown)
         else:
-            work_file = uploaded_file
-
-        structured_data = call_zhipu_ocr(work_file)
+            structured_data = call_zhipu_ocr(uploaded_file)
 
         cache_filename = f"extract_cache_{int(time.time())}.json"
         cache_path = os.path.join(Config.GENERATED_FOLDER_SUB2, cache_filename)
@@ -99,18 +99,27 @@ def generate_questions_route(req: GenerateQuestionsSchema, request: Request, use
             f"Type: {req.question_type}, "
             f"Count: {req.num_questions}, "
             f"Difficulty: {difficulty_label}, "
-            f"Constraints: {constraint_text}"
+            f"Constraints: {constraint_text}, "
+            f"Output Language: {req.output_language}"
         )
 
         result_text = call_coze_generate(
             base_content,
             user_reqs,
+            output_language=req.output_language,
             question_basis=req.question_basis,
             knowledge_points=req.knowledge_points,
             saved_screenshots=req.saved_screenshots,
         )
 
-        request.session['generated_questions'] = result_text
+        generated_filename = f"generated_questions_{int(time.time())}.md"
+        generated_path = os.path.join(Config.GENERATED_FOLDER_SUB2, generated_filename)
+        with open(generated_path, 'w', encoding='utf-8') as f:
+            f.write(result_text)
+
+        # Keep session cookie small: store only server path/token, not full generated text.
+        request.session.pop('generated_questions', None)
+        request.session['generated_questions_path'] = generated_path
         return {'success': True, 'questions': result_text}
 
     except Exception as e:
@@ -120,15 +129,14 @@ def generate_questions_route(req: GenerateQuestionsSchema, request: Request, use
 @sub2_router.post("/export_questions")
 def export_questions_route(req: ExportQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
     try:
-        questions = request.session.get('generated_questions')
-        if not questions:
+        generated_path = request.session.get('generated_questions_path')
+        if not generated_path or not os.path.exists(generated_path):
             return JSONResponse(content={'error': 'No generated questions found'}, status_code=400)
 
         filename = f"Generated_Questions_{int(time.time())}.md"
         filepath = os.path.join(Config.GENERATED_FOLDER_SUB2, filename)
-
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(questions)
+        with open(generated_path, 'r', encoding='utf-8') as src, open(filepath, 'w', encoding='utf-8') as dst:
+            dst.write(src.read())
 
         # 🌟 FastAPI 的文件下载返回
         return FileResponse(filepath, media_type='text/markdown', filename=filename)

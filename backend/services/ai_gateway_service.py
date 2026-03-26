@@ -7,7 +7,7 @@ import httpx
 from backend.config import Config
 
 
-class CozeService:
+class AIGatewayService:
     def __init__(self):
         # Support both naming conventions used in this repo/environment.
         self.api_key = os.getenv("COZE_TOKEN") or os.getenv("COZE_API_KEY")
@@ -163,20 +163,36 @@ class CozeService:
 
     async def analyze_submission(self, text: str, rubric: Dict[str, Any], assignment: str) -> Dict[str, Any]:
         """Analyze full submission with Coze.ai."""
+        trimmed_text = (text or "")[:12000]
+        rubric_json = json.dumps(rubric or {}, ensure_ascii=False)
         prompt = f"""
-Please analyze this homework submission and provide grading feedback.
+You are a strict teaching assistant grading a student's submission.
+Use only the provided submission content as evidence.
+If evidence is missing, state "Not evidenced in submission".
 
 Assignment: {assignment}
-Rubric: {rubric}
+Rubric (JSON): {rubric_json}
 
 Student submission:
-{text[:3000]}
+{trimmed_text}
 
-Return a JSON-like summary with:
-- overall_score (0-100)
-- rubric_scores (object with the rubric categories)
-- overall_feedback (paragraph)
-- improvement_suggestions (list of strings)
+Task:
+1) Evaluate each rubric category with a numeric score and one short evidence sentence.
+2) Provide total score (0-100).
+3) Provide concise overall feedback.
+4) Provide 3-5 actionable improvement suggestions.
+
+Output format requirements:
+- Return valid JSON only (no markdown, no code fence).
+- Use this schema exactly:
+{{
+    "overall_score": number,
+    "rubric_scores": [
+        {{"criterion": string, "score": number, "evidence": string}}
+    ],
+    "overall_feedback": string,
+    "improvement_suggestions": [string]
+}}
 """
         response = await self.chat(prompt)
         return {"raw_response": response}
@@ -194,3 +210,9 @@ Provide a short, constructive feedback comment for this specific section. Be spe
 Keep it under 100 words.
 """
         return await self.chat(prompt)
+
+
+
+
+# Backward compatibility alias for older imports.
+CozeService = AIGatewayService

@@ -144,7 +144,13 @@ def save_annotations(submission_id: str, payload: Dict[str, Any]) -> None:
 
 def _get_test_pdf_override() -> Optional[Path]:
     pdfs = sorted(TEST_PDF_DIR.glob("*.pdf"))
-    return pdfs[0] if pdfs else None
+    for pdf in pdfs:
+        try:
+            if pdf.is_file() and pdf.stat().st_size > 0:
+                return pdf
+        except OSError:
+            continue
+    return None
 
 
 def get_source_pdf_path(submission: Dict[str, Any]) -> Optional[Path]:

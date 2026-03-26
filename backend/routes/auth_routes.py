@@ -129,6 +129,19 @@ async def logout(response: Response):
     return {"message": "Logout successful"}
 
 
+@auth_router.get("/session")
+async def get_session(current_user: dict = Depends(get_current_user)):
+    return {
+        "user": {
+            "id": str(current_user.get("_id") or current_user.get("id") or ""),
+            "username": current_user.get("username"),
+            "email": current_user.get("email"),
+            "role": current_user.get("role", "student"),
+            "teacherCourseIds": current_user.get("teacherCourseIds", []),
+        }
+    }
+
+
 @auth_router.post("/profile/update")
 async def update_profile(req: UpdateProfileSchema, current_user: dict = Depends(get_current_user)):
     update_data = {}
