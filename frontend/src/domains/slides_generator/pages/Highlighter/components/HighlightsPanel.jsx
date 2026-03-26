@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../../../styles/sub1/highlighter.module.css';
+import styles from '../../../../../styles/sub1/highlighter.module.css';
 
 export default function HighlightsPanel({
     searchQuery, setSearchQuery, statusMsg,

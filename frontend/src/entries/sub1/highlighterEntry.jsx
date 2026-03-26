@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import client from '../../api/client';
-import HighlighterPage from '../../pages/sub1/Highlighter/Highlighter';
+import HighlighterPage from '../../domains/slides_generator/pages/Highlighter/Highlighter';
 
 export default function HighlighterEntry() {
     const navigate = useNavigate();

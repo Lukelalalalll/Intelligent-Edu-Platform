@@ -230,28 +230,7 @@
     font-size: 0.95rem;
 }
 
-/* 序号生成 */
-.headerLevel1::before {
-    content: counter(h1) ". ";
-    counter-increment: h1;
-    font-weight: bold;
-    margin-right: 8px;
-    color: var(--primary-color);
-}
-
-.headerLevel2::before {
-    content: counter(h1) "." counter(h2) " ";
-    counter-increment: h2;
-    margin-right: 8px;
-    color: var(--primary-dark);
-}
-
-.headerLevel3::before {
-    content: counter(h1) "." counter(h2) "." counter(h3) " ";
-    counter-increment: h3;
-    margin-right: 8px;
-    color: var(--accent-yellow);
-}
+/* 使用文档自身编号，避免 CSS 伪编号导致的 0.0.1 显示问题 */
 
 /* =========================================
    6. File Info & Loading & Alerts

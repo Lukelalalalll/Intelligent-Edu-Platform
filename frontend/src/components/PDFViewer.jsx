@@ -16,6 +16,8 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [isPlacingLabel, setIsPlacingLabel] = useState(false);
     const [saving, setSaving] = useState(false);
     const [localError, setLocalError] = useState('');
+    const [pdfLoadError, setPdfLoadError] = useState('');
+    const [loadRetry, setLoadRetry] = useState(0);
     const containerRef = useRef(null);
 
     useEffect(() => {
@@ -23,7 +25,13 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         setActiveAnnotation(null);
         setIsPlacingLabel(false);
         setLocalError('');
+        setPdfLoadError('');
+        setLoadRetry(0);
     }, [file]);
+
+    const resolvedFile = file
+        ? `${file}${file.includes('?') ? '&' : '?'}pdf_retry=${loadRetry}`
+        : file;
 
     const handlePageClick = (event, pageNum) => {
         if (!onSaveAnnotation || !isPlacingLabel) return;
@@ -145,7 +153,19 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
             >
                 {file ? (
                     <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <Document file={file} onLoadSuccess={({ numPages: n }) => setNumPages(n)} loading={<div style={{ padding: 20 }}>Loading PDF...</div>}>
+                        <Document
+                            file={resolvedFile}
+                            onLoadSuccess={({ numPages: n }) => {
+                                setNumPages(n);
+                                setPdfLoadError('');
+                            }}
+                            onLoadError={(err) => {
+                                setPdfLoadError(`PDF load failed: ${err?.message || 'network error'}`);
+                                // Network transport can be flaky; retry once with a fresh cache-busting URL.
+                                setLoadRetry((prev) => (prev < 1 ? prev + 1 : prev));
+                            }}
+                            loading={<div style={{ padding: 20 }}>Loading PDF...</div>}
+                        >
                             <Page
                                 pageNumber={pageNumber}
                                 scale={scale}
@@ -154,6 +174,11 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                                 renderTextLayer={false}
                             />
                         </Document>
+                        {pdfLoadError && (
+                            <div style={{ marginTop: 10, color: '#b91c1c', fontSize: 13 }}>
+                                {pdfLoadError}
+                            </div>
+                        )}
                         <AnnotationLayer
                             annotations={renderAnnotations}
                             selectedId={activeAnnotation?.id || (hasPendingNewLabel ? '__pending_label__' : null)}

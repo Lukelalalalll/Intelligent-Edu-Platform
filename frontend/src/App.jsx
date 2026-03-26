@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import HomeEntry from './entries/homeEntry';
@@ -20,11 +22,61 @@ import PptTemplateEntry from './entries/sub1/pptTemplateEntry';
 import HomeStudentEntry from './entries/homeStudentEntry';
 import MailboxEntry from './entries/mailboxEntry';
 import GradingWorkbenchEntry from './entries/gradingWorkbenchEntry';
+import client from './api/client';
 
 
 const ProtectedRoute = ({ children }) => {
-  const user = localStorage.getItem('user');
-  if (!user) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    const checkSession = async () => {
+      const localUser = localStorage.getItem('user');
+      if (!localUser) {
+        if (alive) {
+          setIsAuthed(false);
+          setIsChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await client.get('/session');
+        if (!alive) return;
+
+        const freshUser = res?.data?.user;
+        if (freshUser) {
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }
+        setIsAuthed(true);
+      } catch (_) {
+        if (!alive) return;
+        localStorage.removeItem('user');
+        setIsAuthed(false);
+      } finally {
+        if (alive) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname]);
+
+  if (isChecking) return null;
+
+  if (!isAuthed) {
+    const next = encodeURIComponent(`${location.pathname}${location.search}${location.hash}`);
+    return <Navigate to={`/login?next=${next}`} replace />;
+  }
+
   return children;
 };
 

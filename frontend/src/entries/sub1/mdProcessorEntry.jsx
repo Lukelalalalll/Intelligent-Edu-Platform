@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import client from '../../api/client';
-import MdProcessorPage from '../../pages/sub1/MdProcessor';
+import MdProcessorPage from '../../domains/slides_generator/pages/MdProcessorPage';
 
 export default function MdProcessorEntry() {
     // === 状态管理 ===

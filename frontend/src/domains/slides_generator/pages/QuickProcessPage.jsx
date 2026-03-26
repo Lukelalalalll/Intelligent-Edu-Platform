@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/sub1/quickProcess.module.css';
+import styles from '../../../styles/sub1/quickProcess.module.css';
 
 export default function QuickProcess({
     loading, contentLoading, sections, formState, setFormState,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import PptTemplatePage from '../../pages/sub1/PptTemplate';
+import PptTemplatePage from '../../domains/slides_generator/pages/PptTemplatePage';
 
 export default function PptTemplateEntry() {
     const navigate = useNavigate();

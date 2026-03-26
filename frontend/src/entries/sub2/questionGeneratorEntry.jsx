@@ -4,6 +4,12 @@ import client from '../../api/client';
 import QuestionGeneratorPage from '../../pages/sub2/QuestionGenerator';
 
 export default function QuestionGeneratorEntry() {
+    const [currentStep, setCurrentStep] = useState(() => {
+        const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sub2_current_step') : null;
+        const parsed = Number(saved);
+        return [1, 2, 3].includes(parsed) ? parsed : 1;
+    });
+
     // --- Step 1 State ---
     const [file, setFile] = useState(null);
     const [fileName, setFileName] = useState('');
@@ -28,16 +34,34 @@ export default function QuestionGeneratorEntry() {
     const [numQuestions, setNumQuestions] = useState(5);
     const [difficulty, setDifficulty] = useState(3);
     const [constraints, setConstraints] = useState('');
+    const [outputLanguage, setOutputLanguage] = useState('Chinese');
     const [questionBasis, setQuestionBasis] = useState('');
     const [knowledgePoints, setKnowledgePoints] = useState('');
     const [generateLoading, setGenerateLoading] = useState(false);
     const [generatedQuestions, setGeneratedQuestions] = useState(null);
+
+    const canEnterStep2 = Boolean(file) && (fileType !== 'pdf' || selectedPages.length > 0);
+    const canEnterStep3 = (Array.isArray(exercises) && exercises.length > 0) || Boolean(rawExtractText);
 
     // --- Effect: Handle Question Type changes ---
     useEffect(() => {
         if (questionType === 'Quiz') setNumQuestions(10);
         else if (questionType === 'Exam Paper') setNumQuestions(15);
     }, [questionType]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem('sub2_current_step', String(currentStep));
+        }
+    }, [currentStep]);
+
+    useEffect(() => {
+        if (currentStep === 3 && !canEnterStep3) {
+            setCurrentStep(canEnterStep2 ? 2 : 1);
+        } else if (currentStep === 2 && !canEnterStep2) {
+            setCurrentStep(1);
+        }
+    }, [currentStep, canEnterStep2, canEnterStep3]);
 
     // --- Effect: Trigger MathJax after extract data changes ---
     useEffect(() => {
@@ -52,16 +76,15 @@ export default function QuestionGeneratorEntry() {
         if (!content) return '<p>No content</p>';
         let cleaned = content.replace(/\*\*(\w+)\*\*/g, '$1').replace(/\\mathbf\{(\w+)\}/g, '$1');
         let formatted = cleaned.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
-        try {
-            formatted = formatted.replace(/\$\$(.*?)\$\$/g, '<span class="math">$$$$$1$$$$</span>');
-            formatted = formatted.replace(/\$(.*?)\$/g, '<span class="math">$$$1$$</span>');
-        } catch (e) { }
+        formatted = formatted.replace(/\$\$(.*?)\$\$/g, '<span class="math">$$$$$1$$$$</span>');
+        formatted = formatted.replace(/\$(.*?)\$/g, '<span class="math">$$$1$$</span>');
         return formatted;
     };
 
     // --- Upload Handlers ---
     const handleFile = async (selectedFile) => {
         if (!selectedFile) return;
+        setCurrentStep(1);
         setFile(selectedFile);
         setUploadLoading(true);
         const formData = new FormData();
@@ -166,6 +189,7 @@ export default function QuestionGeneratorEntry() {
             num_questions: safeNumQuestions,
             difficulty: safeDifficulty,
             constraints: safeConstraints,
+            output_language: String(outputLanguage || 'Chinese').trim() || 'Chinese',
             question_basis: questionBasis || null,
             knowledge_points: String(knowledgePoints || ''),
             saved_screenshots: Array.isArray(savedScreenshots) ? savedScreenshots.filter(Boolean) : [],
@@ -199,13 +223,24 @@ export default function QuestionGeneratorEntry() {
             const a = document.createElement('a'); a.href = url;
             a.download = `questions.${format === 'word' ? 'docx' : 'pptx'}`;
             a.click(); window.URL.revokeObjectURL(url);
-        } catch (err) { alert('Export failed'); }
+        } catch { alert('Export failed'); }
+    };
+
+    const goToStep1 = () => setCurrentStep(1);
+    const goToStep2 = () => {
+        if (canEnterStep2) setCurrentStep(2);
+    };
+    const goToStep3 = () => {
+        if (canEnterStep3) setCurrentStep(3);
     };
 
     // --- Bundle States & Handlers ---
-    const states = { file, fileName, fileType, totalPages, selectedPages, uploadLoading, extractPrompt, apiType, extractLoading, exercises, selectedExercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging };
+    const states = { currentStep, file, fileName, fileType, totalPages, selectedPages, uploadLoading, extractPrompt, apiType, extractLoading, exercises, selectedExercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, outputLanguage, questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging };
     const handlers = {
-        setExtractPrompt, setApiType, setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setQuestionBasis, setKnowledgePoints,
+        setExtractPrompt, setApiType, setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setOutputLanguage, setQuestionBasis, setKnowledgePoints,
+        goToStep1,
+        goToStep2,
+        goToStep3,
         handleFileChange: e => handleFile(e.target.files[0]),
         handleDragOver: e => { e.preventDefault(); setIsDragging(true); },
         handleDragLeave: () => setIsDragging(false),

@@ -1,6 +1,6 @@
 // Highlighter.jsx
 import React, { useEffect, useState } from 'react';
-import styles from '../../../styles/sub1/highlighter.module.css';
+import styles from '../../../../styles/sub1/highlighter.module.css';
 import ReaderSection from './components/ReaderSection';
 import HighlightsPanel from './components/HighlightsPanel';
 

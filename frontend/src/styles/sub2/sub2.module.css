@@ -24,7 +24,10 @@
 .pageHeader::before {
     content: "";
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     /* 旧版好看的 SVG 波浪背景 */
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
     background-size: cover;
@@ -35,7 +38,7 @@
     margin-bottom: 0.5rem;
     color: white;
     position: relative;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,6 +73,28 @@
     animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+/* Step2: 固定最大高度，内容过多时内部滚动 */
+.extractScrollableContainer {
+    max-height: 78vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+.extractScrollableContainer::-webkit-scrollbar {
+    width: 8px;
+}
+
+.extractScrollableContainer::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.35);
+    border-radius: 8px;
+}
+
+.extractScrollableContainer::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+}
+
 /* 【修复3】悬浮效果：找回旧版的鼠标移入卡片上浮+阴影加深 */
 .stepContainer:hover {
     transform: translateY(-5px);
@@ -79,15 +104,146 @@
 .stepContainer::before {
     content: "";
     position: absolute;
-    top: 0; left: 0; right: 0; height: 4px;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
     background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
-    z-index: 1; /* 确保线在最上层可见 */
+    z-index: 1;
+    /* 确保线在最上层可见 */
 }
 
 /* 依次延迟进场 */
-.stepContainer:nth-child(1) { animation-delay: 0.1s; }
-.stepContainer:nth-child(2) { animation-delay: 0.2s; }
-.stepContainer:nth-child(3) { animation-delay: 0.3s; }
+.stepContainer:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.stepContainer:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.stepContainer:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.stepperWrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px auto 24px;
+    padding: 16px 40px;
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 10;
+    max-width: 900px;
+}
+
+.stepperItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    color: var(--text-sub);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.stepperCircle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.stepperLabel {
+    font-size: 0.95rem;
+}
+
+.stepperItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -100px;
+    width: 80px;
+    height: 2px;
+    background: #e2e8f0;
+    transform: translateY(-50%);
+    z-index: -1;
+    transition: var(--transition);
+}
+
+.stepperItemDone .stepperCircle {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.stepperItemDone:not(:last-child)::after {
+    background: var(--primary-color);
+}
+
+.stepperItemDone {
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.stepperItemDone:hover {
+    transform: translateY(-2px);
+}
+
+.stepperItemActive .stepperCircle {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.2);
+}
+
+.stepperItemActive {
+    color: var(--primary-color);
+}
+
+.stepView {
+    animation: scaleIn 0.4s var(--ease-out-back) forwards;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98) translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .stepperWrap {
+        padding: 12px;
+        gap: 10px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .stepperItem:not(:last-child)::after {
+        display: none;
+    }
+
+    .extractScrollableContainer {
+        max-height: 70vh;
+    }
+}
 
 /* ================= 内部元素排版 ================= */
 .stepTitle {
@@ -101,7 +257,8 @@
 }
 
 .stepNumber {
-    width: 48px; height: 48px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: rgba(0, 123, 85, 0.1);
     color: var(--primary-color);
@@ -114,10 +271,14 @@
 }
 
 .stepContainer:hover .stepNumber {
-    background: var(--primary-color); /* 背景变成深绿色 */
-    color: white;                     /* 文字变成白色 */
-    transform: scale(1.1);            /* 稍微放大一点点增加呼吸感（不需要可删去此行） */
-    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.3); /* 加上一点绿色发光阴影 */
+    background: var(--primary-color);
+    /* 背景变成深绿色 */
+    color: white;
+    /* 文字变成白色 */
+    transform: scale(1.1);
+    /* 稍微放大一点点增加呼吸感（不需要可删去此行） */
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.3);
+    /* 加上一点绿色发光阴影 */
 }
 
 .uploadArea {
@@ -131,14 +292,34 @@
     position: relative;
     margin-bottom: 1.5rem;
 }
+
 .uploadAreaActive {
     border-color: var(--primary-color);
     background-color: rgba(0, 123, 85, 0.05);
 }
-.uploadIcon { font-size: 3.5rem; margin-bottom: 1.5rem; color: var(--primary-color); opacity: 0.8; }
-.fileInput { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-.pageSelectorButtons { display: flex; gap: 12px; margin: 1.5rem 0; }
+.uploadIcon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+    opacity: 0.8;
+}
+
+.fileInput {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pageSelectorButtons {
+    display: flex;
+    gap: 12px;
+    margin: 1.5rem 0;
+}
 
 .pagesGrid {
     display: grid;
@@ -149,63 +330,200 @@
 }
 
 .pageItem {
-    display: flex; justify-content: center; align-items: center;
-    height: 44px; background-color: var(--bg-input);
-    border: 1px solid transparent; border-radius: var(--radius-sm);
-    cursor: pointer; transition: all 0.2s; user-select: none;
-    font-weight: 600; color: var(--text-sub); font-size: 0.95rem;
-}
-.pageItem:hover { background-color: #fff; border-color: var(--primary-color); color: var(--primary-color); }
-.pageItemSelected {
-    background-color: var(--primary-color); color: white;
-    border-color: var(--primary-color); box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3); transform: translateY(-2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 44px;
+    background-color: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    font-weight: 600;
+    color: var(--text-sub);
+    font-size: 0.95rem;
 }
 
-.formGroup { margin-bottom: 1.5rem; }
-.formGroup label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-sub); font-size: 0.9rem; }
-.formControl {
-    width: 100%; padding: 12px 16px; border: 2px solid transparent;
-    border-radius: var(--radius-sm); background-color: var(--bg-input);
-    font-size: 1rem; color: var(--text-main); transition: all 0.3s;
+.pageItem:hover {
+    background-color: #fff;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
-.formControl:focus { outline: none; background-color: #fff; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1); }
+
+.pageItemSelected {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3);
+    transform: translateY(-2px);
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.formControl {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-input);
+    font-size: 1rem;
+    color: var(--text-main);
+    transition: all 0.3s;
+}
+
+.formControl:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
 
 .infoBox {
-    background: rgba(0, 123, 85, 0.04); border-radius: var(--radius-sm);
-    padding: 1rem 1.5rem; border-left: 4px solid var(--primary-color);
-    margin-bottom: 1.5rem; color: var(--text-sub); font-size: 0.95rem;
+    background: rgba(0, 123, 85, 0.04);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.5rem;
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1.5rem;
+    color: var(--text-sub);
+    font-size: 0.95rem;
 }
 
 .exerciseItem {
-    background: #fff; border: 1px solid rgba(0,0,0,0.06);
-    border-radius: var(--radius-sm); padding: 1.5rem;
-    margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); transition: all 0.3s;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s;
 }
-.exerciseItem:hover { border-color: rgba(0, 123, 85, 0.3); transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 123, 85, 0.1); }
 
-.exerciseHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-.exerciseMeta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.85rem; margin-top: 8px; }
-.metaItem { background: var(--bg-input); padding: 4px 10px; border-radius: var(--radius-sm); color: var(--text-sub); font-weight: 500; }
+.exerciseItem:hover {
+    border-color: rgba(0, 123, 85, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.1);
+}
+
+.exerciseHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.exerciseMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.85rem;
+    margin-top: 8px;
+}
+
+.metaItem {
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-sub);
+    font-weight: 500;
+}
 
 .exerciseContent {
-    background: var(--bg-body); padding: 1rem; border-radius: var(--radius-sm);
-    border: 1px solid rgba(0,0,0,0.05); white-space: pre-wrap;
-    font-family: 'Consolas', 'Monaco', monospace; font-size: 0.95rem; color: var(--text-main); line-height: 1.6;
+    background: var(--bg-body);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    white-space: pre-wrap;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    line-height: 1.6;
 }
 
-.loadingWrapper { text-align: center; padding: 3rem; color: var(--primary-color); }
-.exportOptions { display: flex; gap: 16px; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(0,0,0,0.05); }
+.loadingWrapper {
+    text-align: center;
+    padding: 3rem;
+    color: var(--primary-color);
+}
 
-.btn { padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s;}
-.btnPrimary { background: var(--primary-color); color: white; }
-.btnPrimary:hover:not(:disabled) { background: var(--primary-dark, #005c43); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,123,85,0.3);}
-.btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btnSuccess { background: #28a745; color: white; }
-.btnSuccess:hover:not(:disabled) { background: #218838; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
-.btnWarning { background: #ffc107; color: #212529; }
-.btnWarning:hover:not(:disabled) { background: #e0a800; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
-.btnSecondary { background: #f1f3f5; color: #495057; border: 1px solid #ced4da; }
-.btnSecondary:hover:not(:disabled) { background: #e2e6ea; transform: translateY(-2px); }
+.exportOptions {
+    display: flex;
+    gap: 16px;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.btnPrimary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--primary-dark, #005c43);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 123, 85, 0.3);
+}
+
+.btnPrimary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnSuccess {
+    background: #28a745;
+    color: white;
+}
+
+.btnSuccess:hover:not(:disabled) {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+.btnWarning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btnWarning:hover:not(:disabled) {
+    background: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+}
+
+.btnSecondary {
+    background: #f1f3f5;
+    color: #495057;
+    border: 1px solid #ced4da;
+}
+
+.btnSecondary:hover:not(:disabled) {
+    background: #e2e6ea;
+    transform: translateY(-2px);
+}
 
 /* 【修复4】补全丢失的关键帧动画 */
 @keyframes fadeInUp {
@@ -213,6 +531,7 @@
         opacity: 0;
         transform: translateY(30px);
     }
+
     100% {
         opacity: 1;
         transform: translateY(0);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import client from '../../api/client';
-import QuickProcessPage from '../../pages/sub1/QuickProcess';
+import QuickProcessPage from '../../domains/slides_generator/pages/QuickProcessPage';
 
 export default function QuickProcessEntry() {
     const navigate = useNavigate();
@@ -43,7 +43,7 @@ export default function QuickProcessEntry() {
                 const parsed = Array.from(headings).map((h) => {
                     let content = '';
                     let curr = h.nextElementSibling;
-                    while (curr && !['H1','H2','H3','H4','H5','H6'].includes(curr.tagName)) {
+                    while (curr && !['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(curr.tagName)) {
                         content += curr.outerHTML;
                         curr = curr.nextElementSibling;
                     }

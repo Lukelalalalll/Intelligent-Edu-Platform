@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import SpecifyPage from '../../pages/sub1/Specify';
+import SpecifyPage from '../../domains/slides_generator/pages/SpecifyPage';
 
 export default function SpecifyEntry() {
     const navigate = useNavigate();

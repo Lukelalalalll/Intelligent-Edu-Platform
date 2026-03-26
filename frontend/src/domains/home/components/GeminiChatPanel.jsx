@@ -1,0 +1,504 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import hljs from 'highlight.js';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import styles from '../../../styles/home/home.module.css';
+import 'highlight.js/styles/github-dark.css';
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+};
+
+const messageVariants = {
+    hidden: { opacity: 0, y: 15, scale: 0.98 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
+};
+
+// --- Markdown 渲染配置，复用 AIInteract 的代码块格式 ---
+const renderer = new marked.Renderer();
+renderer.code = function (token) {
+    const codeText = typeof token === 'object' ? token.text : token;
+    const langText = typeof token === 'object' ? token.lang : arguments[1];
+    const safeCode = codeText || '';
+    const validLang = langText && hljs.getLanguage(langText) ? langText : 'plaintext';
+    let highlighted = '';
+    try {
+        highlighted = validLang === 'plaintext'
+            ? hljs.highlightAuto(safeCode).value
+            : hljs.highlight(safeCode, { language: validLang }).value;
+    } catch (e) {
+        highlighted = safeCode;
+    }
+    return `
+        <div class="code-block-wrapper">
+            <div class="code-block-header">
+                <div class="code-header-left">
+                    <div class="code-block-mac-dots"><span></span><span></span><span></span></div>
+                    <span class="code-lang-text">${validLang}</span>
+                </div>
+                <button class="code-copy-btn js-code-copy-btn" data-code="${encodeURIComponent(safeCode)}">
+                    <i class="far fa-copy"></i> Copy code
+                </button>
+            </div>
+            <pre><code class="hljs language-${validLang}">${highlighted}</code></pre>
+        </div>
+    `;
+};
+marked.setOptions({ breaks: true, renderer });
+
+const GeminiChat = ({ aiInteractUrl }) => {
+    const [messages, setMessages] = useState([
+        { id: 'welcome', sender: 'ai', role: 'assistant', text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?" }
+    ]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFull, setIsFull] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [editingVal, setEditingVal] = useState('');
+
+    const messagesContainerRef = useRef(null);
+    const chatContainerRef = useRef(null);
+    const spacerRef = useRef(null);
+    const inputAreaRef = useRef(null);
+    const isAnimatingRef = useRef(false);
+    const probeDataRef = useRef({ offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
+    const abortControllerRef = useRef(null);
+
+    const renderContent = useCallback((content) => {
+        if (!content) return { __html: '' };
+        try {
+            const rawHtml = typeof marked.parse === 'function' ? marked.parse(content) : marked(content);
+            const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                ADD_ATTR: ['class', 'data-code'],
+                ADD_TAGS: ['button', 'i', 'span']
+            });
+            return { __html: cleanHtml };
+        } catch (err) {
+            return { __html: `<p style="color:red">Render Error: ${content}</p>` };
+        }
+    }, []);
+
+    const copyToClipboard = useCallback((text, buttonEl = null) => {
+        navigator.clipboard.writeText(text).catch(() => {
+            const area = document.createElement('textarea');
+            area.value = text; document.body.appendChild(area); area.select();
+            document.execCommand('copy'); document.body.removeChild(area);
+        });
+        if (buttonEl) {
+            const original = buttonEl.innerHTML;
+            buttonEl.innerHTML = '<i class="fas fa-check" style="color:#27c93f;"></i> Copied!';
+            setTimeout(() => { if (buttonEl) buttonEl.innerHTML = original; }, 1800);
+        }
+    }, []);
+
+    const handleChatAreaClick = useCallback((e) => {
+        const copyBtn = e.target.closest('.js-code-copy-btn');
+        if (copyBtn) copyToClipboard(decodeURIComponent(copyBtn.getAttribute('data-code')), copyBtn);
+    }, [copyToClipboard]);
+
+    useEffect(() => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, [messages, isLoading, isFull]);
+
+    const handleInput = useCallback((e) => {
+        const target = e.target;
+        setInput(target.value);
+        target.style.height = 'auto';
+        target.style.height = target.scrollHeight + 'px';
+        if (target.value === '') target.style.height = 'auto';
+    }, []);
+
+    const handleSend = useCallback(async () => {
+        if (!input.trim() || isLoading) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        const userText = input.trim();
+        setInput('');
+        if (inputAreaRef.current) inputAreaRef.current.style.height = 'auto';
+
+        const userMsg = { id: Date.now(), sender: 'user', role: 'user', text: userText };
+        const aiPlaceholderId = Date.now() + 1;
+        const aiMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '' };
+
+        setMessages(prev => [...prev, userMsg, aiMsg]);
+        setIsLoading(true);
+
+        try {
+            const historyForAPI = messages
+                .concat(userMsg)
+                .map(m => ({ role: m.role, content: m.text }));
+
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: historyForAPI }),
+                credentials: 'include',
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let accumulatedText = "";
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+
+                    try {
+                        const dataObj = JSON.parse(dataStr);
+                        if (dataObj.error) accumulatedText += `\n\n**[Error]**: ${dataObj.error}`;
+                        else if (dataObj.choices?.[0]?.delta?.content !== undefined) {
+                            accumulatedText += dataObj.choices[0].delta.content;
+                        }
+
+                        setMessages(prev => prev.map(m =>
+                            m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
+                        ));
+                    } catch (e) {
+                        // ignore partial JSON until buffer completes
+                    }
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setMessages(prev => prev.map(m =>
+                m.id === aiPlaceholderId ? { ...m, text: "Sorry, I encountered an error connecting to the AI server." } : m
+            ));
+        } finally {
+            setIsLoading(false);
+            abortControllerRef.current = null;
+        }
+    }, [input, isLoading, messages]);
+
+    const handleStop = useCallback(() => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setIsLoading(false);
+    }, []);
+
+    const streamFromHistory = useCallback(async (history) => {
+        if (!history.length) return;
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        const targetAssistantId = Date.now();
+        setMessages(historyWithAssistant => {
+            return [...history, { id: targetAssistantId, sender: 'ai', role: 'assistant', text: '' }];
+        });
+        setIsLoading(true);
+
+        try {
+            const apiMessages = history.map(m => ({ role: m.role, content: m.text }));
+            const response = await fetch('http://localhost:5009/api/ai/chat', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: apiMessages }),
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let fullText = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const dataStr = trimmed.replace('data: ', '');
+                    if (dataStr === '[DONE]') continue;
+                    try {
+                        const obj = JSON.parse(dataStr);
+                        if (obj.choices?.[0]?.delta?.content !== undefined) {
+                            fullText += obj.choices[0].delta.content;
+                            setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: fullText } : m));
+                        }
+                    } catch (err) { /* ignore */ }
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: `Network Error: ${error.message}` } : m));
+        } finally {
+            setIsLoading(false);
+            abortControllerRef.current = null;
+        }
+    }, []);
+
+    const handleRegenerate = useCallback((idx) => {
+        if (isLoading) return;
+        const msg = messages[idx];
+        if (!msg || msg.sender !== 'ai') return;
+        const history = messages.slice(0, idx);
+        streamFromHistory(history);
+    }, [isLoading, messages, streamFromHistory]);
+
+    const handleEditUserMsg = useCallback((idx, newVal) => {
+        if (isLoading) return;
+        const msg = messages[idx];
+        if (!msg || msg.sender !== 'user') return;
+        const trimmed = newVal.trim();
+        if (!trimmed) return;
+        const updatedUser = { ...msg, text: trimmed };
+        const history = [...messages.slice(0, idx), updatedUser];
+        streamFromHistory(history);
+        setEditingId(null);
+        setEditingVal('');
+    }, [isLoading, messages, streamFromHistory]);
+
+    const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    }, [handleSend]);
+
+    const toggleFullscreen = useCallback(() => {
+        if (isAnimatingRef.current) return;
+        isAnimatingRef.current = true;
+
+        const container = chatContainerRef.current;
+        const spacer = spacerRef.current;
+        const animDuration = 600;
+
+        if (!isFull) {
+            const rect = container.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(container);
+
+            spacer.style.width = rect.width + 'px';
+            spacer.style.height = rect.height + 'px';
+            spacer.style.marginTop = computedStyle.marginTop;
+            spacer.style.marginBottom = computedStyle.marginBottom;
+            spacer.style.marginLeft = computedStyle.marginLeft;
+            spacer.style.marginRight = computedStyle.marginRight;
+            spacer.style.display = 'block';
+
+            const probe = document.createElement('div');
+            probe.style.cssText = `
+                position: fixed; top: 0; left: 0;
+                width: 100px; height: 100px; visibility: hidden; pointer-events: none;
+            `;
+            container.parentNode.appendChild(probe);
+
+            const probeRect = probe.getBoundingClientRect();
+            const offsetX = probeRect.left;
+            const offsetY = probeRect.top;
+            const scaleX = probeRect.width / 100 || 1;
+            const scaleY = probeRect.height / 100 || 1;
+
+            probeDataRef.current = { offsetX, offsetY, scaleX, scaleY };
+            container.parentNode.removeChild(probe);
+
+            container.style.transition = 'none';
+            container.style.position = 'fixed';
+            container.style.margin = '0';
+            container.style.transform = 'none';
+            container.style.zIndex = '999999';
+
+            container.style.left = ((rect.left - offsetX) / scaleX) + 'px';
+            container.style.top = ((rect.top - offsetY) / scaleY) + 'px';
+            container.style.width = (rect.width / scaleX) + 'px';
+            container.style.height = (rect.height / scaleY) + 'px';
+
+            void container.offsetHeight;
+
+            container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
+            container.style.left = ((0 - offsetX) / scaleX) + 'px';
+            container.style.top = ((0 - offsetY) / scaleY) + 'px';
+            container.style.width = (window.innerWidth / scaleX) + 'px';
+            container.style.height = (window.innerHeight / scaleY) + 'px';
+            container.style.borderRadius = '0px';
+
+            container.classList.add(styles['is-fullscreen-layout']);
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('chat-fullscreen-active');
+
+            setTimeout(() => {
+                isAnimatingRef.current = false;
+                setIsFull(true);
+            }, animDuration);
+
+        } else {
+            container.style.transition = 'none';
+            container.style.margin = '0';
+
+            const targetRect = spacer.getBoundingClientRect();
+            const { offsetX, offsetY, scaleX, scaleY } = probeDataRef.current;
+
+            container.classList.remove(styles['is-fullscreen-layout']);
+
+            container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
+            container.style.left = ((targetRect.left - offsetX) / scaleX) + 'px';
+            container.style.top = ((targetRect.top - offsetY) / scaleY) + 'px';
+            container.style.width = (targetRect.width / scaleX) + 'px';
+            container.style.height = (targetRect.height / scaleY) + 'px';
+            container.style.borderRadius = '24px';
+
+            void container.offsetWidth;
+
+            document.body.style.overflow = '';
+
+            setTimeout(() => {
+                container.style.cssText = '';
+                spacer.style.display = 'none';
+                document.body.classList.remove('chat-fullscreen-active');
+                isAnimatingRef.current = false;
+                setIsFull(false);
+                if (messagesContainerRef.current) {
+                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }
+            }, animDuration);
+        }
+    }, [isFull]);
+
+    const lastMessage = messages[messages.length - 1];
+
+    return (
+        <motion.section variants={itemVariants} className={styles['ai-interaction-section']}>
+            <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
+
+            <div ref={chatContainerRef} className={styles['chat-interface-container']}>
+                <div className={styles['chat-header']}>
+                    <div className={styles['ai-badge']}>
+                        <i className="fas fa-sparkles"></i>
+                        <Link to={aiInteractUrl} className={styles['powered-by-link']}><span>AI Fullscreen Workspace</span></Link>
+                    </div>
+                    <button onClick={toggleFullscreen} className={styles['fullscreen-btn']} title="Toggle Fullscreen">
+                        <i className={isFull ? "fas fa-compress-arrows-alt" : "fas fa-expand-arrows-alt"}></i>
+                    </button>
+                </div>
+
+                <div
+                    ref={messagesContainerRef}
+                    className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}
+                    onClick={handleChatAreaClick}
+                >
+                    <AnimatePresence>
+                        {messages.map((msg, idx) => {
+                            if (msg.sender === 'ai' && !msg.text) return null;
+                            return (
+                                <motion.div
+                                    key={msg.id}
+                                    variants={messageVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    className={`${styles.message} ${styles[`${msg.sender}-message`]}`}
+                                >
+                                    <div className={styles.avatar}>
+                                        {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                                    </div>
+                                    <div className={styles.bubble}>
+                                        {msg.sender === 'ai' ? (
+                                            <div className="markdown-body" dangerouslySetInnerHTML={renderContent(msg.text)} />
+                                        ) : (
+                                            editingId === msg.id ? (
+                                                <div className={styles['edit-box']}>
+                                                    <textarea
+                                                        value={editingVal}
+                                                        onChange={e => setEditingVal(e.target.value)}
+                                                        autoFocus
+                                                        rows={Math.max(2, editingVal.split('\n').length)}
+                                                    />
+                                                    <div className={styles['edit-actions']}>
+                                                        <button onClick={() => { setEditingId(null); setEditingVal(''); }}>Cancel</button>
+                                                        <button onClick={() => handleEditUserMsg(idx, editingVal)} disabled={!editingVal.trim()}>Save &amp; Resend</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {msg.text}
+                                                    {!isLoading && (
+                                                        <div className={styles['user-actions']}>
+                                                            <button onClick={() => { setEditingId(msg.id); setEditingVal(msg.text); }}><i className="fas fa-edit"></i></button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )
+                                        )}
+                                        {msg.sender === 'ai' && !isLoading && msg.id === messages[messages.length - 1]?.id && (
+                                            <div className={styles['message-actions']}>
+                                                <button onClick={() => handleRegenerate(idx)} className={styles['msg-action-btn']}>
+                                                    <i className="fas fa-sync-alt"></i> Regenerate
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                        {isLoading && (!lastMessage || lastMessage.sender !== 'ai' || !lastMessage.text) && (
+                            <motion.div
+                                variants={messageVariants}
+                                initial="hidden"
+                                animate="show"
+                                exit={{ opacity: 0, y: -10 }}
+                                className={`${styles.message} ${styles['ai-message']}`}
+                            >
+                                <div className={styles.avatar}><i className="fas fa-sparkles"></i></div>
+                                <div className={`${styles.bubble} ${styles['typing-bubble']}`}>
+                                    <div className={styles['typing-indicator']}><span></span><span></span><span></span></div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                <div className={styles['input-area']}>
+                    <div className={styles['input-wrapper']}>
+                        <textarea
+                            id="geminiInput"
+                            className={styles.geminiInput}
+                            ref={inputAreaRef}
+                            rows="1" placeholder="Ask anything..."
+                            value={input} onChange={handleInput}
+                            onKeyDown={handleKeyDown}
+                        ></textarea>
+                        <button className={styles['stop-btn']} onClick={handleStop} disabled={!isLoading} title="Stop">
+                            <i className="fas fa-stop"></i>
+                        </button>
+                        <button className={styles['send-btn']} disabled={!input.trim() || isLoading} onClick={handleSend}>
+                            <i className="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </motion.section>
+    );
+};
+
+export default GeminiChat;

@@ -1,7 +1,69 @@
 /* frontend/src/styles/sub1/pptTemplate.module.css */
 
 .pageShell {
+    --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.05);
+    --shadow-hover-strong: 0 20px 40px rgba(0, 123, 85, 0.12), 0 12px 20px rgba(0, 0, 0, 0.04);
     animation: pageFadeIn 0.55s ease-out both;
+}
+
+.pageHeader {
+    text-align: center;
+    margin-bottom: 2.6rem;
+    padding: 3rem 1.8rem;
+    border-radius: 20px;
+    background: linear-gradient(120deg, #007B55, #004D40, #008f66, #004D40);
+    background-size: 300% 300%;
+    animation: gradientFlow 8s ease infinite;
+    color: #fff;
+    box-shadow: 0 15px 30px -5px rgba(0, 123, 85, 0.25);
+}
+
+.pageTitle {
+    font-size: 2.1rem;
+    letter-spacing: -0.4px;
+    margin-bottom: 0.7rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.pageSubtitle {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 1.06rem;
+}
+
+.sectionCard {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.sectionCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
+    opacity: 0.9;
+}
+
+.cardStep1 {
+    animation-delay: 0.05s;
+}
+
+.cardStep2 {
+    animation-delay: 0.12s;
+}
+
+.cardStep3 {
+    animation-delay: 0.18s;
 }
 
 .workflowHint {
@@ -71,6 +133,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
     animation: tileIn 0.5s ease both;
 }
 
@@ -97,7 +160,7 @@
 .themeCard:hover,
 .layoutCard:hover {
     transform: translateY(-8px);
-    box-shadow: var(--shadow-hover);
+    box-shadow: var(--shadow-hover-strong);
     border-color: rgba(0, 123, 85, 0.4);
 }
 
@@ -144,6 +207,12 @@
     background: #fff;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     border-radius: 4px;
+    transition: transform 0.4s ease;
+}
+
+.themeCard:hover .previewBox img,
+.layoutCard:hover .previewBox img {
+    transform: scale(1.04);
 }
 
 .cardInfo {
@@ -208,6 +277,24 @@
     overflow-x: auto;
     padding-bottom: 16px;
     list-style: none;
+}
+
+.customTabs::-webkit-scrollbar {
+    height: 8px;
+}
+
+.customTabs::-webkit-scrollbar-track {
+    background: var(--bg-input);
+    border-radius: 4px;
+}
+
+.customTabs::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.customTabs::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .navLink {
@@ -279,6 +366,7 @@
     border: 1px solid rgba(0, 123, 85, 0.15);
     border-radius: var(--radius-md);
     padding: 2rem;
+    box-shadow: 0 8px 24px rgba(0, 123, 85, 0.05);
 }
 
 .summaryTitle {
@@ -400,6 +488,32 @@
     }
 }
 
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes slideUpFade {
     from {
         opacity: 0;
@@ -461,6 +575,14 @@
 }
 
 @media (max-width: 768px) {
+    .pageHeader {
+        padding: 2rem 1.2rem;
+    }
+
+    .pageTitle {
+        font-size: 1.55rem;
+    }
+
     .workflowHint {
         font-size: 0.95rem;
         padding: 14px 16px;
@@ -474,5 +596,18 @@
     .generateBtn {
         min-height: 66px;
         font-size: 1.08rem;
+    }
+
+    .themeGrid,
+    .layoutGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+
+    .themeGrid,
+    .layoutGrid {
+        grid-template-columns: 1fr;
     }
 }

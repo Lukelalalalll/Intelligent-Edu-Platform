@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/sub1/pptTemplate.module.css';
+import styles from '../../../styles/sub1/pptTemplate.module.css';
 
 export default function PptTemplate({
     states, handlers

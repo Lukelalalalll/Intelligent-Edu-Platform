@@ -41,21 +41,17 @@ export default function LoginEntry() {
             const userData = response.data.user;
             localStorage.setItem('user', JSON.stringify(userData));
 
-            setSuccessMsg('Login successful...');
-
             // 判断是否需要跳转回登录前的页面，否则跳转到主页或学生主页
-            setTimeout(() => {
-                const searchParams = new URLSearchParams(location.search);
-                const nextUrl = searchParams.get('next');
+            const searchParams = new URLSearchParams(location.search);
+            const nextUrl = searchParams.get('next');
 
-                if (nextUrl) {
-                    navigate(nextUrl);
-                } else if (userData.role === 'student') {
-                    navigate('/home_student');
-                } else {
-                    navigate('/');
-                }
-            }, 1000);
+            if (nextUrl) {
+                navigate(nextUrl);
+            } else if (userData.role === 'student') {
+                navigate('/home_student');
+            } else {
+                navigate('/');
+            }
 
         } catch (error) {
             // 捕获后端的报错信息

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/sub1/specify.module.css';
+import styles from '../../../styles/sub1/specify.module.css';
 
 export default function Specify({
     highlightsData, tablesBySection, formState, setFormState,

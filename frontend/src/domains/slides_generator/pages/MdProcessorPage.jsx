@@ -1,9 +1,9 @@
 // MdProcessor.jsx
 import React from 'react';
-import '../../styles/base.css';
+import '../../../styles/base.css';
 import { useNavigate } from 'react-router-dom';
 
-import styles from '../../styles/sub1/md_processor.module.css';
+import styles from '../../../styles/sub1/md_processor.module.css';
 
 const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
