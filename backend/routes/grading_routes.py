@@ -28,16 +28,16 @@ def _can_access_course(course: dict, user: dict) -> bool:
     return bool(legacy_teacher and username and legacy_teacher == username)
 
 
-def _ensure_submission(submission_id: str):
-    course, assignment, submission = find_submission(submission_id)
+async def _ensure_submission(submission_id: str):
+    course, assignment, submission = await find_submission(submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     return course, assignment, submission
 
 
 @grading_router.post("/annotations")
-def upsert_annotation(payload: AnnotationPayload, current_user: dict = Depends(get_current_user)):
-    course, _, submission = _ensure_submission(payload.submissionId)
+async def upsert_annotation(payload: AnnotationPayload, current_user: dict = Depends(get_current_user)):
+    course, _, submission = await _ensure_submission(payload.submissionId)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
     store = load_annotations(payload.submissionId)
@@ -59,12 +59,12 @@ def upsert_annotation(payload: AnnotationPayload, current_user: dict = Depends(g
 
 
 @grading_router.delete("/annotations/{annotation_id}")
-def delete_annotation(
+async def delete_annotation(
     annotation_id: str,
     submissionId: str = Query(..., alias="submissionId"),
     current_user: dict = Depends(get_current_user),
 ):
-    course, _, submission = _ensure_submission(submissionId)
+    course, _, submission = await _ensure_submission(submissionId)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
     store = load_annotations(submissionId)
@@ -76,8 +76,8 @@ def delete_annotation(
 
 
 @grading_router.post("/submission/{submission_id}/score")
-def save_score(submission_id: str, payload: SubmissionScoreSchema, current_user: dict = Depends(get_current_user)):
-    course, _, _ = _ensure_submission(submission_id)
+async def save_score(submission_id: str, payload: SubmissionScoreSchema, current_user: dict = Depends(get_current_user)):
+    course, _, _ = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
     store = load_annotations(submission_id)
@@ -91,12 +91,12 @@ def save_score(submission_id: str, payload: SubmissionScoreSchema, current_user:
 
 
 @grading_router.post("/submission/{submission_id}/annotations/finalize")
-def finalize_annotations(
+async def finalize_annotations(
     submission_id: str,
     payload: FinalizeAnnotationsSchema,
     current_user: dict = Depends(get_current_user),
 ):
-    course, _, submission = _ensure_submission(submission_id)
+    course, _, submission = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
 

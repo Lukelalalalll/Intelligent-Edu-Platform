@@ -151,3 +151,28 @@ class AnnotateSchema(BaseModel):
     messages: List[ChatMessageSchema] | None = None
     useRag: bool = True
     ragTopK: int = 4
+
+
+class AdminCourseSchema(BaseModel):
+    courseId: str
+    name: str
+    teacherId: str = ""
+    degreeLevel: Literal['bachelor', 'master', 'phd'] = 'bachelor'
+    semester: str = ""
+    studentIds: List[str] = Field(default_factory=list)
+
+
+class AdminCourseStudentSchema(BaseModel):
+    studentId: str
+
+
+class AdminAssignmentSchema(BaseModel):
+    id: str
+    title: str
+    description: str = ""
+    dueDate: str = ""
+    rubric: dict = Field(default_factory=dict)
+
+
+class AdminDbDocumentSchema(BaseModel):
+    document: dict = Field(default_factory=dict)

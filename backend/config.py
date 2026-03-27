@@ -11,6 +11,8 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 class Config:
     BASE_DIR = BASE_DIR
 
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+
     SECRET_KEY = 'your-secret-key'
 
     JWT_SECRET_KEY = 'jwt-secret-key-change-this-in-prod'
@@ -41,6 +43,12 @@ class Config:
         os.path.join(BASE_DIR, 'generated', 'vectorstore'),
     )
     RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
+
+    GMAIL_CLIENT_SECRET_FILE = os.getenv(
+        'GMAIL_CLIENT_SECRET_FILE',
+        os.path.join(BASE_DIR, 'client_secret_140717111384-2m1v2psqsarktrujhprth45hqg0hsck0.apps.googleusercontent.com.json'),
+    )
+    GMAIL_REDIRECT_URI = os.getenv('GMAIL_REDIRECT_URI', 'http://localhost:5173/gmail/callback')
 
 
     # ==========================

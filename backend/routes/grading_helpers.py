@@ -5,6 +5,7 @@ from typing import Tuple, Optional, Dict, Any
 from urllib.parse import quote
 
 import fitz
+from backend.core.database import db
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
 COURSES_PATH = DATA_ROOT / "courses.json"
@@ -14,6 +15,7 @@ TEST_PDF_DIR = BACKEND_ROOT / "test_pdf"
 ANNOTATED_PDF_DIR = BACKEND_ROOT / "static" / "grading_annotated"
 PRISTINE_PDF_DIR = BACKEND_ROOT / "static" / "grading_pristine"
 VALID_DEGREE_LEVELS = {"bachelor", "master", "phd"}
+COURSES_COLLECTION = "courses"
 
 
 def _ensure_directories() -> None:
@@ -23,21 +25,38 @@ def _ensure_directories() -> None:
     PRISTINE_PDF_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def load_courses() -> Dict[str, Any]:
+async def load_courses() -> Dict[str, Any]:
     _ensure_directories()
-    if not COURSES_PATH.exists():
-        return {"courses": []}
-    try:
-        raw_data = json.loads(COURSES_PATH.read_text())
-        normalized = normalize_courses_data(raw_data)
-        return normalized
-    except json.JSONDecodeError:
-        return {"courses": []}
+    courses_coll = db[COURSES_COLLECTION]
+    docs = await courses_coll.find({}, {"_id": 0}).to_list(length=5000)
+    if docs:
+        return normalize_courses_data({"courses": docs})
+
+    if COURSES_PATH.exists():
+        try:
+            raw_data = json.loads(COURSES_PATH.read_text())
+            normalized = normalize_courses_data(raw_data)
+            normalized_courses = normalized.get("courses", [])
+            if normalized_courses:
+                await courses_coll.insert_many(normalized_courses)
+            return normalized
+        except json.JSONDecodeError:
+            return {"courses": []}
+
+    return {"courses": []}
 
 
-def save_courses(data: Dict[str, Any]) -> None:
+async def save_courses(data: Dict[str, Any]) -> None:
     _ensure_directories()
-    COURSES_PATH.write_text(json.dumps(data, indent=2))
+    normalized = normalize_courses_data(data)
+    courses = normalized.get("courses", [])
+    courses_coll = db[COURSES_COLLECTION]
+    await courses_coll.delete_many({})
+    if courses:
+        await courses_coll.insert_many(courses)
+
+    # Keep a JSON snapshot for backup and compatibility with existing scripts.
+    COURSES_PATH.write_text(json.dumps(normalized, indent=2))
 
 
 def _normalize_student_list(course: Dict[str, Any]) -> list[Dict[str, Any]]:
@@ -100,9 +119,9 @@ def normalize_courses_data(data: Dict[str, Any]) -> Dict[str, Any]:
     return {"courses": normalized_courses}
 
 
-def find_submission(submission_id: str) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+async def find_submission(submission_id: str) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Return (course, assignment, submission) for an id."""
-    data = load_courses()
+    data = await load_courses()
     for course in data.get("courses", []):
         for assignment in course.get("assignments", []):
             for submission in assignment.get("submissions", []):

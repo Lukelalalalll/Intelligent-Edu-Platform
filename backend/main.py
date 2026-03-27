@@ -1,10 +1,12 @@
 import os
 import logging
+import time
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import Config
@@ -20,8 +22,63 @@ from backend.routes.sub4_routes import sub4_router
 from backend.routes.teacher_routes import teacher_router
 from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
+from backend.routes.gmail_routes import gmail_router
 
 logger = logging.getLogger(__name__)
+
+
+def _setup_logging() -> None:
+    log_level = getattr(logging, Config.LOG_LEVEL, logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    if not root_logger.handlers:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
+        root_logger.addHandler(stream_handler)
+
+    logger.info("Logging initialized with level=%s", Config.LOG_LEVEL)
+
+
+def _resolve_route_group(path: str) -> str:
+    normalized = str(path or "").strip().lower()
+    if normalized.startswith("/api/auth"):
+        return "auth"
+    if normalized.startswith("/api/admin"):
+        return "admin"
+    if normalized.startswith("/api/ai"):
+        return "ai"
+    if normalized.startswith("/api/sub1"):
+        return "sub1"
+    if normalized.startswith("/api/sub2"):
+        return "sub2"
+    if normalized.startswith("/api/sub3"):
+        return "sub3"
+    if normalized.startswith("/api/sub4"):
+        return "sub4"
+    if normalized.startswith("/api/teacher"):
+        return "teacher"
+    if normalized.startswith("/api/grading"):
+        return "grading"
+    if normalized.startswith("/data"):
+        return "data"
+    if normalized.startswith("/static"):
+        return "static"
+    if normalized.startswith("/test_pdf"):
+        return "test_pdf"
+    if normalized.startswith("/grading_annotated"):
+        return "grading_annotated"
+    return "app"
+
+
+def _get_route_logger(path: str) -> logging.Logger:
+    group = _resolve_route_group(path)
+    return logging.getLogger(f"backend.route.{group}")
 
 
 @asynccontextmanager
@@ -51,6 +108,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Intelligent Edu Platform API", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=Config.SECRET_KEY)
 
+_setup_logging()
+
 # 配置 CORS
 app.add_middleware(
     CORSMiddleware,
@@ -59,6 +118,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    started_at = time.perf_counter()
+    method = request.method
+    path = request.url.path
+    client = request.client.host if request.client else "unknown"
+    route_logger = _get_route_logger(path)
+
+    route_logger.info("Request started | method=%s path=%s client=%s", method, path, client)
+    try:
+        response = await call_next(request)
+    except Exception:  # noqa: BLE001
+        duration_ms = (time.perf_counter() - started_at) * 1000
+        route_logger.exception(
+            "Request failed | method=%s path=%s duration_ms=%.2f",
+            method,
+            path,
+            duration_ms,
+        )
+        raise
+
+    duration_ms = (time.perf_counter() - started_at) * 1000
+    route_logger.info(
+        "Request completed | method=%s path=%s status=%s duration_ms=%.2f",
+        method,
+        path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
 
 # 创建目录
 for folder in Config.ALL_FOLDERS:
@@ -96,6 +187,7 @@ app.include_router(sub4_router)
 app.include_router(teacher_router)
 app.include_router(grading_router)
 app.include_router(ai_gateway_router)
+app.include_router(gmail_router)
 
 # === 启动命令 ===
 # 在根目录下终端运行：

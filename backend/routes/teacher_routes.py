@@ -36,9 +36,9 @@ def _can_access_course(course: dict, user: dict) -> bool:
 
 
 @teacher_router.get("/courses")
-def get_courses(current_user: dict = Depends(get_current_user)):
+async def get_courses(current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
-    data = load_courses()
+    data = await load_courses()
     if _is_admin(current_user):
         return data
 
@@ -47,9 +47,9 @@ def get_courses(current_user: dict = Depends(get_current_user)):
 
 
 @teacher_router.get("/assignments/{course_id}")
-def get_assignments(course_id: str, current_user: dict = Depends(get_current_user)):
+async def get_assignments(course_id: str, current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
-    data = load_courses()
+    data = await load_courses()
     for course in data.get("courses", []):
         cid = course.get("courseId") or course.get("id")
         if cid == course_id:
@@ -60,9 +60,9 @@ def get_assignments(course_id: str, current_user: dict = Depends(get_current_use
 
 
 @teacher_router.get("/submissions/{assignment_id}")
-def get_submissions(assignment_id: str, current_user: dict = Depends(get_current_user)):
+async def get_submissions(assignment_id: str, current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
-    data = load_courses()
+    data = await load_courses()
     for course in data.get("courses", []):
         if not _can_access_course(course, current_user):
             continue
@@ -73,9 +73,9 @@ def get_submissions(assignment_id: str, current_user: dict = Depends(get_current
 
 
 @teacher_router.get("/submission/{submission_id}")
-def get_submission(submission_id: str, current_user: dict = Depends(get_current_user)):
+async def get_submission(submission_id: str, current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
-    course, assignment, submission = find_submission(submission_id)
+    course, assignment, submission = await find_submission(submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     if not _can_access_course(course, current_user):

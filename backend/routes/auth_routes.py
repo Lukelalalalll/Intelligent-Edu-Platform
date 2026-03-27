@@ -158,7 +158,7 @@ async def update_profile(req: UpdateProfileSchema, current_user: dict = Depends(
 
 @auth_router.get("/profile/courses")
 async def get_profile_courses(current_user: dict = Depends(get_current_user)):
-    all_courses = load_courses().get("courses", [])
+    all_courses = (await load_courses()).get("courses", [])
     role = current_user.get("role", "student")
 
     if role == "teacher":
