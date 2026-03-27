@@ -1,32 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import WelcomeBanner from './components/WelcomeBanner';
 import ToolCard from './components/ToolCard';
 import GeminiChat from './components/GeminiChat';
 import styles from '../../styles/home/home.module.css';
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.2,
-            delayChildren: 0.2
-        }
-    }
-};
-
-const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    show: {
-        opacity: 1,
-        y: 0,
-        transition: { type: "spring", stiffness: 300, damping: 24 }
-    }
-};
-
 export default function Home({ config }) {
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'tools'
     const toolCardsData = useMemo(() => [
         { title: "AI Slides Generator", desc: "Intelligent document processing and presentation generation", icon: "fa-book-open", url: config.urls.sub1 },
@@ -35,12 +15,15 @@ export default function Home({ config }) {
         { title: "AI Diagram Tool", desc: "Extract from word/PDF, Search and Edit SVG, AI Generate", icon: "fa-cog", url: config.urls.sub5 },
     ], [config.urls]);
 
+    useEffect(() => {
+        const tab = new URLSearchParams(location.search).get('tab');
+        if (tab === 'tools' || tab === 'ai') {
+            setActiveTab(tab);
+        }
+    }, [location.search]);
+
     return (
-        <motion.div
-            initial="hidden"
-            animate="show"
-            variants={containerVariants}
-        >
+        <div>
             <WelcomeBanner />
 
             {/* Tab Switcher: AI Space | Tools */}
@@ -63,7 +46,7 @@ export default function Home({ config }) {
                 <GeminiChat aiInteractUrl={config.urls.aiInteract} />
             ) : (
                 <>
-                    <motion.div variants={itemVariants} className={styles['mailbox-section']}>
+                    <div className={styles['mailbox-section']}>
                         <Link to={config.urls.mailbox} className={styles['mailbox-banner-card']}>
                             <div className={styles['mailbox-left']}>
                                 <div className={styles['mailbox-icon-wrapper']}>
@@ -78,17 +61,17 @@ export default function Home({ config }) {
                                 <span className={styles['btn-enter-mailbox']}>Enter Workspace <i className="fas fa-arrow-right"></i></span>
                             </div>
                         </Link>
-                    </motion.div>
+                    </div>
 
-                    <motion.div variants={containerVariants} className={styles['cards-container']}>
+                    <div className={styles['cards-container']}>
                         {toolCardsData.map((card, index) => (
-                            <motion.div key={index} variants={itemVariants}>
+                            <div key={index}>
                                 <ToolCard {...card} />
-                            </motion.div>
+                            </div>
                         ))}
-                    </motion.div>
+                    </div>
                 </>
             )}
-        </motion.div>
+        </div>
     );
 }

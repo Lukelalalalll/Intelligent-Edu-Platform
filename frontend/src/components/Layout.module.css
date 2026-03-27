@@ -1,3 +1,14 @@
+.appShell {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.mainContent {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
 .navbar {
     background-color: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
@@ -21,7 +32,48 @@
     align-items: center;
 }
 
-.navLogo { display: flex; align-items: center; }
+.navLeft {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.workflowToggle {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(0, 123, 85, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    margin-left: -14px;
+    box-shadow: 0 6px 14px rgba(0, 123, 85, 0.1);
+}
+
+.workflowToggle span {
+    width: 15px;
+    height: 2px;
+    border-radius: 999px;
+    background: #0f6a4b;
+    display: block;
+}
+
+.workflowToggle:hover {
+    border-color: rgba(0, 123, 85, 0.45);
+    background: #f7fcf9;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(0, 123, 85, 0.16);
+}
+
+.navLogo {
+    display: flex;
+    align-items: center;
+}
 
 .logoImg {
     height: 210px;
@@ -30,7 +82,11 @@
     display: block;
 }
 
-.navMenu { display: flex; align-items: center; gap: 16px; }
+.navMenu {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
 
 .navBtn {
     text-decoration: none;
@@ -45,11 +101,24 @@
     cursor: pointer;
 }
 
-.btnLogin { color: var(--primary-color); background: transparent; }
-.btnLogin:hover { background: rgba(0, 123, 85, 0.08); }
+.btnLogin {
+    color: var(--primary-color);
+    background: transparent;
+}
 
-.btnRegister { background: var(--primary-color); color: white; }
-.btnRegister:hover { background: var(--primary-dark); transform: translateY(-2px); }
+.btnLogin:hover {
+    background: rgba(0, 123, 85, 0.08);
+}
+
+.btnRegister {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btnRegister:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
 
 .userProfile {
     display: flex;
@@ -58,12 +127,22 @@
     background: rgba(255, 255, 255, 0.6);
     padding: 6px 8px 6px 12px;
     border-radius: var(--radius-pill);
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .btnAdmin {
     background: rgba(0, 122, 255, 0.1);
     color: var(--admin-color);
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.btnDatabase {
+    background: rgba(0, 0, 0, 0.06);
+    color: #2d3748;
     padding: 6px 14px;
     border-radius: var(--radius-pill);
     font-weight: 700;
@@ -89,8 +168,15 @@
     text-decoration: none;
 }
 
-.welcomeText { font-size: 15px; color: var(--text-main); font-weight: 500; }
-.welcomeText strong { color: var(--primary-color); }
+.welcomeText {
+    font-size: 15px;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.welcomeText strong {
+    color: var(--primary-color);
+}
 
 .btnProfile {
     background: rgba(0, 123, 85, 0.1);
@@ -110,7 +196,11 @@
     border: none;
     cursor: pointer;
 }
-.btnLogout:hover { background: #ffe3e3; color: var(--error-color); }
+
+.btnLogout:hover {
+    background: #ffe3e3;
+    color: var(--error-color);
+}
 
 .footer {
     background-color: #fff;
@@ -118,4 +208,143 @@
     margin-top: auto;
     border-top: 1px solid var(--border-color);
 }
-.footerContent { text-align: center; color: var(--text-sub); font-size: 0.9rem; }
+
+.footerContent {
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.workflowOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    z-index: 1100;
+}
+
+.workflowOverlayActive {
+    opacity: 1;
+    visibility: visible;
+}
+
+.workflowDrawer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100dvh;
+    width: min(320px, 85vw);
+    background: linear-gradient(180deg, rgba(252, 255, 253, 0.98) 0%, rgba(246, 253, 249, 0.96) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 12px 0 34px rgba(0, 0, 0, 0.14);
+    border-right: 1px solid rgba(0, 123, 85, 0.16);
+    border-top-right-radius: 18px;
+    border-bottom-right-radius: 18px;
+    transform: translateX(-102%);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+}
+
+.workflowDrawerOpen {
+    transform: translateX(0);
+}
+
+.workflowHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid rgba(0, 123, 85, 0.12);
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.12), rgba(255, 255, 255, 0.9));
+    border-top-right-radius: 18px;
+}
+
+.workflowHeader h3 {
+    margin: 0;
+    color: #123526;
+    font-size: 1.04rem;
+    letter-spacing: 0.02em;
+}
+
+.workflowClose {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.workflowClose:hover {
+    background: rgba(0, 123, 85, 0.12);
+    color: #0f6a4b;
+}
+
+.workflowNav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    overflow: auto;
+}
+
+.workflowNav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.workflowNav::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.2);
+    border-radius: 999px;
+}
+
+.workflowLink {
+    text-decoration: none;
+    color: #1f2937;
+    font-weight: 600;
+    border: 1px solid rgba(0, 123, 85, 0.14);
+    border-radius: 12px;
+    padding: 16px 16px;
+    background: #fff;
+    transition: all 0.22s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
+.workflowLink:hover {
+    border-color: rgba(0, 123, 85, 0.45);
+    background: #f5fbf8;
+    transform: translateX(2px);
+    box-shadow: 0 8px 14px rgba(0, 123, 85, 0.1);
+}
+
+.workflowLinkActive {
+    background: rgba(0, 123, 85, 0.12);
+    border-color: var(--primary-color);
+    color: #0f6a4b;
+}
+
+@media (max-width: 768px) {
+    .navContainer {
+        padding: 0 14px;
+    }
+
+    .workflowToggle {
+        margin-left: -6px;
+    }
+
+    .workflowDrawer {
+        width: min(300px, 88vw);
+        border-top-right-radius: 14px;
+        border-bottom-right-radius: 14px;
+    }
+
+    .workflowHeader {
+        border-top-right-radius: 14px;
+    }
+}

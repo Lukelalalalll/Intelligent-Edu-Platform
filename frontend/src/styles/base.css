@@ -60,6 +60,10 @@
     box-sizing: border-box;
 }
 
+html {
+    font-size: 16px;
+}
+
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     /* 动态背景 */
@@ -290,6 +294,40 @@ body {
     .btn-teach-view {
         padding: 8px 10px;
         border-radius: 50%;
+    }
+}
+
+@media (max-width: 600px) {
+    html {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    html {
+        font-size: 14px;
+    }
+
+    body,
+    button,
+    input,
+    select,
+    textarea {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 360px) {
+    html {
+        font-size: 13px;
+    }
+
+    body,
+    button,
+    input,
+    select,
+    textarea {
+        font-size: 0.92rem;
     }
 }
 

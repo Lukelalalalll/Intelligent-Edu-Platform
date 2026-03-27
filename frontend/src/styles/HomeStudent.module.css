@@ -1,17 +1,24 @@
 /* frontend/src/styles/HomeStudent.module.css */
 
+.pageContainer {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+}
+
 .welcomeBanner {
     text-align: center;
-    margin-bottom: 5rem;
-    padding: 4rem 2rem;
+    margin-bottom: 4rem;
+    padding: 4.2rem 2rem;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
-    animation: gradientFlow 8s ease infinite;
+    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     border-radius: 24px;
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
+    opacity: 0;
 }
 
 @keyframes gradientFlow {
@@ -111,6 +118,8 @@
     max-width: 900px;
     margin: 76px auto 72px;
     padding: 0 12px;
+    animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.3s;
+    opacity: 0;
 }
 
 @keyframes slideUpFade {
@@ -237,7 +246,7 @@
 
 .selectionGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 24px;
 }
 
@@ -394,6 +403,23 @@
 
 .btnOutlineSmall:hover {
     background: var(--primary-light);
+}
+
+.uploadConfirmBtn {
+    margin-top: 15px;
+    width: 100%;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--primary-color);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.viewFeedbackBtn {
+    margin-top: 15px;
+    width: 100%;
 }
 
 /* =========================================
@@ -704,4 +730,175 @@
 
 .isFullscreenLayout .inputArea {
     padding: 20px 15% 40px;
+}
+
+@media (max-width: 1024px) {
+    .pageContainer {
+        padding: 0 16px 32px;
+    }
+
+    .welcomeBanner {
+        margin-bottom: 4rem;
+        padding: 3.5rem 1.5rem;
+    }
+
+    .welcomeBanner h1 {
+        font-size: 2.3rem;
+    }
+
+    .stepperWrapper {
+        gap: 32px;
+        padding: 14px 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 0 12px 24px;
+    }
+
+    .welcomeBanner {
+        margin-bottom: 3.4rem;
+        padding: 2.8rem 1rem;
+        border-radius: 18px;
+    }
+
+    .welcomeBanner h1 {
+        font-size: 1.9rem;
+        letter-spacing: -0.02em;
+    }
+
+    .welcomeBanner p {
+        font-size: 1rem;
+    }
+
+    .tabSwitcher {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px;
+        margin: -22px auto 26px;
+    }
+
+    .tabSwitcher button.tabBtn {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .geminiWrapper {
+        margin: 48px auto 40px;
+        padding: 0;
+        width: 100%;
+    }
+
+    .sectionHeader h2 {
+        font-size: 1.35rem;
+        margin-bottom: 1rem;
+    }
+
+    .stepperWrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+    }
+
+    .stepItem:first-child::after {
+        display: none;
+    }
+
+    .selectionGrid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .selectionCard {
+        padding: 18px;
+    }
+
+    .hwHeader {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .hwHeader h3 {
+        font-size: 1.06rem;
+    }
+
+    .uploadArea {
+        padding: 16px;
+    }
+
+    .submissionInfo {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcomeBanner h1 {
+        font-size: 1.62rem;
+    }
+
+    .welcomeBanner p {
+        font-size: 0.95rem;
+    }
+
+    .tabSwitcher button.tabBtn {
+        font-size: 0.84rem;
+        padding: 9px 8px;
+        gap: 6px;
+    }
+
+    .stepItem {
+        width: 100%;
+    }
+
+    .btnBack {
+        font-size: 0.92rem;
+    }
+
+    .badge {
+        font-size: 0.74rem;
+        padding: 5px 10px;
+    }
+
+    .uploadConfirmBtn,
+    .viewFeedbackBtn {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .welcomeBanner h1 {
+        font-size: 1.4rem;
+    }
+
+    .welcomeBanner p {
+        font-size: 0.86rem;
+    }
+
+    .tabSwitcher button.tabBtn {
+        font-size: 0.78rem;
+    }
+
+    .sectionHeader h2 {
+        font-size: 1.18rem;
+    }
+
+    .courseCard h3,
+    .hwHeader h3 {
+        font-size: 0.98rem;
+    }
+
+    .hwDesc,
+    .submissionInfo p,
+    .btnBack,
+    .uploadConfirmBtn,
+    .viewFeedbackBtn {
+        font-size: 0.82rem;
+    }
 }

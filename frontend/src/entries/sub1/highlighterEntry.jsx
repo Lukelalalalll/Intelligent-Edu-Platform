@@ -6,6 +6,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import client from '../../api/client';
 import HighlighterPage from '../../domains/slides_generator/pages/Highlighter/Highlighter';
+import { log } from '../../utils/logger';
 
 export default function HighlighterEntry() {
     const navigate = useNavigate();
@@ -39,7 +40,9 @@ export default function HighlighterEntry() {
                     responseType: 'text'
                 });
 
-                console.log("DEBUG: Raw file data received:", response.data);
+                log.debug('sub1-highlighter', 'Raw file data received', {
+                    length: String(response?.data || '').length,
+                });
 
                 const markdown = response.data;
                 if (!markdown || markdown.length === 0) {
@@ -48,7 +51,9 @@ export default function HighlighterEntry() {
 
                 setCurrentFilename(combinedFilename);
                 const parsedSections = parseSections(markdown);
-                console.log("DEBUG: Parsed sections count:", parsedSections.length);
+                log.info('sub1-highlighter', 'Parsed markdown sections', {
+                    count: parsedSections.length,
+                });
 
                 if (parsedSections.length > 0) {
                     setSections(parsedSections);
@@ -58,7 +63,7 @@ export default function HighlighterEntry() {
                     setErrorMsg("Could not parse any sections. Please check MD format.");
                 }
             } catch (error) {
-                console.error("Fetch Error:", error);
+                log.error('sub1-highlighter', 'Failed to load markdown file', { message: error?.message });
                 setErrorMsg('Error loading file: ' + error.message);
             } finally {
                 setLoading(false);
@@ -160,7 +165,7 @@ export default function HighlighterEntry() {
             const currentTitle = sections[currentSectionIndex]?.title || 'Unknown Section';
             setHighlights(prev => [...prev, { id, text: selectedText, sectionTitle: currentTitle }]);
         } catch (e) {
-            console.warn('Highlight failed:', e);
+            log.warn('sub1-highlighter', 'Highlight failed', { message: e?.message });
         }
         selection.removeAllRanges();
     }, [sections, currentSectionIndex]);

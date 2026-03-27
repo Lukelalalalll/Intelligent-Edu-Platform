@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import styles from '../../../../styles/sub1/highlighter.module.css';
 import ReaderSection from './components/ReaderSection';
 import HighlightsPanel from './components/HighlightsPanel';
+import { log } from '../../../../utils/logger';
 
 export default function Highlighter({
     loading, sections, currentSectionIndex, currentSectionTitle,
@@ -88,7 +89,9 @@ export default function Highlighter({
             if (typeof onHighlightCreated === 'function') {
                 onHighlightCreated({ id: highlightId, text: selectedText, sectionTitle: currentSectionTitle });
             }
-        } catch (e) { console.error("Highlighting error:", e); }
+        } catch (e) {
+            log.error('highlighter', 'Highlighting error', { message: e?.message });
+        }
     };
 
     // ======== 增强工具函数 ========

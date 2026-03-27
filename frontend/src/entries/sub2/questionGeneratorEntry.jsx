@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import client from '../../api/client';
 import QuestionGeneratorPage from '../../pages/sub2/QuestionGenerator';
+import { log } from '../../utils/logger';
 
 export default function QuestionGeneratorEntry() {
     const [currentStep, setCurrentStep] = useState(() => {
@@ -67,7 +68,9 @@ export default function QuestionGeneratorEntry() {
     useEffect(() => {
         if ((exercises.length > 0 || generatedQuestions) && window.MathJax) {
             // 当数据变化时，通知 MathJax 重新扫描页面把 $ 代码转成公式图形
-            window.MathJax.typesetPromise().catch(err => console.log('MathJax error:', err));
+            window.MathJax.typesetPromise().catch((err) => {
+                log.warn('sub2', 'MathJax typeset failed', { message: err?.message });
+            });
         }
     }, [exercises, generatedQuestions]); // 监听提取的题和生成的题
 

@@ -105,7 +105,7 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: var(--radius-lg);
-    padding: 40px;
+    padding: 40px 50px;
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     transform-style: preserve-3d;
@@ -261,14 +261,13 @@
     color: #007B55;
 }
 
-/* --- 底部编辑卡片 --- */
 .cardHeader {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding-bottom: 20px;
-    margin-bottom: 30px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
-.profileEditCard h3 {
+.cardHeader h3 {
     margin: 0 0 8px 0;
     color: var(--text-main);
     font-size: 1.5rem;
@@ -276,6 +275,34 @@
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.cardHeader h3 i {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    border: 1px solid rgba(0, 123, 85, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.14);
+    transition: all 0.28s ease;
+    flex-shrink: 0;
+}
+
+.profileEditCard h3 {
+    margin: 0 0 8px 0;
+}
+
+.profileCoursesCard:hover .cardHeader h3 i,
+.profileEditCard:hover .cardHeader h3 i {
+    background: var(--primary-color);
+    color: #ffffff;
+    transform: scale(1.08) rotate(5deg);
+    box-shadow: 0 8px 18px rgba(0, 123, 85, 0.3);
 }
 
 .editSubtitle {
@@ -436,10 +463,18 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
     backdrop-filter: blur(8px);
+    animation: profileModalFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes profileModalFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modalOverlay.active {
@@ -453,10 +488,21 @@
     width: 90%;
     max-width: 400px;
     padding: 30px;
-    transform: scale(0.9);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
     text-align: center;
+    animation: profileModalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes profileModalPopIn {
+    from {
+        transform: scale(0.85) translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
 .modalOverlay.active .modalBox {

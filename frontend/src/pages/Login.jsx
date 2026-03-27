@@ -159,9 +159,6 @@ export default function Login({
 
                     <div className="auth-footer">
                         <p>Don't have an account? <Link to="/register" className="highlight-link">Create Account</Link></p>
-                        <Link to="/" className="back-home-link">
-                            <i className="fas fa-arrow-left"></i> Back to Home
-                        </Link>
                     </div>
                 </div>
             </div>

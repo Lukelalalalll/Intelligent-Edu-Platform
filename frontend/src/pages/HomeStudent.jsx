@@ -12,7 +12,7 @@ export default function HomeStudent({
 }) {
     const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'assignments'
     return (
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', paddingBottom: '40px' }}>
+        <div className={styles.pageContainer}>
             {/* 1. 顶部动态渐变横幅 */}
             <section className={styles.welcomeBanner}>
                 <h1>Welcome back, {username}</h1>
@@ -107,7 +107,7 @@ export default function HomeStudent({
                                     <div className={styles.uploadArea} style={{ borderColor: 'var(--primary-color)', background: 'var(--primary-light)' }}>
                                         <i className="fas fa-check-circle" style={{ color: 'var(--primary-color)' }}></i>
                                         <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{uploadedFiles['Assignment 1']} selected</span>
-                                        <button style={{ marginTop: '15px', width: '100%', border: 'none', padding: '10px', borderRadius: '8px', background: 'var(--primary-color)', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>
+                                        <button className={styles.uploadConfirmBtn}>
                                             Confirm Submission
                                         </button>
                                     </div>
@@ -125,7 +125,7 @@ export default function HomeStudent({
                                     <p><i className="fas fa-file-pdf"></i> final_project_v2.pdf</p>
                                     <p className={styles.time}><i className="far fa-calendar-check"></i> Submitted Oct 10, 14:30</p>
                                 </div>
-                                <button className={styles.btnOutlineSmall} style={{ marginTop: '15px', width: '100%' }}><i className="fas fa-eye"></i> View Feedback</button>
+                                <button className={`${styles.btnOutlineSmall} ${styles.viewFeedbackBtn}`}><i className="fas fa-eye"></i> View Feedback</button>
                             </div>
                         </div>
                     </div>

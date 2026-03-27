@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import SpecifyPage from '../../domains/slides_generator/pages/SpecifyPage';
+import { log } from '../../utils/logger';
 
 export default function SpecifyEntry() {
     const navigate = useNavigate();
@@ -177,7 +178,7 @@ export default function SpecifyEntry() {
             link.parentNode.removeChild(link);
             window.URL.revokeObjectURL(url); // 清理内存
         } catch (error) {
-            console.error("Download failed:", error);
+            log.error('sub1-specify', 'Download script failed', { message: error?.message });
             alert("Failed to download script. Please try again.");
         }
     };

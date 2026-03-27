@@ -19,9 +19,17 @@
 }
 
 @keyframes authGradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 
@@ -29,16 +37,24 @@
     position: absolute;
     top: -10%;
     left: -10%;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
     border-radius: 50%;
     animation: floatOrbRegister 12s ease-in-out infinite;
     pointer-events: none;
 }
 
 @keyframes floatOrbRegister {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(50px, 50px); }
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(50px, 50px);
+    }
 }
 
 /* 登录页特有光球覆盖 (居右且动画反向) */
@@ -49,15 +65,23 @@
 }
 
 @keyframes floatOrbLogin {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-50px, 50px); }
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-50px, 50px);
+    }
 }
 
 
 /* ================= 基础卡片 & 头部通用 ================= */
 .auth-container {
     width: 100%;
-    max-width: 480px; /* Register 默认宽度 */
+    max-width: 480px;
+    /* Register 默认宽度 */
     z-index: 10;
     display: flex;
     justify-content: center;
@@ -78,8 +102,15 @@
 }
 
 @keyframes cardEntrance {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .auth-header {
@@ -100,9 +131,18 @@
 }
 
 /* 登录页特有头部样式覆盖 */
-.split-layout .auth-header { margin-bottom: 2rem; }
-.split-layout .auth-header h2 { color: var(--text-main); font-size: 1.8rem; }
-.split-layout .auth-header p { font-size: 0.95rem; }
+.split-layout .auth-header {
+    margin-bottom: 2rem;
+}
+
+.split-layout .auth-header h2 {
+    color: var(--text-main);
+    font-size: 1.8rem;
+}
+
+.split-layout .auth-header p {
+    font-size: 0.95rem;
+}
 
 .auth-header .header-icon {
     font-size: 3rem;
@@ -110,11 +150,25 @@
     margin-bottom: 1rem;
     opacity: 0.9;
     animation: authFloatIcon 3s ease-in-out infinite;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.auth-header .header-icon:hover {
+    transform: scale(1.3) !important;
+    animation-play-state: paused;
 }
 
 @keyframes authFloatIcon {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.15);
+    }
 }
 
 
@@ -137,7 +191,8 @@
 
 .auth-form .input-group input {
     width: 100%;
-    padding: 16px 45px 16px 48px !important; /* 给左右图标留出空间 */
+    padding: 16px 45px 16px 48px !important;
+    /* 给左右图标留出空间 */
     font-size: 1rem;
     color: var(--text-main);
     background: var(--auth-bg-input) !important;
@@ -167,8 +222,8 @@
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.1);
 }
 
-.auth-form .input-group input:focus ~ label,
-.auth-form .input-group input:not(:placeholder-shown) ~ label {
+.auth-form .input-group input:focus~label,
+.auth-form .input-group input:not(:placeholder-shown)~label {
     top: 0;
     left: 12px;
     font-size: 0.8rem;
@@ -178,7 +233,9 @@
     z-index: 5;
 }
 
-.auth-form .input-group input:focus ~ .input-icon { color: var(--primary-color); }
+.auth-form .input-group input:focus~.input-icon {
+    color: var(--primary-color);
+}
 
 /* 密码显隐图标 */
 .auth-form .toggle-password {
@@ -193,7 +250,9 @@
     font-size: 1rem;
 }
 
-.auth-form .toggle-password:hover { color: var(--primary-color); }
+.auth-form .toggle-password:hover {
+    color: var(--primary-color);
+}
 
 .auth-form .form-options {
     text-align: right;
@@ -208,7 +267,10 @@
     transition: color 0.3s;
 }
 
-.auth-form .forgot-link:hover { color: var(--primary-color); text-decoration: underline; }
+.auth-form .forgot-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
 
 .auth-form .btn-submit {
     width: 100%;
@@ -230,7 +292,12 @@
     overflow: hidden;
 }
 
-.split-layout .auth-form .btn-submit { padding: 14px; margin-top: 0; } /* Login按钮特定微调 */
+.split-layout .auth-form .btn-submit {
+    padding: 14px;
+    margin-top: 0;
+}
+
+/* Login按钮特定微调 */
 
 .auth-form .btn-submit:hover {
     background: var(--primary-dark);
@@ -238,8 +305,14 @@
     box-shadow: 0 10px 20px rgba(0, 123, 85, 0.3);
 }
 
-.auth-form .btn-submit:active { transform: translateY(0); }
-.auth-form .btn-submit.loading { opacity: 0.8; pointer-events: none; }
+.auth-form .btn-submit:active {
+    transform: translateY(0);
+}
+
+.auth-form .btn-submit.loading {
+    opacity: 0.8;
+    pointer-events: none;
+}
 
 .auth-footer {
     text-align: center;
@@ -255,16 +328,21 @@
     transition: opacity 0.3s;
 }
 
-.auth-footer a:hover { opacity: 0.8; text-decoration: underline; }
+.auth-footer a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
 
 /* Login 特定 Footer 样式覆盖 */
 .split-layout .auth-footer {
     padding-top: 1.5rem;
-    border-top: 1px solid rgba(0,0,0,0.06);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     font-size: 0.9rem;
 }
 
-.auth-footer .highlight-link { margin-left: 4px; }
+.auth-footer .highlight-link {
+    margin-left: 4px;
+}
 
 .auth-footer .back-home-link {
     display: inline-flex;
@@ -275,7 +353,11 @@
     text-decoration: none;
     font-size: 0.85rem;
 }
-.auth-footer .back-home-link:hover { color: var(--primary-color); text-decoration: none; }
+
+.auth-footer .back-home-link:hover {
+    color: var(--primary-color);
+    text-decoration: none;
+}
 
 
 /* ================= 提示信息组件 (Login Message & Register Toast) ================= */
@@ -291,12 +373,28 @@
     animation: authFadeIn 0.3s ease;
 }
 
-.auth-card .error-message { background-color: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
-.auth-card .success-message { background-color: rgba(0, 123, 85, 0.1); color: var(--primary-color); border: 1px solid rgba(0, 123, 85, 0.2); }
+.auth-card .error-message {
+    background-color: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #FFCDD2;
+}
+
+.auth-card .success-message {
+    background-color: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(0, 123, 85, 0.2);
+}
 
 @keyframes authFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* 2. Register 全局 Toast */
@@ -331,17 +429,41 @@
     animation: toastEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.custom-toast.success { color: var(--primary-color); border-left: 4px solid var(--primary-color); }
-.custom-toast.error { color: #FF4842; border-left: 4px solid #FF4842; }
-.toast-icon { font-size: 1.25rem; }
+.custom-toast.success {
+    color: var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+}
 
-@keyframes toastEnter { to { opacity: 1; transform: translateY(0); } }
+.custom-toast.error {
+    color: #FF4842;
+    border-left: 4px solid #FF4842;
+}
 
-.toast-leave { animation: toastLeave 0.4s ease-in forwards !important; }
+.toast-icon {
+    font-size: 1.25rem;
+}
+
+@keyframes toastEnter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.toast-leave {
+    animation: toastLeave 0.4s ease-in forwards !important;
+}
 
 @keyframes toastLeave {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-20px); }
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
 }
 
 
@@ -375,9 +497,17 @@
     animation: cinematicReveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-.welcome-section .text-line:nth-child(1) { animation-delay: 0.1s; }
-.welcome-section .text-line:nth-child(2) { animation-delay: 0.3s; }
-.welcome-section .text-line:nth-child(3) { animation-delay: 0.5s; }
+.welcome-section .text-line:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.welcome-section .text-line:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.welcome-section .text-line:nth-child(3) {
+    animation-delay: 0.5s;
+}
 
 .welcome-section .text-glow {
     color: #ffffff;
@@ -397,15 +527,25 @@
 }
 
 @keyframes cinematicReveal {
-    0% { opacity: 0; transform: translateY(40px); filter: blur(10px); }
-    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    0% {
+        opacity: 0;
+        transform: translateY(40px);
+        filter: blur(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
 }
 
 /* Login 卡片定位与专有出场动画 */
 .split-layout .auth-container {
     flex: 0 1 auto;
     display: flex;
-    justify-content: flex-end; /* 靠右排布 */
+    justify-content: flex-end;
+    /* 靠右排布 */
     width: 100%;
     max-width: 440px;
 }
@@ -420,8 +560,9 @@
         opacity: 0;
         transform: translateY(50px) scale(0.96);
         filter: blur(8px);
-        box-shadow: 0 0 0 rgba(0,0,0,0);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
     }
+
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -433,8 +574,13 @@
 
 /* ================= 响应式布局适配 ================= */
 @media (max-width: 1200px) {
-    .split-layout { padding: 2rem 6% !important; }
-    .welcome-title { font-size: 3.2rem; }
+    .split-layout {
+        padding: 2rem 6% !important;
+    }
+
+    .welcome-title {
+        font-size: 3.2rem;
+    }
 }
 
 @media (max-width: 900px) {
@@ -443,28 +589,51 @@
         justify-content: center !important;
         align-items: center;
     }
+
     .welcome-section {
         text-align: center;
         margin-bottom: 2rem;
         max-width: 100%;
     }
-    .welcome-title { font-size: 2.8rem; }
-    .welcome-subtitle { max-width: 100%; margin: 0 auto; }
-    .split-layout .auth-container { justify-content: center; }
+
+    .welcome-title {
+        font-size: 2.8rem;
+    }
+
+    .welcome-subtitle {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .split-layout .auth-container {
+        justify-content: center;
+    }
 }
 
 @media (max-width: 600px) {
-    .auth-card { padding: 2rem 1.5rem; }
-    .split-layout { padding: 1rem !important; }
-    .welcome-section { display: none; }
-    .auth-header .header-icon { font-size: 2.5rem; }
+    .auth-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .split-layout {
+        padding: 1rem !important;
+    }
+
+    .welcome-section {
+        display: none;
+    }
+
+    .auth-header .header-icon {
+        font-size: 2.5rem;
+    }
 }
 
 
 /* 1. 当页面处于 Auth 状态时，清除 Footer 顶部的 4rem margin */
 body:has(.auth-wrapper) .footer {
     margin-top: 0 !important;
-    border-top: none !important; /* 可选：去掉顶部边线，衔接更完美 */
+    border-top: none !important;
+    /* 可选：去掉顶部边线，衔接更完美 */
 }
 
 /* 2. 让 main 变成 flex 容器，确保内部的 .auth-wrapper 能够绝对撑满所有剩余高度 */
