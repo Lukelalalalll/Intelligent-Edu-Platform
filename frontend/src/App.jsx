@@ -13,6 +13,7 @@ import ProfileEntry from "./entries/profileEntry.jsx";
 import AIInteractEntry from './entries/aiInteractEntry';
 import HighlighterEntry from './entries/sub1/highlighterEntry';
 import AdminDashboardEntry from './entries/adminDashboardEntry';
+import AdminDbConsoleEntry from './entries/adminDbConsoleEntry';
 import DiagramToolEntry from './entries/sub4/diagramToolEntry';
 import QuestionGeneratorEntry from './entries/sub2/questionGeneratorEntry';
 import SpecifyEntry from './entries/sub1/specifyEntry';
@@ -22,6 +23,8 @@ import PptTemplateEntry from './entries/sub1/pptTemplateEntry';
 import HomeStudentEntry from './entries/homeStudentEntry';
 import MailboxEntry from './entries/mailboxEntry';
 import GradingWorkbenchEntry from './entries/gradingWorkbenchEntry';
+import AIEmailEntry from './entries/aiEmailEntry';
+import EmailAgentEntry from './entries/emailAgentEntry';
 import client from './api/client';
 
 
@@ -113,11 +116,15 @@ function App() {
           <Route path="sub3" element={<ProtectedRoute><ImageExtractorEntry /></ProtectedRoute>} />
           <Route path="sub2" element={<ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute>} />
           <Route path="admin/dashboard" element={<ProtectedRoute><AdminDashboardEntry /></ProtectedRoute>} />
+          <Route path="admin/db-console" element={<ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute>} />
 
           <Route path="sub4" element={<ProtectedRoute><DiagramToolEntry /></ProtectedRoute>} />
           <Route path="home-student" element={<ProtectedRoute><HomeStudentEntry /></ProtectedRoute>} />
           <Route path="mailbox" element={<ProtectedRoute><MailboxEntry /></ProtectedRoute>} />
           <Route path="mailbox/grade_workbench/:submissionId" element={<ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute>} />
+          <Route path="email-agent" element={<ProtectedRoute><EmailAgentEntry /></ProtectedRoute>} />
+          <Route path="gmail/callback" element={<ProtectedRoute><EmailAgentEntry /></ProtectedRoute>} />
+          <Route path="ai-email" element={<ProtectedRoute><AIEmailEntry /></ProtectedRoute>} />
 
         </Route>
       </Routes>
