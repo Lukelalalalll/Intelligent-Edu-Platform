@@ -18,6 +18,22 @@ class GmailService:
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
     @staticmethod
+    def _client_config_from_env() -> dict[str, Any] | None:
+        if not Config.GMAIL_CLIENT_ID or not Config.GMAIL_CLIENT_SECRET:
+            return None
+        return {
+            "installed": {
+                "client_id": Config.GMAIL_CLIENT_ID,
+                "project_id": Config.GMAIL_PROJECT_ID,
+                "auth_uri": Config.GMAIL_AUTH_URI,
+                "token_uri": Config.GMAIL_TOKEN_URI,
+                "auth_provider_x509_cert_url": Config.GMAIL_AUTH_PROVIDER_X509_CERT_URL,
+                "client_secret": Config.GMAIL_CLIENT_SECRET,
+                "redirect_uris": [Config.GMAIL_REDIRECT_URI],
+            }
+        }
+
+    @staticmethod
     def _generate_code_verifier() -> str:
         # RFC 7636 requires 43-128 chars from URL-safe charset.
         return secrets.token_urlsafe(96)[:128]
@@ -29,6 +45,14 @@ class GmailService:
 
     @staticmethod
     def _create_flow(state: str | None = None) -> Flow:
+        client_config = GmailService._client_config_from_env()
+        if client_config:
+            return Flow.from_client_config(
+                client_config,
+                scopes=GmailService.SCOPES,
+                state=state,
+                redirect_uri=Config.GMAIL_REDIRECT_URI,
+            )
         return Flow.from_client_secrets_file(
             Config.GMAIL_CLIENT_SECRET_FILE,
             scopes=GmailService.SCOPES,

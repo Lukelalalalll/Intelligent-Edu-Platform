@@ -48,6 +48,15 @@ class Config:
         'GMAIL_CLIENT_SECRET_FILE',
         os.path.join(BASE_DIR, 'client_secret_140717111384-2m1v2psqsarktrujhprth45hqg0hsck0.apps.googleusercontent.com.json'),
     )
+    GMAIL_CLIENT_ID = os.getenv('GMAIL_CLIENT_ID')
+    GMAIL_CLIENT_SECRET = os.getenv('GMAIL_CLIENT_SECRET')
+    GMAIL_PROJECT_ID = os.getenv('GMAIL_PROJECT_ID', 'intelligent-edu-platform')
+    GMAIL_AUTH_URI = os.getenv('GMAIL_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth')
+    GMAIL_TOKEN_URI = os.getenv('GMAIL_TOKEN_URI', 'https://oauth2.googleapis.com/token')
+    GMAIL_AUTH_PROVIDER_X509_CERT_URL = os.getenv(
+        'GMAIL_AUTH_PROVIDER_X509_CERT_URL',
+        'https://www.googleapis.com/oauth2/v1/certs',
+    )
     GMAIL_REDIRECT_URI = os.getenv('GMAIL_REDIRECT_URI', 'http://localhost:5173/gmail/callback')
 
 
