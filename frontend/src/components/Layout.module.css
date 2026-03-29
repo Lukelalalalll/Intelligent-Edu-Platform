@@ -1,14 +1,40 @@
+/* ─── Sidebar layout variables ─── */
+:root {
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 60px;
+}
+
 .appShell {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
 }
 
+/* When sidebar is present, use grid layout for body area */
+.withSidebar {
+    display: grid;
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+    grid-template-rows: var(--nav-height) 1fr auto;
+    grid-template-areas:
+        "navbar navbar"
+        "sidebar main"
+        "sidebar footer";
+    min-height: 100dvh;
+    transition: grid-template-columns 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.withSidebar.sidebarExpanded {
+    grid-template-columns: var(--sidebar-width) 1fr;
+}
+
 .mainContent {
     flex: 1 0 auto;
     width: 100%;
+    grid-area: main;
+    overflow-x: hidden;
 }
 
+/* ─── Top Navbar ─── */
 .navbar {
     background-color: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
@@ -19,10 +45,10 @@
     position: sticky;
     top: 0;
     z-index: 1000;
+    grid-area: navbar;
 }
 
 .navContainer {
-    max-width: 1200px;
     width: 100%;
     margin: 0 auto;
     padding: 0 24px;
@@ -38,36 +64,28 @@
     gap: 14px;
 }
 
-.workflowToggle {
+/* ─── Sidebar Toggle Button ─── */
+.sidebarToggle {
     width: 34px;
     height: 34px;
     border: 1px solid rgba(0, 123, 85, 0.2);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.9);
     display: inline-flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 6px;
     cursor: pointer;
     transition: all 0.25s ease;
-    margin-left: -14px;
-    box-shadow: 0 6px 14px rgba(0, 123, 85, 0.1);
+    color: #0f6a4b;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.08);
 }
 
-.workflowToggle span {
-    width: 15px;
-    height: 2px;
-    border-radius: 999px;
-    background: #0f6a4b;
-    display: block;
-}
-
-.workflowToggle:hover {
+.sidebarToggle:hover {
     border-color: rgba(0, 123, 85, 0.45);
     background: #f7fcf9;
     transform: translateY(-1px);
-    box-shadow: 0 10px 18px rgba(0, 123, 85, 0.16);
+    box-shadow: 0 8px 14px rgba(0, 123, 85, 0.14);
 }
 
 .navLogo {
@@ -207,6 +225,7 @@
     padding: 2rem 0;
     margin-top: auto;
     border-top: 1px solid var(--border-color);
+    grid-area: footer;
 }
 
 .footerContent {
@@ -215,118 +234,189 @@
     font-size: 0.9rem;
 }
 
-.workflowOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.28);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.25s ease;
-    z-index: 1100;
-}
-
-.workflowOverlayActive {
-    opacity: 1;
-    visibility: visible;
-}
-
-.workflowDrawer {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100dvh;
-    width: min(320px, 85vw);
+/* ─── Persistent Sidebar ─── */
+.sidebar {
+    grid-area: sidebar;
+    position: sticky;
+    top: var(--nav-height);
+    height: calc(100dvh - var(--nav-height));
     background: linear-gradient(180deg, rgba(252, 255, 253, 0.98) 0%, rgba(246, 253, 249, 0.96) 100%);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: 12px 0 34px rgba(0, 0, 0, 0.14);
-    border-right: 1px solid rgba(0, 123, 85, 0.16);
-    border-top-right-radius: 18px;
-    border-bottom-right-radius: 18px;
-    transform: translateX(-102%);
-    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-    z-index: 1200;
+    border-right: 1px solid rgba(0, 123, 85, 0.12);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 100;
+}
+
+.sidebarOpen {
+    width: var(--sidebar-width);
+}
+
+.sidebarCollapsed {
+    width: var(--sidebar-collapsed-width);
+}
+
+.sidebarNav {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+    padding: 12px 8px;
 }
 
-.workflowDrawerOpen {
-    transform: translateX(0);
-}
-
-.workflowHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    border-bottom: 1px solid rgba(0, 123, 85, 0.12);
-    background: linear-gradient(135deg, rgba(0, 123, 85, 0.12), rgba(255, 255, 255, 0.9));
-    border-top-right-radius: 18px;
-}
-
-.workflowHeader h3 {
-    margin: 0;
-    color: #123526;
-    font-size: 1.04rem;
-    letter-spacing: 0.02em;
-}
-
-.workflowClose {
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 9px;
-    background: rgba(0, 0, 0, 0.05);
-    color: #334155;
-    cursor: pointer;
-    transition: all 0.22s ease;
-}
-
-.workflowClose:hover {
-    background: rgba(0, 123, 85, 0.12);
-    color: #0f6a4b;
-}
-
-.workflowNav {
+.sidebarSection {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px;
-    overflow: auto;
+    gap: 2px;
+    margin-bottom: 8px;
 }
 
-.workflowNav::-webkit-scrollbar {
-    width: 6px;
+.sectionTitle {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-sub);
+    padding: 8px 12px 4px;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
-.workflowNav::-webkit-scrollbar-thumb {
-    background: rgba(0, 123, 85, 0.2);
-    border-radius: 999px;
+.sectionTitleText {
+    display: inline-block;
+    transform-origin: left center;
+    transition: opacity 0.2s ease, transform 0.24s ease;
 }
 
-.workflowLink {
+.sidebarLink {
     text-decoration: none;
     color: #1f2937;
     font-weight: 600;
-    border: 1px solid rgba(0, 123, 85, 0.14);
-    border-radius: 12px;
-    padding: 16px 16px;
-    background: #fff;
-    transition: all 0.22s ease;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
-.workflowLink:hover {
-    border-color: rgba(0, 123, 85, 0.45);
-    background: #f5fbf8;
-    transform: translateX(2px);
-    box-shadow: 0 8px 14px rgba(0, 123, 85, 0.1);
+.linkText {
+    display: inline-block;
+    max-width: 180px;
+    transform-origin: left center;
+    transition: opacity 0.2s ease, transform 0.24s ease, max-width 0.24s ease;
 }
 
-.workflowLinkActive {
-    background: rgba(0, 123, 85, 0.12);
-    border-color: var(--primary-color);
+.sidebarLink i {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.sidebarLink:hover {
+    background: rgba(0, 123, 85, 0.08);
     color: #0f6a4b;
+}
+
+.sidebarLink:hover i {
+    color: #0f6a4b;
+}
+
+.sidebarLinkActive {
+    background: rgba(0, 123, 85, 0.14);
+    color: #0f6a4b;
+    border-left: 3px solid var(--primary-color);
+}
+
+.sidebarLinkActive i {
+    color: var(--primary-color);
+}
+
+.sidebarLinkToneAdmin {
+    background: rgba(0, 122, 255, 0.1);
+    color: #0f4fa8;
+}
+
+.sidebarLinkToneAdmin i {
+    color: #0f4fa8;
+}
+
+.sidebarLinkToneDatabase {
+    background: rgba(71, 85, 105, 0.12);
+    color: #334155;
+}
+
+.sidebarLinkToneDatabase i {
+    color: #334155;
+}
+
+.sidebarLinkToneTeacher {
+    background: rgba(245, 158, 11, 0.15);
+    color: #9a5c00;
+}
+
+.sidebarLinkToneTeacher i {
+    color: #9a5c00;
+}
+
+.sidebarLinkToneStudent {
+    background: rgba(0, 123, 85, 0.12);
+    color: #0f6a4b;
+}
+
+.sidebarLinkToneStudent i {
+    color: #0f6a4b;
+}
+
+.sidebarCollapsed .sidebarLink {
+    justify-content: center;
+    gap: 0;
+    padding: 10px 8px;
+    border-left: none;
+}
+
+.sidebarCollapsed .sidebarLink i {
+    transform: translateX(0);
+}
+
+.sidebarCollapsed .sectionTitleText,
+.sidebarCollapsed .linkText {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.98);
+    max-width: 0;
+    width: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.sidebarOpen .sectionTitleText,
+.sidebarOpen .linkText {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-width: 180px;
+}
+
+.sidebarCollapsed .sidebarLinkActive {
+    background: rgba(0, 123, 85, 0.18);
+}
+
+/* Scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.18);
+    border-radius: 999px;
 }
 
 @media (max-width: 768px) {
@@ -334,17 +424,26 @@
         padding: 0 14px;
     }
 
-    .workflowToggle {
-        margin-left: -6px;
+    .withSidebar {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "navbar"
+            "main"
+            "footer";
     }
 
-    .workflowDrawer {
-        width: min(300px, 88vw);
-        border-top-right-radius: 14px;
-        border-bottom-right-radius: 14px;
+    .sidebar {
+        position: fixed;
+        top: var(--nav-height);
+        left: 0;
+        height: calc(100dvh - var(--nav-height));
+        z-index: 1100;
+        box-shadow: 6px 0 20px rgba(0, 0, 0, 0.12);
     }
 
-    .workflowHeader {
-        border-top-right-radius: 14px;
+    .sidebarCollapsed {
+        width: 0;
+        padding: 0;
+        border: none;
     }
 }

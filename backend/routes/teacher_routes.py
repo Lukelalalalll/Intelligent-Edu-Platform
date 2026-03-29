@@ -81,7 +81,7 @@ async def get_submission(submission_id: str, current_user: dict = Depends(get_cu
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    annotation_store = load_annotations(submission_id)
+    annotation_store = await load_annotations(submission_id)
     annotations = annotation_store.get("annotations", [])
     rendered_pdf_path = render_annotations_to_pdf(submission_id, submission, annotations)
     submission = {

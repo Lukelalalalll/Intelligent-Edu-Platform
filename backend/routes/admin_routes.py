@@ -107,6 +107,21 @@ def _validate_collection_name(name: str) -> str:
     return name
 
 
+# Collections that cannot be modified via the DB console (write-protect critical data)
+DB_CONSOLE_READONLY_COLLECTIONS = {"users"}
+# Collections that cannot be listed or accessed via console at all
+DB_CONSOLE_BLOCKED_COLLECTIONS = {"system.profile", "system.version"}
+
+
+def _check_write_access(collection_name: str) -> None:
+    """Block write operations on protected collections via DB console."""
+    if collection_name in DB_CONSOLE_READONLY_COLLECTIONS:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Collection '{collection_name}' is read-only via DB console. Use dedicated admin endpoints.",
+        )
+
+
 @admin_router.get("/relations/overview")
 async def get_relations_overview(admin: dict = Depends(get_admin_user)):
     users = await db.users.find().to_list(2000)
@@ -363,6 +378,7 @@ async def create_db_document(
     admin: dict = Depends(get_admin_user),
 ):
     collection_name = _validate_collection_name(collection_name)
+    _check_write_access(collection_name)
     doc = dict(req.document or {})
     doc.pop("_id", None)
 
@@ -379,6 +395,7 @@ async def update_db_document(
     admin: dict = Depends(get_admin_user),
 ):
     collection_name = _validate_collection_name(collection_name)
+    _check_write_access(collection_name)
     if not _is_object_id(document_id):
         raise HTTPException(status_code=400, detail="Invalid document id")
 
@@ -400,6 +417,7 @@ async def delete_db_document(
     admin: dict = Depends(get_admin_user),
 ):
     collection_name = _validate_collection_name(collection_name)
+    _check_write_access(collection_name)
     if not _is_object_id(document_id):
         raise HTTPException(status_code=400, detail="Invalid document id")
 
@@ -407,3 +425,24 @@ async def delete_db_document(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Document deleted"}
+
+
+# ── Telemetry / Observability endpoints ─────────────────────────────
+
+@admin_router.get("/telemetry/stats")
+async def get_telemetry_stats(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    return await llm_telemetry.get_stats(hours=hours)
+
+
+@admin_router.get("/telemetry/errors")
+async def get_telemetry_errors(
+    limit: int = Query(default=20, ge=1, le=100),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    errors = await llm_telemetry.get_recent_errors(limit=limit)
+    return {"errors": errors}

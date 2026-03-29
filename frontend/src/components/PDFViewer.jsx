@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import AnnotationLayer from './AnnotationLayer';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
@@ -6,7 +6,7 @@ import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
 // Always use react-pdf's bundled worker to keep API/Worker versions aligned.
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5];
+const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export default function PDFViewer({ file, annotations = [], onSaveAnnotation, onDeleteAnnotation }) {
     const [numPages, setNumPages] = useState(null);
@@ -18,7 +18,23 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [localError, setLocalError] = useState('');
     const [pdfLoadError, setPdfLoadError] = useState('');
     const [loadRetry, setLoadRetry] = useState(0);
+    const [containerWidth, setContainerWidth] = useState(0);
     const containerRef = useRef(null);
+
+    // Measure container width for auto-fit
+    const measureWidth = useCallback(() => {
+        if (containerRef.current) {
+            const w = containerRef.current.clientWidth - 24; // subtract padding
+            if (w > 0) setContainerWidth(w);
+        }
+    }, []);
+
+    useEffect(() => {
+        measureWidth();
+        const ro = new ResizeObserver(measureWidth);
+        if (containerRef.current) ro.observe(containerRef.current);
+        return () => ro.disconnect();
+    }, [measureWidth]);
 
     useEffect(() => {
         setPageNumber(1);
@@ -107,12 +123,13 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                 >
                     Next
                 </button>
+                <span style={{ fontSize: 12, color: '#64748b', marginLeft: 2 }}>Zoom</span>
                 <select
                     value={scale}
                     onChange={(e) => setScale(Number(e.target.value))}
                     style={{ width: 96, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
                 >
-                    {zoomLevels.map((z) => <option key={z} value={z}>{Math.round(z * 100)}%</option>)}
+                    {zoomLevels.map((z) => <option key={z} value={z}>{z === 1 ? 'Fit Width' : `${Math.round(z * 100)}%`}</option>)}
                 </select>
                 <button
                     type="button"
@@ -168,7 +185,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                         >
                             <Page
                                 pageNumber={pageNumber}
-                                scale={scale}
+                                width={containerWidth > 0 ? containerWidth * scale : undefined}
                                 onClick={(e) => handlePageClick(e, pageNumber)}
                                 renderAnnotationLayer={false}
                                 renderTextLayer={false}

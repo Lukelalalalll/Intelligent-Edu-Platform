@@ -1,16 +1,26 @@
-from backend.app import create_app
-from backend.models import User
-from backend.extensions import mongo
+"""Create admin user using the current FastAPI/MongoDB stack."""
+from pymongo import MongoClient
+from werkzeug.security import generate_password_hash
+from backend.config import Config
+
 
 def create_admin_user():
-    app = create_app()
-    with app.app_context():
-        # 检查是否已存在
-        if not User.get_by_username('admin'):
-            User.create_user('admin', 'admin@hku.hk', '123456', role='admin')
-            print(">>> MongoDB 管理员创建成功！")
-        else:
-            print(">>> 管理员已存在。")
+    client = MongoClient(Config.MONGO_URI)
+    db = client.get_default_database()
+
+    existing = db.users.find_one({"username": "admin"})
+    if not existing:
+        db.users.insert_one({
+            "username": "admin",
+            "email": "admin@hku.hk",
+            "password_hash": generate_password_hash("123456"),
+            "role": "admin",
+            "teacherCourseIds": [],
+        })
+        print(">>> Admin user created successfully!")
+    else:
+        print(">>> Admin user already exists.")
+
 
 if __name__ == "__main__":
     create_admin_user()

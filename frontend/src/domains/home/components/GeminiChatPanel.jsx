@@ -59,16 +59,11 @@ const GeminiChat = ({ aiInteractUrl }) => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isFull, setIsFull] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [editingVal, setEditingVal] = useState('');
 
     const messagesContainerRef = useRef(null);
-    const chatContainerRef = useRef(null);
-    const spacerRef = useRef(null);
     const inputAreaRef = useRef(null);
-    const isAnimatingRef = useRef(false);
-    const probeDataRef = useRef({ offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 });
     const abortControllerRef = useRef(null);
 
     const renderContent = useCallback((content) => {
@@ -107,7 +102,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
-    }, [messages, isLoading, isFull]);
+    }, [messages, isLoading]);
 
     const handleInput = useCallback((e) => {
         const target = e.target;
@@ -288,119 +283,16 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [handleSend]);
 
-    const toggleFullscreen = useCallback(() => {
-        if (isAnimatingRef.current) return;
-        isAnimatingRef.current = true;
-
-        const container = chatContainerRef.current;
-        const spacer = spacerRef.current;
-        const animDuration = 600;
-
-        if (!isFull) {
-            const rect = container.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(container);
-
-            spacer.style.width = rect.width + 'px';
-            spacer.style.height = rect.height + 'px';
-            spacer.style.marginTop = computedStyle.marginTop;
-            spacer.style.marginBottom = computedStyle.marginBottom;
-            spacer.style.marginLeft = computedStyle.marginLeft;
-            spacer.style.marginRight = computedStyle.marginRight;
-            spacer.style.display = 'block';
-
-            const probe = document.createElement('div');
-            probe.style.cssText = `
-                position: fixed; top: 0; left: 0;
-                width: 100px; height: 100px; visibility: hidden; pointer-events: none;
-            `;
-            container.parentNode.appendChild(probe);
-
-            const probeRect = probe.getBoundingClientRect();
-            const offsetX = probeRect.left;
-            const offsetY = probeRect.top;
-            const scaleX = probeRect.width / 100 || 1;
-            const scaleY = probeRect.height / 100 || 1;
-
-            probeDataRef.current = { offsetX, offsetY, scaleX, scaleY };
-            container.parentNode.removeChild(probe);
-
-            container.style.transition = 'none';
-            container.style.position = 'fixed';
-            container.style.margin = '0';
-            container.style.transform = 'none';
-            container.style.zIndex = '999999';
-
-            container.style.left = ((rect.left - offsetX) / scaleX) + 'px';
-            container.style.top = ((rect.top - offsetY) / scaleY) + 'px';
-            container.style.width = (rect.width / scaleX) + 'px';
-            container.style.height = (rect.height / scaleY) + 'px';
-
-            void container.offsetHeight;
-
-            container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
-            container.style.left = ((0 - offsetX) / scaleX) + 'px';
-            container.style.top = ((0 - offsetY) / scaleY) + 'px';
-            container.style.width = (window.innerWidth / scaleX) + 'px';
-            container.style.height = (window.innerHeight / scaleY) + 'px';
-            container.style.borderRadius = '0px';
-
-            container.classList.add(styles['is-fullscreen-layout']);
-            document.body.style.overflow = 'hidden';
-            document.body.classList.add('chat-fullscreen-active');
-
-            setTimeout(() => {
-                isAnimatingRef.current = false;
-                setIsFull(true);
-            }, animDuration);
-
-        } else {
-            container.style.transition = 'none';
-            container.style.margin = '0';
-
-            const targetRect = spacer.getBoundingClientRect();
-            const { offsetX, offsetY, scaleX, scaleY } = probeDataRef.current;
-
-            container.classList.remove(styles['is-fullscreen-layout']);
-
-            container.style.transition = `all ${animDuration}ms cubic-bezier(0.25, 1, 0.3, 1)`;
-            container.style.left = ((targetRect.left - offsetX) / scaleX) + 'px';
-            container.style.top = ((targetRect.top - offsetY) / scaleY) + 'px';
-            container.style.width = (targetRect.width / scaleX) + 'px';
-            container.style.height = (targetRect.height / scaleY) + 'px';
-            container.style.borderRadius = '24px';
-
-            void container.offsetWidth;
-
-            document.body.style.overflow = '';
-
-            setTimeout(() => {
-                container.style.cssText = '';
-                spacer.style.display = 'none';
-                document.body.classList.remove('chat-fullscreen-active');
-                isAnimatingRef.current = false;
-                setIsFull(false);
-                if (messagesContainerRef.current) {
-                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-                }
-            }, animDuration);
-        }
-    }, [isFull]);
-
     const lastMessage = messages[messages.length - 1];
 
     return (
         <motion.section variants={itemVariants} className={styles['ai-interaction-section']}>
-            <div ref={spacerRef} style={{ display: 'none', opacity: 0, pointerEvents: 'none' }}></div>
-
-            <div ref={chatContainerRef} className={styles['chat-interface-container']}>
+            <div className={styles['chat-interface-container']}>
                 <div className={styles['chat-header']}>
                     <div className={styles['ai-badge']}>
                         <i className="fas fa-sparkles"></i>
-                        <Link to={aiInteractUrl} className={styles['powered-by-link']}><span>AI Fullscreen Workspace</span></Link>
+                        <Link to={aiInteractUrl} className={styles['powered-by-link']}><span>AI Workspace</span></Link>
                     </div>
-                    <button onClick={toggleFullscreen} className={styles['fullscreen-btn']} title="Toggle Fullscreen">
-                        <i className={isFull ? "fas fa-compress-arrows-alt" : "fas fa-expand-arrows-alt"}></i>
-                    </button>
                 </div>
 
                 <div

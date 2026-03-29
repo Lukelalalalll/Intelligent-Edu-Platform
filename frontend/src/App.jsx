@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
+import { CourseProvider } from './hooks/useCourseContext';
 import HomeEntry from './entries/homeEntry';
 import MdProcessorEntry from './entries/sub1/mdProcessorEntry';
 import LoginEntry from './entries/loginEntry';
@@ -16,15 +17,14 @@ import AdminDashboardEntry from './entries/adminDashboardEntry';
 import AdminDbConsoleEntry from './entries/adminDbConsoleEntry';
 import DiagramToolEntry from './entries/sub4/diagramToolEntry';
 import QuestionGeneratorEntry from './entries/sub2/questionGeneratorEntry';
-import SpecifyEntry from './entries/sub1/specifyEntry';
 import QuickProcessEntry from './entries/sub1/quickProcessEntry';
-import ImageExtractorEntry from './entries/sub3/imageExtractorEntry';
+import SpecifyEntry from './entries/sub1/specifyEntry';
 import PptTemplateEntry from './entries/sub1/pptTemplateEntry';
 import HomeStudentEntry from './entries/homeStudentEntry';
 import MailboxEntry from './entries/mailboxEntry';
 import GradingWorkbenchEntry from './entries/gradingWorkbenchEntry';
-import AIEmailEntry from './entries/aiEmailEntry';
 import EmailAgentEntry from './entries/emailAgentEntry';
+import StudyNotesEntry from './entries/sub5/studyNotesEntry';
 import client from './api/client';
 
 
@@ -92,6 +92,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <CourseProvider>
       <ScrollToTop />
       <Routes>
         {/* 所有页面都继承 Layout (导航栏) */}
@@ -113,21 +114,23 @@ function App() {
           <Route path="sub1/quick-process" element={<ProtectedRoute><QuickProcessEntry /></ProtectedRoute>} />
           <Route path="sub1/ppt-template" element={<ProtectedRoute><PptTemplateEntry /></ProtectedRoute>} />
 
-          <Route path="sub3" element={<ProtectedRoute><ImageExtractorEntry /></ProtectedRoute>} />
+          <Route path="sub3" element={<Navigate to="/sub4" replace />} />
           <Route path="sub2" element={<ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute>} />
           <Route path="admin/dashboard" element={<ProtectedRoute><AdminDashboardEntry /></ProtectedRoute>} />
           <Route path="admin/db-console" element={<ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute>} />
 
           <Route path="sub4" element={<ProtectedRoute><DiagramToolEntry /></ProtectedRoute>} />
+          <Route path="sub5" element={<ProtectedRoute><StudyNotesEntry /></ProtectedRoute>} />
           <Route path="home-student" element={<ProtectedRoute><HomeStudentEntry /></ProtectedRoute>} />
           <Route path="mailbox" element={<ProtectedRoute><MailboxEntry /></ProtectedRoute>} />
           <Route path="mailbox/grade_workbench/:submissionId" element={<ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute>} />
           <Route path="email-agent" element={<ProtectedRoute><EmailAgentEntry /></ProtectedRoute>} />
           <Route path="gmail/callback" element={<ProtectedRoute><EmailAgentEntry /></ProtectedRoute>} />
-          <Route path="ai-email" element={<ProtectedRoute><AIEmailEntry /></ProtectedRoute>} />
+          <Route path="ai-email" element={<Navigate to="/email-agent" replace />} />
 
         </Route>
       </Routes>
+      </CourseProvider>
     </BrowserRouter>
   );
 }

@@ -729,31 +729,6 @@ main {
     transform-origin: bottom left;
 }
 
-.fullscreen-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: rgba(0, 0, 0, 0.03);
-    color: var(--text-sub);
-    font-size: 1rem;
-    cursor: pointer;
-    z-index: 100;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.fullscreen-btn:hover {
-    background: rgba(0, 0, 0, 0.08);
-    color: var(--text-main);
-    transform: scale(1.1);
-}
-
 .chat-messages {
     flex: 1;
     min-height: 0;
@@ -958,61 +933,6 @@ main {
     background: var(--primary-dark);
     transform: scale(1.08) rotate(-5deg);
     box-shadow: 0 6px 14px rgba(0, 123, 85, 0.3);
-}
-
-/* --- Fullscreen Layout --- */
-.chat-interface-container.is-fullscreen-layout {
-    background: #ffffff;
-    border: none;
-    box-shadow: none;
-}
-
-.is-fullscreen-layout .chat-header {
-    padding: 36px 30px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.is-fullscreen-layout .fullscreen-btn {
-    top: 32px;
-    right: 30px;
-    width: 44px;
-    height: 44px;
-    font-size: 1.2rem;
-    background: rgba(0, 0, 0, 0.04);
-}
-
-.is-fullscreen-layout .fullscreen-btn:hover {
-    background: #ff4d4f;
-    color: white;
-    transform: rotate(90deg);
-}
-
-.is-fullscreen-layout .chat-messages {
-    flex: 1;
-    max-height: none;
-    padding: 40px 10%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.is-fullscreen-layout .chat-messages .message {
-    width: 100%;
-    max-width: 800px;
-}
-
-.is-fullscreen-layout .input-area {
-    background: #fff;
-    padding: 24px 10% 40px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: center;
-}
-
-.is-fullscreen-layout .input-wrapper {
-    width: 100%;
-    max-width: 800px;
-    border-radius: var(--radius-md);
 }
 
 /* --- Mailbox Banner Section --- */
@@ -1347,12 +1267,4 @@ main {
     .message {
         font-size: 0.82rem !important;
     }
-}
-
-:global(body.chat-fullscreen-active .navbar) {
-    z-index: 1 !important;
-}
-
-:global(body.chat-fullscreen-active) .ai-interaction-section {
-    z-index: 9999 !important;
 }

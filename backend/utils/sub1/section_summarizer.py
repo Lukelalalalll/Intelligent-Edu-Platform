@@ -1,14 +1,21 @@
 import aiohttp
 import asyncio
 import json
+import os
+
+# Configurable concurrency limit for LLM API calls
+MAX_CONCURRENT_LLM_CALLS = int(os.getenv("SUB1_MAX_CONCURRENT_LLM", "5"))
+
 
 class SectionSummarizer:
     def __init__(self):
+        from backend.config import Config
         self.url = "https://api.deepseek.com/v1/chat/completions"
         self.headers = {
-            'Authorization': 'Bearer sk-f2b923f129634f49ac37c3d675595acf',
+            'Authorization': f'Bearer {Config.DEEPSEEK_API_KEY}',
             'Content-Type': 'application/json'
         }
+        self._semaphore = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
         self.system_prompt = '''
             You are an expert academic summarizer, specialized in extracting dense, entity-rich highlights from technical papers.
             The final output should strictly follow by the following schema:
@@ -65,8 +72,13 @@ class SectionSummarizer:
             The process involves the following structured steps:
 
             1. For each highlighted section, identify 3–5 core entities—these may include concepts, methods, or results.
-            2. Generate an initial set of summary points, ensuring that all critical entities are preserved.
-            3. Refine the output iteratively by:
+            2. If highlights include category tags (definition/concept/formula/example/conclusion/caution), prioritize:
+               - **definitions** and **conclusions** as primary bullet points
+               - **formulas** in the LaTeX extraction field
+               - **examples** as evidence for chart_reasoning
+               - **caution** items as separate bullet points when space allows
+            3. Generate an initial set of summary points, ensuring that all critical entities are preserved.
+            4. Refine the output iteratively by:
 
             * Removing redundant phrases
             * Merging related ideas
@@ -114,13 +126,17 @@ class SectionSummarizer:
         '''
 
     async def fetch_data(self, session, data):
-        try:
-            async with session.post(self.url, json=data, headers=self.headers, ssl=False) as response:
-                response.raise_for_status()
-                return await response.json()
-        except aiohttp.ClientError as e:
-            print(f"Request failed: {e}")
-            return None
+        async with self._semaphore:
+            try:
+                async with session.post(self.url, json=data, headers=self.headers, ssl=False, timeout=aiohttp.ClientTimeout(total=60)) as response:
+                    response.raise_for_status()
+                    return await response.json()
+            except aiohttp.ClientError as e:
+                print(f"Request failed: {e}")
+                return {"_error": str(e)}
+            except asyncio.TimeoutError:
+                print("Request timed out")
+                return {"_error": "timeout"}
 
     async def summarize_sections(self, highlights_data, num_of_bullets, words_each_bullet):
         prompt = self._get_prompt(num_of_bullets, words_each_bullet)
@@ -142,18 +158,49 @@ class SectionSummarizer:
         } for highlight in highlights_data]
 
         final_results = []
+        failed_sections = []
         async with aiohttp.ClientSession() as session:
             tasks = [self.fetch_data(session, data) for data in data_list]
             results = await asyncio.gather(*tasks)
             for i, result in enumerate(results, start=1):
-                if result:
+                if result and "_error" not in result:
                     try:
                         output_str = result['choices'][0]['message']['content'].strip('```json\n').strip('```')
                         output_dict = json.loads(output_str)
                         output_dict["slide_number"] = i
+                        output_dict["_status"] = "success"
                         final_results.append(output_dict)
                     except (KeyError, json.JSONDecodeError) as e:
-                        print(f"Error processing result: {e}")
+                        print(f"Error processing section {i}: {e}")
+                        failed_sections.append({
+                            "slide_number": i,
+                            "_status": "failed",
+                            "_error": f"parse_error: {e}",
+                            "title": highlights_data[i-1].get('title', f'Section {i}') if i <= len(highlights_data) else f'Section {i}',
+                            "content": [],
+                            "latex": [],
+                            "chart_type": "No Chart",
+                            "chart_reasoning": []
+                        })
+                        final_results.append(failed_sections[-1])
+                else:
+                    error_msg = result.get("_error", "unknown") if result else "no_response"
+                    print(f"Section {i} failed: {error_msg}")
+                    placeholder = {
+                        "slide_number": i,
+                        "_status": "failed",
+                        "_error": error_msg,
+                        "title": highlights_data[i-1].get('title', f'Section {i}') if i <= len(highlights_data) else f'Section {i}',
+                        "content": ["[Content generation failed — please retry this section]"],
+                        "latex": [],
+                        "chart_type": "No Chart",
+                        "chart_reasoning": []
+                    }
+                    failed_sections.append(placeholder)
+                    final_results.append(placeholder)
+
+        if failed_sections:
+            print(f"⚠️ {len(failed_sections)}/{len(highlights_data)} sections failed, partial results returned")
 
         return final_results
 

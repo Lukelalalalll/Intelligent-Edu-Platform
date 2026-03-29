@@ -1,12 +1,14 @@
 import os
 import logging
 import time
+import uuid
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import Config
@@ -19,6 +21,7 @@ from backend.routes.sub1_routes import sub1_router, public_sub1_router
 from backend.routes.sub2_routes import sub2_router
 from backend.routes.sub3_routes import sub3_router
 from backend.routes.sub4_routes import sub4_router
+from backend.routes.sub5_routes import sub5_router
 from backend.routes.teacher_routes import teacher_router
 from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
@@ -61,6 +64,8 @@ def _resolve_route_group(path: str) -> str:
         return "sub3"
     if normalized.startswith("/api/sub4"):
         return "sub4"
+    if normalized.startswith("/api/sub5"):
+        return "sub5"
     if normalized.startswith("/api/teacher"):
         return "teacher"
     if normalized.startswith("/api/grading"):
@@ -83,6 +88,9 @@ def _get_route_logger(path: str) -> logging.Logger:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ── Startup validation ──
+    Config.validate_startup()
+
     max_workers = max(1, (os.cpu_count() or 2) - 1)
     http2_enabled = True
     try:
@@ -97,6 +105,20 @@ async def lifespan(app: FastAPI):
         limits=httpx.Limits(max_connections=100, max_keepalive_connections=30, keepalive_expiry=60),
         http2=http2_enabled,
     )
+
+    # ── Ensure MongoDB indexes ──
+    try:
+        from backend.core.database import ensure_indexes
+        await ensure_indexes()
+    except Exception:
+        logger.exception("Failed to ensure MongoDB indexes on startup")
+
+    # ── Clean up old sub2 temporary files ──
+    try:
+        from backend.services.sub2_service import cleanup_old_files
+        cleanup_old_files()
+    except Exception:
+        logger.exception("Failed to run sub2 file cleanup on startup")
 
     try:
         yield
@@ -120,21 +142,54 @@ app.add_middleware(
 )
 
 
+# ── Global exception handler ──
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.exception(
+        "Unhandled exception | request_id=%s path=%s",
+        request_id,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": "An unexpected error occurred. Please try again.",
+            "request_id": request_id,
+        },
+    )
+
+
+# ── Health check endpoint ──
+@app.get("/api/health", tags=["System"])
+async def health_check():
+    from backend.core.database import check_health
+    db_health = await check_health()
+    return {
+        "status": "ok" if db_health.get("status") == "ok" else "degraded",
+        "database": db_health,
+    }
+
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+    request.state.request_id = request_id
     started_at = time.perf_counter()
     method = request.method
     path = request.url.path
     client = request.client.host if request.client else "unknown"
     route_logger = _get_route_logger(path)
 
-    route_logger.info("Request started | method=%s path=%s client=%s", method, path, client)
+    route_logger.info("Request started | rid=%s method=%s path=%s client=%s", request_id, method, path, client)
     try:
         response = await call_next(request)
     except Exception:  # noqa: BLE001
         duration_ms = (time.perf_counter() - started_at) * 1000
         route_logger.exception(
-            "Request failed | method=%s path=%s duration_ms=%.2f",
+            "Request failed | rid=%s method=%s path=%s duration_ms=%.2f",
+            request_id,
             method,
             path,
             duration_ms,
@@ -142,8 +197,10 @@ async def log_requests(request: Request, call_next):
         raise
 
     duration_ms = (time.perf_counter() - started_at) * 1000
+    response.headers["X-Request-ID"] = request_id
     route_logger.info(
-        "Request completed | method=%s path=%s status=%s duration_ms=%.2f",
+        "Request completed | rid=%s method=%s path=%s status=%s duration_ms=%.2f",
+        request_id,
         method,
         path,
         response.status_code,
@@ -184,6 +241,7 @@ app.include_router(public_sub1_router)
 app.include_router(sub2_router)
 app.include_router(sub3_router)
 app.include_router(sub4_router)
+app.include_router(sub5_router)
 app.include_router(teacher_router)
 app.include_router(grading_router)
 app.include_router(ai_gateway_router)

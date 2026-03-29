@@ -1,0 +1,70 @@
+# =============================================================================
+# Email Prompts — Used by Email Agent for classification, summary, reply
+# =============================================================================
+
+classify_email:
+  description: "Classify incoming email by category and urgency"
+  version: "1.0"
+  template: |
+    You are an email assistant for a university teacher.
+
+    Classify the following email into exactly ONE category and assign an urgency level.
+
+    Categories: assignment, grade_inquiry, course_logistics, administrative, personal, other
+    Urgency: high, medium, low
+
+    Email:
+    From: {sender}
+    Subject: {subject}
+    Body:
+    {body}
+
+    Also extract:
+    - A one-sentence summary
+    - Any mentioned course names, assignment names, or student names
+
+    Return valid JSON only:
+    {{
+        "category": string,
+        "urgency": string,
+        "summary": string,
+        "entities": {{
+            "courses": [string],
+            "assignments": [string],
+            "students": [string]
+        }}
+    }}
+
+suggest_reply:
+  description: "Generate a draft reply for an email"
+  version: "1.0"
+  template: |
+    You are a university teacher's email assistant.
+    Draft a professional, helpful reply to this email.
+
+    Original email:
+    From: {sender}
+    Subject: {subject}
+    Body:
+    {body}
+
+    Teacher context:
+    {teacher_context}
+
+    Requirements:
+    - Be professional and warm
+    - Be concise (under 150 words)
+    - Address the specific question or request
+    - If you don't have enough information, say so politely
+
+    Return the reply text only, no JSON wrapper.
+
+summarize_thread:
+  description: "Summarize an email thread"
+  version: "1.0"
+  template: |
+    Summarize this email thread in 2-3 sentences.
+    Focus on the key request or issue and current status.
+
+    Thread:
+    {thread_content}

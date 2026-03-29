@@ -8,6 +8,10 @@ from .image_generator import generate_image_from_prompt, generate_image_from_pro
 # 导入图表生成模块
 from .diagram_generator import generate_diagram_from_prompt_async
 
+# Configurable concurrency limit for image generation
+MAX_CONCURRENT_IMAGE_GEN = int(os.getenv("SUB1_MAX_CONCURRENT_IMAGE", "4"))
+
+
 class ImageChartProcessor:
     def __init__(self, deepseek_base_url="https://api.deepseek.com/v1"):
         """初始化图片图表处理器
@@ -25,7 +29,8 @@ class ImageChartProcessor:
         os.makedirs(self.prompt_save_dir, exist_ok=True)
         
         # DeepSeek API配置（用于图片提示词增强）
-        self.deepseek_api_key = "sk-f2b923f129634f49ac37c3d675595acf"
+        from backend.config import Config
+        self.deepseek_api_key = Config.DEEPSEEK_API_KEY
         self.deepseek_base_url = deepseek_base_url
     
     async def process_multiple_images_async(self, image_data_list):
@@ -113,7 +118,7 @@ class ImageChartProcessor:
         return ordered_data
     
     async def _generate_all_images_async(self, enhanced_image_data_list):
-        """阶段2：异步生成所有图片
+        """阶段2：异步生成所有图片（带并发控制）
         
         Args:
             enhanced_image_data_list (list): 包含增强提示词的图片数据列表
@@ -121,13 +126,16 @@ class ImageChartProcessor:
         Returns:
             list: 图片路径列表
         """
-        # 创建异步任务列表
-        tasks = []
-        for i, image_data in enumerate(enhanced_image_data_list):
-            task = self._generate_single_image_async(image_data, i)
-            tasks.append(task)
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_IMAGE_GEN)
         
-        # 并行执行所有图片生成任务
+        async def _limited_gen(image_data, i):
+            async with semaphore:
+                return await self._generate_single_image_async(image_data, i)
+        
+        # 创建异步任务列表
+        tasks = [_limited_gen(image_data, i) for i, image_data in enumerate(enhanced_image_data_list)]
+        
+        # 并行执行所有图片生成任务（受并发上限控制）
         image_paths = await asyncio.gather(*tasks)
         
         return image_paths

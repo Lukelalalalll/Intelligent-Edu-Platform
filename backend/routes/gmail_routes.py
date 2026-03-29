@@ -1,4 +1,7 @@
 # backend/routes/gmail_routes.py
+import json
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
@@ -6,6 +9,7 @@ from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.services.gmail_service import GmailService
 
+logger = logging.getLogger(__name__)
 
 gmail_router = APIRouter(prefix="/api/gmail", tags=["Gmail"])
 
@@ -13,6 +17,31 @@ gmail_router = APIRouter(prefix="/api/gmail", tags=["Gmail"])
 class GmailCallbackSchema(BaseModel):
     code: str
     state: str | None = None
+
+
+class GmailSendSchema(BaseModel):
+    to: str
+    subject: str
+    body: str
+
+
+class GmailReplySchema(BaseModel):
+    threadId: str
+    messageId: str
+    to: str
+    subject: str
+    body: str
+
+
+class GmailDraftSchema(BaseModel):
+    to: str
+    subject: str
+    body: str
+    threadId: str | None = None
+
+
+class GmailClassifySchema(BaseModel):
+    messageId: str
 
 
 @gmail_router.get("/auth_url")
@@ -110,3 +139,178 @@ async def get_email_detail(message_id: str, current_user: dict = Depends(get_cur
         return {"email": detail}
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Failed to fetch Gmail email detail: {exc}")
+
+
+# ─── Helper: extract token from user doc ──────────────────────────────
+
+async def _get_gmail_token(current_user: dict) -> tuple[dict, dict]:
+    """Return (token_data, user_doc). Raises 400 if not connected."""
+    user_doc = await db.users.find_one({"_id": current_user["_id"]})
+    gmail_token_text = (user_doc or {}).get("gmail_token")
+    if not gmail_token_text:
+        raise HTTPException(status_code=400, detail="Gmail is not connected")
+    return GmailService.decode_token(gmail_token_text), user_doc
+
+
+async def _save_refreshed_token(user_id, refreshed_token: dict) -> None:
+    await db.users.update_one(
+        {"_id": user_id},
+        {"$set": {"gmail_token": GmailService.encode_token(refreshed_token)}},
+    )
+
+
+# ─── Send Email ────────────────────────────────────────────────────────
+
+@gmail_router.post("/send")
+async def send_email(payload: GmailSendSchema, current_user: dict = Depends(get_current_user)):
+    token_data, user_doc = await _get_gmail_token(current_user)
+    try:
+        result, refreshed_token = await GmailService.send_email(
+            token_data=token_data,
+            to=payload.to,
+            subject=payload.subject,
+            body=payload.body,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+        return {"message": "Email sent", "result": result}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {exc}")
+
+
+# ─── Reply to Email ───────────────────────────────────────────────────
+
+@gmail_router.post("/reply")
+async def reply_to_email(payload: GmailReplySchema, current_user: dict = Depends(get_current_user)):
+    token_data, user_doc = await _get_gmail_token(current_user)
+    try:
+        result, refreshed_token = await GmailService.reply_to_email(
+            token_data=token_data,
+            thread_id=payload.threadId,
+            message_id=payload.messageId,
+            to=payload.to,
+            subject=payload.subject,
+            body=payload.body,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+        return {"message": "Reply sent", "result": result}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to reply to email: {exc}")
+
+
+# ─── Get Thread ────────────────────────────────────────────────────────
+
+@gmail_router.get("/thread/{thread_id}")
+async def get_thread(thread_id: str, current_user: dict = Depends(get_current_user)):
+    token_data, user_doc = await _get_gmail_token(current_user)
+    try:
+        thread, refreshed_token = await GmailService.get_thread(
+            token_data=token_data,
+            thread_id=thread_id,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+        return {"thread": thread}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to fetch thread: {exc}")
+
+
+# ─── Create Draft ──────────────────────────────────────────────────────
+
+@gmail_router.post("/draft")
+async def create_draft(payload: GmailDraftSchema, current_user: dict = Depends(get_current_user)):
+    token_data, user_doc = await _get_gmail_token(current_user)
+    try:
+        result, refreshed_token = await GmailService.create_draft(
+            token_data=token_data,
+            to=payload.to,
+            subject=payload.subject,
+            body=payload.body,
+            thread_id=payload.threadId,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+        return {"message": "Draft created", "result": result}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to create draft: {exc}")
+
+
+# ─── AI: Classify Email ───────────────────────────────────────────────
+
+@gmail_router.post("/classify")
+async def classify_email(payload: GmailClassifySchema, current_user: dict = Depends(get_current_user)):
+    """Use AI to classify an email (category, urgency, summary, entities)."""
+    from backend.prompts import prompt_registry
+    from backend.core.dependencies import get_ai_gateway_service
+
+    token_data, user_doc = await _get_gmail_token(current_user)
+
+    try:
+        # Fetch the email content
+        detail, refreshed_token = await GmailService.get_email_detail(
+            token_data=token_data,
+            message_id=payload.messageId,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+
+        # Build classification prompt
+        prompt = prompt_registry.render(
+            "email", "classify_email",
+            sender=detail.get("from", ""),
+            subject=detail.get("subject", ""),
+            body=(detail.get("bodyText", "") or detail.get("snippet", ""))[:3000],
+        )
+
+        # Call AI
+        ai_service = get_ai_gateway_service()
+        response = await ai_service.chat(prompt)
+
+        # Try to parse as JSON
+        try:
+            classification = json.loads(response)
+        except json.JSONDecodeError:
+            classification = {"raw_response": response}
+
+        return {"classification": classification, "email": detail}
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to classify email: {exc}")
+
+
+# ─── AI: Suggest Reply ────────────────────────────────────────────────
+
+@gmail_router.post("/suggest_reply/{message_id}")
+async def suggest_reply(message_id: str, current_user: dict = Depends(get_current_user)):
+    """Use AI to generate a suggested reply for an email."""
+    from backend.prompts import prompt_registry
+    from backend.core.dependencies import get_ai_gateway_service
+
+    token_data, user_doc = await _get_gmail_token(current_user)
+
+    try:
+        detail, refreshed_token = await GmailService.get_email_detail(
+            token_data=token_data,
+            message_id=message_id,
+        )
+        await _save_refreshed_token(current_user["_id"], refreshed_token)
+
+        # Build context about the teacher
+        teacher_context = f"Teacher: {current_user.get('username', '')}, Email: {current_user.get('email', '')}"
+
+        prompt = prompt_registry.render(
+            "email", "suggest_reply",
+            sender=detail.get("from", ""),
+            subject=detail.get("subject", ""),
+            body=(detail.get("bodyText", "") or detail.get("snippet", ""))[:3000],
+            teacher_context=teacher_context,
+        )
+
+        ai_service = get_ai_gateway_service()
+        reply_suggestion = await ai_service.chat(prompt)
+
+        return {
+            "suggestion": reply_suggestion,
+            "email": detail,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to generate reply suggestion: {exc}")

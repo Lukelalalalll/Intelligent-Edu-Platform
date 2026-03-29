@@ -1,10 +1,16 @@
 import os
 import asyncio
 import json
+import logging
+import time
 from typing import Optional, Dict, Any
 
 import httpx
 from backend.config import Config
+from backend.prompts import prompt_registry
+from backend.infrastructure.telemetry import llm_telemetry
+
+logger = logging.getLogger(__name__)
 
 
 class AIGatewayService:
@@ -17,6 +23,9 @@ class AIGatewayService:
         self.poll_interval_seconds = Config.COZE_POLL_INTERVAL_SECONDS
         self.poll_max_attempts = Config.COZE_POLL_MAX_ATTEMPTS
         self.request_timeout_seconds = Config.COZE_REQUEST_TIMEOUT_SECONDS
+
+        if not self.bot_id:
+            logger.warning("COZE_BOT_ID is not configured — Coze AI features will be degraded")
 
     def _serialize_context(self, context: Optional[Dict[str, Any]] = None) -> str:
         """Convert context to bounded text payload to keep Coze requests stable."""
@@ -58,7 +67,7 @@ class AIGatewayService:
             }
 
         context_text = json.dumps(compact, ensure_ascii=False)
-        return context_text[:5000]
+        return context_text[:15000]
 
     async def _chat_v3(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:
         context_text = self._serialize_context(context)
@@ -153,62 +162,61 @@ class AIGatewayService:
         if not self.api_key or not self.bot_id:
             return "[Mock AI] Coze.ai credentials missing; returning placeholder feedback."
 
+        start_time = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=self.request_timeout_seconds) as client:
                 if "/v3/chat" in self.chat_url:
-                    return await self._chat_v3(client, message=message, context=context)
-                return await self._chat_legacy(client, message=message, context=context)
+                    result = await self._chat_v3(client, message=message, context=context)
+                else:
+                    result = await self._chat_legacy(client, message=message, context=context)
+
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            # Estimate tokens: ~1 token per 2.5 chars for Chinese-heavy text
+            est_prompt_tokens = max(1, len(message) // 3)
+            est_completion_tokens = max(1, len(result) // 3)
+            await llm_telemetry.record(
+                provider="coze",
+                model=self.bot_id,
+                prompt_tokens=est_prompt_tokens,
+                completion_tokens=est_completion_tokens,
+                latency_ms=latency_ms,
+                endpoint="chat",
+                success=True,
+            )
+            return result
         except Exception as exc:  # noqa: BLE001
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            await llm_telemetry.record(
+                provider="coze",
+                model=self.bot_id,
+                latency_ms=latency_ms,
+                endpoint="chat",
+                success=False,
+                error=str(exc),
+            )
             return f"Error calling Coze.ai: {exc}"
 
     async def analyze_submission(self, text: str, rubric: Dict[str, Any], assignment: str) -> Dict[str, Any]:
         """Analyze full submission with Coze.ai."""
         trimmed_text = (text or "")[:12000]
         rubric_json = json.dumps(rubric or {}, ensure_ascii=False)
-        prompt = f"""
-You are a strict teaching assistant grading a student's submission.
-Use only the provided submission content as evidence.
-If evidence is missing, state "Not evidenced in submission".
-
-Assignment: {assignment}
-Rubric (JSON): {rubric_json}
-
-Student submission:
-{trimmed_text}
-
-Task:
-1) Evaluate each rubric category with a numeric score and one short evidence sentence.
-2) Provide total score (0-100).
-3) Provide concise overall feedback.
-4) Provide 3-5 actionable improvement suggestions.
-
-Output format requirements:
-- Return valid JSON only (no markdown, no code fence).
-- Use this schema exactly:
-{{
-    "overall_score": number,
-    "rubric_scores": [
-        {{"criterion": string, "score": number, "evidence": string}}
-    ],
-    "overall_feedback": string,
-    "improvement_suggestions": [string]
-}}
-"""
+        prompt = prompt_registry.render(
+            "grading", "analyze_submission",
+            assignment=assignment,
+            rubric_json=rubric_json,
+            text=trimmed_text,
+        )
         response = await self.chat(prompt)
         return {"raw_response": response}
 
     async def suggest_annotation(self, selected_text: str, rubric: Dict[str, Any], assignment: str) -> str:
         """Get AI suggestion for annotating a specific section."""
-        prompt = f"""
-The student wrote this section:
-"{selected_text}"
-
-Assignment: {assignment}
-Rubric: {rubric}
-
-Provide a short, constructive feedback comment for this specific section. Be specific and actionable.
-Keep it under 100 words.
-"""
+        prompt = prompt_registry.render(
+            "grading", "suggest_annotation",
+            selected_text=selected_text,
+            assignment=assignment,
+            rubric=rubric,
+        )
         return await self.chat(prompt)
 
 

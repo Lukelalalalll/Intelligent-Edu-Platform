@@ -10,9 +10,9 @@ export default function Home({ config }) {
     const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'tools'
     const toolCardsData = useMemo(() => [
         { title: "AI Slides Generator", desc: "Intelligent document processing and presentation generation", icon: "fa-book-open", url: config.urls.sub1 },
-        { title: "AI Question Generator", desc: "Smart question extraction and automated generation", icon: "fa-users", url: config.urls.sub3 },
-        { title: "AI Image Extract System", desc: "PDF image extraction and AI generation tool", icon: "fa-tasks", url: config.urls.sub4 },
-        { title: "AI Diagram Tool", desc: "Extract from word/PDF, Search and Edit SVG, AI Generate", icon: "fa-cog", url: config.urls.sub5 },
+        { title: "AI Question Generator", desc: "Smart question extraction and automated generation", icon: "fa-question-circle", url: config.urls.sub2 },
+        { title: "AI Visual Tool", desc: "Diagram extraction, image extraction, SVG editing, AI generation", icon: "fa-images", url: config.urls.sub4 },
+        { title: "AI Study Notes", desc: "Generate structured study notes and flashcards from lecture PDFs", icon: "fa-book-reader", url: config.urls.sub5 },
     ], [config.urls]);
 
     useEffect(() => {

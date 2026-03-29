@@ -1,0 +1,92 @@
+# =============================================================================
+# Grading Prompts — Used by AI Gateway for submission analysis and feedback
+# =============================================================================
+
+analyze_submission:
+  description: "Full submission analysis with rubric scoring"
+  version: "1.0"
+  template: |
+    You are a strict teaching assistant grading a student's submission.
+    Use only the provided submission content as evidence.
+    If evidence is missing, state "Not evidenced in submission".
+
+    Assignment: {assignment}
+    Rubric (JSON): {rubric_json}
+
+    Student submission:
+    {text}
+
+    Task:
+    1) Evaluate each rubric category with a numeric score and one short evidence sentence.
+    2) Provide total score (0-100).
+    3) Provide concise overall feedback.
+    4) Provide 3-5 actionable improvement suggestions.
+
+    Output format requirements:
+    - Return valid JSON only (no markdown, no code fence).
+    - Use this schema exactly:
+    {{
+        "overall_score": number,
+        "rubric_scores": [
+            {{"criterion": string, "score": number, "evidence": string}}
+        ],
+        "overall_feedback": string,
+        "improvement_suggestions": [string]
+    }}
+
+feedback:
+  description: "Actionable feedback for selected student text"
+  version: "1.0"
+  template: |
+    You are a concise grading assistant.
+
+    Assignment:
+    {assignment_desc}
+
+    Rubric:
+    {rubric_json}
+
+    Selected student text:
+    {selected_text}
+
+    Retrieved context from submission:
+    {rag_snippets}
+
+    Task:
+    Provide actionable feedback focused on clarity, correctness, and rubric alignment.
+    Keep it short and specific.
+
+annotation:
+  description: "Short constructive feedback comment for a specific section"
+  version: "1.0"
+  template: |
+    The student wrote this section:
+    "{selected_text}"
+
+    Assignment: {assignment_desc}
+    Rubric: {rubric_json}
+
+    Retrieved context from submission:
+    {rag_snippets}
+
+    Provide a short, constructive feedback comment for this specific section.
+    Be specific and actionable.
+    Keep it under 100 words.
+
+suggest_annotation:
+  description: "Quick annotation suggestion without RAG context"
+  version: "1.0"
+  template: |
+    The student wrote this section:
+    "{selected_text}"
+
+    Assignment: {assignment}
+    Rubric: {rubric}
+
+    Provide a short, constructive feedback comment for this specific section. Be specific and actionable.
+    Keep it under 100 words.
+
+deepseek_system:
+  description: "System prompt for DeepSeek fallback"
+  version: "1.0"
+  template: "You are a concise grading assistant."

@@ -1,9 +1,6 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
-from flask_cors import CORS
-from flask_pymongo import PyMongo
-
-db = SQLAlchemy()
-jwt = JWTManager()
-cors = CORS()
-mongo = PyMongo()
+"""
+DEPRECATED: This module is no longer used.
+The project has migrated from Flask to FastAPI.
+Database access is now via backend.core.database (Motor async MongoDB).
+"""
+# Kept as an empty module to avoid import errors in legacy scripts.

@@ -3,11 +3,10 @@ import re
 import json
 import base64
 import time
+import logging
 import requests
 from zhipuai import ZhipuAI
 import PyPDF2
-from docx import Document
-from pptx import Presentation
 import tempfile
 import fitz
 from backend.config import Config
@@ -19,24 +18,32 @@ def get_proxies():
     return None
 
 
+def cleanup_old_files():
+    """Remove sub2 generated/cache/screenshot files older than SUB2_FILE_TTL_HOURS."""
+    import logging
+    _logger = logging.getLogger("sub2.cleanup")
+    ttl_seconds = Config.SUB2_FILE_TTL_HOURS * 3600
+    now = time.time()
+    cleaned = 0
+    for folder in [Config.GENERATED_FOLDER_SUB2, Config.SCREENSHOTS_FOLDER_SUB2, Config.UPLOAD_FOLDER_SUB2]:
+        if not os.path.isdir(folder):
+            continue
+        for fname in os.listdir(folder):
+            fpath = os.path.join(folder, fname)
+            if os.path.isfile(fpath):
+                try:
+                    age = now - os.path.getmtime(fpath)
+                    if age > ttl_seconds:
+                        os.remove(fpath)
+                        cleaned += 1
+                except OSError:
+                    pass
+    if cleaned:
+        _logger.info("Sub2 cleanup: removed %d files older than %dh", cleaned, Config.SUB2_FILE_TTL_HOURS)
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS_SUB2
-
-
-def extract_pdf_pages(pdf_path, page_numbers):
-    """裁剪选定的 PDF 页面"""
-    with open(pdf_path, 'rb') as file:
-        pdf_reader = PyPDF2.PdfReader(file)
-        pdf_writer = PyPDF2.PdfWriter()
-        for page_num in page_numbers:
-            if 0 <= page_num < len(pdf_reader.pages):
-                pdf_writer.add_page(pdf_reader.pages[page_num])
-
-        fd, temp_path = tempfile.mkstemp(suffix='.pdf')
-        os.close(fd)
-        with open(temp_path, 'wb') as output_file:
-            pdf_writer.write(output_file)
-        return temp_path
 
 
 def _page_numbers_to_spec(page_numbers):
@@ -91,20 +98,7 @@ def extract_pdf_text_with_loader(pdf_path, page_numbers):
             return f.read()
 
 
-# backend/services/sub2_service.py
-import fitz
-import base64
-import os
-import re
-import json
-from zhipuai import ZhipuAI
-
-
-# backend/services/sub2_service.py
-
-# backend/services/sub2_service.py
-
-def call_zhipu_ocr(file_path):
+def call_zhipu_ocr(file_path, extract_prompt="exercise"):
     """智谱 OCR：修复版，不再乱动 JSON 结构"""
     client = ZhipuAI(api_key=Config.ZHIPU_API_KEY)
 
@@ -122,10 +116,10 @@ def call_zhipu_ocr(file_path):
         with open(file_path, "rb") as f:
             img_base = base64.b64encode(f.read()).decode('utf-8')
 
-    prompt = """请识别并提取图中题目。
+    prompt = f"""请识别并提取图中的{extract_prompt}内容。
     要求：
     1. 数学公式用 LaTeX（用 $ 包裹）。
-    2. 必须输出标准 JSON：{"exercises": [{"chapter_number":"","sub_chapter_number":"","question_number":"","text":"题目内容","title":""}]}
+    2. 必须输出标准 JSON：{{"exercises": [{{"chapter_number":"","sub_chapter_number":"","question_number":"","text":"题目内容","title":""}}]}}
     3. 特别注意：如果题目包含 Java/Python 代码，请将代码中的反斜杠进行转义。"""
 
     try:
@@ -135,6 +129,9 @@ def call_zhipu_ocr(file_path):
                                                    {"type": "image_url", "image_url": {"url": img_base}}]}],
             temperature=0.1
         )
+
+        if not response.choices or not response.choices[0].message:
+            raise Exception("Empty OCR response from Zhipu")
 
         raw_text = response.choices[0].message.content
         print(f"智谱原始输出: {raw_text}")
@@ -175,7 +172,7 @@ def call_zhipu_ocr(file_path):
         raise e
 
 
-def call_zhipu_layout_from_text(markdown_text):
+def call_zhipu_layout_from_text(markdown_text, extract_prompt="exercise"):
     """Use Zhipu text model to format extracted markdown into exercise JSON."""
     if not markdown_text or not markdown_text.strip():
         raise Exception("No extracted markdown text from pdf_loader")
@@ -184,7 +181,7 @@ def call_zhipu_layout_from_text(markdown_text):
     prompt = f"""你是教育内容排版助手。下面是从 PDF 中高精度抽取出的 Markdown 文本。
 
 任务目标：
-1) 识别其中的题目内容并按题目切分；
+1) 识别其中的{extract_prompt}内容并按题目切分；
 2) 重点是“结构化排版”，不是改写题意；
 3) 公式保持 LaTeX（用 $ 包裹）；
 4) 输出必须是严格 JSON，且只输出 JSON 本体，不要解释。
@@ -236,7 +233,6 @@ def call_zhipu_layout_from_text(markdown_text):
 
     return parsed
 
-# backend/services/sub2_service.py
 
 def call_coze_generate(base_content, user_requirements, output_language="Chinese", question_basis=None, knowledge_points="", saved_screenshots=None):
     """调用 Coze 生成新题目 (标准 V3 轮询逻辑)"""
@@ -278,7 +274,9 @@ def call_coze_generate(base_content, user_requirements, output_language="Chinese
         "additional_messages": [{"role": "user", "content": prompt, "content_type": "text"}]
     }
 
-    response = requests.post(chat_url, headers=headers, json=payload, proxies=get_proxies())
+    timeout_seconds = Config.COZE_REQUEST_TIMEOUT_SECONDS
+
+    response = requests.post(chat_url, headers=headers, json=payload, proxies=get_proxies(), timeout=timeout_seconds)
     res_data = response.json()
 
     print(f"Coze 发起对话返回: {res_data}")
@@ -292,10 +290,21 @@ def call_coze_generate(base_content, user_requirements, output_language="Chinese
 
     # 2. 轮询查询状态 (注意 URL 里拼上了 conversation_id)
     status_url = f"{Config.COZE_API_ROOT}/v3/chat/retrieve?chat_id={chat_id}&conversation_id={conversation_id}"
+    max_attempts = Config.COZE_POLL_MAX_ATTEMPTS
 
-    for _ in range(40):  # 给它 60 秒的时间（40 * 1.5s）
-        status_res = requests.get(status_url, headers=headers, proxies=get_proxies())
-        status_data = status_res.json()
+    for attempt in range(max_attempts):
+        try:
+            status_res = requests.get(status_url, headers=headers, proxies=get_proxies(), timeout=timeout_seconds)
+            status_data = status_res.json()
+        except requests.exceptions.Timeout:
+            print(f"Coze 轮询超时 (attempt {attempt + 1}/{max_attempts})")
+            continue
+        except requests.exceptions.ConnectionError as e:
+            print(f"Coze 轮询连接错误 (attempt {attempt + 1}): {e}")
+            if attempt >= max_attempts - 1:
+                raise
+            time.sleep(2)
+            continue
 
         status = status_data.get('data', {}).get('status')
         print(f"Coze 任务状态: {status}")
@@ -303,7 +312,7 @@ def call_coze_generate(base_content, user_requirements, output_language="Chinese
         if status == 'completed':
             # 3. 状态完成后，获取消息列表 (注意：获取列表是 GET 请求，也要带上 conversation_id)
             msg_url = f"{Config.COZE_API_ROOT}/v3/chat/message/list?chat_id={chat_id}&conversation_id={conversation_id}"
-            msg_res = requests.get(msg_url, headers=headers, proxies=get_proxies())
+            msg_res = requests.get(msg_url, headers=headers, proxies=get_proxies(), timeout=timeout_seconds)
             msg_data = msg_res.json()
 
             # 在消息列表中寻找 type 为 'answer' 的 AI 回复
@@ -316,33 +325,9 @@ def call_coze_generate(base_content, user_requirements, output_language="Chinese
         elif status in ['failed', 'canceled', 'requires_action']:
             raise Exception(f"Coze 任务异常终止: {status}")
 
-        # 还没完成，等 1.5 秒再查
-        time.sleep(1.5)
+        # Exponential backoff: base from config, capped at 8s
+        base_interval = Config.COZE_POLL_INTERVAL_SECONDS
+        wait_time = min(8.0, base_interval * (1.5 ** min(attempt, 6)))
+        time.sleep(wait_time)
 
     return "Coze 生成题目超时，请稍后再试"
-
-
-def create_word_document(content, filename):
-    doc = Document()
-    doc.add_heading('Generated Practice Questions', 0)
-    # 处理生成的文本，按行写入
-    for line in content.split('\n'):
-        doc.add_paragraph(line)
-    output_path = os.path.join(Config['GENERATED_FOLDER_SUB2'], f'{filename}.docx')
-    doc.save(output_path)
-    return output_path
-
-
-def create_powerpoint(content, filename):
-    prs = Presentation()
-    # 简单的按题目切分逻辑
-    questions = re.split(r'【Question \d+】|Question \d+:', content)
-    for idx, q_text in enumerate(questions):
-        if not q_text.strip(): continue
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        if slide.shapes.title: slide.shapes.title.text = f"Exercise {idx}"
-        slide.placeholders[1].text = q_text.strip()
-
-    output_path = os.path.join(Config['GENERATED_FOLDER_SUB2'], f'{filename}.pptx')
-    prs.save(output_path)
-    return output_path

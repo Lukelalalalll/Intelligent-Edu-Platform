@@ -7,8 +7,7 @@ import styles from '../styles/HomeStudent.module.css';
 
 export default function HomeStudent({
     username, currentStep, selectedCourse, uploadedFiles,
-    messages, chatInput, isTyping, isFullscreen, chatMessagesRef,
-    handlers: { handleCourseSelect, handleFileUpload, handleBackToCourses, handleInputResize, handleKeyDown, handleSendMessage, toggleFullscreen }
+    handlers: { handleCourseSelect, handleFileUpload, handleBackToCourses }
 }) {
     const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'assignments'
     return (

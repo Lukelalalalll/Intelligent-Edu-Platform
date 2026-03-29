@@ -789,33 +789,50 @@ class PPTCreator:
         print("🔄 [Batch Processing] Starting batch collection mode for image placeholders...")
         self.start_collecting()
         
+        failed_slides = []
         for slide_index, slide_data in enumerate(ppt_schema['slides']):
-            if 'layout' not in slide_data:
-                continue
+            try:
+                if 'layout' not in slide_data:
+                    continue
+                    
+                layout_name = slide_data['layout'].get('name')
+                if not layout_name:
+                    continue
+                    
+                # 查找对应的布局
+                layout = self._find_layout_by_name(prs, layout_name)
+                if not layout:
+                    print(f"Warning: Layout '{layout_name}' not found in template")
+                    continue
+                    
+                # 创建幻灯片
+                slide = prs.slides.add_slide(layout)
                 
-            layout_name = slide_data['layout'].get('name')
-            if not layout_name:
-                continue
+                # 添加页码信息到slide_data
+                slide_data['slide_number'] = str(slide_index + 1)  # 从第1页开始
                 
-            # 查找对应的布局
-            layout = self._find_layout_by_name(prs, layout_name)
-            if not layout:
-                print(f"Warning: Layout '{layout_name}' not found in template")
-                continue
-                
-            # 创建幻灯片
-            slide = prs.slides.add_slide(layout)
-            
-            # 添加页码信息到slide_data
-            slide_data['slide_number'] = str(slide_index + 1)  # 从第1页开始
-            
-            # 处理占位符
-            self._process_placeholders(slide, slide_data, presentation_title, prs)
+                # 处理占位符
+                self._process_placeholders(slide, slide_data, presentation_title, prs)
+            except Exception as e:
+                slide_title = slide_data.get('title', f'Slide {slide_index + 1}')
+                print(f"❌ Slide {slide_index + 1} '{slide_title}' failed: {e}")
+                failed_slides.append({
+                    "slide_index": slide_index + 1,
+                    "title": slide_title,
+                    "error": str(e)
+                })
+                # Continue with remaining slides — don't abort the whole presentation
         
         # 停止收集模式并执行批量处理
         self.stop_collecting()
         print("⚡ [Batch Processing] Executing batch processing for all collected image placeholders...")
-        asyncio.run(self.process_all_collected_tasks())
+        try:
+            asyncio.run(self.process_all_collected_tasks())
+        except Exception as e:
+            print(f"⚠️ Batch image processing failed: {e} — PPT saved without some images")
+        
+        if failed_slides:
+            print(f"⚠️ {len(failed_slides)}/{len(ppt_schema['slides'])} slides had errors: {[s['title'] for s in failed_slides]}")
         
         # 保存演示文稿
         prs.save(output_path)

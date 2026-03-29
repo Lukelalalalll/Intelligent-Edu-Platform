@@ -2,15 +2,21 @@ import aiohttp
 import asyncio
 import json
 import math
+import os
+
+# Configurable concurrency limit for LLM API calls
+MAX_CONCURRENT_LLM_CALLS = int(os.getenv("SUB1_MAX_CONCURRENT_LLM", "5"))
 
 
 class ChapterSummarizer:
     def __init__(self):
+        from backend.config import Config
         self.url = "https://api.deepseek.com/v1/chat/completions"
         self.headers = {
-            'Authorization': 'Bearer sk-f2b923f129634f49ac37c3d675595acf',
+            'Authorization': f'Bearer {Config.DEEPSEEK_API_KEY}',
             'Content-Type': 'application/json'
         }
+        self._semaphore = asyncio.Semaphore(MAX_CONCURRENT_LLM_CALLS)
         self.system_prompt = '''
             You are an expert academic summarizer, specialized in extracting dense, entity-rich highlights from technical papers.
             The final output should strictly follow by the following schema:
@@ -130,12 +136,15 @@ class ChapterSummarizer:
 
     async def fetch_data(self, session, data):
         try:
-            async with session.post(self.url, json=data, headers=self.headers,ssl=False) as response:
+            async with session.post(self.url, json=data, headers=self.headers, ssl=False, timeout=aiohttp.ClientTimeout(total=90)) as response:
                 response.raise_for_status()
                 return await response.json()
         except aiohttp.ClientError as e:
             print(f"Request failed: {e}")
-            return None
+            return {"_error": str(e)}
+        except asyncio.TimeoutError:
+            print("Request timed out")
+            return {"_error": "timeout"}
 
     def _calculate_initial_points(self, highlights_data, total_pages):
         """计算每个章节应该分配的页数"""
@@ -296,13 +305,17 @@ class ChapterSummarizer:
 
         final_results = []
         current_slide_number = 1
+        failed_chapters = []
         
         async with aiohttp.ClientSession() as session:
             tasks = [self.fetch_data(session, data) for data in data_list]
             results = await asyncio.gather(*tasks)
             
             for i, result in enumerate(results):
-                if result:
+                target_pages = pages_distribution[i]
+                chapter_title = highlights_data[i].get('sectionTitle', f'Chapter {i+1}')
+                
+                if result and "_error" not in result:
                     try:
                         output_str = result['choices'][0]['message']['content'].strip('```json\n').strip('```')
                         output_dict = json.loads(output_str)
@@ -310,14 +323,45 @@ class ChapterSummarizer:
                         # 处理每个章节的幻灯片
                         for slide in output_dict['slides']:
                             slide['slide_number'] = current_slide_number
+                            slide['_status'] = 'success'
                             current_slide_number += 1
                             final_results.append(slide)
                         
                     except (KeyError, json.JSONDecodeError) as e:
-                        print(f"Error processing result: {e}")
-                        print("="*50)
-                        print(output_str)
-                        
+                        print(f"Error processing chapter {i+1} result: {e}")
+                        failed_chapters.append(chapter_title)
+                        # Generate placeholder slides for the failed chapter
+                        for p in range(target_pages):
+                            final_results.append({
+                                "slide_number": current_slide_number,
+                                "title": f"{chapter_title}" if p == 0 else f"{chapter_title} (cont.)",
+                                "content": ["[Content generation failed — please retry this chapter]"],
+                                "latex": [],
+                                "chart_type": "No Chart",
+                                "chart_reasoning": [],
+                                "_status": "failed",
+                                "_error": f"parse_error: {e}"
+                            })
+                            current_slide_number += 1
+                else:
+                    error_msg = result.get("_error", "unknown") if result else "no_response"
+                    print(f"Chapter {i+1} '{chapter_title}' failed: {error_msg}")
+                    failed_chapters.append(chapter_title)
+                    for p in range(target_pages):
+                        final_results.append({
+                            "slide_number": current_slide_number,
+                            "title": f"{chapter_title}" if p == 0 else f"{chapter_title} (cont.)",
+                            "content": ["[Content generation failed — please retry this chapter]"],
+                            "latex": [],
+                            "chart_type": "No Chart",
+                            "chart_reasoning": [],
+                            "_status": "failed",
+                            "_error": error_msg
+                        })
+                        current_slide_number += 1
+
+        if failed_chapters:
+            print(f"⚠️ {len(failed_chapters)}/{len(highlights_data)} chapters failed: {failed_chapters}")
         
         return final_results
 

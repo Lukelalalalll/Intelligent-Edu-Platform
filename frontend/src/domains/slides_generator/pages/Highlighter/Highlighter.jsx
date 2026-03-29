@@ -10,7 +10,10 @@ export default function Highlighter({
     isRenderedView, htmlContent, highlights, statusMsg,
     markdownViewRef,
     showSection, toggleView, saveHighlights, removeHighlight,
-    onHighlightCreated
+    onHighlightCreated,
+    classifyHighlights, classifying,
+    categoryFilter, setCategoryFilter,
+    removeByCategoryOrConfidence
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [speakingId, setSpeakingId] = useState(null);
@@ -147,10 +150,12 @@ export default function Highlighter({
         a.click();
     };
 
-    const filteredHighlights = (highlights || []).filter(h =>
-        h.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.sectionTitle.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredHighlights = (highlights || []).filter(h => {
+        const matchSearch = h.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            h.sectionTitle.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchCategory = !categoryFilter || categoryFilter === 'all' || h.category === categoryFilter;
+        return matchSearch && matchCategory;
+    });
 
     return (
         <div className="container">
@@ -218,6 +223,12 @@ export default function Highlighter({
                     copyToClipboard={copyToClipboard}
                     copiedId={copiedId}
                     handleLocalRemoveHighlight={handleLocalRemoveHighlight}
+                    classifyHighlights={classifyHighlights}
+                    classifying={classifying}
+                    categoryFilter={categoryFilter}
+                    setCategoryFilter={setCategoryFilter}
+                    removeByCategoryOrConfidence={removeByCategoryOrConfidence}
+                    highlights={highlights}
                 />
             </div>
         </div>

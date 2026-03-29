@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import client from '../../api/client';
+import * as sub2Api from '../../api/sub2Api';
 import QuestionGeneratorPage from '../../pages/sub2/QuestionGenerator';
+import ToastContainer from '../../components/ToastContainer';
+import { useToast } from '../../hooks/useToast';
 import { log } from '../../utils/logger';
 
 export default function QuestionGeneratorEntry() {
+    const { toasts, showToast, removeToast } = useToast();
+
     const [currentStep, setCurrentStep] = useState(() => {
         const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sub2_current_step') : null;
         const parsed = Number(saved);
@@ -19,10 +23,10 @@ export default function QuestionGeneratorEntry() {
     const [selectedPages, setSelectedPages] = useState([]);
     const [uploadLoading, setUploadLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [taskId, setTaskId] = useState(null);
 
     // --- Step 2 State ---
     const [extractPrompt, setExtractPrompt] = useState('exercise');
-    const [apiType, setApiType] = useState('textin');
     const [extractLoading, setExtractLoading] = useState(false);
     const [exercises, setExercises] = useState([]);
     const [rawExtractText, setRawExtractText] = useState('');
@@ -74,14 +78,11 @@ export default function QuestionGeneratorEntry() {
         }
     }, [exercises, generatedQuestions]); // 监听提取的题和生成的题
 
-    // --- Format Helper ---
+    // --- Format Helper (no longer produces HTML; exercises rendered via ReactMarkdown) ---
+    // formatContent is kept only for backward compatibility but no longer used for rendering
     const formatContent = (content) => {
-        if (!content) return '<p>No content</p>';
-        let cleaned = content.replace(/\*\*(\w+)\*\*/g, '$1').replace(/\\mathbf\{(\w+)\}/g, '$1');
-        let formatted = cleaned.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
-        formatted = formatted.replace(/\$\$(.*?)\$\$/g, '<span class="math">$$$$$1$$$$</span>');
-        formatted = formatted.replace(/\$(.*?)\$/g, '<span class="math">$$$1$$</span>');
-        return formatted;
+        if (!content) return '';
+        return content;
     };
 
     // --- Upload Handlers ---
@@ -90,24 +91,22 @@ export default function QuestionGeneratorEntry() {
         setCurrentStep(1);
         setFile(selectedFile);
         setUploadLoading(true);
-        const formData = new FormData();
-        formData.append('file', selectedFile);
 
         try {
-            // ⚠️ 注意：这里假设后端的 API 对应改为了 /sub2
-            const res = await client.post('/sub2/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            if (res.data.success) {
-                setFileName(res.data.filename);
-                setFileType(res.data.file_type);
-                if (res.data.file_type === 'pdf') {
-                    setTotalPages(res.data.total_pages);
+            const data = await sub2Api.uploadFile(selectedFile);
+            if (data.success) {
+                setFileName(data.filename);
+                setFileType(data.file_type);
+                setTaskId(data.task_id);
+                if (data.file_type === 'pdf') {
+                    setTotalPages(data.total_pages);
                     setSelectedPages([]);
                 }
             } else {
-                alert(res.data.error);
+                showToast(data.error, 'error');
             }
         } catch (err) {
-            alert('Upload failed: ' + err.message);
+            showToast('Upload failed: ' + err.message, 'error');
         } finally {
             setUploadLoading(false);
         }
@@ -115,21 +114,21 @@ export default function QuestionGeneratorEntry() {
 
     // --- Extract Handlers ---
     const extractContent = async () => {
-        if (fileType === 'pdf' && selectedPages.length === 0) { alert('Please select at least one page'); return; }
+        if (fileType === 'pdf' && selectedPages.length === 0) { showToast('Please select at least one page', 'warning'); return; }
         setExtractLoading(true); setExercises([]); setRawExtractText('');
         try {
-            const res = await client.post('/sub2/extract_questions', {
-                api_type: apiType, page_numbers: selectedPages, prompt: extractPrompt
+            const data = await sub2Api.extractQuestions({
+                taskId, pageNumbers: selectedPages, prompt: extractPrompt
             });
-            if (res.data.success) {
-                if (res.data.data?.result?.llm_json?.exercises) {
-                    const formattedEx = res.data.data.result.llm_json.exercises.map(ex => ({ ...ex, formattedText: formatContent(ex.text) }));
+            if (data.success) {
+                if (data.data?.result?.llm_json?.exercises) {
+                    const formattedEx = data.data.result.llm_json.exercises.map(ex => ({ ...ex, formattedText: formatContent(ex.text) }));
                     setExercises(formattedEx);
-                } else if (res.data.text) {
-                    setRawExtractText(res.data.text);
+                } else if (data.text) {
+                    setRawExtractText(data.text);
                 }
-            } else { alert(res.data.error); }
-        } catch (error) { alert('Extraction failed: ' + error.message); }
+            } else { showToast(data.error, 'error'); }
+        } catch (error) { showToast('Extraction failed: ' + error.message, 'error'); }
         finally { setExtractLoading(false); }
     };
 
@@ -148,32 +147,32 @@ export default function QuestionGeneratorEntry() {
             document.body.removeChild(clone);
             const imgData = canvas.toDataURL('image/png');
 
-            const res = await client.post('/sub2/upload_screenshot', {
+            const res = await sub2Api.uploadScreenshot({
                 image: imgData,
-                chapter_number: element.dataset.chapter,
-                sub_chapter_number: element.dataset.sub,
-                exercise_number: element.dataset.q
+                chapterNumber: element.dataset.chapter,
+                subChapterNumber: element.dataset.sub,
+                exerciseNumber: element.dataset.q,
             });
 
-            if (res.data.success) {
-                setSavedScreenshots(prev => (prev.includes(res.data.filename) ? prev : [...prev, res.data.filename]));
-                if (!suppressAlert) alert(`Screenshot saved: ${res.data.filename}`);
-            } else { throw new Error(res.data.error); }
+            if (res.success) {
+                setSavedScreenshots(prev => (prev.includes(res.filename) ? prev : [...prev, res.filename]));
+                if (!suppressAlert) showToast(`Screenshot saved: ${res.filename}`, 'success');
+            } else { throw new Error(res.error); }
         } catch (err) {
-            if (!suppressAlert) alert('Failed: ' + err.message);
+            if (!suppressAlert) showToast('Failed: ' + err.message, 'error');
         }
     };
 
     const takeBatchScreenshots = async () => {
-        if (selectedExercises.length === 0) { alert('Please select exercises first.'); return; }
+        if (selectedExercises.length === 0) { showToast('Please select exercises first.', 'warning'); return; }
         for (const idx of selectedExercises) { await captureElement(idx, true); }
-        alert(`Batch processing complete. Images saved.`);
+        showToast('Batch processing complete. Images saved.', 'success');
     };
 
     // --- Generate & Export ---
     const generateQuestions = async () => {
         if (questionBasis === 'example_images' && savedScreenshots.length === 0) {
-            alert('Please capture at least one screenshot before using Example images basis.');
+            showToast('Please capture at least one screenshot before using Example images basis.', 'warning');
             return;
         }
 
@@ -187,6 +186,7 @@ export default function QuestionGeneratorEntry() {
             .filter(Boolean);
 
         const payload = {
+            task_id: taskId,
             subject: String(subject || 'Mathematics').trim() || 'Mathematics',
             question_type: String(questionType || 'Multiple choice').trim() || 'Multiple choice',
             num_questions: safeNumQuestions,
@@ -200,10 +200,10 @@ export default function QuestionGeneratorEntry() {
 
         setGenerateLoading(true); setGeneratedQuestions(null);
         try {
-            const res = await client.post('/sub2/generate_questions', payload);
-            if (res.data.success) {
-                setGeneratedQuestions(res.data.questions.replace(/\n/g, '<br>'));
-            } else { alert(res.data.error); }
+            const data = await sub2Api.generateQuestions(payload);
+            if (data.success) {
+                setGeneratedQuestions(data.questions);
+            } else { showToast(data.error, 'error'); }
         } catch (err) {
             const detail = err?.response?.data?.detail;
             let detailText = '';
@@ -214,19 +214,19 @@ export default function QuestionGeneratorEntry() {
             } else if (err?.response?.data?.error) {
                 detailText = String(err.response.data.error);
             }
-            alert('Generation error: ' + (detailText || err.message));
+            showToast('Generation error: ' + (detailText || err.message), 'error');
         }
         finally { setGenerateLoading(false); }
     };
 
-    const exportQuestions = async (format) => {
+    const exportQuestions = async () => {
         try {
-            const res = await client.post('/sub2/export_questions', { format }, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(res.data);
+            const blob = await sub2Api.exportQuestions();
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
-            a.download = `questions.${format === 'word' ? 'docx' : 'pptx'}`;
+            a.download = 'questions.md';
             a.click(); window.URL.revokeObjectURL(url);
-        } catch { alert('Export failed'); }
+        } catch { showToast('Export failed', 'error'); }
     };
 
     const goToStep1 = () => setCurrentStep(1);
@@ -238,9 +238,9 @@ export default function QuestionGeneratorEntry() {
     };
 
     // --- Bundle States & Handlers ---
-    const states = { currentStep, file, fileName, fileType, totalPages, selectedPages, uploadLoading, extractPrompt, apiType, extractLoading, exercises, selectedExercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, outputLanguage, questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging };
+    const states = { currentStep, file, fileName, fileType, totalPages, selectedPages, uploadLoading, extractPrompt, extractLoading, exercises, selectedExercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, outputLanguage, questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging };
     const handlers = {
-        setExtractPrompt, setApiType, setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setOutputLanguage, setQuestionBasis, setKnowledgePoints,
+        setExtractPrompt, setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setOutputLanguage, setQuestionBasis, setKnowledgePoints,
         goToStep1,
         goToStep2,
         goToStep3,
@@ -255,9 +255,19 @@ export default function QuestionGeneratorEntry() {
         toggleExercise: i => setSelectedExercises(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]),
         toggleAllExercises: checked => setSelectedExercises(checked ? exercises.map((_, i) => i) : []),
         clearExerciseSelection: () => setSelectedExercises([]),
+        updateExerciseText: (index, newText) => setExercises(prev => prev.map((ex, i) => i === index ? { ...ex, text: newText } : ex)),
+        deleteExercise: (index) => {
+            setExercises(prev => prev.filter((_, i) => i !== index));
+            setSelectedExercises(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+        },
         takeSingleScreenshot: i => captureElement(i, false),
         takeBatchScreenshots, generateQuestions, exportQuestions
     };
 
-    return <QuestionGeneratorPage states={states} handlers={handlers} />;
+    return (
+        <>
+            <QuestionGeneratorPage states={states} handlers={handlers} />
+            <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        </>
+    );
 }

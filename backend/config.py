@@ -13,20 +13,17 @@ class Config:
 
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
-    SECRET_KEY = 'your-secret-key'
+    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 
-    JWT_SECRET_KEY = 'jwt-secret-key-change-this-in-prod'
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-this-in-prod')
     JWT_TOKEN_LOCATION = ['cookies']
-    JWT_COOKIE_CSRF_PROTECT = False
+    JWT_COOKIE_CSRF_PROTECT = os.getenv('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=30)
-
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'users.db')}"
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.getenv('JWT_EXPIRES_HOURS', '24')))
 
     SERP_API_KEY = os.getenv('SERP_API_KEY')
     DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
-    MONGO_URI = "mongodb://localhost:27017/intelligent_edu"
+    MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/intelligent_edu')
 
     ZHIPU_API_KEY = os.getenv('ZHIPU_API_KEY')
     COZE_TOKEN = os.getenv('COZE_TOKEN')
@@ -64,7 +61,7 @@ class Config:
     # 全局及 Sub1 文件夹配置
     # ==========================
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-    MAX_CONTENT_LENGTH = 200 * 1024 * 1024
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', str(50 * 1024 * 1024)))  # 50MB default
     MARKDOWN_FOLDER = os.path.join(BASE_DIR, 'md')
     HIGHLIGHTS_FOLDER = os.path.join(BASE_DIR, 'highlights')
 
@@ -85,6 +82,9 @@ class Config:
     SCREENSHOTS_FOLDER_SUB2 = os.path.join(BASE_DIR, 'static', 'sub2', 'screenshots')
 
     ALLOWED_EXTENSIONS_SUB2 = {'pdf', 'png', 'jpg', 'jpeg'}
+
+    # File lifecycle: auto-clean files older than this many hours
+    SUB2_FILE_TTL_HOURS = int(os.getenv('SUB2_FILE_TTL_HOURS', '72'))
 
     # API 密钥与服务地址 (优先读取环境变量，否则使用默认值)
     TEXTIN_API_KEY = os.getenv('TEXTIN_API_KEY')
@@ -126,3 +126,30 @@ class Config:
         os.path.join(BASE_DIR, 'generated/sub5'),
         RAG_VECTORSTORE_DIR,
     ]
+
+    @classmethod
+    def validate_startup(cls) -> list[str]:
+        """Check critical config on startup. Returns list of warnings."""
+        import logging
+        _logger = logging.getLogger("config.validation")
+        warnings: list[str] = []
+
+        if cls.SECRET_KEY in ('your-secret-key', ''):
+            warnings.append("SECURITY: SECRET_KEY is using default value. Set SECRET_KEY env variable!")
+            _logger.warning(warnings[-1])
+        if cls.JWT_SECRET_KEY in ('jwt-secret-key-change-this-in-prod', ''):
+            warnings.append("SECURITY: JWT_SECRET_KEY is using default value. Set JWT_SECRET_KEY env variable!")
+            _logger.warning(warnings[-1])
+
+        optional_keys = {
+            'DEEPSEEK_API_KEY': cls.DEEPSEEK_API_KEY,
+            'COZE_TOKEN': cls.COZE_TOKEN,
+            'ZHIPU_API_KEY': cls.ZHIPU_API_KEY,
+        }
+        for name, value in optional_keys.items():
+            if not value:
+                msg = f"CONFIG: {name} is not set — related features will be degraded."
+                warnings.append(msg)
+                _logger.info(msg)
+
+        return warnings

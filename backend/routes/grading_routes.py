@@ -40,9 +40,9 @@ async def upsert_annotation(payload: AnnotationPayload, current_user: dict = Dep
     course, _, submission = await _ensure_submission(payload.submissionId)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
-    store = load_annotations(payload.submissionId)
+    store = await load_annotations(payload.submissionId)
     ann = payload.annotation.copy()
-    ann.setdefault("id", f"ann_{uuid.uuid4().hex[:8]}")
+    ann.setdefault("id", f"ann_{uuid.uuid4().hex}")
     ann.setdefault("timestamp", ann.get("timestamp"))
 
     annotations = store.get("annotations", [])
@@ -53,7 +53,7 @@ async def upsert_annotation(payload: AnnotationPayload, current_user: dict = Dep
         annotations.append(ann)
 
     store["annotations"] = annotations
-    save_annotations(payload.submissionId, store)
+    await save_annotations(payload.submissionId, store)
     render_annotations_to_pdf(payload.submissionId, submission, store.get("annotations", []))
     return {"status": "ok", "annotation": ann}
 
@@ -67,10 +67,10 @@ async def delete_annotation(
     course, _, submission = await _ensure_submission(submissionId)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
-    store = load_annotations(submissionId)
+    store = await load_annotations(submissionId)
     annotations = [a for a in store.get("annotations", []) if a.get("id") != annotation_id]
     store["annotations"] = annotations
-    save_annotations(submissionId, store)
+    await save_annotations(submissionId, store)
     render_annotations_to_pdf(submissionId, submission, store.get("annotations", []))
     return {"status": "deleted", "annotationId": annotation_id}
 
@@ -80,13 +80,13 @@ async def save_score(submission_id: str, payload: SubmissionScoreSchema, current
     course, _, _ = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
-    store = load_annotations(submission_id)
+    store = await load_annotations(submission_id)
     store["totalScore"] = payload.totalScore
     store["rubricScores"] = payload.rubricScores
     store["overallFeedback"] = payload.overallFeedback
     if payload.gradedBy:
         store["gradedBy"] = payload.gradedBy
-    save_annotations(submission_id, store)
+    await save_annotations(submission_id, store)
     return {"status": "ok", "scores": store}
 
 
@@ -100,16 +100,16 @@ async def finalize_annotations(
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    store = load_annotations(submission_id)
+    store = await load_annotations(submission_id)
     normalized_annotations = []
     for ann in payload.annotations or []:
         item = dict(ann)
-        item.setdefault("id", f"ann_{uuid.uuid4().hex[:8]}")
+        item.setdefault("id", f"ann_{uuid.uuid4().hex}")
         item.setdefault("timestamp", item.get("timestamp"))
         normalized_annotations.append(item)
 
     store["annotations"] = normalized_annotations
-    save_annotations(submission_id, store)
+    await save_annotations(submission_id, store)
     pdf_path = render_annotations_to_pdf(submission_id, submission, normalized_annotations)
 
     return {

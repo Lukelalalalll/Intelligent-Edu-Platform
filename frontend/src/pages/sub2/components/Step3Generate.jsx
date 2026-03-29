@@ -2,9 +2,21 @@
 import React from 'react';
 import styles from '../../../styles/sub2/sub2.module.css';
 import ReactMarkdown from "react-markdown";
+import HistoryPanel from './HistoryPanel';
 export default function Step3Generate({ states, handlers }) {
     const { exercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, questionBasis, knowledgePoints, savedScreenshots, outputLanguage, generateLoading, generatedQuestions } = states;
     const { setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setQuestionBasis, setKnowledgePoints, setOutputLanguage, goToStep2, generateQuestions, exportQuestions } = handlers;
+
+    const handleReplay = (params) => {
+        if (params.subject) setSubject(params.subject);
+        if (params.question_type) setQuestionType(params.question_type);
+        if (params.num_questions) setNumQuestions(params.num_questions);
+        if (params.difficulty) setDifficulty(params.difficulty);
+        if (params.constraints) setConstraints(Array.isArray(params.constraints) ? params.constraints.join('\n') : '');
+        if (params.output_language) setOutputLanguage(params.output_language);
+        if (params.question_basis) setQuestionBasis(params.question_basis);
+        if (params.knowledge_points) setKnowledgePoints(params.knowledge_points);
+    };
 
     return (
         <div className={styles.stepContainer}>
@@ -108,17 +120,19 @@ export default function Step3Generate({ states, handlers }) {
                 <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px dashed rgba(0,0,0,0.1)' }}>
                     {/* 使用 ReactMarkdown 替换原来的 dangerouslySetInnerHTML */}
                     <div className={styles.markdownContainer}>
-                        <ReactMarkdown>{generatedQuestions.replace(/<br>/g, '\n')}</ReactMarkdown>
+                        <ReactMarkdown>{generatedQuestions}</ReactMarkdown>
                     </div>
 
                     <div className={styles.exportOptions}>
                         {/* 修改导出按钮，只保留导出 MD */}
-                        <button className={`${styles.btn} ${styles.btnSuccess}`} onClick={() => exportQuestions('markdown')}>
+                        <button className={`${styles.btn} ${styles.btnSuccess}`} onClick={() => exportQuestions()}>
                             <i className="fas fa-file-code"></i> Export as Markdown (.md)
                         </button>
                     </div>
                 </div>
             )}
+
+            <HistoryPanel onReplay={handleReplay} />
         </div>
     );
 }

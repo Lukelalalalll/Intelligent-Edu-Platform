@@ -142,8 +142,8 @@ def generate_diagram(promptFile: UploadFile = File(...), user: dict = Depends(ge
                 r"\documentclass[border=1mm]{standalone}\n\usepackage[dvipsnames]{xcolor}\n\usepackage{tikz}\n\begin{document}\n" + tikz_code + r"\n\end{document}\n")
 
         subprocess.run(
-            [r"C:\Program Files\MiKTeX\miktex\bin\x64\pdflatex.exe", '-interaction=nonstopmode', '-output-directory',
-             output_dir, f'{output_filename}.tex'], cwd=output_dir, capture_output=True)
+            [shutil.which("pdflatex") or "pdflatex", '-interaction=nonstopmode', '-output-directory',
+             output_dir, f'{output_filename}.tex'], cwd=output_dir, capture_output=True, timeout=30)
 
         if os.path.exists(pdf_path):
             with open(pdf_path, 'rb') as f:

@@ -9,20 +9,47 @@ import '../styles/base.css';
 // 2. 引入 Module 样式
 import styles from './Layout.module.css';
 
+const NAV_SECTIONS = [
+    {
+        title: 'Main',
+        links: [
+            { to: '/', label: 'Home', icon: 'fa-home' },
+            { to: '/home_student', label: 'Student View', icon: 'fa-graduation-cap' },
+        ],
+    },
+    {
+        title: 'AI Tools',
+        links: [
+            { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
+            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
+        ],
+    },
+    {
+        title: 'Workflow',
+        links: [
+            { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
+            { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
+        ],
+    },
+];
+
+const ADMIN_SECTION = {
+    title: 'Admin',
+    links: [
+        { to: '/admin/dashboard', label: 'Dashboard', icon: 'fa-shield-alt', tone: 'admin' },
+        { to: '/admin/db-console', label: 'Database', icon: 'fa-database', tone: 'database' },
+    ],
+};
+
 export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
-    const [workflowMenuOpen, setWorkflowMenuOpen] = useState(false);
-    const hideWorkflowToggle = ['/login', '/register', '/forgot-password'].includes(location.pathname);
-
-    const workflowLinks = [
-        { to: '/', label: 'Home' },
-        { to: '/home_student', label: 'Home Student' },
-        { to: '/ai-interaction', label: 'AI Fullscreen Workspace' },
-        { to: '/email-agent', label: 'AI Email' },
-        { to: '/?tab=tools', label: 'Tools Workspace' },
-    ];
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        const stored = localStorage.getItem('sidebarOpen');
+        return stored === null ? true : stored === 'true';
+    });
+    const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -31,8 +58,14 @@ export default function Layout() {
         } else {
             setUser(null);
         }
-        setWorkflowMenuOpen(false);
     }, [location]);
+
+    const toggleSidebar = () => {
+        setSidebarOpen((prev) => {
+            localStorage.setItem('sidebarOpen', String(!prev));
+            return !prev;
+        });
+    };
 
     const handleLogout = async (e) => {
         e.preventDefault();
@@ -47,21 +80,51 @@ export default function Layout() {
         }
     };
 
+    const isLinkActive = (to) => {
+        const currentTab = new URLSearchParams(location.search).get('tab');
+        if (to === '/?tab=tools') return location.pathname === '/' && currentTab === 'tools';
+        if (to === '/') return location.pathname === '/' && currentTab !== 'tools';
+        return location.pathname === to;
+    };
+
+    const sections = user?.role === 'admin'
+        ? [
+            ...NAV_SECTIONS,
+            {
+                ...ADMIN_SECTION,
+                links: [
+                    ...ADMIN_SECTION.links,
+                    location.pathname === '/home_student'
+                        ? { to: '/', label: 'Teacher View', icon: 'fa-chalkboard-teacher', tone: 'teacher' }
+                        : { to: '/home_student', label: 'Student View', icon: 'fa-graduation-cap', tone: 'student' },
+                ],
+            },
+        ]
+        : NAV_SECTIONS;
+
+    const getToneClassName = (tone) => {
+        if (tone === 'admin') return styles.sidebarLinkToneAdmin;
+        if (tone === 'database') return styles.sidebarLinkToneDatabase;
+        if (tone === 'teacher') return styles.sidebarLinkToneTeacher;
+        if (tone === 'student') return styles.sidebarLinkToneStudent;
+        return '';
+    };
+
     return (
-        <div className={styles.appShell}>
+        <div className={`${styles.appShell} ${!isAuthPage && user ? styles.withSidebar : ''} ${sidebarOpen ? styles.sidebarExpanded : ''}`}>
+            {/* ── Top Navbar ── */}
             <header className={styles.navbar}>
                 <div className={styles.navContainer}>
                     <div className={styles.navLeft}>
-                        {!hideWorkflowToggle && (
+                        {!isAuthPage && user && (
                             <button
                                 type="button"
-                                className={styles.workflowToggle}
-                                onClick={() => setWorkflowMenuOpen((prev) => !prev)}
-                                aria-label="Toggle workflow menu"
-                                aria-expanded={workflowMenuOpen}
+                                className={styles.sidebarToggle}
+                                onClick={toggleSidebar}
+                                aria-label="Toggle sidebar"
+                                aria-expanded={sidebarOpen}
                             >
-                                <span></span>
-                                <span></span>
+                                <i className={`fas ${sidebarOpen ? 'fa-indent' : 'fa-outdent'}`}></i>
                             </button>
                         )}
 
@@ -75,27 +138,6 @@ export default function Layout() {
                     <div className={styles.navMenu}>
                         {user ? (
                             <div className={styles.userProfile}>
-                                {user.role === 'admin' && (
-                                    <>
-                                        <Link to="/admin/dashboard" className={styles.btnAdmin}>
-                                            <i className="fas fa-shield-alt"></i> <span>Dashboard</span>
-                                        </Link>
-                                        <Link to="/admin/db-console" className={styles.btnDatabase}>
-                                            <i className="fas fa-database"></i> <span>Database</span>
-                                        </Link>
-
-                                        {location.pathname === '/home_student' ? (
-                                            <Link to="/" className={styles.btnTeachView}>
-                                                <i className="fas fa-chalkboard-teacher"></i> <span>Teacher View</span>
-                                            </Link>
-                                        ) : (
-                                            <Link to="/home_student" className={styles.btnStudentView}>
-                                                <i className="fas fa-graduation-cap"></i> <span>Student View</span>
-                                            </Link>
-                                        )}
-                                    </>
-                                )}
-
                                 <span className={styles.welcomeText}>Hi, <strong>{user.username}</strong></span>
 
                                 <Link to="/profile" className={styles.btnProfile}>
@@ -120,51 +162,30 @@ export default function Layout() {
                 </div>
             </header>
 
-            {!hideWorkflowToggle && (
-                <>
-                    <div
-                        className={`${styles.workflowOverlay} ${workflowMenuOpen ? styles.workflowOverlayActive : ''}`}
-                        onClick={() => setWorkflowMenuOpen(false)}
-                    ></div>
-
-                    <aside className={`${styles.workflowDrawer} ${workflowMenuOpen ? styles.workflowDrawerOpen : ''}`}>
-                        <div className={styles.workflowHeader}>
-                            <h3>Workflow Services</h3>
-                            <button
-                                type="button"
-                                className={styles.workflowClose}
-                                onClick={() => setWorkflowMenuOpen(false)}
-                                aria-label="Close workflow menu"
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <nav className={styles.workflowNav}>
-                            {workflowLinks.map((item) => {
-                                const currentTab = new URLSearchParams(location.search).get('tab');
-                                const isToolsLink = item.to === '/?tab=tools';
-                                const isHomeLink = item.to === '/';
-                                const isActive = isToolsLink
-                                    ? location.pathname === '/' && currentTab === 'tools'
-                                    : isHomeLink
-                                        ? location.pathname === '/' && currentTab !== 'tools'
-                                        : location.pathname === item.to;
-
-                                return (
+            {/* ── Persistent Sidebar ── */}
+            {!isAuthPage && user && (
+                <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarCollapsed}`}>
+                    <nav className={styles.sidebarNav}>
+                        {sections.map((section) => (
+                            <div key={section.title} className={styles.sidebarSection}>
+                                <div className={styles.sectionTitle}>
+                                    <span className={styles.sectionTitleText}>{section.title}</span>
+                                </div>
+                                {section.links.map((item) => (
                                     <Link
                                         key={item.to}
                                         to={item.to}
-                                        className={`${styles.workflowLink} ${isActive ? styles.workflowLinkActive : ''}`}
-                                        onClick={() => setWorkflowMenuOpen(false)}
+                                        className={`${styles.sidebarLink} ${getToneClassName(item.tone)} ${isLinkActive(item.to) ? styles.sidebarLinkActive : ''}`}
+                                        title={item.label}
                                     >
-                                        {item.label}
+                                        <i className={`fas ${item.icon}`}></i>
+                                        <span className={styles.linkText}>{item.label}</span>
                                     </Link>
-                                );
-                            })}
-                        </nav>
-                    </aside>
-                </>
+                                ))}
+                            </div>
+                        ))}
+                    </nav>
+                </aside>
             )}
 
             <main className={styles.mainContent}>

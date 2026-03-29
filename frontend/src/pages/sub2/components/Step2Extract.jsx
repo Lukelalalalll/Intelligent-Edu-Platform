@@ -1,10 +1,30 @@
 // frontend/src/pages/sub2/components/Step2Extract.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import styles from '../../../styles/sub2/sub2.module.css';
+import ReactMarkdown from 'react-markdown';
 
 export default function Step2Extract({ states, handlers }) {
-    const { file, fileType, selectedPages, extractPrompt, apiType, extractLoading, exercises, selectedExercises, rawExtractText } = states;
-    const { setExtractPrompt, setApiType, extractContent, toggleExercise, toggleAllExercises, clearExerciseSelection, takeSingleScreenshot, takeBatchScreenshots, goToStep1, goToStep3 } = handlers;
+    const { file, fileType, selectedPages, extractPrompt, extractLoading, exercises, selectedExercises, rawExtractText } = states;
+    const { setExtractPrompt, extractContent, toggleExercise, toggleAllExercises, clearExerciseSelection, updateExerciseText, deleteExercise, takeSingleScreenshot, takeBatchScreenshots, goToStep1, goToStep3 } = handlers;
+
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editBuffer, setEditBuffer] = useState('');
+
+    const startEdit = (index) => {
+        setEditBuffer(exercises[index]?.text || '');
+        setEditingIndex(index);
+    };
+    const saveEdit = () => {
+        if (editingIndex !== null) {
+            updateExerciseText(editingIndex, editBuffer);
+            setEditingIndex(null);
+            setEditBuffer('');
+        }
+    };
+    const cancelEdit = () => {
+        setEditingIndex(null);
+        setEditBuffer('');
+    };
 
     const hasExtractedResult = (Array.isArray(exercises) && exercises.length > 0) || Boolean(rawExtractText);
 
@@ -18,15 +38,6 @@ export default function Step2Extract({ states, handlers }) {
             <div className={styles.formGroup}>
                 <label>Extraction Prompt:</label>
                 <input type="text" className={styles.formControl} value={extractPrompt} onChange={e => setExtractPrompt(e.target.value)} placeholder="e.g.: exercise, question, practice" />
-            </div>
-
-            <div className={styles.formGroup}>
-                <label>API Mode:</label>
-                <select className={styles.formControl} value={apiType} onChange={e => setApiType(e.target.value)}>
-                    <option value="textin">TextIn Cloud API</option>
-                    <option value="deepseek">Local DeepSeek</option>
-                    <option value="zhipu">Zhipu AI GLM-4V (Formula Specialist)</option>
-                </select>
             </div>
 
             <button
@@ -90,11 +101,36 @@ export default function Step2Extract({ states, handlers }) {
                                         </div>
                                     </div>
                                 </div>
-                                <button className={`${styles.btn} ${styles.btnSuccess}`} style={{ padding: '8px 16px', fontSize: '0.9rem' }} onClick={() => takeSingleScreenshot(index)}>
-                                    <i className="fas fa-camera"></i> Screenshot
-                                </button>
+                                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                    <button className={`${styles.btn} ${styles.btnSuccess}`} style={{ padding: '8px 16px', fontSize: '0.9rem' }} onClick={() => takeSingleScreenshot(index)}>
+                                        <i className="fas fa-camera"></i> Screenshot
+                                    </button>
+                                    <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ padding: '8px 16px', fontSize: '0.9rem' }} onClick={() => editingIndex === index ? cancelEdit() : startEdit(index)}>
+                                        <i className={`fas ${editingIndex === index ? 'fa-times' : 'fa-edit'}`}></i> {editingIndex === index ? 'Cancel' : 'Edit'}
+                                    </button>
+                                    <button className={`${styles.btn}`} style={{ padding: '8px 16px', fontSize: '0.9rem', color: '#dc3545', border: '1px solid #dc3545', background: 'transparent' }} onClick={() => deleteExercise(index)}>
+                                        <i className="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div className={styles.exerciseContent} dangerouslySetInnerHTML={{ __html: ex.formattedText }} />
+                            <div className={styles.exerciseContent}>
+                                {editingIndex === index ? (
+                                    <div>
+                                        <textarea
+                                            className={styles.formControl}
+                                            rows="8"
+                                            value={editBuffer}
+                                            onChange={e => setEditBuffer(e.target.value)}
+                                            style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                                        />
+                                        <button className={`${styles.btn} ${styles.btnPrimary}`} style={{ marginTop: '8px', fontSize: '0.85rem' }} onClick={saveEdit}>
+                                            <i className="fas fa-check"></i> Save
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <ReactMarkdown>{ex.text || 'No content'}</ReactMarkdown>
+                                )}
+                            </div>
                             {ex.images && ex.images.length > 0 && (
                                 <div style={{ marginTop: '15px' }}>
                                     {ex.images.map((url, i) => (

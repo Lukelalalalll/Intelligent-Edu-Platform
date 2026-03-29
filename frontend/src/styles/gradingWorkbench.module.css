@@ -33,8 +33,7 @@ main {
 
 .page {
     background: transparent;
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
+    width: 100%;
     padding: 18px 24px 24px;
     min-height: calc(100vh - 72px);
     overflow-x: hidden;
@@ -51,17 +50,65 @@ main {
     margin: 0 auto;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
     padding-bottom: 8px;
+}
+
+.topTabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(15, 118, 110, 0.16);
+    border-radius: 999px;
+    padding: 6px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 14px rgba(15, 118, 110, 0.1);
+}
+
+.topTabBtn {
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.86rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.topTabBtn:hover {
+    background: rgba(15, 118, 110, 0.08);
+    color: #0f766e;
+}
+
+.topTabBtnActive {
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(15, 118, 110, 0.26);
 }
 
 .grid {
     display: grid;
-    grid-template-columns: minmax(900px, 2.2fr) minmax(620px, 1.4fr) minmax(400px, 1fr);
+    grid-template-columns: 2.2fr 1.4fr 1fr;
     gap: 18px;
     align-items: stretch;
     height: 100%;
+    min-height: 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.gridTwoCols {
+    display: grid;
+    grid-template-columns: 1.9fr 1.1fr;
+    gap: 18px;
+    align-items: stretch;
+    height: calc(100% - 58px);
     min-height: 0;
     width: 100%;
     min-width: 0;
@@ -156,6 +203,22 @@ main {
 
 .delay3 {
     animation-delay: 0.4s;
+}
+
+@keyframes paneSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(16px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.rightPaneAnimated {
+    animation: paneSlideIn 0.35s var(--ease-spring) both;
 }
 
 /* =========================================
@@ -651,9 +714,15 @@ main {
     }
 
     .grid {
-        grid-template-columns: minmax(860px, 1.95fr) minmax(580px, 1.25fr) minmax(380px, 1fr);
+        grid-template-columns: 1.8fr 1.2fr 1fr;
+        gap: 14px;
         min-height: 0;
         width: 100%;
+    }
+
+    .gridTwoCols {
+        grid-template-columns: 1.6fr 1fr;
+        gap: 14px;
     }
 
     .chatPane {
@@ -663,7 +732,6 @@ main {
 
 @media (max-width: 1024px) {
     .page {
-        margin-left: 0;
         width: 100%;
         padding: 14px 10px 16px;
     }
@@ -678,6 +746,19 @@ main {
         grid-template-columns: 1fr;
         min-height: auto;
         width: 100%;
+    }
+
+    .gridTwoCols {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        height: auto;
+    }
+
+    .topTabs {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-radius: 16px;
     }
 
     .chatPane {

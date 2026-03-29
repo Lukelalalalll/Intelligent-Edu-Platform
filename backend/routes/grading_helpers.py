@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 import shutil
 from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
@@ -6,6 +8,8 @@ from urllib.parse import quote
 
 import fitz
 from backend.core.database import db
+
+logger = logging.getLogger(__name__)
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
 COURSES_PATH = DATA_ROOT / "courses.json"
@@ -130,33 +134,62 @@ async def find_submission(submission_id: str) -> Tuple[Optional[Dict[str, Any]],
     return None, None, None
 
 
-def load_annotations(submission_id: str) -> Dict[str, Any]:
+ANNOTATIONS_COLLECTION = "annotations"
+
+
+def _default_annotation_store(submission_id: str) -> Dict[str, Any]:
+    return {
+        "submissionId": submission_id,
+        "annotations": [],
+        "totalScore": None,
+        "rubricScores": {},
+        "overallFeedback": "",
+        "cozeAiResponses": [],
+    }
+
+
+async def load_annotations(submission_id: str) -> Dict[str, Any]:
+    """Load annotations from MongoDB, falling back to JSON file for migration."""
     _ensure_directories()
+    coll = db[ANNOTATIONS_COLLECTION]
+    doc = await coll.find_one({"submissionId": submission_id}, {"_id": 0})
+    if doc:
+        return doc
+
+    # Fallback: attempt to read from legacy JSON file and migrate to MongoDB
     ann_path = ANNOTATIONS_DIR / f"{submission_id}.json"
-    if not ann_path.exists():
-        return {
-            "submissionId": submission_id,
-            "annotations": [],
-            "totalScore": None,
-            "rubricScores": {},
-            "overallFeedback": "",
-            "cozeAiResponses": [],
-        }
-    try:
-        return json.loads(ann_path.read_text())
-    except json.JSONDecodeError:
-        return {
-            "submissionId": submission_id,
-            "annotations": [],
-            "totalScore": None,
-            "rubricScores": {},
-            "overallFeedback": "",
-            "cozeAiResponses": [],
-        }
+    if ann_path.exists():
+        try:
+            data = json.loads(ann_path.read_text())
+            data["submissionId"] = submission_id
+            data.pop("_id", None)
+            await coll.update_one(
+                {"submissionId": submission_id},
+                {"$set": data},
+                upsert=True,
+            )
+            logger.info("Migrated annotation %s from JSON to MongoDB", submission_id)
+            return data
+        except (json.JSONDecodeError, Exception):
+            logger.exception("Failed to read legacy annotation file %s", submission_id)
+
+    return _default_annotation_store(submission_id)
 
 
-def save_annotations(submission_id: str, payload: Dict[str, Any]) -> None:
+async def save_annotations(submission_id: str, payload: Dict[str, Any]) -> None:
+    """Save annotations to MongoDB (primary) and JSON file (backup)."""
     _ensure_directories()
+    payload["submissionId"] = submission_id
+    payload.pop("_id", None)
+
+    coll = db[ANNOTATIONS_COLLECTION]
+    await coll.update_one(
+        {"submissionId": submission_id},
+        {"$set": payload},
+        upsert=True,
+    )
+
+    # Keep JSON backup for compatibility
     ann_path = ANNOTATIONS_DIR / f"{submission_id}.json"
     ann_path.write_text(json.dumps(payload, indent=2))
 

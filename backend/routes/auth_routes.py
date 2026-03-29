@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 from backend.core.database import db
 from backend.core.security import create_access_token, get_current_user
-from backend.schemas import AuthSchema, UpdateProfileSchema
+from backend.schemas import AuthSchema, UpdateProfileSchema, TeacherPreferencesSchema
 from backend.config import Config
 from backend.routes.grading_helpers import load_courses
 
@@ -87,6 +87,12 @@ def _student_enrolled_in_course(user: dict, course: dict) -> bool:
 
 @auth_router.post("/register")
 async def register(req: AuthSchema):
+    # Password strength validation
+    if len(req.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not any(c.isdigit() for c in req.password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+
     if await db.users.find_one({"username": req.username}):
         raise HTTPException(status_code=409, detail="Username already exists")
 
@@ -185,3 +191,36 @@ async def get_profile_courses(current_user: dict = Depends(get_current_user)):
         "semester": _current_semester_label(),
         "courses": [],
     }
+
+
+# ─── Teacher Preferences ──────────────────────────────────────────────
+
+DEFAULT_TEACHER_PREFERENCES = {
+    "feedback_style": "concise",
+    "feedback_language": "English",
+    "auto_rag": True,
+    "default_rag_top_k": 4,
+    "email_auto_classify": True,
+    "email_suggest_reply": True,
+}
+
+
+@auth_router.get("/profile/preferences")
+async def get_preferences(current_user: dict = Depends(get_current_user)):
+    """Get teacher AI preferences."""
+    user_doc = await db.users.find_one({"_id": current_user["_id"]})
+    prefs = (user_doc or {}).get("preferences", DEFAULT_TEACHER_PREFERENCES)
+    return {"preferences": {**DEFAULT_TEACHER_PREFERENCES, **prefs}}
+
+
+@auth_router.post("/profile/preferences")
+async def update_preferences(
+    payload: TeacherPreferencesSchema,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update teacher AI preferences."""
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"preferences": payload.model_dump()}},
+    )
+    return {"message": "Preferences updated", "preferences": payload.model_dump()}

@@ -12,6 +12,9 @@ class RagChunkSchema(BaseModel):
     chunk_id: int | None = None
     score: float | None = None
     text: str = ""
+    page_num: int = -1
+    char_start: int = 0
+    char_end: int = 0
 
 
 class RagContextSchema(BaseModel):
@@ -50,7 +53,7 @@ class SaveHighlightsSchema(BaseModel):
     highlights: List[dict]
 
 class AiChatSchema(BaseModel):
-    messages: List[dict]
+    messages: List[dict] = Field(..., max_length=100)
 
 class SearchSvgSchema(BaseModel):
     prompt: str
@@ -64,6 +67,17 @@ class SummarizeRequestSchema(BaseModel):
     num_of_bullets: int = 3
     words_each_bullet: int = 15
 
+
+class ClassifyHighlightsSchema(BaseModel):
+    highlights: List[dict]  # [{"text": str, "id": str, "sectionTitle": str}, ...]
+
+
+class BatchHighlightActionSchema(BaseModel):
+    action: Literal['keep', 'remove']
+    category: Optional[str] = None          # filter by category
+    min_confidence: Optional[float] = None  # filter by confidence threshold
+    highlight_ids: Optional[List[str]] = None  # explicit list of IDs
+
 class GenerateScriptSchema(BaseModel):
     slides_results: List[dict]
     script_style: str = "academic"
@@ -71,13 +85,29 @@ class GenerateScriptSchema(BaseModel):
     generate_word: bool = True
 
 
+class MapToSlidesSchema(BaseModel):
+    summaries: List[dict]
+    available_layouts: Optional[List[str]] = None
+    start_number: int = 1
+
+
+class ValidateSlidesSchema(BaseModel):
+    slides: List[dict]
+
+
+class EvaluateQualitySchema(BaseModel):
+    highlights: List[dict] = []
+    slides: List[dict]
+
+
 # === Sub2 (Question Generator) Schemas ===
 class ExtractQuestionsSchema(BaseModel):
+    task_id: str
     page_numbers: List[int] = []
-    api_type: Optional[str] = None
-    prompt: Optional[str] = None
+    prompt: str = "exercise"
 
 class GenerateQuestionsSchema(BaseModel):
+    task_id: str
     subject: str
     question_type: str
     num_questions: int
@@ -89,7 +119,7 @@ class GenerateQuestionsSchema(BaseModel):
     saved_screenshots: List[str] = []
 
 class ExportQuestionsSchema(BaseModel):
-    format: str = "word"
+    pass  # Export is always markdown; no format field needed
 
 class UploadScreenshotSchema(BaseModel):
     image: str
@@ -176,3 +206,13 @@ class AdminAssignmentSchema(BaseModel):
 
 class AdminDbDocumentSchema(BaseModel):
     document: dict = Field(default_factory=dict)
+
+
+# === Teacher Preferences ===
+class TeacherPreferencesSchema(BaseModel):
+    feedback_style: Literal["concise", "detailed", "constructive"] = "concise"
+    feedback_language: str = "English"
+    auto_rag: bool = True
+    default_rag_top_k: int = 4
+    email_auto_classify: bool = True
+    email_suggest_reply: bool = True

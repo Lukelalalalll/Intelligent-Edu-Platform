@@ -32,6 +32,7 @@ from backend.services.ai_gateway_service import AIGatewayService
 from backend.services.rag_service import LocalRagService
 from backend.utils.pdf_extractor import extract_text_from_pdf
 from backend.config import Config
+from backend.prompts import prompt_registry
 
 ai_gateway_router = APIRouter(prefix="/api/ai", tags=["AIGateway"])
 logger = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ async def _read_submission_text(submission: dict[str, Any], process_pool: Proces
     return await _run_in_process_pool(process_pool, _extract_text_from_pdf_job, str(candidate))
 
 
-def _compact_rag_for_prompt(rag_context: RagContextSchema, max_chunks: int = 3, max_text: int = 600) -> RagContextSchema:
+def _compact_rag_for_prompt(rag_context: RagContextSchema, max_chunks: int = 5, max_text: int = 800) -> RagContextSchema:
     compact_chunks = []
     for chunk in rag_context.retrieved_chunks[:max_chunks]:
         compact_chunks.append(
@@ -125,6 +126,9 @@ def _compact_rag_for_prompt(rag_context: RagContextSchema, max_chunks: int = 3, 
                 "chunk_id": chunk.chunk_id,
                 "score": chunk.score,
                 "text": str(chunk.text or "")[:max_text],
+                "page_num": chunk.page_num,
+                "char_start": chunk.char_start,
+                "char_end": chunk.char_end,
             }
         )
     return RagContextSchema.model_validate(
@@ -135,6 +139,17 @@ def _compact_rag_for_prompt(rag_context: RagContextSchema, max_chunks: int = 3, 
     )
 
 
+def _format_rag_snippets(rag: RagContextSchema) -> str:
+    """Format RAG chunks with citation markers including page numbers."""
+    if not rag.retrieved_chunks:
+        return "No retrieval context available."
+    parts = []
+    for chunk in rag.retrieved_chunks:
+        page_info = f"p.{chunk.page_num}" if chunk.page_num > 0 else "p.?"
+        parts.append(f"[chunk-{chunk.chunk_id}|{page_info}|score={chunk.score}] {chunk.text}")
+    return "\n\n".join(parts)
+
+
 def _build_feedback_prompt(
     selected_text: str,
     assignment_desc: str,
@@ -142,29 +157,14 @@ def _build_feedback_prompt(
     rag_context: RagContextSchema,
 ) -> str:
     rag = _compact_rag_for_prompt(rag_context)
-    rag_snippets = "\n\n".join(
-        f"[chunk-{chunk.chunk_id}|score={chunk.score}] {chunk.text}"
-        for chunk in rag.retrieved_chunks
+    rag_snippets = _format_rag_snippets(rag)
+    return prompt_registry.render(
+        "grading", "feedback",
+        assignment_desc=assignment_desc,
+        rubric_json=json.dumps(rubric, ensure_ascii=False),
+        selected_text=selected_text,
+        rag_snippets=rag_snippets,
     )
-    return f"""
-You are a concise grading assistant.
-
-Assignment:
-{assignment_desc}
-
-Rubric:
-{json.dumps(rubric, ensure_ascii=False)}
-
-Selected student text:
-{selected_text}
-
-Retrieved context from submission:
-{rag_snippets if rag_snippets else 'No retrieval context available.'}
-
-Task:
-Provide actionable feedback focused on clarity, correctness, and rubric alignment.
-Keep it short and specific.
-""".strip()
 
 
 def _build_annotation_prompt(
@@ -174,24 +174,14 @@ def _build_annotation_prompt(
     rag_context: RagContextSchema,
 ) -> str:
     rag = _compact_rag_for_prompt(rag_context)
-    rag_snippets = "\n\n".join(
-        f"[chunk-{chunk.chunk_id}|score={chunk.score}] {chunk.text}"
-        for chunk in rag.retrieved_chunks
+    rag_snippets = _format_rag_snippets(rag)
+    return prompt_registry.render(
+        "grading", "annotation",
+        selected_text=selected_text,
+        assignment_desc=assignment_desc,
+        rubric_json=json.dumps(rubric, ensure_ascii=False),
+        rag_snippets=rag_snippets,
     )
-    return f"""
-The student wrote this section:
-"{selected_text}"
-
-Assignment: {assignment_desc}
-Rubric: {json.dumps(rubric, ensure_ascii=False)}
-
-Retrieved context from submission:
-{rag_snippets if rag_snippets else 'No retrieval context available.'}
-
-Provide a short, constructive feedback comment for this specific section.
-Be specific and actionable.
-Keep it under 100 words.
-""".strip()
 
 
 async def _stream_deepseek_chunks(http_client: httpx.AsyncClient, prompt: str):
@@ -202,7 +192,7 @@ async def _stream_deepseek_chunks(http_client: httpx.AsyncClient, prompt: str):
     body = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": "You are a concise grading assistant."},
+            {"role": "system", "content": prompt_registry.get("grading", "deepseek_system")},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.3,
@@ -304,10 +294,27 @@ async def _build_rag_context_for_request(
 
 
 def _chunk_text(text: str, size: int = STREAM_TEXT_CHUNK_SIZE) -> list[str]:
+    """Split text into chunks for streaming, avoiding mid-word breaks."""
     content = str(text or "")
     if not content:
         return []
-    return [content[i:i + size] for i in range(0, len(content), size)]
+    # For CJK-heavy text or short sizes, character-level chunking is fine
+    if size <= 10:
+        return [content[i:i + size] for i in range(0, len(content), size)]
+    # Word-boundary-aware chunking
+    chunks: list[str] = []
+    words = content.split()
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}" if current else word
+        if len(candidate) > size and current:
+            chunks.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks if chunks else [content]
 
 
 @ai_gateway_router.post("/analyze")
@@ -322,7 +329,7 @@ async def analyze_submission(
     assignment_desc = assignment.get("description", "")
 
     response = await ai_gateway_service.analyze_submission(text=text, rubric=rubric, assignment=assignment_desc)
-    annotations = await asyncio.to_thread(load_annotations, payload.submissionId)
+    annotations = await load_annotations(payload.submissionId)
     return {
         "analysis": response,
         "rubric": rubric,
@@ -372,6 +379,15 @@ async def request_feedback(
         "rag": {
             "enabled": rag_enabled,
             "retrieved_count": rag_context.retrieved_count,
+            "citations": [
+                {
+                    "chunk_id": c.chunk_id,
+                    "page_num": c.page_num,
+                    "score": c.score,
+                    "preview": str(c.text or "")[:120],
+                }
+                for c in rag_context.retrieved_chunks[:3]
+            ],
         },
     }
 
@@ -502,6 +518,15 @@ async def request_annotation(
         "rag": {
             "enabled": bool(payload.useRag),
             "retrieved_count": rag_context.retrieved_count,
+            "citations": [
+                {
+                    "chunk_id": c.chunk_id,
+                    "page_num": c.page_num,
+                    "score": c.score,
+                    "preview": str(c.text or "")[:120],
+                }
+                for c in rag_context.retrieved_chunks[:3]
+            ],
         },
     }
 

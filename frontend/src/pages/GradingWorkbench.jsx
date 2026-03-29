@@ -46,6 +46,7 @@ export default function GradingWorkbench() {
     const [pdfVersion, setPdfVersion] = useState(Date.now());
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [activePane, setActivePane] = useState('assistant');
 
     useEffect(() => {
         const load = async () => {
@@ -153,7 +154,24 @@ export default function GradingWorkbench() {
             )}
 
             <div className={styles.contentShell}>
-                <div className={styles.grid}>
+                <div className={styles.topTabs}>
+                    <button
+                        type="button"
+                        className={`${styles.topTabBtn} ${activePane === 'assistant' ? styles.topTabBtnActive : ''}`}
+                        onClick={() => setActivePane('assistant')}
+                    >
+                        <i className="fas fa-robot" /> PDF + Coze Assistant
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.topTabBtn} ${activePane === 'scorer' ? styles.topTabBtnActive : ''}`}
+                        onClick={() => setActivePane('scorer')}
+                    >
+                        <i className="fas fa-check-circle" /> PDF + Grader
+                    </button>
+                </div>
+
+                <div className={styles.gridTwoCols}>
                     <div className={`${styles.card} ${styles.pane} ${styles.pdfPane} ${styles.animatedElement} ${styles.delay1}`}>
                         <div className={styles.cardHeader}>
                             <div className={styles.tag}><i className="fas fa-file-pdf" /> PDF Viewer</div>
@@ -186,22 +204,26 @@ export default function GradingWorkbench() {
                         />
                     </div>
 
-                    <div className={`${styles.cozeWrapper} ${styles.pane} ${styles.chatPane} ${styles.animatedElement} ${styles.delay2}`}>
-                        <CozeAssistant
-                            submissionId={submissionId}
-                            assignment={detail?.assignment}
-                            rubric={detail?.assignment?.rubric}
-                            onAnalysis={() => { }}
-                            className={styles}
-                        />
-                    </div>
-
-                    <div className={`${styles.card} ${styles.pane} ${styles.scorePane} ${styles.animatedElement} ${styles.delay3}`}>
-                        <RubricPanel
-                            rubric={detail?.assignment?.rubric || {}}
-                            existingScores={detail?.annotationsStore}
-                            onSave={handleSaveScores}
-                        />
+                    <div key={activePane} className={`${styles.pane} ${styles.rightPaneAnimated}`}>
+                        {activePane === 'assistant' ? (
+                            <div className={`${styles.cozeWrapper} ${styles.pane} ${styles.chatPane}`}>
+                                <CozeAssistant
+                                    submissionId={submissionId}
+                                    assignment={detail?.assignment}
+                                    rubric={detail?.assignment?.rubric}
+                                    onAnalysis={() => { }}
+                                    className={styles}
+                                />
+                            </div>
+                        ) : (
+                            <div className={`${styles.card} ${styles.pane} ${styles.scorePane}`}>
+                                <RubricPanel
+                                    rubric={detail?.assignment?.rubric || {}}
+                                    existingScores={detail?.annotationsStore}
+                                    onSave={handleSaveScores}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

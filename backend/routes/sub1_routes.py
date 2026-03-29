@@ -1,15 +1,18 @@
 import os
 import shutil
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+import logging
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from werkzeug.utils import secure_filename
 from backend.services.sub1_service import Sub1Service
 from backend.config import Config
 from backend.core.security import get_current_user
-from backend.schemas import CombineSchema, SaveHighlightsSchema
 import traceback
-from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema, PptProcessSchema
+from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema, PptProcessSchema, ClassifyHighlightsSchema, MapToSlidesSchema, ValidateSlidesSchema, EvaluateQualitySchema
 from backend.utils.sub1.list_plsholders import PPTTemplateManager
+from backend.utils.sub1.task_tracker import TaskTracker, StepStatus, TaskStatus, AuditLogger
+
+logger = logging.getLogger(__name__)
 
 
 sub1_router = APIRouter(prefix="/api/sub1", tags=["Sub1"])
@@ -57,22 +60,44 @@ def get_placeholders(theme_name: str):
 @sub1_router.post("/generate_ppt")
 @public_sub1_router.post("/process-ppt", include_in_schema=False)
 @public_sub1_router.post("/generate_ppt", include_in_schema=False)
-def process_ppt(req: PptProcessSchema):
+async def process_ppt(req: PptProcessSchema, request: Request):
+    import asyncio
+    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+
+    request_id = request.headers.get("X-Request-ID") or None
+    tracker = TaskTracker(request_id=request_id, task_type="ppt_generate")
+
     try:
         if not req.ppt_schema:
             raise ValueError("ppt_schema is required")
 
-        filename = Sub1Service.create_ppt(req.ppt_schema)
+        with tracker.step("ppt_generate", slides_count=len(req.ppt_schema.get("slides", []) if isinstance(req.ppt_schema, dict) else [])):
+            filename = await asyncio.to_thread(Sub1Service.create_ppt, req.ppt_schema)
+
+        tracker.finish(StepStatus.SUCCESS)
+        tracker.result_metadata["filename"] = filename
+
+        # Save checkpoint
+        await CheckpointManager.save(
+            task_id=tracker.request_id,
+            step="ppt_generate",
+            output={"filename": filename, "download_url": f"/sub1/download_ppt/{filename}"},
+            input_data=req.ppt_schema if isinstance(req.ppt_schema, dict) else None,
+        )
+        await tracker.save()
+
         return {
             "status": "success",
             "filename": filename,
-            "download_url": f"/sub1/download_ppt/{filename}"
+            "download_url": f"/sub1/download_ppt/{filename}",
+            "request_id": tracker.request_id
         }
     except ValueError as e:
+        tracker.finish(StepStatus.FAILED)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print("🚨 PPT PROCESS ERROR OCCURRED:")
-        traceback.print_exc()
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] PPT generation failed", tracker.request_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -97,14 +122,17 @@ def download_ppt(filename: str):
     raise HTTPException(status_code=404, detail="File not found")
 
 @sub1_router.post("/parse-md")
-def parse_md(
+async def parse_md(
         file: UploadFile = File(...),
         use_llm: bool = Form(False),
-        user: dict = Depends(get_current_user)
+        user: dict = Depends(get_current_user),
+        request: Request = None
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No selected file")
 
+    request_id = (request.headers.get("X-Request-ID") if request else None)
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="parse")
     try:
         filename = secure_filename(file.filename)
         upload_path = os.path.join(Config.SUB1_UPLOAD_FOLDER, filename)
@@ -116,22 +144,31 @@ def parse_md(
             md_filename = filename.rsplit('.', 1)[0] + ".md"
             target_md_path = os.path.join(Config.SUB1_MD_FOLDER, md_filename)
 
-            from backend.utils.sub1.pdf2md import convert_pdf_to_md
-            convert_pdf_to_md(upload_path, target_md_path)
+            with tracker.step("parse", filename=filename, use_llm=use_llm):
+                from backend.utils.sub1.pdf2md import convert_pdf_to_md
+                convert_pdf_to_md(upload_path, target_md_path)
             parsing_path = target_md_path
         else:
             parsing_path = upload_path
 
-        result = _get_parsed_data_with_cache(parsing_path, use_llm)
+        with tracker.step("parse" if not filename.lower().endswith('.pdf') else "header_extract", filename=filename):
+            result = _get_parsed_data_with_cache(parsing_path, use_llm)
+
+        tracker.finish(StepStatus.SUCCESS)
+        tracker.result_metadata["headers_count"] = len(result.get('headers', []))
+        await tracker.save()
 
         return {
             'status': 'success',
             'filename': filename,
             'headers': result['headers'],
-            'tables': result['tables']
+            'tables': result['tables'],
+            'request_id': tracker.request_id
         }
 
     except Exception as e:
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Parse failed", tracker.request_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -225,6 +262,65 @@ def save_highlights(req: SaveHighlightsSchema, user: dict = Depends(get_current_
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@sub1_router.post("/classify-highlights")
+async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depends(get_current_user)):
+    """
+    Classify raw highlights into structured categories with confidence scores.
+    Returns enriched highlights with: category, confidence, reason.
+    Categories: definition, concept, formula, example, conclusion, caution.
+    """
+    tracker = TaskTracker(user_id=user.get("username", ""), task_type="classify_highlights")
+    try:
+        # Flatten highlights from sections format to flat list
+        flat_highlights = []
+        for section in req.highlights:
+            section_title = section.get("sectionTitle", "")
+            for h in section.get("highlights", []):
+                flat_highlights.append({
+                    "text": h.get("text", ""),
+                    "id": h.get("id", ""),
+                    "sectionTitle": section_title,
+                })
+
+        if not flat_highlights:
+            return {"status": "success", "highlights": [], "stats": {}}
+
+        from backend.utils.sub1.highlight_classifier import HighlightClassifier
+        classifier = HighlightClassifier()
+
+        with tracker.step("classify_highlights", count=len(flat_highlights)):
+            classified = classifier.classify(flat_highlights)
+
+        # Compute stats
+        cat_counts = {}
+        low_confidence = []
+        for h in classified:
+            cat = h.get("category", "concept")
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+            if h.get("confidence", 1.0) < 0.6:
+                low_confidence.append(h["id"])
+
+        tracker.finish(StepStatus.SUCCESS)
+        await tracker.save()
+
+        return {
+            "status": "success",
+            "highlights": classified,
+            "stats": {
+                "total": len(classified),
+                "by_category": cat_counts,
+                "low_confidence_ids": low_confidence,
+                "low_confidence_count": len(low_confidence),
+            },
+            "request_id": tracker.request_id,
+        }
+
+    except Exception as e:
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Highlight classification failed", tracker.request_id)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @sub1_router.get("/download/{filename}")
 def download_combined(filename: str, user: dict = Depends(get_current_user)):
     from fastapi.responses import FileResponse
@@ -236,18 +332,21 @@ def download_combined(filename: str, user: dict = Depends(get_current_user)):
 
 
 @sub1_router.post("/summarize")
-def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends(get_current_user)):
+async def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends(get_current_user), request: Request = None):
     """
-    处理选中的高亮内容，利用 LLM 生成 PPT 的结构化数据
+    处理选中的高亮内容，利用 LLM 生成 PPT 的结构化数据。
+    Supports idempotency: same input returns cached result.
     """
-    import traceback
+    request_id = (request.headers.get("X-Request-ID") if request else None)
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="summarize")
+
+    from backend.utils.sub1.checkpoint_manager import CheckpointManager, _compute_hash
+
     try:
         from backend.utils.sub1.section_summarizer import SectionSummarizer
-        summarizer = SectionSummarizer()
 
         structured_content = []
         for section in req.highlights:
-            # 提取每一个 section 里高亮的文本
             section_text = "\n".join([h.get('text', '') for h in section.get('highlights', [])])
             if section_text:
                 structured_content.append({
@@ -258,36 +357,98 @@ def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends(get_c
         if not structured_content:
             raise Exception("No valid highlights provided for summarization.")
 
-        results = summarizer.summarize(
-            highlights_data=structured_content,
-            num_of_bullets=req.num_of_bullets,
-            words_each_bullet=req.words_each_bullet
-        )
-
-        return {
-            'status': 'success',
-            'results': results
+        # Idempotency check: same input → cached output
+        input_for_hash = {
+            "content": structured_content,
+            "num_of_bullets": req.num_of_bullets,
+            "words_each_bullet": req.words_each_bullet,
         }
+        input_hash = _compute_hash(input_for_hash)
+
+        cached = await CheckpointManager.load_by_hash(step="summarize", input_hash=input_hash)
+        if cached:
+            tracker.mark_skipped("summarize")
+            tracker.finish(StepStatus.SUCCESS)
+            tracker.result_metadata["cache_hit"] = True
+            await tracker.save()
+            return {
+                'status': 'success',
+                'results': cached["output"],
+                'request_id': tracker.request_id,
+                'cached': True
+            }
+
+        summarizer = SectionSummarizer()
+        with tracker.step("summarize", sections_count=len(structured_content),
+                          num_of_bullets=req.num_of_bullets, words_each_bullet=req.words_each_bullet):
+            results = await summarizer.summarize_sections(
+                highlights_data=structured_content,
+                num_of_bullets=req.num_of_bullets,
+                words_each_bullet=req.words_each_bullet
+            )
+
+        # Detect partial failures
+        failed = [r for r in results if r.get("_status") == "failed"]
+        if failed and len(failed) < len(results):
+            overall_status = "partial_success"
+        elif failed and len(failed) == len(results):
+            overall_status = "failed"
+        else:
+            overall_status = "success"
+
+        tracker.finish(StepStatus.SUCCESS if overall_status != "failed" else StepStatus.FAILED)
+        tracker.result_metadata["slides_generated"] = len(results)
+        tracker.result_metadata["slides_failed"] = len(failed)
+
+        # Save checkpoint for idempotency & resume
+        await CheckpointManager.save(
+            task_id=tracker.request_id,
+            step="summarize",
+            output=results,
+            input_data=input_for_hash,
+            user_id=user.get("username", ""),
+        )
+        await tracker.save()
+
+        response = {
+            'status': overall_status,
+            'results': results,
+            'request_id': tracker.request_id
+        }
+        if failed:
+            response['failed_sections'] = [
+                {"slide_number": f["slide_number"], "error": f.get("_error", "unknown")}
+                for f in failed
+            ]
+        return response
 
     except Exception as e:
-        print("🚨 SUMMARIZE ERROR OCCURRED:")
-        traceback.print_exc()
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Summarize failed", tracker.request_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @sub1_router.post("/generate_talking_script")
-def generate_talking_script(req: GenerateScriptSchema, user: dict = Depends(get_current_user)):
+async def generate_talking_script(req: GenerateScriptSchema, user: dict = Depends(get_current_user), request: Request = None):
+    request_id = (request.headers.get("X-Request-ID") if request else None)
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="script_generate")
     try:
-        scripts, filename = Sub1Service.generate_script(
-            slides_results=req.slides_results,
-            style=req.script_style,
-            title=req.presentation_title
-        )
+        with tracker.step("script_generate", slides_count=len(req.slides_results), style=req.script_style):
+            scripts, filename = Sub1Service.generate_script(
+                slides_results=req.slides_results,
+                style=req.script_style,
+                title=req.presentation_title
+            )
+
+        tracker.finish(StepStatus.SUCCESS)
+        tracker.result_metadata["total_scripts"] = len(scripts)
+        await tracker.save()
 
         response_data = {
             'status': 'success',
             'total_scripts': len(scripts),
-            'estimated_total_duration': f"{len(scripts) * 2} minutes"  # 简单的预估，或者如果脚本里有可以替换
+            'estimated_total_duration': f"{len(scripts) * 2} minutes",
+            'request_id': tracker.request_id
         }
 
         # 如果前端要求生成 Word，返回下载链接
@@ -301,8 +462,8 @@ def generate_talking_script(req: GenerateScriptSchema, user: dict = Depends(get_
         return response_data
 
     except Exception as e:
-        print("🚨 SCRIPT GENERATION ERROR OCCURRED:")
-        traceback.print_exc()
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Script generation failed", tracker.request_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 @sub1_router.get("/download_script/{filename}")
@@ -319,13 +480,142 @@ def download_script(filename: str, user: dict = Depends(get_current_user)):
 
 
 @sub1_router.post("/summarize_in_chapters")
-def summarize_chapters(req: SummarizeChaptersSchema, user: dict = Depends(get_current_user)):
+async def summarize_chapters(req: SummarizeChaptersSchema, user: dict = Depends(get_current_user), request: Request = None):
+    request_id = (request.headers.get("X-Request-ID") if request else None)
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="summarize_chapters")
     try:
         from backend.utils.sub1.section_summarizer import SectionSummarizer
         summarizer = SectionSummarizer()
-        # 假设你原来的 summarizer 支持处理带页数限制的章节
-        results = summarizer.summarize(req.chapterData, req.num_of_bullets, req.words_each_bullet)
-        # 这里你可能需要根据 total_pages 对 results 进行切分或扩充的逻辑
-        return {'status': 'success', 'results': results[:req.total_pages]}
+        with tracker.step("summarize", chapters_count=len(req.chapterData), total_pages=req.total_pages):
+            results = await summarizer.summarize_sections(req.chapterData, req.num_of_bullets, req.words_each_bullet)
+        tracker.finish(StepStatus.SUCCESS)
+        await tracker.save()
+        return {'status': 'success', 'results': results[:req.total_pages], 'request_id': tracker.request_id}
     except Exception as e:
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Chapter summarization failed", tracker.request_id)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Template Mapping Endpoints ====================
+
+@sub1_router.post("/map-to-slides")
+def map_summaries_to_slides_endpoint(req: MapToSlidesSchema, user: dict = Depends(get_current_user)):
+    """
+    Map structured summaries to PPT-ready slide data (decoupled from summarization).
+    Template mapping failures can be retried independently without re-running summarization.
+    """
+    try:
+        from backend.utils.sub1.template_mapper import map_summaries_to_slides, validate_presentation
+        slides = map_summaries_to_slides(
+            summaries=req.summaries,
+            available_layouts=req.available_layouts,
+            start_number=req.start_number,
+        )
+        quality = validate_presentation(slides)
+        return {
+            "status": "success",
+            "slides": slides,
+            "quality_report": quality,
+        }
+    except Exception as e:
+        logger.exception("Template mapping failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.post("/validate-slides")
+def validate_slides_endpoint(req: ValidateSlidesSchema, user: dict = Depends(get_current_user)):
+    """Pre-generation quality check on slide data. Returns issues and quality score."""
+    try:
+        from backend.utils.sub1.template_mapper import validate_presentation
+        report = validate_presentation(req.slides)
+        return report
+    except Exception as e:
+        logger.exception("Slide validation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.post("/evaluate-quality")
+def evaluate_quality(req: EvaluateQualitySchema, user: dict = Depends(get_current_user)):
+    """
+    Evaluate the quality of generated slides against source highlights.
+    Returns: coverage, consistency, readability, hallucination, structural scores.
+    """
+    from backend.utils.sub1.quality_evaluator import evaluate_pipeline_run
+
+    if not req.slides:
+        raise HTTPException(status_code=400, detail="slides list is required")
+
+    report = evaluate_pipeline_run(highlights=req.highlights, slides=req.slides)
+    return report
+
+
+# ==================== Observability Endpoints ====================
+
+@sub1_router.get("/pipeline-stats")
+async def get_pipeline_stats(hours: int = 24, user: dict = Depends(get_current_user)):
+    """Get Sub1 pipeline aggregate stats: success rate, avg/P95 latency, error breakdown."""
+    try:
+        stats = await TaskTracker.get_stats(hours=hours)
+        return stats
+    except Exception as e:
+        logger.exception("Failed to get pipeline stats")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@sub1_router.get("/task/{request_id}")
+async def get_task_timeline(request_id: str, user: dict = Depends(get_current_user)):
+    """Get step-level timeline for a specific task by request_id."""
+    doc = await TaskTracker.get_task(request_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return doc
+
+
+# ==================== Checkpoint & Resume Endpoints ====================
+
+@sub1_router.get("/checkpoints/{task_id}")
+async def get_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
+    """List all checkpoints for a task (without large output blobs)."""
+    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    cps = await CheckpointManager.get_task_checkpoints(task_id)
+    resumable = await CheckpointManager.get_resumable_step(task_id)
+    return {"task_id": task_id, "checkpoints": cps, "last_successful_step": resumable}
+
+
+@sub1_router.get("/checkpoint/{task_id}/{step}")
+async def get_checkpoint_output(task_id: str, step: str, user: dict = Depends(get_current_user)):
+    """Load a specific checkpoint's full output."""
+    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    doc = await CheckpointManager.load(task_id=task_id, step=step)
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"No checkpoint for task={task_id} step={step}")
+    return doc
+
+
+@sub1_router.delete("/checkpoints/{task_id}")
+async def delete_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
+    """Delete all checkpoints for a task."""
+    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    count = await CheckpointManager.delete_task(task_id)
+    return {"deleted": count}
+
+
+# ==================== Audit Log Endpoints ====================
+
+@sub1_router.get("/audit-log")
+async def get_audit_log(
+    hours: int = 24,
+    action: str = None,
+    limit: int = 100,
+    user: dict = Depends(get_current_user)
+):
+    """Query Sub1 audit logs. Supports filtering by action and time range."""
+    from backend.utils.sub1.task_tracker import AuditLogger
+    logs = await AuditLogger.get_logs(
+        user_id=None,  # show all for now (admin view)
+        action=action,
+        hours=hours,
+        limit=limit,
+    )
+    return {"logs": logs, "count": len(logs)}

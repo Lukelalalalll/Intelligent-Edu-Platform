@@ -24,6 +24,8 @@ export default function HighlighterEntry() {
 
     const [highlights, setHighlights] = useState([]);
     const highlightIdCounter = useRef(0);
+    const [classifying, setClassifying] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState('all');
 
     // 1. 初始化拉取数据
     useEffect(() => {
@@ -204,6 +206,51 @@ export default function HighlighterEntry() {
         if (existingHighlights.length > 0) markdownViewRef.current.normalize();
     };
 
+    const classifyHighlights = async () => {
+        if (highlights.length === 0) {
+            setStatusMsg('No highlights to classify');
+            setTimeout(() => setStatusMsg(''), 2000);
+            return;
+        }
+        setClassifying(true);
+        setStatusMsg('Classifying highlights...');
+        try {
+            const organizedData = sections.map(sec => ({
+                sectionTitle: sec.title,
+                highlights: highlights.filter(h => h.sectionTitle === sec.title).map(h => ({ text: h.text, id: h.id }))
+            })).filter(sec => sec.highlights.length > 0);
+
+            const res = await client.post('/sub1/classify-highlights', { highlights: organizedData });
+            const classified = res.data.highlights || [];
+
+            // Merge classification into existing highlights
+            setHighlights(prev => prev.map(h => {
+                const match = classified.find(c => c.id === h.id);
+                if (match) {
+                    return { ...h, category: match.category, confidence: match.confidence, reason: match.reason };
+                }
+                return h;
+            }));
+
+            const stats = res.data.stats || {};
+            setStatusMsg(`Classified ${stats.total || 0} highlights (${stats.low_confidence_count || 0} low confidence)`);
+            setTimeout(() => setStatusMsg(''), 4000);
+        } catch (error) {
+            setStatusMsg('Classification failed: ' + (error?.response?.data?.detail || error.message));
+            setTimeout(() => setStatusMsg(''), 3000);
+        } finally {
+            setClassifying(false);
+        }
+    };
+
+    const removeByCategoryOrConfidence = (category = null, maxConfidence = null) => {
+        setHighlights(prev => prev.filter(h => {
+            if (category && h.category === category) return false;
+            if (maxConfidence != null && h.confidence != null && h.confidence < maxConfidence) return false;
+            return true;
+        }));
+    };
+
     const saveHighlights = async () => {
         if (highlights.length === 0) {
             setStatusMsg('No highlights to save');
@@ -238,5 +285,8 @@ export default function HighlighterEntry() {
         markdownViewRef={markdownViewRef}
         showSection={showSection} toggleView={toggleView}
         saveHighlights={saveHighlights} removeHighlight={removeHighlight}
+        classifyHighlights={classifyHighlights} classifying={classifying}
+        categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+        removeByCategoryOrConfidence={removeByCategoryOrConfidence}
     />;
 }
