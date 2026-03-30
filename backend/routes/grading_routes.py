@@ -1,7 +1,10 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.schemas import AnnotationPayload, SubmissionScoreSchema, FinalizeAnnotationsSchema
-from backend.routes.grading_helpers import load_annotations, save_annotations, find_submission, render_annotations_to_pdf
+from backend.routes.grading_helpers import (
+    load_annotations, save_annotations, find_submission, render_annotations_to_pdf,
+    upsert_grade, update_submission, find_submission_v2,
+)
 from backend.core.security import get_current_user
 
 
@@ -29,7 +32,7 @@ def _can_access_course(course: dict, user: dict) -> bool:
 
 
 async def _ensure_submission(submission_id: str):
-    course, assignment, submission = await find_submission(submission_id)
+    course, assignment, submission = await find_submission_v2(submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     return course, assignment, submission
@@ -80,6 +83,8 @@ async def save_score(submission_id: str, payload: SubmissionScoreSchema, current
     course, _, _ = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
         raise HTTPException(status_code=403, detail="Permission denied")
+
+    # Persist to annotation store (legacy compat)
     store = await load_annotations(submission_id)
     store["totalScore"] = payload.totalScore
     store["rubricScores"] = payload.rubricScores
@@ -87,6 +92,19 @@ async def save_score(submission_id: str, payload: SubmissionScoreSchema, current
     if payload.gradedBy:
         store["gradedBy"] = payload.gradedBy
     await save_annotations(submission_id, store)
+
+    # Persist to v2 grades collection & update submission status
+    grader_id = payload.gradedBy or str(current_user.get("_id") or current_user.get("id") or "")
+    try:
+        await upsert_grade(submission_id, grader_id, {
+            "totalScore": payload.totalScore,
+            "rubricScores": payload.rubricScores,
+            "overallFeedback": payload.overallFeedback,
+            "gradingStatus": "draft",
+        })
+    except Exception:
+        pass  # v2 write is best-effort during migration
+
     return {"status": "ok", "scores": store}
 
 
@@ -111,6 +129,21 @@ async def finalize_annotations(
     store["annotations"] = normalized_annotations
     await save_annotations(submission_id, store)
     pdf_path = render_annotations_to_pdf(submission_id, submission, normalized_annotations)
+
+    # Mark grade as final and submission as graded
+    grader_id = str(current_user.get("_id") or current_user.get("id") or "")
+    try:
+        existing_grade = store.get("totalScore")
+        if existing_grade is not None:
+            await upsert_grade(submission_id, grader_id, {
+                "totalScore": store.get("totalScore", 0),
+                "rubricScores": store.get("rubricScores", {}),
+                "overallFeedback": store.get("overallFeedback", ""),
+                "gradingStatus": "final",
+            })
+        await update_submission(submission_id, {"status": "graded"})
+    except Exception:
+        pass  # v2 write is best-effort during migration
 
     return {
         "status": "ok",

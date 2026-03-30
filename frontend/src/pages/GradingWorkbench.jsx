@@ -52,18 +52,37 @@ export default function GradingWorkbench() {
         const load = async () => {
             try {
                 setLoading(true);
-                const data = await teacherApi.getSubmissionDetail(submissionId);
+                // Try v2 bundle first; fall back to legacy detail only on 404
+                let data;
+                try {
+                    data = await teacherApi.getSubmissionDetailV2(submissionId);
+                } catch (v2Err) {
+                    if (v2Err.response && v2Err.response.status !== 404) {
+                        throw v2Err;
+                    }
+                    data = await teacherApi.getSubmissionDetail(submissionId);
+                }
                 setDetail({
                     course: data.course || presetCourse,
                     assignment: data.assignment || presetAssignment,
                     submission: data.submission,
                     annotationsStore: data.annotations,
+                    grade: data.grade || null,
                 });
                 setAnnotations(data.annotations?.annotations || []);
                 setHasUnsavedLabelChanges(false);
                 setPdfVersion(Date.now());
             } catch (err) {
-                setError('Failed to load submission');
+                const status = err?.response?.status;
+                if (status === 401) {
+                    setError('Session expired — please log in again.');
+                } else if (status === 403) {
+                    setError('You do not have permission to view this submission.');
+                } else if (status === 404) {
+                    setError('Submission not found.');
+                } else {
+                    setError('Failed to load submission.');
+                }
             } finally {
                 setLoading(false);
             }
@@ -138,6 +157,10 @@ export default function GradingWorkbench() {
                 rubricScores,
                 overallFeedback,
             });
+            setDetail((prev) => prev ? {
+                ...prev,
+                grade: { totalScore, rubricScores, overallFeedback },
+            } : prev);
         } catch (err) {
             setError('Failed to save scores');
         }
@@ -219,7 +242,7 @@ export default function GradingWorkbench() {
                             <div className={`${styles.card} ${styles.pane} ${styles.scorePane}`}>
                                 <RubricPanel
                                     rubric={detail?.assignment?.rubric || {}}
-                                    existingScores={detail?.annotationsStore}
+                                    existingScores={detail?.grade || detail?.annotationsStore}
                                     onSave={handleSaveScores}
                                 />
                             </div>

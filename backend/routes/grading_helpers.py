@@ -2,11 +2,13 @@ import asyncio
 import json
 import logging
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, List
 from urllib.parse import quote
 
 import fitz
+from bson import ObjectId
 from backend.core.database import db
 
 logger = logging.getLogger(__name__)
@@ -325,3 +327,284 @@ def render_annotations_to_pdf(submission_id: str, submission: Dict[str, Any], an
 
     shutil.copy2(out_pdf, source_pdf)
     return get_source_pdf_web_path(submission)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2 — Flat domain model helpers
+# These operate on individual MongoDB collections instead of the legacy
+# nested "courses" document.
+# ═══════════════════════════════════════════════════════════════════════
+
+def _oid(doc: Dict[str, Any]) -> str:
+    """Stringify the Mongo _id field."""
+    return str(doc.get("_id", ""))
+
+
+def _utcnow() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+# ── Course Sections ───────────────────────────────────────────────────
+
+async def create_course_section(data: Dict[str, Any]) -> Dict[str, Any]:
+    data.pop("_id", None)
+    result = await db.course_sections.insert_one(data)
+    doc = await db.course_sections.find_one({"_id": result.inserted_id})
+    doc["id"] = _oid(doc)
+    return doc
+
+
+async def get_course_section(section_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.course_sections.find_one({"_id": ObjectId(section_id)})
+    if doc:
+        doc["id"] = _oid(doc)
+    return doc
+
+
+async def list_course_sections(filter_query: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    docs = await db.course_sections.find(filter_query or {}).to_list(length=5000)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+async def update_course_section(section_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    data.pop("_id", None)
+    await db.course_sections.update_one({"_id": ObjectId(section_id)}, {"$set": data})
+    return await get_course_section(section_id)
+
+
+async def delete_course_section(section_id: str) -> bool:
+    result = await db.course_sections.delete_one({"_id": ObjectId(section_id)})
+    if result.deleted_count:
+        await db.enrollments.delete_many({"courseSectionId": section_id})
+        await db.assignments.delete_many({"courseSectionId": section_id})
+    return result.deleted_count > 0
+
+
+# ── Enrollments ───────────────────────────────────────────────────────
+
+async def enroll_user(course_section_id: str, user_id: str, role: str = "student") -> Dict[str, Any]:
+    doc = {
+        "courseSectionId": course_section_id,
+        "userId": user_id,
+        "roleInCourse": role,
+    }
+    await db.enrollments.update_one(
+        {"courseSectionId": course_section_id, "userId": user_id},
+        {"$set": doc},
+        upsert=True,
+    )
+    return doc
+
+
+async def unenroll_user(course_section_id: str, user_id: str) -> bool:
+    result = await db.enrollments.delete_one({"courseSectionId": course_section_id, "userId": user_id})
+    return result.deleted_count > 0
+
+
+async def list_enrollments(course_section_id: Optional[str] = None, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    q: Dict[str, Any] = {}
+    if course_section_id:
+        q["courseSectionId"] = course_section_id
+    if user_id:
+        q["userId"] = user_id
+    docs = await db.enrollments.find(q).to_list(length=5000)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+# ── Assignments ───────────────────────────────────────────────────────
+
+async def create_assignment(data: Dict[str, Any]) -> Dict[str, Any]:
+    data.pop("_id", None)
+    result = await db.assignments.insert_one(data)
+    doc = await db.assignments.find_one({"_id": result.inserted_id})
+    doc["id"] = _oid(doc)
+    return doc
+
+
+async def get_assignment(assignment_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.assignments.find_one({"_id": ObjectId(assignment_id)})
+    if doc:
+        doc["id"] = _oid(doc)
+    return doc
+
+
+async def list_assignments(course_section_id: str) -> List[Dict[str, Any]]:
+    docs = await db.assignments.find({"courseSectionId": course_section_id}).to_list(length=5000)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+async def update_assignment(assignment_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    data.pop("_id", None)
+    await db.assignments.update_one({"_id": ObjectId(assignment_id)}, {"$set": data})
+    return await get_assignment(assignment_id)
+
+
+async def delete_assignment(assignment_id: str) -> bool:
+    result = await db.assignments.delete_one({"_id": ObjectId(assignment_id)})
+    return result.deleted_count > 0
+
+
+# ── Submissions ───────────────────────────────────────────────────────
+
+async def create_submission(data: Dict[str, Any]) -> Dict[str, Any]:
+    data.pop("_id", None)
+    data.setdefault("status", "pending")
+    data.setdefault("submittedAt", _utcnow())
+    data.setdefault("attemptNo", 1)
+    result = await db.submissions.insert_one(data)
+    doc = await db.submissions.find_one({"_id": result.inserted_id})
+    doc["id"] = _oid(doc)
+    return doc
+
+
+async def get_submission(submission_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.submissions.find_one({"_id": ObjectId(submission_id)})
+    if doc:
+        doc["id"] = _oid(doc)
+    return doc
+
+
+async def list_submissions(assignment_id: str) -> List[Dict[str, Any]]:
+    docs = await db.submissions.find({"assignmentId": assignment_id}).to_list(length=5000)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+async def list_submissions_for_student(student_id: str) -> List[Dict[str, Any]]:
+    docs = await db.submissions.find({"studentId": student_id}).to_list(length=5000)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+async def update_submission(submission_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    data.pop("_id", None)
+    await db.submissions.update_one({"_id": ObjectId(submission_id)}, {"$set": data})
+    return await get_submission(submission_id)
+
+
+# ── Documents (PDF asset management) ─────────────────────────────────
+
+async def create_document(data: Dict[str, Any]) -> Dict[str, Any]:
+    data.pop("_id", None)
+    result = await db.documents.insert_one(data)
+    doc = await db.documents.find_one({"_id": result.inserted_id})
+    doc["id"] = _oid(doc)
+    return doc
+
+
+async def get_document(document_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.documents.find_one({"_id": ObjectId(document_id)})
+    if doc:
+        doc["id"] = _oid(doc)
+    return doc
+
+
+async def list_documents(owner_id: str, source_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    q: Dict[str, Any] = {"ownerId": owner_id}
+    if source_type:
+        q["sourceType"] = source_type
+    docs = await db.documents.find(q).to_list(length=500)
+    for d in docs:
+        d["id"] = _oid(d)
+    return docs
+
+
+# ── Grades ────────────────────────────────────────────────────────────
+
+async def upsert_grade(submission_id: str, grader_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    data.pop("_id", None)
+    data["submissionId"] = submission_id
+    data["graderId"] = grader_id
+    data.setdefault("gradedAt", _utcnow())
+    data.setdefault("gradingStatus", "draft")
+
+    await db.grades.update_one(
+        {"submissionId": submission_id},
+        {"$set": data},
+        upsert=True,
+    )
+    doc = await db.grades.find_one({"submissionId": submission_id})
+    doc["id"] = _oid(doc)
+
+    # Sync submission status
+    status = "graded" if data.get("gradingStatus") == "final" else "grading"
+    await db.submissions.update_one(
+        {"_id": ObjectId(submission_id)},
+        {"$set": {"status": status, "latestGradeId": doc["id"]}},
+    )
+    return doc
+
+
+async def get_grade(submission_id: str) -> Optional[Dict[str, Any]]:
+    doc = await db.grades.find_one({"submissionId": submission_id})
+    if doc:
+        doc["id"] = _oid(doc)
+    return doc
+
+
+# ── Submission Bundle (for workbench) ─────────────────────────────────
+
+async def get_submission_bundle(submission_id: str) -> Optional[Dict[str, Any]]:
+    """Load the full bundle needed by the grading workbench in a single call."""
+    submission = await get_submission(submission_id)
+    if not submission:
+        return None
+
+    assignment = await get_assignment(submission["assignmentId"]) if submission.get("assignmentId") else None
+    course = None
+    if assignment and assignment.get("courseSectionId"):
+        course = await get_course_section(assignment["courseSectionId"])
+
+    annotation_store = await load_annotations(submission_id)
+    grade = await get_grade(submission_id)
+
+    # Resolve PDF path — try v2 document first, fall back to legacy pdfPath
+    doc_record = None
+    if submission.get("latestDocumentId"):
+        doc_record = await get_document(submission["latestDocumentId"])
+
+    # Render existing annotations onto the PDF so the viewer shows them
+    annotations_list = annotation_store.get("annotations", [])
+    rendered_pdf_path = render_annotations_to_pdf(submission_id, submission, annotations_list)
+    if rendered_pdf_path:
+        submission = {**submission, "pdfPath": rendered_pdf_path}
+    elif not submission.get("pdfPath"):
+        submission = {**submission, "pdfPath": get_source_pdf_web_path(submission)}
+
+    return {
+        "course": course,
+        "assignment": assignment,
+        "submission": submission,
+        "annotations": annotation_store,
+        "grade": grade,
+        "document": doc_record,
+    }
+
+
+# ── Legacy compatibility: find_submission using v2 collections ─────
+
+async def find_submission_v2(submission_id: str) -> Tuple[Optional[Dict], Optional[Dict], Optional[Dict]]:
+    """v2 version: look up from flat collections first, fall back to legacy."""
+    try:
+        sub = await db.submissions.find_one({"_id": ObjectId(submission_id)})
+    except Exception:
+        sub = None
+
+    if sub:
+        sub["id"] = _oid(sub)
+        assignment = await get_assignment(sub["assignmentId"]) if sub.get("assignmentId") else None
+        course = None
+        if assignment and assignment.get("courseSectionId"):
+            course = await get_course_section(assignment["courseSectionId"])
+        return course, assignment, sub
+
+    # Fall back to legacy nested search
+    return await find_submission(submission_id)
