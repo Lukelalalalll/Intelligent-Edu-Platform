@@ -220,30 +220,29 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
 
 
 @sub2_router.post("/export_questions")
-def export_questions_route(request: Request, user: dict = Depends(get_current_user)):
+def export_questions_route(request: Request, task_id: str = Query(None), user: dict = Depends(get_current_user)):
     """Export generated questions as a Markdown file download.
-    Accepts optional task_id in JSON body to identify which task's output to export.
+    Accepts optional task_id query param to identify which task's output to export.
+    Falls back to most-recent task in session if task_id is not provided.
     """
     try:
-        body = {}
-        # Try to parse body for task_id; export also works via session fallback
-        import asyncio
-        try:
-            # Sync route — FastAPI already parsed the body if Content-Type is JSON
-            pass
-        except Exception:
-            pass
-
-        # Look through all tasks to find the latest one with a generated path
         generated_path = None
         tasks = request.session.get('sub2_tasks', {})
-        # Prefer the most recently modified task that has a generated file
-        for tid in reversed(list(tasks.keys())):
-            t = tasks[tid]
-            gp = t.get('generated_questions_path')
+
+        # Prefer explicit task_id if provided
+        if task_id and task_id in tasks:
+            gp = tasks[task_id].get('generated_questions_path')
             if gp and os.path.exists(gp):
                 generated_path = gp
-                break
+
+        # Fall back to most-recent task with a generated file
+        if not generated_path:
+            for tid in reversed(list(tasks.keys())):
+                t = tasks[tid]
+                gp = t.get('generated_questions_path')
+                if gp and os.path.exists(gp):
+                    generated_path = gp
+                    break
 
         if not generated_path:
             return JSONResponse(content={'error': 'No generated questions found'}, status_code=400)
@@ -321,8 +320,13 @@ async def get_generation_detail(history_id: str, user: dict = Depends(get_curren
     """Return full generation result for replay/review."""
     try:
         from bson import ObjectId
+        from bson.errors import InvalidId
+        try:
+            oid = ObjectId(history_id)
+        except (InvalidId, Exception):
+            return JSONResponse(content={'success': False, 'error': 'Invalid history ID format'}, status_code=400)
         doc = await db.sub2_generation_history.find_one({
-            '_id': ObjectId(history_id),
+            '_id': oid,
             'user_id': user.get('id', ''),
         })
         if not doc:

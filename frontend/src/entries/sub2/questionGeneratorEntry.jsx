@@ -221,7 +221,7 @@ export default function QuestionGeneratorEntry() {
 
     const exportQuestions = async () => {
         try {
-            const blob = await sub2Api.exportQuestions();
+            const blob = await sub2Api.exportQuestions(taskId);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
             a.download = 'questions.md';
