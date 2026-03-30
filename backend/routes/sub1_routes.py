@@ -58,8 +58,6 @@ def get_placeholders(theme_name: str):
 
 @sub1_router.post("/process-ppt")
 @sub1_router.post("/generate_ppt")
-@public_sub1_router.post("/process-ppt", include_in_schema=False)
-@public_sub1_router.post("/generate_ppt", include_in_schema=False)
 async def process_ppt(req: PptProcessSchema, request: Request):
     import asyncio
     from backend.utils.sub1.checkpoint_manager import CheckpointManager
@@ -102,7 +100,6 @@ async def process_ppt(req: PptProcessSchema, request: Request):
 
 
 @sub1_router.get("/download_ppt/{filename}")
-@public_sub1_router.get("/download_ppt/{filename}", include_in_schema=False)
 def download_ppt(filename: str):
     from fastapi.responses import FileResponse
 
