@@ -23,6 +23,49 @@ async def ensure_indexes() -> None:
 
         await db.annotations.create_index("submissionId", unique=True, background=True)
 
+        # --- v2 flat domain model collections ---
+        await db.course_sections.create_index("courseCode", background=True)
+        await db.course_sections.create_index("ownerTeacherId", background=True)
+        await db.course_sections.create_index(
+            [("courseCode", 1), ("semester", 1)],
+            background=True,
+        )
+
+        await db.enrollments.create_index(
+            [("courseSectionId", 1), ("userId", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.enrollments.create_index("userId", background=True)
+
+        await db.assignments.create_index("courseSectionId", background=True)
+        await db.assignments.create_index(
+            [("courseSectionId", 1), ("dueAt", -1)],
+            background=True,
+        )
+
+        await db.submissions.create_index(
+            [("assignmentId", 1), ("studentId", 1)],
+            background=True,
+        )
+        await db.submissions.create_index("studentId", background=True)
+        await db.submissions.create_index(
+            [("status", 1), ("submittedAt", -1)],
+            background=True,
+        )
+
+        await db.documents.create_index(
+            [("ownerId", 1), ("sourceType", 1)],
+            background=True,
+        )
+
+        await db.grades.create_index("submissionId", background=True)
+        await db.grades.create_index(
+            [("graderId", 1), ("gradedAt", -1)],
+            background=True,
+        )
+
+        # --- legacy courses collection (kept for backward compat during migration) ---
         await db.courses.create_index("courseId", background=True)
 
         await db.llm_telemetry.create_index(
@@ -91,6 +134,27 @@ async def ensure_indexes() -> None:
         await db.sub2_generation_history.create_index(
             "created_at",
             expireAfterSeconds=90 * 24 * 3600,
+            background=True,
+        )
+
+        # Email classification cache indexes
+        await db.email_classifications.create_index("messageId", unique=True, background=True)
+        # TTL: auto-delete classification cache after 7 days
+        await db.email_classifications.create_index(
+            "cachedAt",
+            expireAfterSeconds=7 * 24 * 3600,
+            background=True,
+        )
+
+        # --- AI Chat Sessions ---
+        await db.ai_chat_sessions.create_index(
+            [("userId", 1), ("updatedAt", -1)],
+            background=True,
+        )
+        # TTL: auto-delete sessions not updated for 180 days
+        await db.ai_chat_sessions.create_index(
+            "updatedAt",
+            expireAfterSeconds=180 * 24 * 3600,
             background=True,
         )
 

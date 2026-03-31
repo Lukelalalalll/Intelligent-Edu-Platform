@@ -127,19 +127,35 @@ class Config:
         RAG_VECTORSTORE_DIR,
     ]
 
+    # Comma-separated allowed origins for CORS (read from env, defaults to dev)
+    ALLOWED_ORIGINS = [
+        o.strip() for o in
+        os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+        if o.strip()
+    ]
+
     @classmethod
     def validate_startup(cls) -> list[str]:
-        """Check critical config on startup. Returns list of warnings."""
+        """Check critical config on startup. Returns list of warnings.
+        Raises SystemExit for insecure defaults in non-dev environments."""
         import logging
         _logger = logging.getLogger("config.validation")
         warnings: list[str] = []
 
-        if cls.SECRET_KEY in ('your-secret-key', ''):
-            warnings.append("SECURITY: SECRET_KEY is using default value. Set SECRET_KEY env variable!")
-            _logger.warning(warnings[-1])
-        if cls.JWT_SECRET_KEY in ('jwt-secret-key-change-this-in-prod', ''):
-            warnings.append("SECURITY: JWT_SECRET_KEY is using default value. Set JWT_SECRET_KEY env variable!")
-            _logger.warning(warnings[-1])
+        _insecure_defaults = {'your-secret-key', 'jwt-secret-key-change-this-in-prod', ''}
+        if cls.SECRET_KEY in _insecure_defaults:
+            msg = "CRITICAL: SECRET_KEY is using an insecure default. Set SECRET_KEY env variable!"
+            warnings.append(msg)
+            _logger.critical(msg)
+        if cls.JWT_SECRET_KEY in _insecure_defaults:
+            msg = "CRITICAL: JWT_SECRET_KEY is using an insecure default. Set JWT_SECRET_KEY env variable!"
+            warnings.append(msg)
+            _logger.critical(msg)
+
+        # In production, refuse to start with insecure keys
+        if os.getenv('ENV', 'development').lower() in ('production', 'prod'):
+            if cls.SECRET_KEY in _insecure_defaults or cls.JWT_SECRET_KEY in _insecure_defaults:
+                raise SystemExit("Refusing to start: SECRET_KEY and JWT_SECRET_KEY must be set in production.")
 
         optional_keys = {
             'DEEPSEEK_API_KEY': cls.DEEPSEEK_API_KEY,
