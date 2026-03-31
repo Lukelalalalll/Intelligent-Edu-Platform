@@ -1,14 +1,23 @@
 # backend/routes/auth_routes.py
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Form
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from backend.core.database import db
-from backend.core.security import create_access_token, get_current_user
+from backend.core.security import create_access_token, get_current_user, teacher_owns_course, student_enrolled_in_course
 from backend.schemas import AuthSchema, UpdateProfileSchema, TeacherPreferencesSchema
 from backend.config import Config
-from backend.routes.grading_helpers import load_courses
+from backend.routes.grading_helpers import (
+    load_courses,
+    # v2
+    list_enrollments, list_course_sections, get_course_section,
+    list_assignments, get_assignment, list_submissions_for_student, create_submission,
+    create_document,
+)
 
+limiter = Limiter(key_func=get_remote_address)
 auth_router = APIRouter(prefix="/api", tags=["Auth"])
 
 
@@ -38,55 +47,16 @@ def _course_summary(course: dict) -> dict:
 
 
 def _teacher_owns_course(user: dict, course: dict) -> bool:
-    user_id = str(user.get("id") or user.get("_id") or "")
-    teacher_id = str(course.get("teacherId") or "")
-    if user_id and teacher_id and user_id == teacher_id:
-        return True
-
-    teacher_course_ids = {str(cid).strip() for cid in (user.get("teacherCourseIds") or []) if str(cid).strip()}
-    course_id = str(course.get("courseId") or course.get("id") or "").strip()
-    if course_id and course_id in teacher_course_ids:
-        return True
-
-    legacy_teacher = str(course.get("teacher") or "").strip().lower()
-    username = str(user.get("username") or "").strip().lower()
-    return bool(legacy_teacher and username and legacy_teacher == username)
+    return teacher_owns_course(user, course)
 
 
 def _student_enrolled_in_course(user: dict, course: dict) -> bool:
-    student_id_candidates = {
-        str(v).strip()
-        for v in [user.get("studentId"), user.get("id"), user.get("_id")]
-        if v is not None and str(v).strip()
-    }
-    username = str(user.get("username") or "").strip().lower()
-    email = str(user.get("email") or "").strip().lower()
-
-    for item in course.get("studentList", []):
-        if isinstance(item, str) and item.strip() in student_id_candidates:
-            return True
-        if isinstance(item, dict):
-            sid = str(item.get("studentId") or "").strip()
-            if sid and sid in student_id_candidates:
-                return True
-            if username and str(item.get("username") or "").strip().lower() == username:
-                return True
-            if email and str(item.get("email") or "").strip().lower() == email:
-                return True
-
-    for assignment in course.get("assignments", []):
-        for submission in assignment.get("submissions", []):
-            sid = str(submission.get("studentId") or "").strip()
-            if sid and sid in student_id_candidates:
-                return True
-            if username and str(submission.get("studentName") or "").strip().lower() == username:
-                return True
-
-    return False
+    return student_enrolled_in_course(user, course)
 
 
 @auth_router.post("/register")
-async def register(req: AuthSchema):
+@limiter.limit("10/minute")
+async def register(request: Request, req: AuthSchema):
     # Password strength validation
     if len(req.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
@@ -108,7 +78,8 @@ async def register(req: AuthSchema):
 
 
 @auth_router.post("/login")
-async def login(req: AuthSchema, response: Response):
+@limiter.limit("10/minute")
+async def login(request: Request, req: AuthSchema, response: Response):
     user = await db.users.find_one({"username": req.username})
     if not user or not check_password_hash(user['password_hash'], req.password):
         raise HTTPException(status_code=401, detail="Wrong username or password")
@@ -224,3 +195,153 @@ async def update_preferences(
         {"$set": {"preferences": payload.model_dump()}},
     )
     return {"message": "Preferences updated", "preferences": payload.model_dump()}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# v2 — Student-facing endpoints
+# ═══════════════════════════════════════════════════════════════════════
+
+@auth_router.get("/v2/profile/courses")
+async def get_profile_courses_v2(current_user: dict = Depends(get_current_user)):
+    """Return courses for the current user using v2 enrollment model."""
+    user_id = str(current_user.get("_id") or current_user.get("id") or "")
+    role = current_user.get("role", "student")
+
+    enrollments = await list_enrollments(user_id=user_id)
+
+    if not enrollments:
+        # Fall back to legacy lookup
+        return await get_profile_courses(current_user)
+
+    from bson import ObjectId as OID
+    section_ids = [e["courseSectionId"] for e in enrollments]
+    courses = []
+    for sid in section_ids:
+        try:
+            course = await get_course_section(sid)
+            if course:
+                assignments = await list_assignments(sid)
+                course["assignmentCount"] = len(assignments)
+                # Get enrollment count for this section
+                section_enrollments = await list_enrollments(course_section_id=sid)
+                course["studentCount"] = sum(1 for e in section_enrollments if e.get("roleInCourse") == "student")
+                # Include the role for this user
+                user_enrollment = next((e for e in enrollments if e["courseSectionId"] == sid), None)
+                course["roleInCourse"] = user_enrollment.get("roleInCourse", "student") if user_enrollment else "student"
+                courses.append(course)
+        except Exception:
+            pass
+
+    return {
+        "role": role,
+        "semester": _current_semester_label(),
+        "courses": courses,
+    }
+
+
+@auth_router.get("/v2/student/assignments/{course_section_id}")
+async def get_student_assignments(course_section_id: str, current_user: dict = Depends(get_current_user)):
+    """Return assignments for a course with the student's submission status."""
+    user_id = str(current_user.get("_id") or current_user.get("id") or "")
+    assignments = await list_assignments(course_section_id)
+    student_subs = await list_submissions_for_student(user_id)
+    sub_by_assignment = {}
+    for s in student_subs:
+        sub_by_assignment[s.get("assignmentId", "")] = s
+
+    result = []
+    for a in assignments:
+        a_id = a.get("id", "")
+        sub = sub_by_assignment.get(a_id)
+        result.append({
+            **a,
+            "submission": sub,
+            "hasSubmitted": sub is not None,
+            "status": sub.get("status", "not_submitted") if sub else "not_submitted",
+            "totalScore": sub.get("totalScore") if sub else None,
+        })
+
+    return {"assignments": result}
+
+
+@auth_router.post("/v2/student/submit")
+async def student_submit(
+    assignmentId: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Student uploads a PDF submission."""
+    import hashlib
+    from pathlib import Path
+
+    user_id = str(current_user.get("_id") or current_user.get("id") or "")
+    username = current_user.get("username", "student")
+
+    # --- Validation: assignment must exist ---
+    assignment = await get_assignment(assignmentId)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # --- Validation: student must be enrolled in the course ---
+    course_section_id = assignment.get("courseSectionId", "")
+    if course_section_id:
+        enrollments = await list_enrollments(course_section_id=course_section_id, user_id=user_id)
+        if not enrollments:
+            raise HTTPException(status_code=403, detail="You are not enrolled in this course")
+
+    # Validate file
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    # Read file content
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:  # 50MB limit
+        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+
+    # Save to disk
+    upload_dir = Path(__file__).resolve().parents[1] / "uploads" / "submissions"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_hash = hashlib.sha256(content).hexdigest()[:16]
+    safe_filename = f"{user_id}_{assignmentId}_{file_hash}_{file.filename}"
+    file_path = upload_dir / safe_filename
+    file_path.write_bytes(content)
+
+    storage_key = f"uploads/submissions/{safe_filename}"
+
+    # Create document record
+    doc_record = await create_document({
+        "ownerType": "submission",
+        "ownerId": "",  # Will be updated after submission is created
+        "storageKey": storage_key,
+        "filename": file.filename,
+        "mimeType": file.content_type or "application/pdf",
+        "pageCount": 0,
+        "checksum": hashlib.sha256(content).hexdigest(),
+        "sourceType": "original",
+    })
+
+    # Create submission
+    submission = await create_submission({
+        "assignmentId": assignmentId,
+        "studentId": user_id,
+        "studentName": username,
+        "status": "pending",
+        "attemptNo": 1,
+        "latestDocumentId": doc_record["id"],
+        "pdfPath": storage_key,
+    })
+
+    # Update document ownerId
+    from backend.core.database import db as _db
+    from bson import ObjectId as OID
+    await _db.documents.update_one(
+        {"_id": OID(doc_record["id"])},
+        {"$set": {"ownerId": submission["id"]}},
+    )
+
+    return {
+        "message": "Submission uploaded successfully",
+        "submission": submission,
+        "document": doc_record,
+    }

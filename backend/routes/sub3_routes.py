@@ -13,13 +13,14 @@ import requests
 import re
 import unicodedata
 from backend.core.security import get_current_user
+from backend.core.safe_requests import safe_get
 from backend.config import Config
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
 sub3_router = APIRouter(prefix="/api/sub3", tags=["Sub3"])
 
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "044337510b5beac32d438e65310aa839d5f7772866604d662b70e7c291512f")
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
 MAGIC_API_URL = os.getenv("MAGIC_API_URL", "https://api.magicstudio.com/api/ai-art-generator")
 
 def _slugify(text: str, fallback: str = "image") -> str:
@@ -229,7 +230,7 @@ def api_export_zip(req: ExportImagesSchema, user: dict = Depends(get_current_use
                         continue
                 elif img_src.startswith('http'):
                     try:
-                        resp = requests.get(img_src, timeout=10)
+                        resp = safe_get(img_src, timeout=10)
                         if resp.status_code == 200:
                             img_data = resp.content
                     except Exception:
@@ -268,7 +269,7 @@ def api_export_pdf(req: ExportImagesSchema, user: dict = Depends(get_current_use
                     img_data = base64.b64decode(base64_data)
                     img_buffer = BytesIO(img_data)
                 elif img_src.startswith('http'):
-                    resp = requests.get(img_src, timeout=10)
+                    resp = safe_get(img_src, timeout=10)
                     if resp.status_code == 200:
                         img_buffer = BytesIO(resp.content)
                 if img_buffer:

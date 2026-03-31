@@ -228,6 +228,12 @@ async def generate_notes(
     except Exception as e:
         logger.exception("Notes generation failed")
         raise HTTPException(500, f"Generation failed: {str(e)}")
+    finally:
+        try:
+            if os.path.exists(save_path):
+                os.remove(save_path)
+        except OSError:
+            logger.warning("Failed to clean up temp file: %s", save_path)
 
 
 @sub5_router.post("/generate-flashcards")
@@ -249,7 +255,14 @@ async def generate_flashcards(
             raise HTTPException(400, "File too large (max 20MB)")
         with open(save_path, "wb") as f:
             f.write(content)
-        source_text = _extract_pdf_text(save_path)
+        try:
+            source_text = _extract_pdf_text(save_path)
+        finally:
+            try:
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+            except OSError:
+                logger.warning("Failed to clean up temp file: %s", save_path)
     elif text and text.strip():
         source_text = text.strip()[:MAX_PDF_TEXT_CHARS]
     else:

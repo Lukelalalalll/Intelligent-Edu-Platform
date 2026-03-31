@@ -58,11 +58,13 @@ async def save_courses(data: Dict[str, Any]) -> None:
     courses = normalized.get("courses", [])
     courses_coll = db[COURSES_COLLECTION]
     await courses_coll.delete_many({})
-    if courses:
-        await courses_coll.insert_many(courses)
 
     # Keep a JSON snapshot for backup and compatibility with existing scripts.
+    # Write BEFORE insert_many because Motor mutates dicts in-place (adds _id).
     COURSES_PATH.write_text(json.dumps(normalized, indent=2))
+
+    if courses:
+        await courses_coll.insert_many(courses)
 
 
 def _normalize_student_list(course: Dict[str, Any]) -> list[Dict[str, Any]]:

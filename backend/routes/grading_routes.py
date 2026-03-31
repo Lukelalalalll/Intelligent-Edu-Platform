@@ -5,30 +5,14 @@ from backend.routes.grading_helpers import (
     load_annotations, save_annotations, find_submission, render_annotations_to_pdf,
     upsert_grade, update_submission, find_submission_v2,
 )
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, can_access_course
 
 
 grading_router = APIRouter(prefix="/api/teacher", tags=["Grading"])
 
 
 def _can_access_course(course: dict, user: dict) -> bool:
-    if user.get("role") == "admin":
-        return True
-    if user.get("role") != "teacher":
-        return False
-
-    user_id = str(user.get("id") or user.get("_id") or "")
-    if str(course.get("teacherId") or "") == user_id:
-        return True
-
-    bound_courses = {str(cid).strip() for cid in (user.get("teacherCourseIds") or []) if str(cid).strip()}
-    course_id = str(course.get("courseId") or course.get("id") or "").strip()
-    if course_id in bound_courses:
-        return True
-
-    legacy_teacher = str(course.get("teacher") or "").strip().lower()
-    username = str(user.get("username") or "").strip().lower()
-    return bool(legacy_teacher and username and legacy_teacher == username)
+    return can_access_course(course, user)
 
 
 async def _ensure_submission(submission_id: str):

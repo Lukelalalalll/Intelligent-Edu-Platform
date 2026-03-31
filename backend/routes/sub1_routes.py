@@ -1,8 +1,11 @@
 import os
+import re
 import shutil
 import logging
+import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from werkzeug.utils import secure_filename
 from backend.services.sub1_service import Sub1Service
 from backend.config import Config
@@ -326,6 +329,170 @@ def download_combined(filename: str, user: dict = Depends(get_current_user)):
         if os.path.exists(path):
             return FileResponse(path)
     raise HTTPException(status_code=404, detail="File not found")
+
+
+@sub1_router.get("/load_highlights/{filename}")
+def load_highlights(filename: str, user: dict = Depends(get_current_user)):
+    """加载某个 combined 文件的已保存高亮（flat JSON 列表）"""
+    try:
+        highlights = Sub1Service.load_highlights(filename)
+        return {"highlights": highlights}
+    except Exception as e:
+        logger.exception("Failed to load highlights for %s", filename)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Coze Outline Generation ──
+
+OUTLINE_SYSTEM_PROMPT = """You are an expert educational content writer.
+Given a topic or keywords, generate well-structured content in Markdown format, suitable for creating a presentation (PPT).
+
+Requirements:
+- Use ## for major sections (3-6 sections)
+- Use - bullet points for key sub-points under each section
+- Each section body: 3-5 concise bullet points
+- Write in the same language as the input keywords
+- Start directly with the first ## heading, no preamble
+- Total length: 300-600 words"""
+
+
+class CozeOutlineRequest(BaseModel):
+    keywords: str
+
+
+class ProcessTextRequest(BaseModel):
+    text: str
+    title: str
+
+
+async def _call_coze_text_sub1(system_prompt: str, user_content: str) -> str:
+    """Call Coze v3 chat API with polling (mirrors sub5 pattern)."""
+    api_key = Config.COZE_TOKEN
+    bot_id = Config.COZE_BOT_ID
+    api_root = (Config.COZE_API_ROOT or "https://api.coze.com").rstrip("/")
+
+    if not api_key or not bot_id:
+        raise HTTPException(503, "Coze API key or bot id not configured")
+
+    full_prompt = f"{system_prompt}\n\n{user_content}"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "bot_id": bot_id,
+        "user_id": "sub1_outline_gen",
+        "stream": False,
+        "additional_messages": [
+            {"role": "user", "content": full_prompt, "content_type": "text"}
+        ],
+    }
+
+    timeout_seconds = float(getattr(Config, 'COZE_REQUEST_TIMEOUT_SECONDS', 120))
+    poll_interval = float(getattr(Config, 'COZE_POLL_INTERVAL_SECONDS', 2))
+    poll_max_attempts = int(getattr(Config, 'COZE_POLL_MAX_ATTEMPTS', 60))
+
+    async with httpx.AsyncClient(timeout=timeout_seconds) as http_client:
+        start_resp = await http_client.post(f"{api_root}/v3/chat", headers=headers, json=payload)
+        if start_resp.status_code != 200:
+            logger.error("Coze start chat error %s: %s", start_resp.status_code, start_resp.text[:500])
+            raise HTTPException(502, f"AI service error: {start_resp.status_code}")
+
+        start_data = start_resp.json().get("data", {})
+        chat_id = start_data.get("id")
+        conversation_id = start_data.get("conversation_id")
+        if not chat_id or not conversation_id:
+            raise HTTPException(502, "AI service returned invalid chat identifiers")
+
+        import asyncio
+        for _ in range(poll_max_attempts):
+            retrieve_resp = await http_client.get(
+                f"{api_root}/v3/chat/retrieve",
+                headers=headers,
+                params={"chat_id": chat_id, "conversation_id": conversation_id},
+            )
+            if retrieve_resp.status_code != 200:
+                raise HTTPException(502, f"AI service error: {retrieve_resp.status_code}")
+
+            status = retrieve_resp.json().get("data", {}).get("status")
+            if status == "completed":
+                message_resp = await http_client.get(
+                    f"{api_root}/v3/chat/message/list",
+                    headers=headers,
+                    params={"chat_id": chat_id, "conversation_id": conversation_id},
+                )
+                if message_resp.status_code != 200:
+                    raise HTTPException(502, f"AI service error: {message_resp.status_code}")
+
+                messages = message_resp.json().get("data", [])
+                for msg in messages:
+                    if msg.get("type") in {"answer", "assistant_answer"} and msg.get("content"):
+                        return str(msg.get("content"))
+                    if msg.get("role") == "assistant" and msg.get("content"):
+                        return str(msg.get("content"))
+                raise HTTPException(502, "AI service returned no content")
+
+            if status == "failed":
+                raise HTTPException(502, "AI service generation failed")
+
+            await asyncio.sleep(poll_interval)
+
+        raise HTTPException(504, "AI service timed out")
+
+
+@sub1_router.post("/coze-generate-outline")
+async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(get_current_user)):
+    """Use Coze AI to generate a structured Markdown outline from keywords."""
+    keywords = req.keywords.strip()
+    if not keywords:
+        raise HTTPException(400, "Keywords must not be empty")
+    try:
+        text = await _call_coze_text_sub1(OUTLINE_SYSTEM_PROMPT, keywords)
+        return {"text": text}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Coze outline generation failed")
+        raise HTTPException(500, str(e))
+
+
+@sub1_router.post("/process-text")
+async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current_user)):
+    """Convert plain text/markdown into a combined MD file (section-break format)."""
+    text = req.text.strip()
+    title = req.title.strip() or "untitled"
+    if not text:
+        raise HTTPException(400, "Text must not be empty")
+
+    # Sanitize title for filename
+    safe_title = re.sub(r'[^\w\s-]', '', title)[:60].strip().replace(' ', '_') or 'untitled'
+
+    # Split text by ## headings into sections
+    parts = re.split(r'(?=^## )', text, flags=re.MULTILINE)
+    sections = []
+    for part in parts:
+        stripped = part.strip()
+        if not stripped:
+            continue
+        # If part doesn't start with ##, wrap it as default section
+        if not stripped.startswith('## '):
+            sections.append(f"## Overview\n{stripped}")
+        else:
+            sections.append(stripped)
+
+    if not sections:
+        raise HTTPException(400, "Could not parse any sections from the text")
+
+    # Write combined file with SECTION_BREAK format
+    filename = f"combined_{safe_title}.md"
+    os.makedirs(Config.SUB1_MD_FOLDER, exist_ok=True)
+    filepath = os.path.join(Config.SUB1_MD_FOLDER, filename)
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write("\n===SECTION_BREAK===\n".join(sections))
+
+    logger.info("process-text: wrote %d sections to %s", len(sections), filename)
+    return {"filename": filename, "sections": len(sections)}
 
 
 @sub1_router.post("/summarize")

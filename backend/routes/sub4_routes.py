@@ -2,19 +2,23 @@
 import os
 import shutil
 import base64
-import uuid
 import re
+import logging
+import httpx
 import requests
-import subprocess
 import fitz
 from io import BytesIO
+from typing import Optional
 from docx import Document
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, Response
 from werkzeug.utils import secure_filename
 from backend.core.security import get_current_user
+from backend.core.safe_requests import safe_get
 from backend.schemas import SearchSvgSchema, DownloadSvgSchema
 from backend.config import Config
+
+logger = logging.getLogger(__name__)
 
 sub4_router = APIRouter(prefix="/api/sub4", tags=["Sub4"])
 
@@ -114,43 +118,192 @@ def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
 
 
 @sub4_router.post("/generate_diagram")
-def generate_diagram(promptFile: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    _, output_dir = get_sub4_paths()
-    prompt_text = promptFile.file.read().decode('utf-8')
-    output_filename = f'diagram_{str(uuid.uuid4())[:8]}'
-    tex_path = os.path.join(output_dir, f'{output_filename}.tex')
-    pdf_path = os.path.join(output_dir, f'{output_filename}.pdf')
+async def generate_diagram(
+    promptFile: Optional[UploadFile] = File(None),
+    promptText: str = Form(default=''),
+    user: dict = Depends(get_current_user),
+):
+    """Generate SVG diagram from uploaded text file OR direct text input via DeepSeek."""
+    # Resolve prompt: file takes priority, then text field
+    text = ''
+    if promptFile and promptFile.filename:
+        raw = await promptFile.read()
+        text = raw.decode('utf-8', errors='replace').strip()
+    if not text:
+        text = (promptText or '').strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Please provide a text file or enter text content")
 
     try:
-        headers = {'Authorization': f'Bearer {Config.DEEPSEEK_API_KEY}', 'Content-Type': 'application/json'}
-        chat_prompt = f"Generate a LaTeX diagram using TikZ for: {prompt_text}. Only return the code between ```latex and ```."
+        headers = {
+            'Authorization': f'Bearer {Config.DEEPSEEK_API_KEY}',
+            'Content-Type': 'application/json',
+        }
+        chat_prompt = (
+            "You are an expert SVG diagram creator. Given the following description, generate a clean, "
+            "well-structured SVG diagram.\n\n"
+            "CRITICAL RULES:\n"
+            "1. Output ONLY raw SVG XML code (starting with <svg and ending with </svg>). "
+            "   Do NOT include any markdown fences, explanation, or surrounding text.\n"
+            "2. The SVG MUST be valid XML. All special characters in text content must be XML-escaped: "
+            "   use &amp; for &, &lt; for <, &gt; for >, &quot; for \". NEVER use bare & in text.\n"
+            "3. LAYOUT: Use a large viewBox (at least 800x600). Leave generous spacing between elements "
+            "   (minimum 40px gap). Stack layers vertically with at least 80px between rows. "
+            "   Do NOT overlap any text, boxes, arrows, or labels. Offset side annotations so they "
+            "   don't cover main content.\n"
+            "4. TEXT: Use font-family='Arial, sans-serif', font-size >= 14px. Keep labels short. "
+            "   Use <text> elements positioned well inside their parent shapes with sufficient padding.\n"
+            "5. STYLE: Use soft, professional colors. Add rounded rectangles (rx/ry). "
+            "   Use <marker> arrowheads for connections. Add subtle drop shadows via <filter> if useful.\n"
+            "6. ARROWS: Use <line> or <path> with marker-end. Keep arrows clearly separated from text.\n\n"
+            f"Description:\n{text}"
+        )
 
-        resp = requests.post('https://api.deepseek.com/chat/completions',
-                             json={'model': 'deepseek-chat', 'messages': [{'role': 'user', 'content': chat_prompt}]},
-                             headers=headers, timeout=40)
-        resp.raise_for_status()
-        latex_code = resp.json()['choices'][0]['message']['content']
+        async with httpx.AsyncClient(timeout=60) as http_client:
+            resp = await http_client.post(
+                'https://api.deepseek.com/chat/completions',
+                json={
+                    'model': 'deepseek-chat',
+                    'messages': [{'role': 'user', 'content': chat_prompt}],
+                },
+                headers=headers,
+            )
+            resp.raise_for_status()
 
-        if '```latex' in latex_code: latex_code = latex_code.split('```latex')[1].split('```')[0].strip()
-        latex_code = re.sub(r'\\documentclass.*?{.*?}|\\usepackage.*|\\begin{document}|\\end{document}', '', latex_code,
-                            flags=re.DOTALL)
-        match = re.search(r'\\begin{tikzpicture}.*?\\end{tikzpicture}', latex_code, re.DOTALL)
-        tikz_code = match.group(0) if match else latex_code
+        content = resp.json()['choices'][0]['message']['content']
 
-        with open(tex_path, 'w', encoding='utf-8') as f:
-            f.write(
-                r"\documentclass[border=1mm]{standalone}\n\usepackage[dvipsnames]{xcolor}\n\usepackage{tikz}\n\begin{document}\n" + tikz_code + r"\n\end{document}\n")
+        # Extract SVG from possible markdown fences
+        if '```svg' in content:
+            content = content.split('```svg')[1].split('```')[0].strip()
+        elif '```xml' in content:
+            content = content.split('```xml')[1].split('```')[0].strip()
+        elif '```' in content:
+            content = content.split('```')[1].split('```')[0].strip()
 
-        subprocess.run(
-            [shutil.which("pdflatex") or "pdflatex", '-interaction=nonstopmode', '-output-directory',
-             output_dir, f'{output_filename}.tex'], cwd=output_dir, capture_output=True, timeout=30)
+        # Validate it contains SVG
+        if '<svg' not in content.lower():
+            raise ValueError("AI did not return valid SVG content")
 
-        if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                return {'pdf_base64': base64.b64encode(f.read()).decode('utf-8')}
-        raise Exception("LaTeX compilation failed")
+        # Extract just the <svg>...</svg> portion
+        svg_match = re.search(r'<svg[\s\S]*?</svg>', content, re.IGNORECASE)
+        if not svg_match:
+            raise ValueError("Could not extract SVG element from AI response")
+
+        svg_code = svg_match.group(0)
+
+        # Sanitize: fix unescaped & in text content (causes "xmlParseEntityRef: no name")
+        # Replace & that is NOT already part of a valid XML entity (&amp; &lt; &gt; &quot; &apos; &#nnn;)
+        svg_code = re.sub(
+            r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)',
+            '&amp;',
+            svg_code
+        )
+
+        return {'svg': svg_code}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Diagram generation failed")
+        raise HTTPException(status_code=500, detail=f"Diagram generation failed: {str(e)}")
+
+
+@sub4_router.post("/coze_generate_text")
+async def coze_generate_text(
+    keywords: str = Form(...),
+    user: dict = Depends(get_current_user),
+):
+    """Use Coze AI to expand keywords into a detailed diagram description."""
+    keywords = keywords.strip()
+    if not keywords:
+        raise HTTPException(status_code=400, detail="Keywords are required")
+
+    api_key = Config.COZE_TOKEN
+    bot_id = Config.COZE_BOT_ID
+    api_root = (Config.COZE_API_ROOT or "https://api.coze.com").rstrip("/")
+
+    if not api_key or not bot_id:
+        raise HTTPException(503, "Coze API key or bot id not configured")
+
+    system_prompt = (
+        "You are an expert educator and diagram designer. "
+        "Given keywords or a topic, write a detailed English description (150-300 words) "
+        "that can be used to generate an educational diagram. "
+        "Include: the main components/nodes, their relationships/connections, "
+        "hierarchy or flow direction, and any important labels. "
+        "Be specific about structure (e.g., tree, flowchart, cycle, layered). "
+        "Output ONLY the description text, no titles or formatting."
+    )
+
+    full_prompt = f"{system_prompt}\n\nKeywords/Topic: {keywords}"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "bot_id": bot_id,
+        "user_id": "sub4_diagram_gen",
+        "stream": False,
+        "additional_messages": [
+            {"role": "user", "content": full_prompt, "content_type": "text"}
+        ],
+    }
+
+    timeout_seconds = float(Config.COZE_REQUEST_TIMEOUT_SECONDS)
+    poll_interval = float(Config.COZE_POLL_INTERVAL_SECONDS)
+    poll_max_attempts = int(Config.COZE_POLL_MAX_ATTEMPTS)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout_seconds) as http_client:
+            # Start chat
+            start_resp = await http_client.post(
+                f"{api_root}/v3/chat", headers=headers, json=payload
+            )
+            if start_resp.status_code != 200:
+                logger.error("Coze start error %s: %s", start_resp.status_code, start_resp.text[:500])
+                raise HTTPException(502, "AI service error")
+
+            start_data = start_resp.json().get("data", {})
+            chat_id = start_data.get("id")
+            conversation_id = start_data.get("conversation_id")
+            if not chat_id or not conversation_id:
+                raise HTTPException(502, "AI service returned invalid chat identifiers")
+
+            # Poll for completion
+            import asyncio
+            for _ in range(poll_max_attempts):
+                retrieve_resp = await http_client.get(
+                    f"{api_root}/v3/chat/retrieve",
+                    headers=headers,
+                    params={"chat_id": chat_id, "conversation_id": conversation_id},
+                )
+                status = retrieve_resp.json().get("data", {}).get("status")
+                if status == "completed":
+                    break
+                if status == "failed":
+                    raise HTTPException(502, "AI service chat failed")
+                await asyncio.sleep(poll_interval)
+            else:
+                raise HTTPException(504, "AI service timed out")
+
+            # Fetch messages
+            msg_resp = await http_client.get(
+                f"{api_root}/v3/chat/message/list",
+                headers=headers,
+                params={"chat_id": chat_id, "conversation_id": conversation_id},
+            )
+            messages = msg_resp.json().get("data", [])
+            for m in messages:
+                if m.get("role") == "assistant" and m.get("type") == "answer":
+                    return {"text": m.get("content", "").strip()}
+
+            raise HTTPException(502, "No answer received from AI service")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Coze text generation failed")
+        raise HTTPException(status_code=500, detail=f"Text generation failed: {str(e)}")
 
 
 @sub4_router.post("/download_svg")
@@ -166,7 +319,7 @@ def fetch_external_svg(url: str, user: dict = Depends(get_current_user)):
         if not isinstance(url, str) or not re.match(r"^https?://", url.strip(), re.IGNORECASE):
             raise HTTPException(status_code=400, detail="Invalid URL")
 
-        resp = requests.get(
+        resp = safe_get(
             url,
             headers={
                 'User-Agent': 'Mozilla/5.0',

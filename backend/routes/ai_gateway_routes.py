@@ -19,7 +19,7 @@ from backend.core.dependencies import (
     get_langchain_rag_service,
     get_process_pool,
 )
-from backend.routes.grading_helpers import find_submission, load_annotations
+from backend.routes.grading_helpers import find_submission, load_annotations, find_submission_v2
 from backend.schemas import (
     AnalyzeSubmissionSchema,
     AnnotateSchema,
@@ -99,15 +99,20 @@ def _normalize_rag_top_k(raw_top_k: int | None) -> int:
 
 def _resolve_submission_pdf_path(submission: dict[str, Any]) -> Path:
     pdf_path = str((submission or {}).get("pdfPath", ""))
+    root_dir = Path(__file__).resolve().parents[2]
     candidate = Path(pdf_path)
     if candidate.is_absolute():
-        return candidate
-    root_dir = Path(__file__).resolve().parents[2]
-    return root_dir / pdf_path
+        resolved = candidate.resolve()
+    else:
+        resolved = (root_dir / pdf_path).resolve()
+    # Prevent path traversal — resolved path must be under the project root
+    if not resolved.is_relative_to(root_dir):
+        raise HTTPException(status_code=403, detail="Access denied: path outside project root")
+    return resolved
 
 
 async def _get_submission_bundle(submission_id: str):
-    course, assignment, submission = await asyncio.to_thread(find_submission, submission_id)
+    course, assignment, submission = await find_submission_v2(submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     return course, assignment, submission

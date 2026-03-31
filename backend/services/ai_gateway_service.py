@@ -70,70 +70,108 @@ class AIGatewayService:
         return context_text[:15000]
 
     async def _chat_v3(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:
-        context_text = self._serialize_context(context)
-        context_block = f"\n\nContext:\n{context_text}" if context_text else ""
-        full_prompt = f"{message}{context_block}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+
+        # Build additional_messages as real multi-turn conversation
+        additional_msgs: list[Dict[str, str]] = []
+
+        # Add chat history as proper alternating user/assistant turns
+        chat_history = (context or {}).get("chat_history") or []
+        for turn in chat_history:
+            role = str(turn.get("role", "")).strip().lower() if isinstance(turn, dict) else ""
+            content = str(turn.get("content", "")).strip()[:2000] if isinstance(turn, dict) else ""
+            if role in ("user", "assistant") and content:
+                additional_msgs.append({"role": role, "content": content, "content_type": "text"})
+
+        # Current user message — merge system_memory into it (not a separate msg)
+        system_memory = (context or {}).get("system_memory", "").strip()
+        final_message = f"[{system_memory}]\n\n{message}" if system_memory else message
+        additional_msgs.append({"role": "user", "content": final_message, "content_type": "text"})
+
         payload: Dict[str, Any] = {
             "bot_id": self.bot_id,
-            "user_id": "teacher_grading",
-            "stream": False,
-            "additional_messages": [
-                {"role": "user", "content": full_prompt, "content_type": "text"}
-            ],
+            "user_id": (context or {}).get("coze_user_id", "teacher_grading"),
+            "stream": True,
+            "auto_save_history": False,
+            "additional_messages": additional_msgs,
         }
 
-        start = await client.post(self.chat_url, json=payload, headers=headers)
-        start.raise_for_status()
-        start_data = start.json()
-        data = start_data.get("data", {})
-        chat_id = data.get("id")
-        conversation_id = data.get("conversation_id")
-        if not chat_id or not conversation_id:
-            raise ValueError(f"Invalid Coze v3 response: {start_data}")
+        # Streaming mode: read SSE events and accumulate the answer
+        answer_parts: list[str] = []
+        async with client.stream("POST", self.chat_url, json=payload, headers=headers) as resp:
+            resp.raise_for_status()
+            buffer = ""
+            current_event = ""
+            async for chunk in resp.aiter_text():
+                buffer += chunk
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
 
-        retrieve_url = f"{self.api_root}/v3/chat/retrieve"
-        msg_url = f"{self.api_root}/v3/chat/message/list"
+                    # SSE format: "event: <type>" then "data: <json>" then blank line
+                    if line.startswith("event:"):
+                        current_event = line[len("event:"):].strip()
+                        continue
+                    if not line.startswith("data:"):
+                        # Blank line = end of SSE block, reset event
+                        if not line:
+                            current_event = ""
+                        continue
 
-        for _ in range(self.poll_max_attempts):
-            status_resp = await client.get(
-                retrieve_url,
-                params={"chat_id": chat_id, "conversation_id": conversation_id},
-                headers=headers,
-            )
-            status_resp.raise_for_status()
-            status_data = status_resp.json().get("data", {})
-            status = status_data.get("status")
+                    data_str = line[len("data:"):].strip()
+                    if data_str == "[DONE]":
+                        continue
+                    try:
+                        data_obj = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
 
-            if status == "completed":
-                msg_resp = await client.get(
-                    msg_url,
-                    params={"chat_id": chat_id, "conversation_id": conversation_id},
-                    headers=headers,
-                )
-                msg_resp.raise_for_status()
-                messages = msg_resp.json().get("data", [])
-                for msg in messages:
-                    if msg.get("type") in {"answer", "assistant_answer"} and msg.get("content"):
-                        return msg.get("content")
-                    if msg.get("role") == "assistant" and msg.get("content"):
-                        return msg.get("content")
-                return "Coze completed but returned no answer content."
+                    # Coze may also put "event" inside the JSON envelope
+                    event_type = current_event or (data_obj.get("event", "") if isinstance(data_obj, dict) else "")
 
-            if status in {"failed", "canceled", "requires_action"}:
-                return f"Coze request ended with status: {status}"
+                    if event_type == "conversation.message.delta":
+                        # Only accumulate "answer" type deltas; skip verbose/function_call/tool_output
+                        if isinstance(data_obj, dict) and data_obj.get("type") == "answer":
+                            token = data_obj.get("content", "")
+                        elif isinstance(data_obj, str):
+                            try:
+                                parsed = json.loads(data_obj)
+                                token = parsed.get("content", "") if parsed.get("type") == "answer" else ""
+                            except (json.JSONDecodeError, AttributeError):
+                                token = ""
+                        else:
+                            token = ""
+                        if token:
+                            answer_parts.append(token)
 
-            if status in {"queued", "in_progress", "processing", None, ""}:
-                await asyncio.sleep(self.poll_interval_seconds)
-                continue
+                    elif event_type == "conversation.message.completed":
+                        msg_data = data_obj
+                        if isinstance(msg_data, str):
+                            try:
+                                msg_data = json.loads(msg_data)
+                            except (json.JSONDecodeError, AttributeError):
+                                msg_data = {}
+                        if isinstance(msg_data, dict) and msg_data.get("type") == "answer" and msg_data.get("content"):
+                            return msg_data["content"]
 
-            # Unknown intermediate status, still wait a bit and continue.
-            await asyncio.sleep(self.poll_interval_seconds)
+                    elif event_type == "conversation.chat.completed":
+                        break
 
-        return "Coze response timeout."
+                    elif event_type in ("done", "error"):
+                        if event_type == "error":
+                            logger.error("Coze stream error: %s", data_obj)
+                            return f"Coze error: {data_obj}"
+                        break
+
+                    # Reset after processing
+                    current_event = ""
+
+        if answer_parts:
+            return "".join(answer_parts)
+        return "Coze completed but returned no answer content."
 
     async def _chat_legacy(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:
         headers = {

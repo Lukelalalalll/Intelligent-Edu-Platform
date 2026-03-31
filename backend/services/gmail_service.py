@@ -91,13 +91,13 @@ class GmailService:
             else:
                 flow.fetch_token(code=code)
             creds = flow.credentials
+            granted = creds.scopes  # noqa: avoid clash with SCOPES
             return {
                 "token": creds.token,
                 "refresh_token": creds.refresh_token,
                 "token_uri": creds.token_uri,
                 "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
+                "granted_scopes": granted,
                 "expiry": creds.expiry.isoformat() if creds.expiry else None,
             }
 
@@ -105,10 +105,25 @@ class GmailService:
 
     @staticmethod
     def _build_credentials(token_data: dict[str, Any]) -> Credentials:
-        credentials = Credentials.from_authorized_user_info(token_data, GmailService.SCOPES)
+        # Inject client_secret from env so it's never required in stored token
+        enriched = {**token_data, "client_secret": Config.GMAIL_CLIENT_SECRET}
+        credentials = Credentials.from_authorized_user_info(enriched, GmailService.SCOPES)
         if credentials.expired and credentials.refresh_token:
             credentials.refresh(GoogleAuthRequest())
         return credentials
+
+    @staticmethod
+    def _build_refreshed_token(creds: Credentials) -> dict[str, Any]:
+        """Build a serializable token dict from credentials. Excludes client_secret."""
+        granted = creds.scopes  # noqa: avoid clash with SCOPES
+        return {
+            "token": creds.token,
+            "refresh_token": creds.refresh_token,
+            "token_uri": creds.token_uri,
+            "client_id": creds.client_id,
+            "granted_scopes": granted,
+            "expiry": creds.expiry.isoformat() if creds.expiry else None,
+        }
 
     @staticmethod
     def _decode_body_data(data: str | None) -> str:
@@ -142,44 +157,51 @@ class GmailService:
         return "\n\n".join(text_parts).strip(), "\n\n".join(html_parts).strip()
 
     @staticmethod
-    async def list_latest_emails(token_data: dict[str, Any], limit: int = 10) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        def _job() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    async def list_latest_emails(token_data: dict[str, Any], limit: int = 10, page_token: str | None = None) -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+        def _job() -> tuple[list[dict[str, Any]], dict[str, Any], str | None]:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
             creds = GmailService._build_credentials(token_data)
             service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
-            resp = service.users().messages().list(userId="me", maxResults=limit).execute()
+            list_kwargs: dict[str, Any] = {"userId": "me", "maxResults": limit}
+            if page_token:
+                list_kwargs["pageToken"] = page_token
+            resp = service.users().messages().list(**list_kwargs).execute()
             message_refs = resp.get("messages", [])
+            next_page_token = resp.get("nextPageToken")
 
-            emails: list[dict[str, Any]] = []
-            for message_ref in message_refs:
-                msg = service.users().messages().get(
+            def _fetch_one(msg_id: str) -> dict[str, Any]:
+                # Each thread needs its own service — httplib2.Http is NOT thread-safe
+                svc = build("gmail", "v1", credentials=creds, cache_discovery=False)
+                msg = svc.users().messages().get(
                     userId="me",
-                    id=message_ref["id"],
+                    id=msg_id,
                     format="metadata",
                     metadataHeaders=["Subject", "From", "Date"],
                 ).execute()
-
                 headers = {h.get("name", ""): h.get("value", "") for h in msg.get("payload", {}).get("headers", [])}
-                emails.append(
-                    {
-                        "id": msg.get("id"),
-                        "subject": headers.get("Subject", "(No Subject)"),
-                        "from": headers.get("From", ""),
-                        "snippet": msg.get("snippet", ""),
-                        "date": headers.get("Date", ""),
-                    }
-                )
+                return {
+                    "id": msg.get("id"),
+                    "subject": headers.get("Subject", "(No Subject)"),
+                    "from": headers.get("From", ""),
+                    "snippet": msg.get("snippet", ""),
+                    "date": headers.get("Date", ""),
+                }
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return emails, refreshed_token
+            # Fetch all messages concurrently instead of serially (N+1 → 1 round-trip time)
+            ordered: dict[str, dict[str, Any]] = {}
+            with ThreadPoolExecutor(max_workers=min(len(message_refs), 10)) as pool:
+                future_map = {pool.submit(_fetch_one, ref["id"]): ref["id"] for ref in message_refs}
+                for future in as_completed(future_map):
+                    msg_id = future_map[future]
+                    ordered[msg_id] = future.result()
+
+            # Preserve original order
+            emails = [ordered[ref["id"]] for ref in message_refs if ref["id"] in ordered]
+
+            refreshed_token = GmailService._build_refreshed_token(creds)
+            return emails, refreshed_token, next_page_token
 
         return await asyncio.to_thread(_job)
 
@@ -210,21 +232,13 @@ class GmailService:
                 "to": headers.get("To", ""),
                 "cc": headers.get("Cc", ""),
                 "date": headers.get("Date", ""),
+                "messageIdHeader": headers.get("Message-ID", ""),
                 "snippet": msg.get("snippet", ""),
                 "bodyText": text_body,
                 "bodyHtml": html_body,
             }
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return detail, refreshed_token
+            return detail, GmailService._build_refreshed_token(creds)
 
         return await asyncio.to_thread(_job)
 
@@ -270,16 +284,7 @@ class GmailService:
                 body={"raw": raw},
             ).execute()
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return {"id": result.get("id"), "threadId": result.get("threadId")}, refreshed_token
+            return {"id": result.get("id"), "threadId": result.get("threadId")}, GmailService._build_refreshed_token(creds)
 
         return await asyncio.to_thread(_job)
 
@@ -291,39 +296,33 @@ class GmailService:
         to: str,
         subject: str,
         body: str,
+        in_reply_to: str | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Reply to an existing email thread."""
         def _job() -> tuple[dict[str, Any], dict[str, Any]]:
             creds = GmailService._build_credentials(token_data)
             service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
-            # Get original message's Message-ID header for threading
-            original = service.users().messages().get(
-                userId="me", id=message_id, format="metadata",
-                metadataHeaders=["Message-ID"],
-            ).execute()
-            headers = {h.get("name", ""): h.get("value", "") for h in original.get("payload", {}).get("headers", [])}
-            in_reply_to = headers.get("Message-ID", "")
+            # Use provided Message-ID or fetch from Gmail
+            reply_to = in_reply_to
+            if not reply_to:
+                original = service.users().messages().get(
+                    userId="me", id=message_id, format="metadata",
+                    metadataHeaders=["Message-ID"],
+                ).execute()
+                headers = {h.get("name", ""): h.get("value", "") for h in original.get("payload", {}).get("headers", [])}
+                reply_to = headers.get("Message-ID", "")
 
             raw = GmailService._make_mime_message(
                 to=to, subject=subject, body=body,
-                thread_id=thread_id, in_reply_to=in_reply_to,
+                thread_id=thread_id, in_reply_to=reply_to,
             )
             result = service.users().messages().send(
                 userId="me",
                 body={"raw": raw, "threadId": thread_id},
             ).execute()
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return {"id": result.get("id"), "threadId": result.get("threadId")}, refreshed_token
+            return {"id": result.get("id"), "threadId": result.get("threadId")}, GmailService._build_refreshed_token(creds)
 
         return await asyncio.to_thread(_job)
 
@@ -355,16 +354,7 @@ class GmailService:
                     "bodyHtml": html_body,
                 })
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return {"threadId": thread_id, "messages": messages}, refreshed_token
+            return {"threadId": thread_id, "messages": messages}, GmailService._build_refreshed_token(creds)
 
         return await asyncio.to_thread(_job)
 
@@ -388,15 +378,6 @@ class GmailService:
 
             result = service.users().drafts().create(userId="me", body=draft_body).execute()
 
-            refreshed_token = {
-                "token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "scopes": creds.scopes,
-                "expiry": creds.expiry.isoformat() if creds.expiry else None,
-            }
-            return {"draftId": result.get("id"), "messageId": result.get("message", {}).get("id")}, refreshed_token
+            return {"draftId": result.get("id"), "messageId": result.get("message", {}).get("id")}, GmailService._build_refreshed_token(creds)
 
         return await asyncio.to_thread(_job)
