@@ -12,13 +12,63 @@
     padding: 4.2rem 2rem;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
-    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: gradientFlow 8s ease infinite, bannerEnter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     border-radius: 24px;
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
-    opacity: 0;
+    max-height: 300px;
+}
+
+/* Banner exit animation */
+.welcomeBannerExiting {
+    animation: bannerExit 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
+@keyframes bannerEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(-16px) scale(0.97);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    40% {
+        max-height: 300px;
+        margin-bottom: 4rem;
+        padding-top: 4.2rem;
+        padding-bottom: 4.2rem;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 300px;
+        margin-bottom: 4rem;
+    }
+}
+
+@keyframes bannerExit {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 300px;
+        margin-bottom: 4rem;
+    }
+    50% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.97);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.97);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
 }
 
 @keyframes gradientFlow {
@@ -58,12 +108,10 @@
 @keyframes tabPopIn {
     0% {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
     }
 
     100% {
         opacity: 1;
-        transform: translateY(0) scale(1);
     }
 }
 
@@ -79,7 +127,7 @@
     margin: -30px auto 42px auto;
     position: relative;
     z-index: 30;
-    animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
+    animation: tabPopIn 0.4s ease-out forwards 0.2s;
     opacity: 0;
 }
 
@@ -113,12 +161,30 @@
     box-shadow: none !important;
 }
 
+/* When banner is hidden, tab floats to top */
+.tabSwitcherTop {
+    margin-top: 0;
+    animation: tabSlideUp 0.3s ease-out forwards;
+}
+@keyframes tabSlideUp {
+    from { opacity: 0.8; }
+    to   { opacity: 1; }
+}
+
+/* Study Room fullscreen (banner hidden → extra vertical space) */
+.studyFullscreen {
+    max-width: 100% !important;
+    margin-top: 20px !important;
+    margin-bottom: 0 !important;
+    height: calc(100vh - 140px);
+}
+
 /* Chat wrapper spacing to mirror home page feel */
 .geminiWrapper {
     max-width: 900px;
     margin: 76px auto 72px;
     padding: 0 12px;
-    animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.3s;
+    animation: tabPopIn 0.4s ease-out forwards 0.15s;
     opacity: 0;
 }
 

@@ -432,9 +432,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    visibility: hidden;
-    opacity: 0;
-    transition: all 0.3s ease-in-out;
+    /* transition: all 0.3s ease-in-out; Framer-motion controls it now */
 }
 
 .modalOverlayActive {
@@ -449,14 +447,14 @@
     border-radius: 24px;
     padding: 35px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    transform: scale(0.9) translateY(20px);
+    /* transform: scale(0.9) translateY(20px);
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); */
 }
 
 .modalOverlayActive .modalContent {
-    transform: scale(1) translateY(0);
-    opacity: 1;
+    /* transform: scale(1) translateY(0);
+    opacity: 1; */
 }
 
 .modalHeader {
@@ -514,6 +512,35 @@
     border-color: var(--primary-color);
     background: #fff;
     box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
+
+.passwordInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.passwordInputWrapper .formInput {
+    padding-right: 44px;
+}
+
+.passwordToggleBtn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 1rem;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.passwordToggleBtn:hover {
+    color: #333;
 }
 
 .formNote {

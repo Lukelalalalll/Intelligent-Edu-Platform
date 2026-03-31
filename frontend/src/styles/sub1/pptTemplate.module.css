@@ -298,20 +298,33 @@
 }
 
 .navLink {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: var(--bg-input);
-    color: var(--text-sub);
-    border-radius: 30px;
-    padding: 10px 20px;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    background: var(--bg-input) !important;
+    color: var(--text-sub) !important;
+    border-radius: 30px !important;
+    padding: 10px 20px !important;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
     transition: var(--transition);
+    box-shadow: none !important;
+}
+
+.navLink:hover {
+    background: #e2e8f0 !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 .navLinkActive {
     background: var(--primary-color) !important;
     color: white !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.25) !important;
+}
+
+.navLinkActive:hover {
+    background: var(--primary-dark, #006644) !important;
 }
 
 .customTabContent {

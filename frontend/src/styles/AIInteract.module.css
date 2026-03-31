@@ -149,8 +149,10 @@
     color: #4B5563;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    /* 避免与 framer-motion 冲突，仅过渡颜色和背景 */
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
     margin-bottom: 6px;
+    overflow: hidden; /* 防止高度塌陷时内容溢出 */
 }
 
 /* --- 新增：为 React 中新加的类补齐样式，防止挤压删除按钮 --- */
@@ -423,10 +425,49 @@
     flex-shrink: 0;
 }
 
-.send-btn:hover {
+.send-btn:hover:not(:disabled) {
     background: #004D40;
     transform: scale(1.08) rotate(-5deg);
     box-shadow: 0 6px 14px rgba(0, 123, 85, 0.3);
+}
+
+.send-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.stop-btn {
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: #f43f5e;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(244, 63, 94, 0.2);
+    flex-shrink: 0;
+}
+
+.stop-btn:hover:not(:disabled) {
+    background: #e11d48;
+    transform: scale(1.08);
+    box-shadow: 0 6px 14px rgba(244, 63, 94, 0.3);
+}
+
+.stop-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .input-footer-text {
@@ -816,14 +857,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.custom-modal-overlay.show {
-    opacity: 1;
-    visibility: visible;
+    /* Framer Motion takes over opacity and visibility */
 }
 
 .custom-modal-box {
@@ -833,13 +867,7 @@
     padding: 24px 24px 20px;
     text-align: center;
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
-    /* 核心：微弹簧缩放动画 */
-    transform: scale(0.9);
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.custom-modal-overlay.show .custom-modal-box {
-    transform: scale(1);
+    /* Framer motion takes over scale animations */
 }
 
 .modal-icon {
@@ -910,6 +938,87 @@
     transform: translateY(0);
 }
 
+/* ========== Memory Modal Form ========== */
+
+.memory-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.memory-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4B5563;
+}
+
+.memory-label span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.memory-label span i {
+    font-size: 0.78rem;
+    color: var(--primary-color, #007B55);
+    opacity: 0.7;
+}
+
+.memory-input,
+.memory-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e4e6eb;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fafafa;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.memory-input:focus,
+.memory-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color, #007B55);
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
+    background: #fff;
+}
+
+.memory-textarea {
+    resize: vertical;
+    min-height: 48px;
+}
+
+/* ========== Memory Button in Header ========== */
+
+.memory-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 1.5px solid rgba(0, 123, 85, 0.2);
+    border-radius: 20px;
+    background: rgba(0, 123, 85, 0.06);
+    color: var(--primary-color, #007B55);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.memory-btn:hover {
+    background: rgba(0, 123, 85, 0.12);
+    border-color: rgba(0, 123, 85, 0.35);
+}
+
+.memory-btn i {
+    font-size: 0.78rem;
+}
 
 /* 修复基础文本颜色 */
 .markdown-body pre code.hljs,
