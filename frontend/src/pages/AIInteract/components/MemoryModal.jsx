@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../../../styles/AIInteract.module.css';
 
@@ -108,3 +109,16 @@ export default function MemoryModal({ show, onClose, memory, onSave, saving }) {
         </AnimatePresence>
     );
 }
+
+MemoryModal.propTypes = {
+    show: PropTypes.bool,
+    onClose: PropTypes.func,
+    memory: PropTypes.shape({
+        name: PropTypes.string,
+        major: PropTypes.string,
+        year: PropTypes.string,
+        preferences: PropTypes.string,
+    }),
+    onSave: PropTypes.func,
+    saving: PropTypes.bool,
+};

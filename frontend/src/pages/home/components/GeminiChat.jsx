@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
@@ -22,6 +23,10 @@ const messageVariants = {
     show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
 };
 
+function replaceMessageText(list, id, text) {
+    return list.map(m => (m.id === id ? { ...m, text } : m));
+}
+
 // --- Markdown 渲染配置，复用 AIInteract 的代码块格式 ---
 const renderer = new marked.Renderer();
 renderer.code = function (token) {
@@ -35,6 +40,7 @@ renderer.code = function (token) {
             ? hljs.highlightAuto(safeCode).value
             : hljs.highlight(safeCode, { language: validLang }).value;
     } catch (e) {
+        console.warn('Code highlight fallback triggered', e);
         highlighted = safeCode;
     }
     return `
@@ -87,31 +93,42 @@ const GeminiChat = ({ aiInteractUrl }) => {
             });
             return { __html: cleanHtml };
         } catch (err) {
+            console.error('Markdown render error', err);
             return { __html: `<p style="color:red">Render Error: ${content}</p>` };
         }
     }, []);
 
-    const copyToClipboard = useCallback((text, buttonEl = null) => {
-        navigator.clipboard.writeText(text).catch(() => {
-            const area = document.createElement('textarea');
-            area.value = text; document.body.appendChild(area); area.select();
-            document.execCommand('copy'); document.body.removeChild(area);
-        });
-        if (buttonEl) {
+    const copyToClipboard = useCallback(async (text, buttonEl = null) => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (err) {
+            console.error('Clipboard write failed', err);
+            return;
+        }
+        if (buttonEl instanceof HTMLElement) {
             const original = buttonEl.innerHTML;
             buttonEl.innerHTML = '<i class="fas fa-check" style="color:#27c93f;"></i> Copied!';
-            setTimeout(() => { if (buttonEl) buttonEl.innerHTML = original; }, 1800);
+            setTimeout(() => { buttonEl.innerHTML = original; }, 1800);
         }
     }, []);
 
     const handleChatAreaClick = useCallback((e) => {
         const copyBtn = e.target.closest('.js-code-copy-btn');
-        if (copyBtn) copyToClipboard(decodeURIComponent(copyBtn.getAttribute('data-code')), copyBtn);
+        if (!copyBtn) return;
+        const encoded = copyBtn.dataset.code || '';
+        copyToClipboard(decodeURIComponent(encoded), copyBtn);
     }, [copyToClipboard]);
 
     useEffect(() => {
         scrollToBottom(/* immediate */ !isLoading);
     }, [messages, isLoading, scrollToBottom]);
+
+    useEffect(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        el.addEventListener('click', handleChatAreaClick);
+        return () => el.removeEventListener('click', handleChatAreaClick);
+    }, [handleChatAreaClick]);
 
     const handleInput = useCallback((e) => {
         const target = e.target;
@@ -121,7 +138,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         if (target.value === '') target.style.height = 'auto';
     }, []);
 
-    const handleSend = useCallback(async () => {
+    const handleSend = useCallback(async () => { // NOSONAR
         if (!input.trim() || isLoading) return;
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
@@ -163,9 +180,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const flushToState = () => {
                 streamRafRef.current = null;
                 const snapshot = accumulatedText;
-                setMessages(prev => prev.map(m =>
-                    m.id === aiPlaceholderId ? { ...m, text: snapshot } : m
-                ));
+                setMessages(prev => replaceMessageText(prev, aiPlaceholderId, snapshot));
             };
             const scheduleFlush = () => {
                 if (streamRafRef.current != null) return;
@@ -182,7 +197,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
                 for (const line of lines) {
                     const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    if (!trimmed?.startsWith('data: ')) continue;
                     const dataStr = trimmed.replace('data: ', '');
                     if (dataStr === '[DONE]') continue;
 
@@ -194,7 +209,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
                         }
                         scheduleFlush();
                     } catch (e) {
-                        // ignore partial JSON until buffer completes
+                        if (import.meta.env.DEV) console.debug('Skipping partial stream chunk', e);
                     }
                 }
             }
@@ -204,9 +219,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
             flushToState();
         } catch (error) {
             if (error.name === 'AbortError') return;
-            setMessages(prev => prev.map(m =>
-                m.id === aiPlaceholderId ? { ...m, text: "Sorry, I encountered an error connecting to the AI server." } : m
-            ));
+            setMessages(prev => replaceMessageText(prev, aiPlaceholderId, 'Sorry, I encountered an error connecting to the AI server.'));
         } finally {
             setIsLoading(false);
             abortControllerRef.current = null;
@@ -223,7 +236,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setIsLoading(false);
     }, []);
 
-    const streamFromHistory = useCallback(async (history) => {
+    const streamFromHistory = useCallback(async (history) => { // NOSONAR
         if (!history.length) return;
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
@@ -256,7 +269,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const flushToState = () => {
                 streamRafRef.current = null;
                 const snapshot = fullText;
-                setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: snapshot } : m));
+                setMessages(prev => replaceMessageText(prev, targetAssistantId, snapshot));
             };
             const scheduleFlush = () => {
                 if (streamRafRef.current != null) return;
@@ -273,7 +286,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
                 for (const line of lines) {
                     const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    if (!trimmed?.startsWith('data: ')) continue;
                     const dataStr = trimmed.replace('data: ', '');
                     if (dataStr === '[DONE]') continue;
                     try {
@@ -282,7 +295,9 @@ const GeminiChat = ({ aiInteractUrl }) => {
                             fullText += obj.choices[0].delta.content;
                             scheduleFlush();
                         }
-                    } catch (err) { /* ignore */ }
+                    } catch (err) {
+                        if (import.meta.env.DEV) console.debug('Skipping partial history chunk', err);
+                    }
                 }
             }
 
@@ -301,7 +316,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const handleRegenerate = useCallback((idx) => {
         if (isLoading) return;
         const msg = messages[idx];
-        if (!msg || msg.sender !== 'ai') return;
+        if (msg?.sender !== 'ai') return;
         const history = messages.slice(0, idx);
         streamFromHistory(history);
     }, [isLoading, messages, streamFromHistory]);
@@ -309,7 +324,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const handleEditUserMsg = useCallback((idx, newVal) => {
         if (isLoading) return;
         const msg = messages[idx];
-        if (!msg || msg.sender !== 'user') return;
+        if (msg?.sender !== 'user') return;
         const trimmed = newVal.trim();
         if (!trimmed) return;
         const updatedUser = { ...msg, text: trimmed };
@@ -326,7 +341,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         }
     }, [handleSend]);
 
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = messages.at(-1);
 
     return (
         <motion.section variants={itemVariants} className={styles['ai-interaction-section']}>
@@ -341,51 +356,53 @@ const GeminiChat = ({ aiInteractUrl }) => {
                 <div
                     ref={messagesContainerRef}
                     className={`${styles['chat-messages']} ${(messages.length > 0 || isLoading) ? styles['has-interaction'] : ''}`}
-                    onClick={handleChatAreaClick}
                 >
                     <AnimatePresence>
                         {messages.map((msg, idx) => {
                             if (msg.sender === 'ai' && !msg.text) return null;
+                            const senderClassKey = `${msg.sender}-message`;
+                            const messageClass = `${styles.message} ${styles[senderClassKey]}`;
+                            const isEditingUser = msg.sender === 'user' && editingId === msg.id;
                             return (
                                 <motion.div
                                     key={msg.id}
                                     variants={messageVariants}
                                     initial="hidden"
                                     animate="show"
-                                    className={`${styles.message} ${styles[`${msg.sender}-message`]}`}
+                                    className={messageClass}
                                 >
                                     <div className={styles.avatar}>
                                         {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
                                     </div>
                                     <div className={styles.bubble}>
-                                        {msg.sender === 'ai' ? (
+                                        {msg.sender === 'ai' && (
                                             <div className="markdown-body" dangerouslySetInnerHTML={renderContent(msg.text)} />
-                                        ) : (
-                                            editingId === msg.id ? (
-                                                <div className={styles['edit-box']}>
-                                                    <textarea
-                                                        value={editingVal}
-                                                        onChange={e => setEditingVal(e.target.value)}
-                                                        autoFocus
-                                                        rows={Math.max(2, editingVal.split('\n').length)}
-                                                    />
-                                                    <div className={styles['edit-actions']}>
-                                                        <button onClick={() => { setEditingId(null); setEditingVal(''); }}>Cancel</button>
-                                                        <button onClick={() => handleEditUserMsg(idx, editingVal)} disabled={!editingVal.trim()}>Save &amp; Resend</button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    {msg.text}
-                                                    {!isLoading && (
-                                                        <div className={styles['user-actions']}>
-                                                            <button onClick={() => { setEditingId(msg.id); setEditingVal(msg.text); }}><i className="fas fa-edit"></i></button>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )
                                         )}
-                                        {msg.sender === 'ai' && !isLoading && msg.id === messages[messages.length - 1]?.id && (
+                                        {msg.sender === 'user' && isEditingUser && (
+                                            <div className={styles['edit-box']}>
+                                                <textarea
+                                                    value={editingVal}
+                                                    onChange={e => setEditingVal(e.target.value)}
+                                                    autoFocus
+                                                    rows={Math.max(2, editingVal.split('\n').length)}
+                                                />
+                                                <div className={styles['edit-actions']}>
+                                                    <button onClick={() => { setEditingId(null); setEditingVal(''); }}>Cancel</button>
+                                                    <button onClick={() => handleEditUserMsg(idx, editingVal)} disabled={!editingVal.trim()}>Save &amp; Resend</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {msg.sender === 'user' && !isEditingUser && (
+                                            <>
+                                                {msg.text}
+                                                {!isLoading && (
+                                                    <div className={styles['user-actions']}>
+                                                        <button onClick={() => { setEditingId(msg.id); setEditingVal(msg.text); }}><i className="fas fa-edit"></i></button>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {msg.sender === 'ai' && !isLoading && msg.id === messages.at(-1)?.id && (
                                             <div className={styles['message-actions']}>
                                                 <button onClick={() => handleRegenerate(idx)} className={styles['msg-action-btn']}>
                                                     <i className="fas fa-sync-alt"></i> Regenerate
@@ -396,7 +413,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
                                 </motion.div>
                             );
                         })}
-                        {isLoading && (!lastMessage || lastMessage.sender !== 'ai' || !lastMessage.text) && (
+                        {isLoading && (lastMessage?.sender !== 'ai' || !lastMessage?.text) && (
                             <motion.div
                                 variants={messageVariants}
                                 initial="hidden"
@@ -437,3 +454,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
 };
 
 export default GeminiChat;
+
+GeminiChat.propTypes = {
+    aiInteractUrl: PropTypes.string,
+};

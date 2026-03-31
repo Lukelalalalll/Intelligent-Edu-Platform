@@ -61,7 +61,7 @@ export function useEmailClient() {
             setIsConnected(true);
             setNextPageToken(data.nextPageToken || null);
             if (list.length === 0) { resetSelection(); return; }
-            setSelectedEmailId(prev => list.find(m => m.id === prev) ? prev : list[0].id);
+            setSelectedEmailId(prev => list.some(m => m.id === prev) ? prev : list[0].id);
         } catch (err) {
             const status = err?.response?.status;
             if (status === 400) {

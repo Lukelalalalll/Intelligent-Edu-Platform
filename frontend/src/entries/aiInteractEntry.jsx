@@ -49,22 +49,29 @@ export default function AIInteractEntry() {
     // Clipboard
     const showToast = useCallback(() => { setToastVisible(true); setTimeout(() => setToastVisible(false), 2500); }, []);
 
-    const copyToClipboard = useCallback((text, buttonEl = null) => {
-        navigator.clipboard.writeText(text).then(showToast).catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = text; document.body.appendChild(ta); ta.select();
-            document.execCommand('copy'); document.body.removeChild(ta); showToast();
-        });
-        if (buttonEl) {
+    const copyToClipboard = useCallback(async (text, buttonEl = null) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast();
+        } catch (err) {
+            console.error('Clipboard write failed', err);
+            return;
+        }
+
+        if (buttonEl instanceof HTMLElement) {
             const orig = buttonEl.innerHTML;
             buttonEl.innerHTML = '<i class="fas fa-check" style="color:#27c93f;"></i> Copied!';
-            setTimeout(() => { if (buttonEl) buttonEl.innerHTML = orig; }, 2000);
+            setTimeout(() => {
+                buttonEl.innerHTML = orig;
+            }, 2000);
         }
     }, [showToast]);
 
     const handleChatAreaClick = useCallback((e) => {
         const btn = e.target.closest('.js-code-copy-btn');
-        if (btn) copyToClipboard(decodeURIComponent(btn.getAttribute('data-code')), btn);
+        if (!btn) return;
+        const encoded = btn.dataset.code || '';
+        copyToClipboard(decodeURIComponent(encoded), btn);
     }, [copyToClipboard]);
 
     // File attachments

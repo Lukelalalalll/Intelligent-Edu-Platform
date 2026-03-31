@@ -10,6 +10,7 @@ from backend.routes.grading_helpers import (
 )
 
 teacher_router = APIRouter(prefix="/api/teacher", tags=["TeacherMailbox"])
+PERMISSION_DENIED = "Permission denied"
 
 
 def _is_admin(user: dict) -> bool:
@@ -22,7 +23,7 @@ def _is_teacher(user: dict) -> bool:
 
 def _assert_teacher_or_admin(user: dict) -> None:
     if not (_is_admin(user) or _is_teacher(user)):
-        raise HTTPException(status_code=403, detail="Permission denied")
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
 
 
 def _can_access_course(course: dict, user: dict) -> bool:
@@ -53,7 +54,7 @@ async def _assert_v2_course_access(course_section_id: str, user: dict) -> dict:
         if e.get("roleInCourse") in ("teacher", "ta"):
             return course
 
-    raise HTTPException(status_code=403, detail="Permission denied: you are not assigned to this course")
+    raise HTTPException(status_code=403, detail=f"{PERMISSION_DENIED}: you are not assigned to this course")
 
 
 @teacher_router.get("/courses")
@@ -75,7 +76,7 @@ async def get_assignments(course_id: str, current_user: dict = Depends(get_curre
         cid = course.get("courseId") or course.get("id")
         if cid == course_id:
             if not _can_access_course(course, current_user):
-                raise HTTPException(status_code=403, detail="Permission denied")
+                raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
             return {"assignments": course.get("assignments", [])}
     raise HTTPException(status_code=404, detail="Course not found")
 
@@ -101,7 +102,7 @@ async def get_submission(submission_id: str, current_user: dict = Depends(get_cu
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
     if course and not _can_access_course(course, current_user):
-        raise HTTPException(status_code=403, detail="Permission denied")
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
 
     annotation_store = await load_annotations(submission_id)
     annotations = annotation_store.get("annotations", [])

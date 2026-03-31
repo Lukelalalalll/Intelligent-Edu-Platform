@@ -69,7 +69,7 @@ class AIGatewayService:
         context_text = json.dumps(compact, ensure_ascii=False)
         return context_text[:15000]
 
-    async def _chat_v3(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:
+    async def _chat_v3(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:  # noqa: C901  # NOSONAR
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

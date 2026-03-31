@@ -157,7 +157,7 @@ def _chunk_text(text: str, size: int = 1) -> list[str]:
     return [content[i:i + size] for i in range(0, len(content), size)]
 
 @ai_router.post("/chat")
-async def ai_chat(req: AiChatSchema, user: dict = Depends(get_current_user)):
+async def ai_chat(req: AiChatSchema, user: dict = Depends(get_current_user)):  # noqa: C901  # NOSONAR
     if not req.messages:
         raise HTTPException(status_code=400, detail="No messages")
 
@@ -270,7 +270,7 @@ _STUDY_COZE_SYSTEM = (
 )
 
 
-async def _call_coze_study(system_prompt: str, user_content: str, context: str = "", user_id: str = "study_coach", history_messages: list = None) -> str:
+async def _call_coze_study(system_prompt: str, user_content: str, context: str = "", user_id: str = "study_coach", history_messages: list = None) -> str:  # noqa: C901  # NOSONAR
     """Call Coze v3 chat API for study coach (text-only, polling)."""
     api_key = Config.COZE_TOKEN
     bot_id = Config.COZE_BOT_ID

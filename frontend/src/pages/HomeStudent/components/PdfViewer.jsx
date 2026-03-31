@@ -7,6 +7,7 @@ import 'react-pdf-highlighter/dist/esm/style/PdfHighlighter.css';
 import 'react-pdf-highlighter/dist/esm/style/Highlight.css';
 import 'react-pdf-highlighter/dist/esm/style/Tip.css';
 import 'react-pdf-highlighter/dist/esm/style/pdf_viewer.css';
+import PropTypes from 'prop-types';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import styles from '../../../styles/StudyRoom.module.css';
@@ -38,6 +39,11 @@ const PdfDocBridge = React.memo(function PdfDocBridge({ pdfDocument, onLoad, ren
         />
     );
 });
+PdfDocBridge.propTypes = {
+    pdfDocument: PropTypes.object.isRequired,
+    onLoad: PropTypes.func.isRequired,
+    renderSelectionTip: PropTypes.func.isRequired,
+};
 
 /**
  * Extract all text from a PDFDocumentProxy (for AI context).
@@ -168,12 +174,12 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
 
     // MD selection handler
     const handleSelectionUp = useCallback(() => {
-        const sel = window.getSelection();
+        const sel = globalThis.getSelection();
         if (!sel || sel.isCollapsed) { setPopover(null); return; }
         const text = sel.toString().trim();
         if (!text || text.length < 3) { setPopover(null); return; }
         const body = viewerBodyRef.current;
-        if (!body || !body.contains(sel.anchorNode)) { setPopover(null); return; }
+        if (!body?.contains(sel.anchorNode)) { setPopover(null); return; }
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         setPopover({ text, x: rect.left + rect.width / 2, y: rect.top - 10 });
@@ -193,7 +199,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
         if (!popover) return;
         const text = popover.text;
         setPopover(null);
-        window.getSelection()?.removeAllRanges();
+        globalThis.getSelection()?.removeAllRanges();
         if (mode === 'note') {
             onAddNote?.({ content: text, color: 'yellow', highlightedText: text });
         } else {
@@ -206,15 +212,13 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
     useEffect(() => {
         if (fileType === 'md' && file) {
             let cancelled = false;
-            const reader = new FileReader();
-            reader.onload = (e) => {
+            file.text().then(text => {
                 if (cancelled) return;
-                const raw = marked.parse(e.target.result || '');
+                const raw = marked.parse(text || '');
                 setMdHtml(DOMPurify.sanitize(raw));
-                onTextExtracted?.(e.target.result || '');
-            };
-            reader.readAsText(file);
-            return () => { cancelled = true; reader.abort(); };
+                onTextExtracted?.(text || '');
+            });
+            return () => { cancelled = true; };
         }
     }, [file, fileType, onTextExtracted]);
 
@@ -294,6 +298,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                     </PdfLoader>
                 </div>
             ) : (
+                // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- text selection area
                 <div
                     className={styles.viewerBody}
                     ref={viewerBodyRef}
@@ -321,7 +326,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                             </button>
                             <button
                                 className={`${styles.selBtn} ${styles.selBtnClose}`}
-                                onClick={() => { setPopover(null); window.getSelection()?.removeAllRanges(); }}
+                                onClick={() => { setPopover(null); globalThis.getSelection()?.removeAllRanges(); }}
                             >
                                 <i className="fas fa-times"></i>
                             </button>
@@ -332,3 +337,12 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
         </div>
     );
 }
+
+PdfViewer.propTypes = {
+    file: PropTypes.object,
+    fileType: PropTypes.string,
+    onHighlight: PropTypes.func,
+    onClose: PropTypes.func,
+    onAddNote: PropTypes.func,
+    onTextExtracted: PropTypes.func,
+};

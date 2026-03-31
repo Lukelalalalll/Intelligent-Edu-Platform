@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const overlayStyle = {
@@ -39,3 +40,9 @@ export default function BaseModal({ open, onClose, children }) {
         </AnimatePresence>
     );
 }
+
+BaseModal.propTypes = {
+    open: PropTypes.bool,
+    onClose: PropTypes.func,
+    children: PropTypes.node,
+};

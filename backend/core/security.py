@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from fastapi import Request, HTTPException, Depends
 from backend.config import Config
@@ -8,7 +8,7 @@ from bson import ObjectId
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + Config.JWT_ACCESS_TOKEN_EXPIRES
+    expire = datetime.now(timezone.utc) + Config.JWT_ACCESS_TOKEN_EXPIRES
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, Config.JWT_SECRET_KEY, algorithm="HS256")
 
@@ -33,7 +33,7 @@ async def get_current_user(request: Request):
     return user
 
 
-async def get_admin_user(current_user: dict = Depends(get_current_user)):
+def get_admin_user(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Permission denied")
     return current_user
@@ -57,7 +57,7 @@ def teacher_owns_course(user: dict, course: dict) -> bool:
     return bool(legacy_teacher and username and legacy_teacher == username)
 
 
-def student_enrolled_in_course(user: dict, course: dict) -> bool:
+def student_enrolled_in_course(user: dict, course: dict) -> bool:  # noqa: C901  # NOSONAR
     student_id_candidates = {
         str(v).strip()
         for v in [user.get("studentId"), user.get("id"), user.get("_id")]

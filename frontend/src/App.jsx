@@ -1,7 +1,6 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import { CourseProvider } from './hooks/useCourseContext';
@@ -56,7 +55,8 @@ const ProtectedRoute = ({ children }) => {
           localStorage.setItem('user', JSON.stringify(freshUser));
         }
         setIsAuthed(true);
-      } catch (_) {
+      } catch (err) {
+        console.error('Session check failed', err);
         if (!alive) return;
         localStorage.removeItem('user');
         setIsAuthed(false);
@@ -88,6 +88,14 @@ const PublicRoute = ({ children }) => {
   const user = localStorage.getItem('user');
   if (user) return <Navigate to="/" replace />;
   return children;
+};
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node,
+};
+
+PublicRoute.propTypes = {
+  children: PropTypes.node,
 };
 
 function App() {

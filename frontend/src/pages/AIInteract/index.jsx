@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import styles from '../../styles/AIInteract.module.css';
 
 import Sidebar from './components/Sidebar';
@@ -89,3 +90,37 @@ export default function AIInteractPage({
         </>
     );
 }
+
+AIInteractPage.propTypes = {
+    sessions: PropTypes.array,
+    currentSessionId: PropTypes.string,
+    inputText: PropTypes.string,
+    isTyping: PropTypes.bool,
+    modalConfig: PropTypes.object,
+    toastVisible: PropTypes.bool,
+    chatMessagesRef: PropTypes.object,
+    inputRef: PropTypes.object,
+    createNewSession: PropTypes.func,
+    deleteSession: PropTypes.func,
+    confirmDelete: PropTypes.func,
+    setModalConfig: PropTypes.func,
+    handleInput: PropTypes.func,
+    handleKeyDown: PropTypes.func,
+    handleSend: PropTypes.func,
+    copyToClipboard: PropTypes.func,
+    handleChatAreaClick: PropTypes.func,
+    deletingId: PropTypes.string,
+    handleRegenerate: PropTypes.func,
+    handleEditUserMsg: PropTypes.func,
+    handleStop: PropTypes.func,
+    attachedFiles: PropTypes.array,
+    isUploadingFile: PropTypes.bool,
+    fileInputRef: PropTypes.object,
+    handleFileChange: PropTypes.func,
+    removeAttachedFile: PropTypes.func,
+    memoryModalOpen: PropTypes.bool,
+    setMemoryModalOpen: PropTypes.func,
+    aiMemory: PropTypes.string,
+    saveMemory: PropTypes.func,
+    savingMemory: PropTypes.bool,
+};

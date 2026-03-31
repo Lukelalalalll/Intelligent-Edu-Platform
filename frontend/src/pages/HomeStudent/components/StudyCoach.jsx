@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import ReactMarkdown from 'react-markdown';
 import client from '../../../api/client';
 import styles from '../../../styles/StudyRoom.module.css';
@@ -22,6 +23,11 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         return () => { if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
     }, []);
 
+    // Helpers to update a single message by id (extracted to avoid deep nesting)
+    const updateMessage = useCallback((msgId, content) => {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content } : m));
+    }, []);
+
     // rAF typewriter — reveals full text frame-by-frame, cancels previous animation
     const revealTypewriter = useCallback((fullText, msgId) => {
         // Cancel any previous typewriter to avoid orphaned rAF chains
@@ -33,9 +39,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         const CHARS_PER_FRAME = 4;
         const tick = () => {
             i = Math.min(i + CHARS_PER_FRAME, fullText.length);
-            setMessages(prev => prev.map(m =>
-                m.id === msgId ? { ...m, content: fullText.slice(0, i) } : m
-            ));
+            updateMessage(msgId, fullText.slice(0, i));
             if (i < fullText.length) {
                 rafIdRef.current = requestAnimationFrame(tick);
             } else {
@@ -44,7 +48,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
             }
         };
         rafIdRef.current = requestAnimationFrame(tick);
-    }, []);
+    }, [updateMessage]);
 
     // Coze polling study ask
     const askStudyCoze = useCallback(async (content, mode, history) => {
@@ -68,11 +72,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
             const text = res.data?.reply || res.data?.text || 'No response from AI.';
             revealTypewriter(text, msgId);
         } catch (err) {
-            setMessages(prev => prev.map(m =>
-                m.id === msgId
-                    ? { ...m, content: 'Error: ' + (err?.response?.data?.detail || err.message) }
-                    : m
-            ));
+            updateMessage(msgId, 'Error: ' + (err?.response?.data?.detail || err.message));
             setStreaming(false);
         }
     }, [pdfText, revealTypewriter]);
@@ -157,7 +157,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
                                 {msg.role === 'assistant'
                                     ? <ReactMarkdown>{msg.content}</ReactMarkdown>
                                     : msg.content}
-                                {streaming && msg === messages[messages.length - 1] && msg.role === 'assistant' && (
+                                {streaming && msg === messages.at(-1) && msg.role === 'assistant' && (
                                     <span className={styles.streamingDot}></span>
                                 )}
                             </div>
@@ -196,3 +196,13 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         </div>
     );
 }
+
+StudyCoach.propTypes = {
+    pendingHighlight: PropTypes.oneOfType([PropTypes.string, PropTypes.shape({
+        text: PropTypes.string,
+        mode: PropTypes.string,
+    })]),
+    onDismissHighlight: PropTypes.func,
+    onSaveNote: PropTypes.func,
+    pdfText: PropTypes.string,
+};

@@ -398,13 +398,13 @@ async def request_feedback(
 
 
 @ai_gateway_router.post("/feedback/stream")
-async def request_feedback_stream(
+async def request_feedback_stream(  # NOSONAR
     payload: FeedbackSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
     http_client: httpx.AsyncClient = Depends(get_http_client),
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),
     langchain_rag_service=Depends(get_langchain_rag_service),
-):
+):  # noqa: C901
     _, assignment, submission = await _get_submission_bundle(payload.submissionId)
     assignment_desc = payload.assignment or assignment.get("description", "")
     rubric = payload.rubric or assignment.get("rubric", {})

@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import styles from '../../../styles/AIInteract.module.css';
 
@@ -20,3 +21,7 @@ export default function ChatHeader({ onOpenMemory }) {
         </header>
     );
 }
+
+ChatHeader.propTypes = {
+    onOpenMemory: PropTypes.func,
+};

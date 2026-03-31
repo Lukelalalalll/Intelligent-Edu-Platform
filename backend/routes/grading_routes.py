@@ -9,6 +9,7 @@ from backend.core.security import get_current_user, can_access_course
 
 
 grading_router = APIRouter(prefix="/api/teacher", tags=["Grading"])
+PERMISSION_DENIED = "Permission denied"
 
 
 def _can_access_course(course: dict, user: dict) -> bool:
@@ -26,7 +27,7 @@ async def _ensure_submission(submission_id: str):
 async def upsert_annotation(payload: AnnotationPayload, current_user: dict = Depends(get_current_user)):
     course, _, submission = await _ensure_submission(payload.submissionId)
     if not _can_access_course(course, current_user):
-        raise HTTPException(status_code=403, detail="Permission denied")
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
     store = await load_annotations(payload.submissionId)
     ann = payload.annotation.copy()
     ann.setdefault("id", f"ann_{uuid.uuid4().hex}")
@@ -48,17 +49,17 @@ async def upsert_annotation(payload: AnnotationPayload, current_user: dict = Dep
 @grading_router.delete("/annotations/{annotation_id}")
 async def delete_annotation(
     annotation_id: str,
-    submissionId: str = Query(..., alias="submissionId"),
+    submission_id: str = Query(..., alias="submissionId"),
     current_user: dict = Depends(get_current_user),
 ):
-    course, _, submission = await _ensure_submission(submissionId)
+    course, _, submission = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
-        raise HTTPException(status_code=403, detail="Permission denied")
-    store = await load_annotations(submissionId)
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
+    store = await load_annotations(submission_id)
     annotations = [a for a in store.get("annotations", []) if a.get("id") != annotation_id]
     store["annotations"] = annotations
-    await save_annotations(submissionId, store)
-    render_annotations_to_pdf(submissionId, submission, store.get("annotations", []))
+    await save_annotations(submission_id, store)
+    render_annotations_to_pdf(submission_id, submission, store.get("annotations", []))
     return {"status": "deleted", "annotationId": annotation_id}
 
 
@@ -66,7 +67,7 @@ async def delete_annotation(
 async def save_score(submission_id: str, payload: SubmissionScoreSchema, current_user: dict = Depends(get_current_user)):
     course, _, _ = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
-        raise HTTPException(status_code=403, detail="Permission denied")
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
 
     # Persist to annotation store (legacy compat)
     store = await load_annotations(submission_id)
@@ -100,7 +101,7 @@ async def finalize_annotations(
 ):
     course, _, submission = await _ensure_submission(submission_id)
     if not _can_access_course(course, current_user):
-        raise HTTPException(status_code=403, detail="Permission denied")
+        raise HTTPException(status_code=403, detail=PERMISSION_DENIED)
 
     store = await load_annotations(submission_id)
     normalized_annotations = []

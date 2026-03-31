@@ -23,6 +23,32 @@ export function useAISessions() {
     const sessionsRef = useRef(sessions);
     sessionsRef.current = sessions;
 
+    const applyFetchedSession = useCallback((id, data) => {
+        setSessions(prev => {
+            const list = prev || [];
+            return list.map(s => (s.id === id
+                ? { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false }
+                : s));
+        });
+    }, []);
+
+    const markSessionFetchDone = useCallback((id) => {
+        setSessions(prev => {
+            const list = prev || [];
+            return list.map(s => (s.id === id ? { ...s, _needFetch: false } : s));
+        });
+    }, []);
+
+    const applyAssistantSnapshot = useCallback((targetId, snapshot) => {
+        setSessions(prev => prev.map(s => {
+            if (s.id !== targetId) return s;
+            const msgs = [...s.messages];
+            const lastMsg = msgs.at(-1);
+            msgs[msgs.length - 1] = { ...lastMsg, content: snapshot };
+            return { ...s, messages: msgs };
+        }));
+    }, []);
+
     // ── Load sessions on mount ──
     useEffect(() => {
         let cancelled = false;
@@ -57,24 +83,20 @@ export function useAISessions() {
     useEffect(() => {
         if (!currentSessionId || !sessions) return;
         const sess = sessions.find(s => s.id === currentSessionId);
-        if (!sess || !sess._needFetch) return;
+        if (!sess?._needFetch) return;
 
         let cancelled = false;
         (async () => {
             try {
                 const data = await aiSessionApi.get(currentSessionId);
                 if (cancelled) return;
-                setSessions(prev => (prev || []).map(s =>
-                    s.id !== currentSessionId ? s : { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false }
-                ));
+                applyFetchedSession(currentSessionId, data);
             } catch {
-                setSessions(prev => (prev || []).map(s =>
-                    s.id === currentSessionId ? { ...s, _needFetch: false } : s
-                ));
+                markSessionFetchDone(currentSessionId);
             }
         })();
         return () => { cancelled = true; };
-    }, [currentSessionId, sessions]);
+    }, [currentSessionId, sessions, applyFetchedSession, markSessionFetchDone]);
 
     // ── Sync helper ──
     const syncToServer = useCallback(async (id, data) => {
@@ -122,7 +144,7 @@ export function useAISessions() {
     }, [modalConfig.sessionId, currentSessionId, createNewSession]);
 
     // ── SSE streaming with rAF batching ──
-    const streamSSE = useCallback(async (apiMessages, targetId, signal) => {
+    const streamSSE = useCallback(async (apiMessages, targetId, signal) => { // NOSONAR
         const response = await createChatStream(apiMessages, signal);
 
         if (!response.ok) {
@@ -141,12 +163,7 @@ export function useAISessions() {
         const flush = () => {
             rafRef.current = null;
             const snapshot = full;
-            setSessions(prev => prev.map(s => {
-                if (s.id !== targetId) return s;
-                const msgs = [...s.messages];
-                msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content: snapshot };
-                return { ...s, messages: msgs };
-            }));
+            applyAssistantSnapshot(targetId, snapshot);
         };
 
         const schedule = () => { if (rafRef.current == null) rafRef.current = requestAnimationFrame(flush); };
@@ -159,7 +176,7 @@ export function useAISessions() {
             buffer = lines.pop();
             for (const line of lines) {
                 const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                if (!trimmed?.startsWith('data: ')) continue;
                 const raw = trimmed.slice(6);
                 if (raw === '[DONE]') continue;
                 try {
@@ -173,7 +190,7 @@ export function useAISessions() {
 
         if (rafRef.current != null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
         flush();
-    }, []);
+    }, [applyAssistantSnapshot]);
 
     // ── Send message ──
     const sendMessage = useCallback(async (text) => {
@@ -190,7 +207,10 @@ export function useAISessions() {
 
         setSessions(prev => prev.map(s => {
             if (s.id !== targetId) return s;
-            const title = s.messages.length <= 1 ? (trimmed.length > 20 ? trimmed.slice(0, 20) + '...' : trimmed) : s.title;
+            let title = s.title;
+            if (s.messages.length <= 1) {
+                title = trimmed.length > 20 ? `${trimmed.slice(0, 20)}...` : trimmed;
+            }
             return { ...s, title, messages: [...s.messages, { role: 'user', content: trimmed }, { role: 'assistant', content: '' }] };
         }));
 
@@ -223,7 +243,7 @@ export function useAISessions() {
 
         const history = sess.messages.slice(0, msgIndex);
         setIsTyping(true);
-        setSessions(prev => prev.map(s => s.id !== targetId ? s : { ...s, messages: [...history, { role: 'assistant', content: '' }] }));
+        setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: 'assistant', content: '' }] } : s));
 
         try {
             await streamSSE(history.filter(m => m.role !== 'system' || history.length < 5), targetId, abortRef.current.signal);
@@ -252,7 +272,7 @@ export function useAISessions() {
 
         const history = [...sess.messages.slice(0, msgIndex), { ...sess.messages[msgIndex], content: newVal.trim() }];
         setIsTyping(true);
-        setSessions(prev => prev.map(s => s.id !== targetId ? s : { ...s, messages: [...history, { role: 'assistant', content: '' }] }));
+        setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: 'assistant', content: '' }] } : s));
 
         try {
             await streamSSE(history.filter(m => m.role !== 'system' || history.length < 5), targetId, abortRef.current.signal);

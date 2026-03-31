@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import styles from '../../../styles/StudyRoom.module.css';
 
 const COLORS = [
@@ -28,14 +29,18 @@ export default function NotesPanel({ notes, onAdd, onDelete, onClickNote }) {
 
     return (
         <>
-            <div className={styles.notesToggle} onClick={() => setOpen(v => !v)}>
+            <button
+                type="button"
+                className={styles.notesToggle}
+                onClick={() => setOpen(v => !v)}
+            >
                 <div className={styles.notesToggleLeft}>
                     <i className="fas fa-sticky-note"></i>
                     <span>My Notes</span>
                     {notes.length > 0 && <span className={styles.notesBadge}>{notes.length}</span>}
                 </div>
                 <i className={`fas fa-chevron-down ${styles.notesChevron} ${open ? styles.notesChevronOpen : ''}`}></i>
-            </div>
+            </button>
 
             <div className={`${styles.notesBody} ${open ? styles.notesBodyOpen : ''}`}>
                 <div className={styles.notesInputRow}>
@@ -71,11 +76,15 @@ export default function NotesPanel({ notes, onAdd, onDelete, onClickNote }) {
                         {notes.map(note => {
                             const colorObj = COLORS.find(c => c.key === note.color) || COLORS[0];
                             return (
+                                // eslint-disable-next-line jsx-a11y/prefer-tag-over-role -- can't use <button>: contains nested delete <button>
                                 <div
                                     key={note.id}
                                     className={styles.noteItem}
                                     style={{ background: colorObj.bg }}
-                                    onClick={() => onClickNote && onClickNote(note)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => onClickNote?.(note)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClickNote?.(note); } }}
                                 >
                                     <div className={styles.noteColorBar} style={{ background: colorObj.bar }} />
                                     <div className={styles.noteContent}>
@@ -108,3 +117,17 @@ export default function NotesPanel({ notes, onAdd, onDelete, onClickNote }) {
         </>
     );
 }
+
+NotesPanel.propTypes = {
+    notes: PropTypes.arrayOf(PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        content: PropTypes.string,
+        color: PropTypes.string,
+        highlightedText: PropTypes.string,
+        pageNumber: PropTypes.number,
+        createdAt: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    })),
+    onAdd: PropTypes.func,
+    onDelete: PropTypes.func,
+    onClickNote: PropTypes.func,
+};

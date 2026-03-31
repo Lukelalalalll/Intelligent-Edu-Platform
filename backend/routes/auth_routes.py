@@ -266,7 +266,7 @@ async def get_student_assignments(course_section_id: str, current_user: dict = D
 
 @auth_router.post("/v2/student/submit")
 async def student_submit(
-    assignmentId: str = Form(...),
+    assignment_id: str = Form(..., alias="assignmentId"),
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
@@ -278,7 +278,7 @@ async def student_submit(
     username = current_user.get("username", "student")
 
     # --- Validation: assignment must exist ---
-    assignment = await get_assignment(assignmentId)
+    assignment = await get_assignment(assignment_id)
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
@@ -303,7 +303,7 @@ async def student_submit(
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     file_hash = hashlib.sha256(content).hexdigest()[:16]
-    safe_filename = f"{user_id}_{assignmentId}_{file_hash}_{file.filename}"
+    safe_filename = f"{user_id}_{assignment_id}_{file_hash}_{file.filename}"
     file_path = upload_dir / safe_filename
     file_path.write_bytes(content)
 
@@ -323,7 +323,7 @@ async def student_submit(
 
     # Create submission
     submission = await create_submission({
-        "assignmentId": assignmentId,
+        "assignmentId": assignment_id,
         "studentId": user_id,
         "studentName": username,
         "status": "pending",

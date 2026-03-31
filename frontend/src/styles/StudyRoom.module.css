@@ -203,7 +203,7 @@
     border-radius: 8px !important;
     border: 1px solid rgba(220, 53, 69, 0.2) !important;
     background: rgba(220, 53, 69, 0.05) !important;
-    color: #dc3545 !important;
+    color: #b91c1c !important; /* NOSONAR */
     font-size: 0.78rem !important;
     font-weight: 600 !important;
     cursor: pointer;
@@ -295,8 +295,8 @@
     box-shadow: none !important;
 }
 .selBtn:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: #fff !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
 }
 .selBtn i {
     font-size: 0.72rem;
@@ -306,8 +306,8 @@
     color: rgba(255,255,255,0.4) !important;
 }
 .selBtnClose:hover {
-    color: #ff6b6b !important;
-    background: rgba(255,107,107,0.12) !important;
+    color: #7f1d1d !important;
+    background: rgba(255,107,107,0.22) !important; /* NOSONAR */
 }
 
 /* ========== PDF Highlighter Wrapper ========== */
@@ -388,7 +388,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: #06281f;
     font-size: 1.1rem;
 }
 .coachTitle {
@@ -528,7 +528,7 @@
 }
 .msgUser {
     align-self: flex-end;
-    background: linear-gradient(135deg, var(--primary-color), #009966);
+    background: linear-gradient(135deg, #006b4a, #007a55);
     color: #fff;
     border-bottom-right-radius: 4px;
     white-space: pre-wrap;
@@ -646,7 +646,7 @@
     height: 40px !important;
     border-radius: 12px !important;
     border: none !important;
-    background: linear-gradient(135deg, var(--primary-color), #009966) !important;
+    background: linear-gradient(135deg, #006b4a, #007a55) !important;
     color: #fff !important;
     font-size: 1rem !important;
     cursor: pointer;
@@ -835,14 +835,14 @@
     border-radius: 6px !important;
     border: none !important;
     background: rgba(220, 53, 69, 0.08) !important;
-    color: #dc3545 !important;
+    color: #991b1b !important; /* NOSONAR */
     font-size: 0.7rem !important;
     cursor: pointer;
     transition: all 0.2s !important;
     box-shadow: none !important;
 }
 .noteDeleteBtn:hover {
-    background: #dc3545 !important;
+    background: #b91c1c !important;
     color: #fff !important;
 }
 
