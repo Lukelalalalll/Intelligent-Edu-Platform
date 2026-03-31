@@ -78,16 +78,28 @@ export default function PptTemplateEntry() {
         },
         setCurrentSlideIndex,
         selectLayout: (layout) => {
-            const newSchema = { ...pptSchema };
-            newSchema.slides[currentSlideIndex].layout = { name: layout.name, placeholders: layout.placeholders };
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) =>
+                    i === currentSlideIndex
+                        ? { ...s, layout: { name: layout.name, placeholders: layout.placeholders } }
+                        : s
+                )
+            };
             setPptSchema(newSchema);
             localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
         },
         applyLayoutToAll: () => {
-            const currentLayout = pptSchema.slides[currentSlideIndex].layout;
-            if (!currentLayout) return alert("Select a layout first!");
-            const newSchema = { ...pptSchema };
-            newSchema.slides.forEach(s => s.layout = currentLayout);
+            const currentLayout = pptSchema.slides[currentSlideIndex]?.layout;
+            if (!currentLayout) {
+                setErrorMsg('Select a layout first!');
+                setTimeout(() => setErrorMsg(''), 3000);
+                return;
+            }
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map(s => ({ ...s, layout: currentLayout }))
+            };
             setPptSchema(newSchema);
             localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
         },

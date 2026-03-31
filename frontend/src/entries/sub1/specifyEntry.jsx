@@ -175,7 +175,7 @@ export default function SpecifyEntry() {
             link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
-            link.parentNode.removeChild(link);
+            link.remove();
             window.URL.revokeObjectURL(url); // 清理内存
         } catch (error) {
             log.error('sub1-specify', 'Download script failed', { message: error?.message });

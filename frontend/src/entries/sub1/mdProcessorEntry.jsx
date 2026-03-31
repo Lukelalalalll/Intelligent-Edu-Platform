@@ -1,8 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import MdProcessorPage from '../../domains/slides_generator/pages/MdProcessorPage';
 
 export default function MdProcessorEntry() {
+    const navigate = useNavigate();
+
     // === 状态管理 ===
     const [file, setFile] = useState(null);
     const [useLLM, setUseLLM] = useState(false);
@@ -19,6 +22,14 @@ export default function MdProcessorEntry() {
     const [errorMsg, setErrorMsg] = useState('');
 
     const fileInputRef = useRef(null);
+
+    // === Tab 2: Text Input ===
+    const [inputMode, setInputMode] = useState('file');       // 'file' | 'text'
+    const [textContent, setTextContent] = useState('');
+    const [textTitle, setTextTitle] = useState('');
+    const [cozeLoading, setCozeLoading] = useState(false);
+    const [cozeError, setCozeError] = useState('');
+    const [textProcessing, setTextProcessing] = useState(false);
 
     // === 文件与拖拽操作 ===
     const handleDragOver = (e) => {
@@ -153,10 +164,8 @@ export default function MdProcessorEntry() {
                     localStorage.setItem('chapterData', JSON.stringify([]));
                 }
 
-                // 建议使用 navigate 而不是 window.location.href 以保持 SPA 状态
-                // 这里暂时沿用你的逻辑
                 if (redirectUrl) {
-                    setTimeout(() => { window.location.href = redirectUrl; }, 300);
+                    setTimeout(() => { navigate(redirectUrl); }, 300);
                 }
             }
         } catch (error) {
@@ -166,10 +175,58 @@ export default function MdProcessorEntry() {
         }
     };
 
+    // === Coze AI: Generate outline from keywords ===
+    const handleCozeGenerate = async () => {
+        if (!textTitle.trim()) {
+            setCozeError('Please enter a topic or keywords');
+            return;
+        }
+        setCozeLoading(true);
+        setCozeError('');
+        try {
+            const res = await client.post('/sub1/coze-generate-outline', { keywords: textTitle.trim() });
+            setTextContent(res.data.text || '');
+        } catch (error) {
+            setCozeError(error.response?.data?.detail || 'AI generation failed: ' + error.message);
+        } finally {
+            setCozeLoading(false);
+        }
+    };
+
+    // === Process text directly into combined MD ===
+    const handleProcessText = async (redirectUrl) => {
+        if (!textContent.trim()) {
+            setErrorMsg('Please enter or generate some content first');
+            return;
+        }
+        setTextProcessing(true);
+        setErrorMsg('');
+        try {
+            const res = await client.post('/sub1/process-text', {
+                text: textContent.trim(),
+                title: textTitle.trim() || 'untitled',
+            });
+            if (res.data.filename) {
+                localStorage.setItem('combinedFilename', res.data.filename);
+                if (redirectUrl) {
+                    setTimeout(() => navigate(redirectUrl), 300);
+                }
+            }
+        } catch (error) {
+            setErrorMsg(error.response?.data?.detail || 'Processing failed: ' + error.message);
+        } finally {
+            setTextProcessing(false);
+        }
+    };
+
     const pageProps = {
         file, useLLM, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
         fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
-        handleUpload, handleCheckboxChange, combineSections
+        handleUpload, handleCheckboxChange, combineSections,
+        // Tab 2 props
+        inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
+        cozeLoading, cozeError, textProcessing,
+        handleCozeGenerate, handleProcessText,
     };
 
     return <MdProcessorPage {...pageProps} />;

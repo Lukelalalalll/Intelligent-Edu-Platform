@@ -46,6 +46,11 @@ export default function DiagramToolEntry() {
     const [genLoading, setGenLoading] = useState(false);
     const [genData, setGenData] = useState(null);
     const [genError, setGenError] = useState('');
+    const [genInputMode, setGenInputMode] = useState('file'); // 'file' | 'text' | 'coze'
+    const [genText, setGenText] = useState('');
+    const [cozeKeywords, setCozeKeywords] = useState('');
+    const [cozeLoading, setCozeLoading] = useState(false);
+    const [cozeText, setCozeText] = useState('');
 
     // === 5. Modal State ===
     const [modal, setModal] = useState({ isOpen: false, imgSrc: '', pageNum: '' });
@@ -209,16 +214,41 @@ export default function DiagramToolEntry() {
 
     // --- Generate Logic ---
     const handleGenerate = async () => {
-        setGenLoading(true); setGenError('');
+        setGenLoading(true); setGenError(''); setGenData(null);
         const formData = new FormData();
-        formData.append('promptFile', genFile);
+
+        if (genInputMode === 'file') {
+            if (!genFile) { setGenError('Please select a file first'); setGenLoading(false); return; }
+            formData.append('promptFile', genFile);
+        } else {
+            // 'text' or 'coze' mode — use the text content
+            const textToSend = genInputMode === 'coze' ? cozeText : genText;
+            if (!textToSend.trim()) { setGenError('Please enter or generate text content first'); setGenLoading(false); return; }
+            formData.append('promptText', textToSend);
+        }
+
         try {
-            const res = await client.post('/sub4/generate_diagram', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            const res = await client.post('/sub4/generate_diagram', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 90000 });
             setGenData(res.data);
         } catch (err) {
             setGenError(extractErrorMessage(err));
         } finally {
             setGenLoading(false);
+        }
+    };
+
+    const handleCozeGenerate = async () => {
+        if (!cozeKeywords.trim()) { setGenError('Please enter keywords'); return; }
+        setCozeLoading(true); setGenError(''); setCozeText('');
+        const formData = new FormData();
+        formData.append('keywords', cozeKeywords);
+        try {
+            const res = await client.post('/sub4/coze_generate_text', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
+            setCozeText(res.data.text || '');
+        } catch (err) {
+            setGenError(extractErrorMessage(err));
+        } finally {
+            setCozeLoading(false);
         }
     };
 
@@ -337,13 +367,18 @@ export default function DiagramToolEntry() {
         }}
         searchState={{ query: searchQuery, setQuery: setSearchQuery, loading: searchLoading, results: searchResults, error: searchError }}
         searchHandlers={{ handleSearch }}
-        genState={{ file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError }}
+        genState={{ file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError, inputMode: genInputMode, text: genText, cozeKeywords, cozeLoading, cozeText }}
         genHandlers={{
             handleFileChange: (e) => setGenFile(e.target.files[0]),
             handleDragOver: (e) => handleDrag(e, setIsGenDragging),
             handleDragLeave: (e) => handleLeave(e, setIsGenDragging),
             handleDrop: (e) => handleDrop(e, setIsGenDragging, setGenFile),
-            handleGenerate
+            handleGenerate,
+            setInputMode: setGenInputMode,
+            setText: setGenText,
+            setCozeKeywords,
+            handleCozeGenerate,
+            setCozeText,
         }}
         editorState={{ isVisible: isEditorVisible, loading: editorLoading, fields: editorFields, previewHtml, error: editorError }}
         editorHandlers={{ loadEditor, handleFieldChange: handleEditorFieldChange, handleRemoveField: handleEditorRemoveField, applyChanges: updatePreviewHtml, downloadSvg, setIsVisible: setIsEditorVisible }}

@@ -23,11 +23,10 @@ export default function HighlighterEntry() {
     const [htmlContent, setHtmlContent] = useState('');
 
     const [highlights, setHighlights] = useState([]);
-    const highlightIdCounter = useRef(0);
     const [classifying, setClassifying] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState('all');
 
-    // 1. 初始化拉取数据
+    // 1. 初始化：拉取 MD 文件 + 加载已保存的高亮
     useEffect(() => {
         const fetchFile = async () => {
             const combinedFilename = localStorage.getItem('combinedFilename');
@@ -38,15 +37,17 @@ export default function HighlighterEntry() {
             }
 
             try {
-                const response = await client.get(`/sub1/download/${combinedFilename}`, {
-                    responseType: 'text'
-                });
+                // 并行拉取 MD 内容和已保存高亮
+                const [mdResponse, hlResponse] = await Promise.all([
+                    client.get(`/sub1/download/${combinedFilename}`, { responseType: 'text' }),
+                    client.get(`/sub1/load_highlights/${encodeURIComponent(combinedFilename)}`).catch(() => ({ data: { highlights: [] } })),
+                ]);
 
                 log.debug('sub1-highlighter', 'Raw file data received', {
-                    length: String(response?.data || '').length,
+                    length: String(mdResponse?.data || '').length,
                 });
 
-                const markdown = response.data;
+                const markdown = mdResponse.data;
                 if (!markdown || markdown.length === 0) {
                     throw new Error("File content is empty");
                 }
@@ -56,6 +57,13 @@ export default function HighlighterEntry() {
                 log.info('sub1-highlighter', 'Parsed markdown sections', {
                     count: parsedSections.length,
                 });
+
+                // 恢复已保存的高亮
+                const savedHighlights = hlResponse?.data?.highlights || [];
+                if (savedHighlights.length > 0) {
+                    setHighlights(savedHighlights);
+                    log.info('sub1-highlighter', 'Restored saved highlights', { count: savedHighlights.length });
+                }
 
                 if (parsedSections.length > 0) {
                     setSections(parsedSections);
@@ -78,23 +86,20 @@ export default function HighlighterEntry() {
     const parseSections = (markdown) => {
         if (!markdown) return [];
 
-        // 🌟 只认后端给的强分隔符
         const rawChunks = String(markdown).split('===SECTION_BREAK===');
 
         return rawChunks.map(chunk => {
             const lines = chunk.trim().split(/\r?\n/);
             if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) return null;
 
-            // 第一行是我们手动塞的标题，去掉可能存在的 #
             const title = lines[0].replace(/^#+\s*/, '').trim();
-            // 剩下的全部作为正文内容
             const content = lines.slice(1).join('\n').trim();
 
             return { title, content };
         }).filter(item => item !== null);
     };
 
-    // 3. 渲染内容
+    // 3. 渲染内容（纯数据变更，不操作 DOM）
     const renderContent = (section, rendered) => {
         if (!section) return;
         if (rendered) {
@@ -104,7 +109,6 @@ export default function HighlighterEntry() {
         } else {
             setHtmlContent(section.content);
         }
-        setTimeout(applyHighlights, 100);
     };
 
     const showSection = (index) => {
@@ -118,93 +122,23 @@ export default function HighlighterEntry() {
         renderContent(sections[currentSectionIndex], newView);
     };
 
-    const handleTextSelection = useCallback(() => {
-        const selection = window.getSelection();
-        if (selection.isCollapsed || !markdownViewRef.current) return;
-        const selectedText = selection.toString().trim();
-        if (selectedText.length === 0) return;
-        const range = selection.getRangeAt(0);
-        const existingHighlights = markdownViewRef.current.querySelectorAll('.highlighted');
-        for (let i = 0; i < existingHighlights.length; i++) {
-            if (range.intersectsNode(existingHighlights[i])) {
-                selection.removeAllRanges();
-                return;
+    // 统一的高亮创建回调（由 Highlighter.jsx handleMouseUp 调用）
+    const handleHighlightCreated = useCallback(({ id, text, sectionTitle }) => {
+        setHighlights(prev => {
+            // 去重：如果已存在完全相同文本和 Section 的高亮，跳过
+            const isDuplicate = prev.some(h => h.text === text && h.sectionTitle === sectionTitle);
+            if (isDuplicate) {
+                log.warn('sub1-highlighter', 'Duplicate highlight skipped', { text: text.substring(0, 40) });
+                return prev;
             }
-        }
-        const id = 'highlight-' + highlightIdCounter.current++;
-        let rootNode = range.commonAncestorContainer;
-        if (rootNode.nodeType === Node.TEXT_NODE) rootNode = rootNode.parentNode;
-        try {
-            const treeWalker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
-                acceptNode: (node) => range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
-            });
-            const textNodes = [];
-            let currentNode = treeWalker.nextNode();
-            while (currentNode) { textNodes.push(currentNode); currentNode = treeWalker.nextNode(); }
-            if (textNodes.length === 0) { selection.removeAllRanges(); return; }
-            textNodes.forEach(textNode => {
-                let startOffset = 0;
-                let endOffset = textNode.nodeValue.length;
-                if (textNode === range.startContainer) startOffset = range.startOffset;
-                if (textNode === range.endContainer) endOffset = range.endOffset;
-                if (startOffset === endOffset) return;
-                const extractedText = textNode.nodeValue.substring(startOffset, endOffset);
-                if (extractedText.trim().length === 0 && textNodes.length > 1) return;
-                const span = document.createElement('span');
-                span.className = 'highlighted';
-                span.dataset.id = id;
-                span.textContent = extractedText;
-                span.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    removeHighlight(id);
-                });
-                const subRange = document.createRange();
-                subRange.setStart(textNode, startOffset);
-                subRange.setEnd(textNode, endOffset);
-                subRange.deleteContents();
-                subRange.insertNode(span);
-            });
-            const currentTitle = sections[currentSectionIndex]?.title || 'Unknown Section';
-            setHighlights(prev => [...prev, { id, text: selectedText, sectionTitle: currentTitle }]);
-        } catch (e) {
-            log.warn('sub1-highlighter', 'Highlight failed', { message: e?.message });
-        }
-        selection.removeAllRanges();
-    }, [sections, currentSectionIndex]);
-
-    useEffect(() => {
-        const view = markdownViewRef.current;
-        if (view) {
-            view.addEventListener('mouseup', handleTextSelection);
-            return () => view.removeEventListener('mouseup', handleTextSelection);
-        }
-    }, [handleTextSelection, htmlContent]);
-
-    const removeHighlight = (id) => {
-        if (!markdownViewRef.current) return;
-        const els = markdownViewRef.current.querySelectorAll(`.highlighted[data-id="${id}"]`);
-        els.forEach(el => el.classList.add('un-highlighting'));
-        setTimeout(() => {
-            els.forEach(el => {
-                if (el.parentNode) {
-                    const textNode = document.createTextNode(el.textContent);
-                    el.parentNode.replaceChild(textNode, el);
-                }
-            });
-            markdownViewRef.current.normalize();
-        }, 400);
-        setHighlights(prev => prev.filter(h => h.id !== id));
-    };
-
-    const applyHighlights = () => {
-        if (!markdownViewRef.current) return;
-        const existingHighlights = markdownViewRef.current.querySelectorAll('.highlighted');
-        existingHighlights.forEach(el => {
-            const textNode = document.createTextNode(el.textContent);
-            el.parentNode.replaceChild(textNode, el);
+            return [...prev, { id, text, sectionTitle }];
         });
-        if (existingHighlights.length > 0) markdownViewRef.current.normalize();
-    };
+    }, []);
+
+    // 统一的高亮删除（纯 state 驱动，DOM 由 useEffect 自动重渲染）
+    const removeHighlight = useCallback((id) => {
+        setHighlights(prev => prev.filter(h => h.id !== id));
+    }, []);
 
     const classifyHighlights = async () => {
         if (highlights.length === 0) {
@@ -223,7 +157,6 @@ export default function HighlighterEntry() {
             const res = await client.post('/sub1/classify-highlights', { highlights: organizedData });
             const classified = res.data.highlights || [];
 
-            // Merge classification into existing highlights
             setHighlights(prev => prev.map(h => {
                 const match = classified.find(c => c.id === h.id);
                 if (match) {
@@ -285,6 +218,7 @@ export default function HighlighterEntry() {
         markdownViewRef={markdownViewRef}
         showSection={showSection} toggleView={toggleView}
         saveHighlights={saveHighlights} removeHighlight={removeHighlight}
+        onHighlightCreated={handleHighlightCreated}
         classifyHighlights={classifyHighlights} classifying={classifying}
         categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
         removeByCategoryOrConfidence={removeByCategoryOrConfidence}

@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import { CourseProvider } from './hooks/useCourseContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import HomeEntry from './entries/homeEntry';
 import MdProcessorEntry from './entries/sub1/mdProcessorEntry';
 import LoginEntry from './entries/loginEntry';
@@ -92,6 +93,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <CourseProvider>
       <ScrollToTop />
       <Routes>
@@ -114,7 +116,6 @@ function App() {
           <Route path="sub1/quick-process" element={<ProtectedRoute><QuickProcessEntry /></ProtectedRoute>} />
           <Route path="sub1/ppt-template" element={<ProtectedRoute><PptTemplateEntry /></ProtectedRoute>} />
 
-          <Route path="sub3" element={<Navigate to="/sub4" replace />} />
           <Route path="sub2" element={<ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute>} />
           <Route path="admin/dashboard" element={<ProtectedRoute><AdminDashboardEntry /></ProtectedRoute>} />
           <Route path="admin/db-console" element={<ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute>} />
@@ -131,6 +132,7 @@ function App() {
         </Route>
       </Routes>
       </CourseProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
