@@ -1,6 +1,16 @@
 import React from 'react';
 import styles from '../../../styles/sub1/specify.module.css';
 
+/** 将单元格中的 <br> / <br/> / <br /> 转为真实换行渲染 */
+function renderCellText(text) {
+    if (typeof text !== 'string') return text;
+    const parts = text.split(/<br\s*\/?>/gi);
+    if (parts.length <= 1) return text;
+    return parts.map((p, i) => (
+        <React.Fragment key={i}>{p}{i < parts.length - 1 && <br />}</React.Fragment>
+    ));
+}
+
 export default function Specify({
     highlightsData, tablesBySection, formState, setFormState,
     handleCheckboxChange, handleSubmit, loading, errorMsg,
@@ -152,11 +162,11 @@ export default function Specify({
                                                             <div className={styles.tablePreview}>
                                                                 <table>
                                                                     <thead>
-                                                                        <tr>{table.table?.header?.map((h, i) => <th key={i}>{h}</th>)}</tr>
+                                                                        <tr>{table.table?.header?.map((h, i) => <th key={i}>{renderCellText(h)}</th>)}</tr>
                                                                     </thead>
                                                                     <tbody>
                                                                         {table.table?.rows?.slice(0, 2).map((row, rIdx) => (
-                                                                            <tr key={rIdx}>{row.map((cell, cIdx) => <td key={cIdx}>{cell}</td>)}</tr>
+                                                                            <tr key={rIdx}>{row.map((cell, cIdx) => <td key={cIdx}>{renderCellText(cell)}</td>)}</tr>
                                                                         ))}
                                                                     </tbody>
                                                                 </table>

@@ -16,10 +16,15 @@ const formatFileSize = (bytes) => {
 export default function MdProcessor({
     file, useLLM, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
     fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
-    handleUpload, handleCheckboxChange, combineSections
+    handleUpload, handleCheckboxChange, combineSections,
+    // Tab 2 props
+    inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
+    cozeLoading, cozeError, textProcessing,
+    handleCozeGenerate, handleProcessText,
 }) {
     const navigate = useNavigate();
     const showUploadCard = headers.length === 0;
+    const wordCount = textContent ? textContent.trim().split(/\s+/).filter(Boolean).length : 0;
 
     return (
         <div className="container">
@@ -29,8 +34,26 @@ export default function MdProcessor({
                 <p>Process and enhance your PDF and Markdown files with intelligent section extraction</p>
             </header>
 
-            {/* File Upload Section */}
+            {/* Tab Switcher — only show when no headers parsed yet */}
             {showUploadCard && (
+                <div className={styles.tabBar}>
+                    <button
+                        className={`${styles.tabBtn} ${inputMode === 'file' ? styles.tabBtnActive : ''}`}
+                        onClick={() => setInputMode('file')}
+                    >
+                        <i className="fas fa-upload"></i> Upload File
+                    </button>
+                    <button
+                        className={`${styles.tabBtn} ${inputMode === 'text' ? styles.tabBtnActive : ''}`}
+                        onClick={() => setInputMode('text')}
+                    >
+                        <i className="fas fa-pen-fancy"></i> Write / Paste Text
+                    </button>
+                </div>
+            )}
+
+            {/* File Upload Section */}
+            {showUploadCard && inputMode === 'file' && (
                 <section className={`card ${styles.card}`} aria-labelledby="upload-title">
                     <div className={`card-body ${styles.cardBody}`}>
                         <h5 id="upload-title" className="card-title">
@@ -115,6 +138,81 @@ export default function MdProcessor({
                 </section>
             )}
 
+            {/* Text Input Tab */}
+            {showUploadCard && inputMode === 'text' && (
+                <section className={`card ${styles.card}`} aria-labelledby="text-title">
+                    <div className={`card-body ${styles.cardBody}`}>
+                        <h5 id="text-title" className="card-title">
+                            <i className="fas fa-pen-fancy" aria-hidden="true"></i> Write or Generate Content
+                        </h5>
+
+                        {/* Coze AI Row */}
+                        <div className={styles.cozeRow}>
+                            <div className={styles.cozeInputGroup}>
+                                <i className="fas fa-lightbulb"></i>
+                                <input
+                                    type="text"
+                                    className={styles.cozeInput}
+                                    placeholder="Enter topic or keywords (e.g. TCP/IP four-layer model)"
+                                    value={textTitle}
+                                    onChange={(e) => setTextTitle(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && !cozeLoading && handleCozeGenerate()}
+                                />
+                            </div>
+                            <button
+                                className={styles.cozeBtn}
+                                onClick={handleCozeGenerate}
+                                disabled={cozeLoading || !textTitle.trim()}
+                            >
+                                {cozeLoading ? (
+                                    <><i className="fas fa-spinner fa-spin"></i> Generating...</>
+                                ) : (
+                                    <><i className="fas fa-magic"></i> Generate with AI</>
+                                )}
+                            </button>
+                        </div>
+
+                        {cozeError && (
+                            <div className={styles.cozeErrorMsg}>
+                                <i className="fas fa-exclamation-circle"></i> {cozeError}
+                            </div>
+                        )}
+
+                        {/* Content Textarea */}
+                        <div className={styles.textareaWrapper}>
+                            <textarea
+                                className={styles.contentTextarea}
+                                placeholder={"Write your content here using Markdown...\n\n## Section Title\n- Key point 1\n- Key point 2\n\n## Another Section\n- More content..."}
+                                value={textContent}
+                                onChange={(e) => setTextContent(e.target.value)}
+                                rows={14}
+                            />
+                            <div className={styles.wordCountBar}>
+                                <span>{wordCount} words</span>
+                                {wordCount > 0 && wordCount < 50 && (
+                                    <span className={styles.wordCountHint}>Tip: 100+ words recommended for good PPT content</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className={styles.textActionRow}>
+                            <button
+                                className={`${styles.btn} ${styles.btnPrimary} ${styles.textProceedBtn}`}
+                                onClick={() => handleProcessText('/sub1/highlighter')}
+                                disabled={!textContent.trim() || textProcessing}
+                            >
+                                {textProcessing ? (
+                                    <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                                ) : (
+                                    <><i className="fas fa-highlighter"></i> Highlight &amp; Proceed</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Headers List Section */}
             {!showUploadCard && (
                 <section id="headersSection" className={`card ${styles.card}`} aria-labelledby="headers-title">
@@ -193,19 +291,8 @@ export default function MdProcessor({
             )}
 
             {loading && (
-                <div id="loading" className={`card mt-3 ${styles.loading}`} aria-live="polite" aria-atomic="true">
-                    <div className="card-body text-center">
-                        <div className={`spinner-border ${styles.spinnerBorder}`} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <p className="mt-3 mb-0">Processing request, please wait...</p>
-                        <small className="text-muted">This may take a few moments</small>
-                        <div className="progress mt-3" style={{ height: '6px' }}>
-                            <div className="progress-bar progress-bar-striped progress-bar-animated"
-                                role="progressbar" style={{ width: '100%' }} aria-valuenow="100"
-                                aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
+                <div className={styles.inlineLoadingHint} aria-live="polite">
+                    <i className="fas fa-circle-notch fa-spin"></i> Processing your file, please wait...
                 </div>
             )}
 

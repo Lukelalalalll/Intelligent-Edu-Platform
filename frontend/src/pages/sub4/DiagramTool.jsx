@@ -52,26 +52,28 @@ export default function DiagramTool({
             </div>
 
             <div className={styles.servicePanel}>
-                {activeService === 'extract' && (
-                    <ExtractSection extractState={extractState} extractHandlers={extractHandlers} modalHandlers={modalHandlers} />
-                )}
+                <div key={activeService} className={styles.servicePanelContent}>
+                    {activeService === 'extract' && (
+                        <ExtractSection extractState={extractState} extractHandlers={extractHandlers} modalHandlers={modalHandlers} />
+                    )}
 
-                {activeService === 'images' && imageState && (
-                    <ImageExtractSection imageState={imageState} imageHandlers={imageHandlers} />
-                )}
+                    {activeService === 'images' && imageState && (
+                        <ImageExtractSection imageState={imageState} imageHandlers={imageHandlers} />
+                    )}
 
-                {activeService === 'search' && (
-                    <SearchEditSection
-                        searchState={searchState}
-                        searchHandlers={searchHandlers}
-                        editorState={editorState}
-                        editorHandlers={editorHandlers}
-                    />
-                )}
+                    {activeService === 'search' && (
+                        <SearchEditSection
+                            searchState={searchState}
+                            searchHandlers={searchHandlers}
+                            editorState={editorState}
+                            editorHandlers={editorHandlers}
+                        />
+                    )}
 
-                {activeService === 'generate' && (
-                    <GenSection genState={genState} genHandlers={genHandlers} />
-                )}
+                    {activeService === 'generate' && (
+                        <GenSection genState={genState} genHandlers={genHandlers} />
+                    )}
+                </div>
             </div>
 
             <PreviewModal modalState={modalState} modalHandlers={modalHandlers} />

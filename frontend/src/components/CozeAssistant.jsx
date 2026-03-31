@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { cozeApi } from '../services/api';
 import { useLLMStream } from '../hooks/useLLMStream';
+import { usePretextMeasure } from '../hooks/usePretextMeasure';
 
 export default function CozeAssistant({ submissionId, assignment, rubric, onAnalysis, className }) {
     const [messages, setMessages] = useState([{ role: 'assistant', content: 'Hi! I can help you grade, generate rubric scores, or suggest annotations.' }]);
@@ -19,17 +21,22 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
     } = useLLMStream();
     const chatAreaRef = useRef(null);
 
+    // Pretext: reflow-free scroll management
+    const { scrollToBottom } = usePretextMeasure(chatAreaRef, {
+        font: '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        lineHeight: 22.4, // 14px * 1.6
+        debounceMs: 60,
+    });
+
     useEffect(() => {
         setLocalError('');
         clearError();
         setLastRagInfo(null);
-    }, [submissionId]);
+    }, [submissionId, clearError]);
 
     useEffect(() => {
-        if (chatAreaRef.current) {
-            chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
-        }
-    }, [messages, loading]);
+        scrollToBottom(/* immediate */ !loading);
+    }, [messages, loading, scrollToBottom]);
 
     const appendMessage = (role, content) => setMessages((prev) => [...prev, { role, content }]);
 
@@ -74,13 +81,10 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
             lines.push(`Overall Score: ${overallScore}/100`);
         }
         if (overallFeedback) {
-            lines.push('');
-            lines.push('Overall Feedback:');
-            lines.push(overallFeedback);
+            lines.push('', 'Overall Feedback:', overallFeedback);
         }
         if (rubricScores.length) {
-            lines.push('');
-            lines.push('Rubric Breakdown:');
+            lines.push('', 'Rubric Breakdown:');
             rubricScores.forEach((item) => {
                 const criterion = String(item?.criterion || 'Criterion');
                 const score = item?.score ?? '-';
@@ -90,8 +94,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
             });
         }
         if (suggestions.length) {
-            lines.push('');
-            lines.push('Improvement Suggestions:');
+            lines.push('', 'Improvement Suggestions:');
             suggestions.forEach((item) => lines.push(`- ${String(item)}`));
         }
 
@@ -125,7 +128,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                 onDelta: (fullText) => {
                     setMessages((prev) => {
                         const updated = [...prev];
-                        const last = updated[updated.length - 1];
+                        const last = updated.at(-1);
                         if (last?.role === 'assistant') {
                             updated[updated.length - 1] = { ...last, content: fullText };
                         } else {
@@ -138,7 +141,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                     if (!String(fullText || '').trim()) {
                         setMessages((prev) => {
                             const updated = [...prev];
-                            const last = updated[updated.length - 1];
+                            const last = updated.at(-1);
                             if (last?.role === 'assistant') {
                                 updated[updated.length - 1] = { ...last, content: 'No response content.' };
                             }
@@ -168,7 +171,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                 ...res.analysis,
                 parsed: tryParseAnalysisJson(rawResponse),
             });
-        } catch (err) {
+        } catch {
             setLocalError('Analyze request failed');
         } finally {
             setAnalyzeLoading(false);
@@ -183,7 +186,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
     };
 
     return (
-        <div className={className?.cozeCard || ''} style={!className ? { display: 'flex', flexDirection: 'column', height: '100%' } : undefined}>
+        <div className={className?.cozeCard || ''} style={className ? undefined : { display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className={className?.cozeHeader || ''}>
                 <div>
                     <div className={className?.cozeTitle || ''}><i className="fas fa-robot" /> Coze.ai Assistant</div>
@@ -213,7 +216,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                 {messages.map((m, idx) => {
                     if (m.role === 'assistant' && !String(m.content || '').trim()) return null;
                     return (
-                        <div key={idx} className={`${className?.msg || ''} ${m.role === 'user' ? className?.msgUser : className?.msgAssistant}`}>
+                        <div key={`${m.role}-${idx}`} className={`${className?.msg || ''} ${m.role === 'user' ? className?.msgUser : className?.msgAssistant}`}>
                             <div className={className?.msgAvatar || ''}>
                                 <i className={m.role === 'user' ? 'fas fa-user' : 'fas fa-robot'} />
                             </div>
@@ -281,3 +284,36 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
         </div>
     );
 }
+
+CozeAssistant.propTypes = {
+    submissionId: PropTypes.string,
+    assignment: PropTypes.shape({
+        title: PropTypes.string,
+        description: PropTypes.string,
+    }),
+    rubric: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    onAnalysis: PropTypes.func,
+    className: PropTypes.shape({
+        cozeCard: PropTypes.string,
+        cozeHeader: PropTypes.string,
+        cozeTitle: PropTypes.string,
+        cozeSub: PropTypes.string,
+        cozeActions: PropTypes.string,
+        primaryBtn: PropTypes.string,
+        ghostBtn: PropTypes.string,
+        chatArea: PropTypes.string,
+        msg: PropTypes.string,
+        msgUser: PropTypes.string,
+        msgAssistant: PropTypes.string,
+        msgAvatar: PropTypes.string,
+        msgBubble: PropTypes.string,
+        msgAuthor: PropTypes.string,
+        typingBubble: PropTypes.string,
+        typingDots: PropTypes.string,
+        inputRow: PropTypes.string,
+        textInput: PropTypes.string,
+        sendBtn: PropTypes.string,
+        stopBtn: PropTypes.string,
+        inputHint: PropTypes.string,
+    }),
+};

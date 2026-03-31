@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePretextMeasure } from '../../../hooks/usePretextMeasure';
 import styles from '../../../styles/home/home.module.css';
 import 'highlight.js/styles/github-dark.css';
 
@@ -66,6 +67,16 @@ const GeminiChat = ({ aiInteractUrl }) => {
     const inputAreaRef = useRef(null);
     const abortControllerRef = useRef(null);
 
+    // Pretext: reflow-free scroll management
+    const { scrollToBottom } = usePretextMeasure(messagesContainerRef, {
+        font: '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        lineHeight: 25.6,
+        debounceMs: 60,
+    });
+
+    // rAF-batched streaming ref (one flush per animation frame ≈16ms for typewriter feel)
+    const streamRafRef = useRef(null);
+
     const renderContent = useCallback((content) => {
         if (!content) return { __html: '' };
         try {
@@ -99,10 +110,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
     }, [copyToClipboard]);
 
     useEffect(() => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-    }, [messages, isLoading]);
+        scrollToBottom(/* immediate */ !isLoading);
+    }, [messages, isLoading, scrollToBottom]);
 
     const handleInput = useCallback((e) => {
         const target = e.target;
@@ -121,8 +130,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
         setInput('');
         if (inputAreaRef.current) inputAreaRef.current.style.height = 'auto';
 
-        const userMsg = { id: Date.now(), sender: 'user', role: 'user', text: userText };
-        const aiPlaceholderId = Date.now() + 1;
+        const userMsg = { id: crypto.randomUUID(), sender: 'user', role: 'user', text: userText };
+        const aiPlaceholderId = crypto.randomUUID();
         const aiMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '' };
 
         setMessages(prev => [...prev, userMsg, aiMsg]);
@@ -130,10 +139,12 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
         try {
             const historyForAPI = messages
+                .filter(m => m.id !== 'welcome')
                 .concat(userMsg)
                 .map(m => ({ role: m.role, content: m.text }));
 
-            const response = await fetch('http://localhost:5009/api/ai/chat', {
+            const apiRoot = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+            const response = await fetch(`${apiRoot}/api/ai/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages: historyForAPI }),
@@ -147,6 +158,19 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const decoder = new TextDecoder("utf-8");
             let accumulatedText = "";
             let buffer = "";
+
+            // rAF-batched flush: one state update per animation frame (~16ms) for typewriter feel
+            const flushToState = () => {
+                streamRafRef.current = null;
+                const snapshot = accumulatedText;
+                setMessages(prev => prev.map(m =>
+                    m.id === aiPlaceholderId ? { ...m, text: snapshot } : m
+                ));
+            };
+            const scheduleFlush = () => {
+                if (streamRafRef.current != null) return;
+                streamRafRef.current = requestAnimationFrame(flushToState);
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -168,15 +192,16 @@ const GeminiChat = ({ aiInteractUrl }) => {
                         else if (dataObj.choices?.[0]?.delta?.content !== undefined) {
                             accumulatedText += dataObj.choices[0].delta.content;
                         }
-
-                        setMessages(prev => prev.map(m =>
-                            m.id === aiPlaceholderId ? { ...m, text: accumulatedText } : m
-                        ));
+                        scheduleFlush();
                     } catch (e) {
                         // ignore partial JSON until buffer completes
                     }
                 }
             }
+
+            // Final flush
+            if (streamRafRef.current != null) { cancelAnimationFrame(streamRafRef.current); streamRafRef.current = null; }
+            flushToState();
         } catch (error) {
             if (error.name === 'AbortError') return;
             setMessages(prev => prev.map(m =>
@@ -193,6 +218,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
         }
+        // Clean up any pending stream flush
+        if (streamRafRef.current != null) { cancelAnimationFrame(streamRafRef.current); streamRafRef.current = null; }
         setIsLoading(false);
     }, []);
 
@@ -201,7 +228,7 @@ const GeminiChat = ({ aiInteractUrl }) => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
 
-        const targetAssistantId = Date.now();
+        const targetAssistantId = crypto.randomUUID();
         setMessages(historyWithAssistant => {
             return [...history, { id: targetAssistantId, sender: 'ai', role: 'assistant', text: '' }];
         });
@@ -209,7 +236,8 @@ const GeminiChat = ({ aiInteractUrl }) => {
 
         try {
             const apiMessages = history.map(m => ({ role: m.role, content: m.text }));
-            const response = await fetch('http://localhost:5009/api/ai/chat', {
+            const apiRoot2 = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+            const response = await fetch(`${apiRoot2}/api/ai/chat`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -223,6 +251,17 @@ const GeminiChat = ({ aiInteractUrl }) => {
             const decoder = new TextDecoder('utf-8');
             let fullText = '';
             let buffer = '';
+
+            // rAF-batched flush for streamFromHistory — typewriter-smooth updates
+            const flushToState = () => {
+                streamRafRef.current = null;
+                const snapshot = fullText;
+                setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: snapshot } : m));
+            };
+            const scheduleFlush = () => {
+                if (streamRafRef.current != null) return;
+                streamRafRef.current = requestAnimationFrame(flushToState);
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -241,11 +280,15 @@ const GeminiChat = ({ aiInteractUrl }) => {
                         const obj = JSON.parse(dataStr);
                         if (obj.choices?.[0]?.delta?.content !== undefined) {
                             fullText += obj.choices[0].delta.content;
-                            setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: fullText } : m));
+                            scheduleFlush();
                         }
                     } catch (err) { /* ignore */ }
                 }
             }
+
+            // Final flush
+            if (streamRafRef.current != null) { cancelAnimationFrame(streamRafRef.current); streamRafRef.current = null; }
+            flushToState();
         } catch (error) {
             if (error.name === 'AbortError') return;
             setMessages(prev => prev.map(m => m.id === targetAssistantId ? { ...m, text: `Network Error: ${error.message}` } : m));

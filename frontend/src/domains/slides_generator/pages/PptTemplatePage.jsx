@@ -10,7 +10,7 @@ export default function PptTemplate({
     const currentSlide = pptSchema?.slides[currentSlideIndex];
     const configuredCount = pptSchema?.slides.filter(s => s.layout?.name).length || 0;
     const totalSlides = pptSchema?.slides.length || 0;
-    const backendStaticBase = 'http://localhost:5009/static';
+    const backendStaticBase = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009') + '/static';
 
     const getThemePreviewSrc = (themeName) => (
         `${backendStaticBase}/img/${encodeURIComponent(themeName.toLowerCase())}-theme.png`
@@ -86,7 +86,7 @@ export default function PptTemplate({
                     <ul className={styles.customTabs}>
                         {pptSchema.slides.map((slide, idx) => (
                             <li key={idx}>
-                                <button
+                                <button type="button"
                                     className={`${styles.navLink} ${currentSlideIndex === idx ? styles.navLinkActive : ''}`}
                                     onClick={() => setCurrentSlideIndex(idx)}
                                 >
@@ -127,7 +127,7 @@ export default function PptTemplate({
                         )}
 
                         <div style={{ textAlign: 'right', marginTop: '2rem' }}>
-                            <button className={styles.btnApplyAll} onClick={applyLayoutToAll}>
+                            <button type="button" className={styles.btnApplyAll} onClick={applyLayoutToAll}>
                                 <i className="fas fa-clone"></i> Apply This Layout to All Slides
                             </button>
                         </div>
@@ -136,22 +136,25 @@ export default function PptTemplate({
             )}
 
             {/* Step 3: Action */}
-            {configuredCount === totalSlides && (
-                <div className={`card ${styles.sectionCard} ${styles.cardStep3}`}>
-                    <div className={styles.actionGrid}>
-                        <div className={styles.summaryBox}>
-                            <h5 className={styles.summaryTitle}>Configuration Summary</h5>
-                            <div className={styles.statItem}><span>Theme</span><strong>{selectedTheme}</strong></div>
-                            <div className={styles.statItem}><span>Status</span><strong>Ready to Generate</strong></div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <button className={`btn btn-primary ${styles.generateBtn}`} onClick={generatePpt}>
-                                <i className="fas fa-file-powerpoint"></i> Generate PPT
-                            </button>
-                        </div>
+            <div className={`card ${styles.sectionCard} ${styles.cardStep3}`}>
+                <div className={styles.actionGrid}>
+                    <div className={styles.summaryBox}>
+                        <h5 className={styles.summaryTitle}>Configuration Summary</h5>
+                        <div className={styles.statItem}><span>Theme</span><strong>{selectedTheme || 'Not selected'}</strong></div>
+                        <div className={styles.statItem}><span>Status</span><strong>{configuredCount === totalSlides ? 'Ready to Generate' : `${totalSlides - configuredCount} slides remaining`}</strong></div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <button type="button"
+                            className={`btn btn-primary ${styles.generateBtn}`}
+                            onClick={generatePpt}
+                            disabled={configuredCount !== totalSlides}
+                            title={configuredCount !== totalSlides ? `Configure all slides first (${totalSlides - configuredCount} remaining)` : 'Generate PowerPoint'}
+                        >
+                            <i className="fas fa-file-powerpoint"></i> Generate PPT
+                        </button>
                     </div>
                 </div>
-            )}
+            </div>
 
             {isGenerating && (
                 <div className={styles.glassLoadingOverlay}>

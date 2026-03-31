@@ -86,7 +86,7 @@ export default function PptTemplate({
                     <ul className={styles.customTabs}>
                         {pptSchema.slides.map((slide, idx) => (
                             <li key={idx}>
-                                <button
+                                <button type="button"
                                     className={`${styles.navLink} ${currentSlideIndex === idx ? styles.navLinkActive : ''}`}
                                     onClick={() => setCurrentSlideIndex(idx)}
                                 >
@@ -127,7 +127,7 @@ export default function PptTemplate({
                         )}
 
                         <div style={{ textAlign: 'right', marginTop: '2rem' }}>
-                            <button className={styles.btnApplyAll} onClick={applyLayoutToAll}>
+                            <button type="button" className={styles.btnApplyAll} onClick={applyLayoutToAll}>
                                 <i className="fas fa-clone"></i> Apply This Layout to All Slides
                             </button>
                         </div>
@@ -145,7 +145,7 @@ export default function PptTemplate({
                             <div className={styles.statItem}><span>Status</span><strong>Ready to Generate</strong></div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <button className={`btn btn-primary ${styles.generateBtn}`} onClick={generatePpt}>
+                            <button type="button" className={`btn btn-primary ${styles.generateBtn}`} onClick={generatePpt}>
                                 <i className="fas fa-file-powerpoint"></i> Generate PPT
                             </button>
                         </div>

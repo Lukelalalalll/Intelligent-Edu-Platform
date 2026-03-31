@@ -1,9 +1,68 @@
 // Highlighter.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import styles from '../../../../styles/sub1/highlighter.module.css';
 import ReaderSection from './components/ReaderSection';
 import HighlightsPanel from './components/HighlightsPanel';
 import { log } from '../../../../utils/logger';
+
+/**
+ * 将已有高亮注入到 HTML 字符串中（数据驱动），避免 innerHTML 重置后丢失 DOM 高亮。
+ * 使用纯文本匹配 + 避免匹配 HTML 标签内部文字。
+ */
+/**
+ * 将纯文本转为 HTML 实体转义后的正则片段，
+ * 以便在 HTML 源码中匹配 selection.toString() 返回的未转义文本。
+ * 例如 "Java & Python" → "Java\\s*(&amp;|&)\\s*Python"
+ */
+function textToHtmlRegex(text) {
+    // 先按 HTML 实体字符拆分，对每段分别做 regex escape
+    const entityMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const specialChars = /[&<>"']/g;
+    let result = '';
+    let lastIndex = 0;
+    let m;
+    while ((m = specialChars.exec(text)) !== null) {
+        // escape 前面的普通文本
+        if (m.index > lastIndex) {
+            result += text.slice(lastIndex, m.index).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        // 匹配原始字符或其 HTML 实体形式
+        const char = m[0];
+        const entity = entityMap[char];
+        result += `(?:${char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`;
+        lastIndex = m.index + 1;
+    }
+    if (lastIndex < text.length) {
+        result += text.slice(lastIndex).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    return result;
+}
+
+function injectHighlightsIntoHtml(html, sectionHighlights) {
+    if (!html || !sectionHighlights || sectionHighlights.length === 0) return html;
+
+    let result = html;
+    // 按文本长度降序排列，优先匹配长文本，避免短文本部分匹配破坏长高亮
+    const sorted = [...sectionHighlights].sort((a, b) => b.text.length - a.text.length);
+
+    for (const h of sorted) {
+        if (!h.text || h.text.trim().length === 0) continue;
+        try {
+            const pattern = textToHtmlRegex(h.text);
+            // 匹配不在 HTML 标签内部的文本
+            const regex = new RegExp(`(?<=>|^)([^<]*?)(${pattern})`, 'g');
+            let replaced = false;
+            result = result.replace(regex, (match, before, target) => {
+                if (replaced) return match; // 只替换第一处匹配
+                replaced = true;
+                return `${before}<span class="highlighted" data-id="${h.id}">${target}</span>`;
+            });
+        } catch (e) {
+            log.warn('highlighter', 'Highlight injection regex failed', { id: h.id, error: e?.message });
+        }
+    }
+    return result;
+}
 
 export default function Highlighter({
     loading, sections, currentSectionIndex, currentSectionTitle,
@@ -18,15 +77,34 @@ export default function Highlighter({
     const [searchQuery, setSearchQuery] = useState('');
     const [speakingId, setSpeakingId] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
+    // 用 ref 追踪最新 highlights，避免 useEffect 依赖 highlights 导致无限重渲染
+    const highlightsRef = useRef(highlights);
+    highlightsRef.current = highlights;
 
     const textLength = htmlContent ? htmlContent.replace(/<[^>]+>/g, '').length : 0;
     const readTime = Math.max(1, Math.ceil(textLength / 250));
 
+    // 核心：用数据驱动方式注入高亮后再设置 innerHTML
     useEffect(() => {
         if (!loading && isRenderedView && markdownViewRef.current) {
-            markdownViewRef.current.innerHTML = htmlContent;
+            const currentHighlights = (highlightsRef.current || []).filter(
+                h => h.sectionTitle === currentSectionTitle
+            );
+            const injectedHtml = injectHighlightsIntoHtml(htmlContent, currentHighlights);
+            markdownViewRef.current.innerHTML = injectedHtml;
         }
-    }, [htmlContent, isRenderedView, loading, markdownViewRef]);
+    }, [htmlContent, isRenderedView, loading, markdownViewRef, currentSectionTitle]);
+
+    // 当 highlights 数组变化时（新增/删除），重新注入当前 Section 的高亮
+    useEffect(() => {
+        if (!loading && isRenderedView && markdownViewRef.current && htmlContent) {
+            const currentHighlights = (highlights || []).filter(
+                h => h.sectionTitle === currentSectionTitle
+            );
+            const injectedHtml = injectHighlightsIntoHtml(htmlContent, currentHighlights);
+            markdownViewRef.current.innerHTML = injectedHtml;
+        }
+    }, [highlights, currentSectionTitle]);
 
     useEffect(() => {
         return () => {
@@ -36,25 +114,25 @@ export default function Highlighter({
         };
     }, []);
 
-    // ======== 核心交互逻辑 ========
-    const handleLocalRemoveHighlight = (id) => {
-        if (!markdownViewRef.current) return;
+    // ======== 统一高亮删除（只更新 state，DOM 由 useEffect 自动重渲染） ========
+    const handleLocalRemoveHighlight = useCallback((id) => {
         if (speakingId === id && typeof window !== 'undefined' && window.speechSynthesis) {
             window.speechSynthesis.cancel();
             setSpeakingId(null);
         }
-        const nodes = markdownViewRef.current.querySelectorAll(`span.highlighted[data-id="${id}"]`);
-        nodes.forEach(node => {
-            const parent = node.parentNode;
-            while (node.firstChild) {
-                parent.insertBefore(node.firstChild, node);
-            }
-            parent.removeChild(node);
-        });
-        removeHighlight(id);
-    };
+        // 先播放淡出动画
+        if (markdownViewRef.current) {
+            const els = markdownViewRef.current.querySelectorAll(`span.highlighted[data-id="${id}"]`);
+            els.forEach(el => el.classList.add('un-highlighting'));
+        }
+        // 400ms 后从 state 移除（触发 useEffect 重渲染 DOM）
+        setTimeout(() => {
+            removeHighlight(id);
+        }, 400);
+    }, [removeHighlight, speakingId, markdownViewRef]);
 
-    const handleMouseUp = () => {
+    // ======== 统一的高亮创建逻辑 ========
+    const handleMouseUp = useCallback(() => {
         if (!isRenderedView) return;
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed) return;
@@ -65,7 +143,16 @@ export default function Highlighter({
         const container = markdownViewRef.current;
         if (!container || !container.contains(range.commonAncestorContainer)) return;
 
-        const highlightId = 'hl-' + Date.now().toString();
+        // 检查是否与已有高亮重叠
+        const existingSpans = container.querySelectorAll('.highlighted');
+        for (let i = 0; i < existingSpans.length; i++) {
+            if (range.intersectsNode(existingSpans[i])) {
+                selection.removeAllRanges();
+                return;
+            }
+        }
+
+        const highlightId = 'hl-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         try {
             const spanTemplate = document.createElement('span');
             spanTemplate.className = 'highlighted';
@@ -89,13 +176,16 @@ export default function Highlighter({
                 range.insertNode(fragment);
             }
             selection.removeAllRanges();
+
+            // 通知 Entry 更新 state
             if (typeof onHighlightCreated === 'function') {
                 onHighlightCreated({ id: highlightId, text: selectedText, sectionTitle: currentSectionTitle });
             }
         } catch (e) {
             log.error('highlighter', 'Highlighting error', { message: e?.message });
+            selection.removeAllRanges();
         }
-    };
+    }, [isRenderedView, markdownViewRef, currentSectionTitle, onHighlightCreated]);
 
     // ======== 增强工具函数 ========
     const scrollToHighlight = (id) => {

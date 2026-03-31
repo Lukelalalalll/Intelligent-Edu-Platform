@@ -6,6 +6,7 @@ import ChatHeader from './components/ChatHeader';
 import MessageList from './components/MessageList';
 import ChatInput from './components/ChatInput';
 import ConfirmModal from './components/ConfirmModal';
+import MemoryModal from './components/MemoryModal';
 
 export default function AIInteractPage({
     sessions, currentSessionId, inputText, isTyping, modalConfig, toastVisible,
@@ -13,9 +14,11 @@ export default function AIInteractPage({
     setModalConfig, handleInput, handleKeyDown, handleSend, copyToClipboard, handleChatAreaClick, deletingId,
     // Methods passed down from Entry wrapper
     handleRegenerate, handleEditUserMsg, handleStop,
-    attachedFiles, isUploadingFile, fileInputRef, handleFileChange, removeAttachedFile
+    attachedFiles, isUploadingFile, fileInputRef, handleFileChange, removeAttachedFile,
+    // Memory
+    memoryModalOpen, setMemoryModalOpen, aiMemory, saveMemory, savingMemory,
 }) {
-    const currentSession = sessions.find(s => s.id === currentSessionId) || sessions[0];
+    const currentSession = (sessions || []).find(s => s.id === currentSessionId) || (sessions || [])[0];
 
     return (
         <>
@@ -32,7 +35,7 @@ export default function AIInteractPage({
                     />
 
                     <main className={styles['chat-main']}>
-                        <ChatHeader />
+                        <ChatHeader onOpenMemory={() => setMemoryModalOpen(true)} />
 
                         <MessageList
                             currentSession={currentSession}
@@ -66,6 +69,14 @@ export default function AIInteractPage({
                 show={modalConfig.show}
                 setModalConfig={setModalConfig}
                 confirmDelete={confirmDelete}
+            />
+
+            <MemoryModal
+                show={memoryModalOpen}
+                onClose={() => setMemoryModalOpen(false)}
+                memory={aiMemory}
+                onSave={saveMemory}
+                saving={savingMemory}
             />
 
             <div className={`toast ${toastVisible ? 'show' : ''}`} style={{

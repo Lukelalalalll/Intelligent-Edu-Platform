@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../../../styles/AdminDashboard.module.css';
 
 export default function UserManagementPanel({
@@ -7,6 +8,8 @@ export default function UserManagementPanel({
     modalState, formData, setFormData, isSaving, deletingId,
     openAddModal, openEditModal, closeModal, handleFormSubmit, deleteUser
 }) {
+    const [showPassword, setShowPassword] = useState(false);
+
     const filteredUsers = useMemo(() => {
         const query = searchQuery.toLowerCase();
         return users.filter(u =>
@@ -92,43 +95,65 @@ export default function UserManagementPanel({
             </div>
 
             {/* 用户编辑/新增的弹窗 */}
-            {modalState.isOpen && createPortal(
-                <div className={`${styles.modalOverlay} ${styles.modalOverlayActive}`} onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3>{modalState.isEditMode ? 'Edit User Profile' : 'Add New User'}</h3>
-                            <button type="button" className={styles.closeBtn} onClick={closeModal}>&times;</button>
-                        </div>
-                        <form onSubmit={handleFormSubmit}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Username</label>
-                                <input type="text" className={styles.formInput} required value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Email Address</label>
-                                <input type="email" className={styles.formInput} required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Password</label>
-                                <input type="password" className={styles.formInput} required={!modalState.isEditMode} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.formLabel}>Role Permission</label>
-                                <div className={styles.formSelectWrapper}>
-                                    <select className={styles.formSelect} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
-                                        <option value="student">Student</option>
-                                        <option value="teacher">Teacher</option>
-                                        <option value="admin">Administrator</option>
-                                    </select>
+            {createPortal(
+                <AnimatePresence>
+                    {modalState.isOpen && (
+                        <motion.div 
+                            className={`${styles.modalOverlay} ${styles.modalOverlayActive}`} 
+                            onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <motion.div 
+                                className={styles.modalContent}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                <div className={styles.modalHeader}>
+                                    <h3>{modalState.isEditMode ? 'Edit User Profile' : 'Add New User'}</h3>
+                                    <button type="button" className={styles.closeBtn} onClick={closeModal}>&times;</button>
                                 </div>
-                            </div>
-                            <div className={styles.modalFooter}>
-                                <button type="button" className={styles.btnCancel} onClick={closeModal}>Cancel</button>
-                                <button type="submit" className={styles.btnSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>, 
+                                <form onSubmit={handleFormSubmit}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>Username</label>
+                                        <input type="text" className={styles.formInput} required value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>Email Address</label>
+                                        <input type="email" className={styles.formInput} required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>Password {modalState.isEditMode && <span className={styles.formNote} style={{ display: 'inline', marginLeft: 6 }}>(leave blank to keep unchanged)</span>}</label>
+                                        <div className={styles.passwordInputWrapper}>
+                                            <input type={showPassword ? 'text' : 'password'} className={styles.formInput} required={!modalState.isEditMode} placeholder={modalState.isEditMode ? 'Enter new password...' : ''} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                                            <button type="button" className={styles.passwordToggleBtn} onClick={() => setShowPassword(v => !v)} tabIndex={-1}>
+                                                <i className={showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.formLabel}>Role Permission</label>
+                                        <div className={styles.formSelectWrapper}>
+                                            <select className={styles.formSelect} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                                                <option value="student">Student</option>
+                                                <option value="teacher">Teacher</option>
+                                                <option value="admin">Administrator</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className={styles.modalFooter}>
+                                        <button type="button" className={styles.btnCancel} onClick={closeModal}>Cancel</button>
+                                        <button type="submit" className={styles.btnSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>, 
                 document.body
             )}
         </>
