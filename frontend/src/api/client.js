@@ -3,7 +3,7 @@ import axios from 'axios';
 import { log } from '../utils/logger';
 
 const client = axios.create({
-  baseURL: 'http://localhost:5009/api',
+  baseURL: (import.meta.env.VITE_API_ROOT || 'http://localhost:5009') + '/api',
   withCredentials: true,
 });
 

@@ -27,8 +27,9 @@ export async function generateQuestions(payload) {
     return res.data;
 }
 
-export async function exportQuestions() {
-    const res = await client.post('/sub2/export_questions', {}, { responseType: 'blob' });
+export async function exportQuestions(taskId) {
+    const params = taskId ? { task_id: taskId } : {};
+    const res = await client.post('/sub2/export_questions', {}, { params, responseType: 'blob' });
     return res.data;
 }
 
