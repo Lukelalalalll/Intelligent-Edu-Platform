@@ -1,0 +1,57 @@
+# ============================================================
+# Intelligent Edu Platform — Docker Compose (Production)
+# ============================================================
+# Usage:
+#   1. Copy backend/.env.production → backend/.env  (fill in real values)
+#   2. Copy frontend/.env.production → frontend/.env (set VITE_API_ROOT)
+#   3. docker compose up --build -d
+# ============================================================
+
+services:
+  # ── MongoDB ──────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  # ── FastAPI backend ─────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    env_file:
+      - backend/.env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/intelligent_edu
+      - ENV=production
+    volumes:
+      - backend_uploads:/app/backend/uploads
+      - backend_static:/app/backend/static
+    expose:
+      - "5009"
+
+  # ── Nginx (serves frontend + reverse-proxies API) ──────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      # Mount your SSL certs here:
+      # - ./deploy/ssl:/etc/nginx/ssl:ro
+
+volumes:
+  mongo_data:
+  backend_uploads:
+  backend_static:
