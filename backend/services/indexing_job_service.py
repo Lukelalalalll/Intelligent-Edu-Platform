@@ -1,0 +1,148 @@
+"""
+Async indexing job service.
+
+Manages background document indexing tasks with status tracking in MongoDB.
+Uses asyncio.create_task for in-process background work (no Celery needed).
+"""
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import logging
+import tempfile
+import os
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
+
+from backend.core.database import db
+
+logger = logging.getLogger(__name__)
+
+COLLECTION = "indexing_jobs"
+
+
+async def create_job(
+    course_id: str,
+    filename: str,
+    content_bytes: bytes,
+    user_id: str,
+) -> dict:
+    """Create a new indexing job and start processing in the background.
+
+    Returns the job document with id, status, etc.
+    If an identical file (same course + filename + content hash) was already
+    indexed, returns a fast "duplicate" response without re-indexing.
+    """
+    content_hash = hashlib.sha256(content_bytes).hexdigest()
+
+    # Check for duplicate: same course, filename, content hash, already done
+    existing = await db[COLLECTION].find_one({
+        "course_id": course_id,
+        "filename": filename,
+        "content_hash": content_hash,
+        "status": "done",
+    }, sort=[("created_at", -1)])
+
+    if existing:
+        logger.info("Skipping duplicate index: course=%s file=%s hash=%s", course_id, filename, content_hash[:12])
+        return {
+            "job_id": existing["job_id"],
+            "status": "done",
+            "filename": filename,
+            "content_hash": content_hash,
+            "duplicate": True,
+        }
+
+    job_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+
+    job_doc = {
+        "job_id": job_id,
+        "course_id": course_id,
+        "filename": filename,
+        "content_hash": content_hash,
+        "file_size": len(content_bytes),
+        "user_id": user_id,
+        "status": "pending",  # pending -> processing -> done | failed
+        "error": None,
+        "result": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db[COLLECTION].insert_one(job_doc)
+
+    # Fire-and-forget background task
+    asyncio.create_task(_process_job(job_id, course_id, filename, content_bytes))
+
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "filename": filename,
+        "content_hash": content_hash,
+    }
+
+
+async def get_job_status(job_id: str) -> Optional[dict]:
+    """Return the current status of an indexing job."""
+    doc = await db[COLLECTION].find_one({"job_id": job_id}, {"_id": 0})
+    if doc and "created_at" in doc:
+        doc["created_at"] = doc["created_at"].isoformat()
+    if doc and "updated_at" in doc:
+        doc["updated_at"] = doc["updated_at"].isoformat()
+    return doc
+
+
+async def _update_status(job_id: str, status: str, **extra) -> None:
+    update = {"status": status, "updated_at": datetime.now(timezone.utc)}
+    update.update(extra)
+    await db[COLLECTION].update_one({"job_id": job_id}, {"$set": update})
+
+
+async def _process_job(
+    job_id: str,
+    course_id: str,
+    filename: str,
+    content_bytes: bytes,
+) -> None:
+    """Background coroutine that extracts text and indexes it."""
+    try:
+        await _update_status(job_id, "processing")
+
+        # Extract text (run blocking I/O in executor)
+        text = await asyncio.get_event_loop().run_in_executor(
+            None, _extract_text, filename, content_bytes
+        )
+
+        if not text or not text.strip():
+            await _update_status(job_id, "failed", error="Could not extract any text from the file")
+            return
+
+        # Index (also blocking — ChromaDB operations)
+        from backend.services.course_rag_service import course_rag_service
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, course_rag_service.index_document, course_id, filename, text
+        )
+
+        await _update_status(job_id, "done", result=result)
+        logger.info("Indexing job %s completed: %s", job_id, result)
+
+    except Exception:
+        logger.exception("Indexing job %s failed", job_id)
+        await _update_status(job_id, "failed", error="Internal indexing error")
+
+
+def _extract_text(filename: str, content_bytes: bytes) -> str:
+    """Extract text from a file (PDF or plain text). Runs in thread executor."""
+    if filename.lower().endswith(".pdf"):
+        from backend.utils.pdf_extractor import extract_text_from_pdf
+
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+        try:
+            os.write(tmp_fd, content_bytes)
+            os.close(tmp_fd)
+            return extract_text_from_pdf(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+    else:
+        return content_bytes.decode("utf-8", errors="replace")
