@@ -1,3 +1,4 @@
+import os
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -5,6 +6,7 @@ from bson.objectid import ObjectId
 from werkzeug.security import generate_password_hash
 from backend.core.database import db
 from backend.core.security import get_admin_user
+from backend.core.utils import safe_object_id
 from backend.schemas import (
     AuthSchema,
     UpdateProfileSchema,
@@ -13,7 +15,7 @@ from backend.schemas import (
     AdminAssignmentSchema,
     AdminDbDocumentSchema,
 )
-from backend.routes.grading_helpers import (
+from backend.services.grading_service import (
     load_courses, save_courses, normalize_courses_data,
     # v2
     create_course_section, list_course_sections, update_course_section, delete_course_section,
@@ -55,7 +57,7 @@ async def update_user(user_id: str, req: UpdateProfileSchema, admin: dict = Depe
     update_data = {k: v for k, v in req.dict(exclude_unset=True).items() if k != "password"}
     if req.password: update_data["password_hash"] = generate_password_hash(req.password)
 
-    await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
+    await db.users.update_one({"_id": safe_object_id(user_id, label="user")}, {"$set": update_data})
     return {"message": "User updated successfully"}
 
 
@@ -63,7 +65,7 @@ async def update_user(user_id: str, req: UpdateProfileSchema, admin: dict = Depe
 async def delete_user(user_id: str, admin: dict = Depends(get_admin_user)):
     if str(admin["_id"]) == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
-    await db.users.delete_one({"_id": ObjectId(user_id)})
+    await db.users.delete_one({"_id": safe_object_id(user_id, label="user")})
     return {"message": "User deleted successfully"}
 
 
@@ -455,6 +457,431 @@ async def get_telemetry_errors(
     return {"errors": errors}
 
 
+@admin_router.get("/telemetry/timeseries")
+async def get_telemetry_timeseries(
+    hours: int = Query(default=24, ge=1, le=720),
+    bucket: int = Query(default=60, ge=5, le=1440),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    data = await llm_telemetry.get_timeseries(hours=hours, bucket_minutes=bucket)
+    return {"timeseries": data}
+
+
+@admin_router.get("/telemetry/breakdown")
+async def get_telemetry_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    group_by: str = Query(default="provider"),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    data = await llm_telemetry.get_breakdown(hours=hours, group_by=group_by)
+    return {"breakdown": data, "group_by": group_by}
+
+
+@admin_router.get("/telemetry/cost")
+async def get_telemetry_cost(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    return await llm_telemetry.get_cost_summary(hours=hours)
+
+
+# ── API Key Management ──────────────────────────────────────────────
+
+@admin_router.post("/verify-password")
+async def verify_admin_password(
+    req: dict,
+    admin: dict = Depends(get_admin_user),
+):
+    """Verify admin password before showing sensitive data (API keys)."""
+    from werkzeug.security import check_password_hash
+    password = req.get("password", "")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password required")
+    if not check_password_hash(admin.get("password_hash", ""), password):
+        raise HTTPException(status_code=403, detail="Invalid password")
+    return {"verified": True}
+
+
+# ── RAG Telemetry endpoints ─────────────────────────────────────────
+
+@admin_router.get("/rag-telemetry/stats")
+async def rag_telemetry_stats(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return await rag_telemetry.get_stats(hours)
+
+
+@admin_router.get("/rag-telemetry/course-breakdown")
+async def rag_telemetry_course_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"breakdown": await rag_telemetry.get_course_breakdown(hours)}
+
+
+@admin_router.get("/rag-telemetry/role-breakdown")
+async def rag_telemetry_role_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"breakdown": await rag_telemetry.get_role_breakdown(hours)}
+
+
+@admin_router.get("/rag-telemetry/alerts")
+async def rag_telemetry_alerts(
+    hours: int = Query(default=1, ge=1, le=24),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"alerts": await rag_telemetry.check_alerts(hours)}
+
+
+# ── RAG Evaluation endpoints ────────────────────────────────────────
+
+@admin_router.get("/rag-eval/datasets")
+async def list_eval_datasets(admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import list_datasets
+    return {"datasets": await list_datasets()}
+
+
+@admin_router.post("/rag-eval/datasets")
+async def create_eval_dataset(req: dict, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import create_dataset
+    name = (req.get("name") or "").strip()
+    if not name:
+        raise HTTPException(400, "Dataset name is required")
+    cases = req.get("cases", [])
+    if not cases:
+        raise HTTPException(400, "At least one test case is required")
+    ds = await create_dataset(name, cases, req.get("description", ""))
+    return ds
+
+
+@admin_router.get("/rag-eval/datasets/{dataset_id}")
+async def get_eval_dataset(dataset_id: str, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import get_dataset
+    ds = await get_dataset(dataset_id)
+    if not ds:
+        raise HTTPException(404, "Dataset not found")
+    return ds
+
+
+@admin_router.delete("/rag-eval/datasets/{dataset_id}")
+async def delete_eval_dataset(dataset_id: str, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import delete_dataset
+    ok = await delete_dataset(dataset_id)
+    if not ok:
+        raise HTTPException(404, "Dataset not found")
+    return {"ok": True}
+
+
+@admin_router.post("/rag-eval/run")
+async def run_rag_evaluation(req: dict, admin: dict = Depends(get_admin_user)):
+    """Start a full evaluation run on a dataset."""
+    from backend.services.rag_eval_service import run_evaluation
+
+    dataset_id = (req.get("dataset_id") or "").strip()
+    course_id = (req.get("course_id") or "").strip()
+    if not dataset_id or not course_id:
+        raise HTTPException(400, "dataset_id and course_id are required")
+
+    config = req.get("config", {})
+    triggered_by = str(admin.get("username", admin.get("_id", "admin")))
+
+    try:
+        result = await run_evaluation(dataset_id, course_id, config, triggered_by)
+        return result
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Eval run failed")
+        raise HTTPException(500, "Evaluation run failed")
+
+
+@admin_router.get("/rag-eval/runs")
+async def list_eval_runs(
+    limit: int = Query(default=50, ge=1, le=200),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.services.rag_eval_service import list_runs
+    return {"runs": await list_runs(limit)}
+
+
+@admin_router.get("/rag-eval/run/{run_id}")
+async def get_eval_run(run_id: str, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import get_run, get_run_results
+    run = await get_run(run_id)
+    if not run:
+        raise HTTPException(404, "Run not found")
+    run["results"] = await get_run_results(run_id)
+    return run
+
+
+@admin_router.post("/rag-eval/case-test")
+async def rag_case_test(req: dict, admin: dict = Depends(get_admin_user)):
+    """Single-query debug test — not persisted."""
+    from backend.services.rag_eval_service import case_test
+
+    course_id = (req.get("course_id") or "").strip()
+    query = (req.get("query") or "").strip()
+    if not course_id or not query:
+        raise HTTPException(400, "course_id and query are required")
+
+    result = await case_test(
+        course_id=course_id,
+        query=query,
+        top_k=int(req.get("top_k", 5)),
+        use_hybrid=bool(req.get("use_hybrid", True)),
+    )
+    return result
+
+
+@admin_router.post("/rag-eval/baseline/{run_id}")
+async def set_eval_baseline(run_id: str, req: dict, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import set_baseline
+    course_id = (req.get("course_id") or "").strip()
+    if not course_id:
+        raise HTTPException(400, "course_id is required")
+    return await set_baseline(run_id, course_id)
+
+
+@admin_router.get("/rag-eval/baseline/{course_id}")
+async def get_eval_baseline(course_id: str, admin: dict = Depends(get_admin_user)):
+    from backend.services.rag_eval_service import get_baseline, get_run
+    bl = await get_baseline(course_id)
+    if not bl:
+        return {"baseline": None}
+    run = await get_run(bl.get("run_id", ""))
+    return {"baseline": bl, "run": run}
+
+
+@admin_router.get("/rag-eval/compare")
+async def compare_eval_runs(
+    base: str = Query(...),
+    target: str = Query(...),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.services.rag_eval_service import compare_runs
+    try:
+        return await compare_runs(base, target)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@admin_router.post("/rag-eval/quality-gate")
+async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
+    """
+    Release quality gate: run evaluation on a dataset, compare against baseline,
+    and return pass/fail based on configurable thresholds.
+
+    Request body:
+        dataset_id:  str            (required)
+        course_id:   str            (required)
+        config:      { top_k?, use_hybrid? }
+        thresholds:  { max_hit_rate_drop_pct?, max_p95_latency_increase_pct?, max_error_rate? }
+
+    Default thresholds:
+        - Recall@k (hit_rate) must not drop more than 3 % vs baseline
+        - P95 latency must not increase more than 20 % vs baseline
+        - empty_retrieval_rate must be <= 2 %
+    """
+    from backend.services.rag_eval_service import (
+        run_evaluation, get_baseline, get_run, compare_runs,
+    )
+
+    dataset_id = (req.get("dataset_id") or "").strip()
+    course_id = (req.get("course_id") or "").strip()
+    if not dataset_id or not course_id:
+        raise HTTPException(400, "dataset_id and course_id are required")
+
+    config = req.get("config", {})
+    th = req.get("thresholds", {})
+    max_hit_rate_drop = th.get("max_hit_rate_drop_pct", 3)
+    max_p95_increase = th.get("max_p95_latency_increase_pct", 20)
+    max_empty_rate = th.get("max_error_rate", 0.02)
+
+    triggered_by = str(admin.get("username", admin.get("_id", "quality-gate")))
+
+    # 1) Run evaluation
+    try:
+        run = await run_evaluation(dataset_id, course_id, config, triggered_by)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Quality gate eval run failed")
+        raise HTTPException(500, "Evaluation run failed")
+
+    run_metrics = run.get("metrics", {})
+    run_id = run.get("run_id", "")
+
+    # 2) Compare against baseline if one exists
+    gate_checks: list[dict] = []
+    baseline = await get_baseline(course_id)
+
+    if baseline:
+        baseline_run_id = baseline.get("run_id", "")
+        try:
+            comparison = await compare_runs(baseline_run_id, run_id)
+            diff = comparison.get("diff", {})
+
+            # hit_rate drop check
+            hr_diff = diff.get("hit_rate", {})
+            hr_delta_pct = hr_diff.get("pct_change", 0)
+            hr_pass = hr_delta_pct >= -max_hit_rate_drop
+            gate_checks.append({
+                "check": "hit_rate_vs_baseline",
+                "passed": hr_pass,
+                "base": hr_diff.get("base", 0),
+                "current": hr_diff.get("target", 0),
+                "delta_pct": hr_delta_pct,
+                "threshold": f">= -{max_hit_rate_drop}%",
+            })
+
+            # P95 latency increase check
+            p95_diff = diff.get("p95_latency_ms", {})
+            p95_delta_pct = p95_diff.get("pct_change", 0)
+            p95_pass = p95_delta_pct <= max_p95_increase
+            gate_checks.append({
+                "check": "p95_latency_vs_baseline",
+                "passed": p95_pass,
+                "base": p95_diff.get("base", 0),
+                "current": p95_diff.get("target", 0),
+                "delta_pct": p95_delta_pct,
+                "threshold": f"<= +{max_p95_increase}%",
+            })
+        except ValueError:
+            gate_checks.append({
+                "check": "baseline_comparison",
+                "passed": True,
+                "note": "Baseline run not found, skipping comparison",
+            })
+    else:
+        gate_checks.append({
+            "check": "baseline_comparison",
+            "passed": True,
+            "note": "No baseline set for this course, skipping comparison",
+        })
+
+    # 3) Absolute empty retrieval rate check
+    er = run_metrics.get("empty_retrieval_rate", 0)
+    er_pass = er <= max_empty_rate
+    gate_checks.append({
+        "check": "empty_retrieval_rate",
+        "passed": er_pass,
+        "current": er,
+        "threshold": f"<= {max_empty_rate * 100}%",
+    })
+
+    overall_pass = all(c["passed"] for c in gate_checks)
+
+    return {
+        "passed": overall_pass,
+        "run_id": run_id,
+        "metrics": run_metrics,
+        "checks": gate_checks,
+    }
+
+
+@admin_router.get("/api-keys")
+async def get_api_keys(admin: dict = Depends(get_admin_user)):
+    """Return configured API key metadata (masked). Never returns raw keys."""
+    from backend.config import Config
+    keys = [
+        {"alias": "COZE_TOKEN",      "provider": "coze",     "value": _mask_key(Config.COZE_TOKEN)},
+        {"alias": "DEEPSEEK_API_KEY", "provider": "deepseek", "value": _mask_key(Config.DEEPSEEK_API_KEY)},
+        {"alias": "ZHIPU_API_KEY",   "provider": "zhipu",    "value": _mask_key(Config.ZHIPU_API_KEY)},
+        {"alias": "SERP_API_KEY",    "provider": "serp",     "value": _mask_key(Config.SERP_API_KEY)},
+    ]
+    return {"keys": keys}
+
+
+# Allowed env var names for API key updates (whitelist)
+_EDITABLE_KEY_ALIASES = {"COZE_TOKEN", "DEEPSEEK_API_KEY", "ZHIPU_API_KEY", "SERP_API_KEY"}
+
+
+@admin_router.put("/api-keys")
+async def update_api_key(
+    req: dict,
+    admin: dict = Depends(get_admin_user),
+):
+    """Update an API key value after password verification.
+
+    Writes to the .env file and updates the runtime Config attribute.
+    """
+    from werkzeug.security import check_password_hash
+    from backend.config import Config
+
+    password = (req.get("password") or "").strip()
+    alias = (req.get("alias") or "").strip()
+    new_value = (req.get("value") or "").strip()
+
+    if not password:
+        raise HTTPException(status_code=400, detail="Password required")
+    if not check_password_hash(admin.get("password_hash", ""), password):
+        raise HTTPException(status_code=403, detail="Invalid password")
+    if alias not in _EDITABLE_KEY_ALIASES:
+        raise HTTPException(status_code=400, detail="Invalid key alias")
+    if not new_value:
+        raise HTTPException(status_code=400, detail="Key value cannot be empty")
+
+    # ── Update .env file ──
+    env_path = os.path.join(Config.BASE_DIR, ".env")
+    _update_env_file(env_path, alias, new_value)
+
+    # ── Update runtime Config + os.environ ──
+    os.environ[alias] = new_value
+    setattr(Config, alias, new_value)
+
+    return {"message": f"{alias} updated successfully", "value": _mask_key(new_value)}
+
+
+def _update_env_file(env_path: str, key: str, value: str) -> None:
+    """Safely update a single key in a .env file (or append if missing)."""
+    import re as _re
+
+    if not os.path.isfile(env_path):
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.write(f"{key}={value}\n")
+        return
+
+    with open(env_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    pattern = _re.compile(rf"^\s*{_re.escape(key)}\s*=")
+    found = False
+    new_lines = []
+    for line in lines:
+        if pattern.match(line):
+            new_lines.append(f"{key}={value}\n")
+            found = True
+        else:
+            new_lines.append(line)
+
+    if not found:
+        new_lines.append(f"{key}={value}\n")
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+
+def _mask_key(value: str | None) -> str:
+    """Mask an API key showing only first 4 and last 4 chars."""
+    if not value:
+        return "(not set)"
+    if len(value) <= 10:
+        return value[:2] + "***" + value[-2:]
+    return value[:4] + "***" + value[-4:]
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # v2 — Flat model admin endpoints (course_sections + enrollments)
 # ═══════════════════════════════════════════════════════════════════════
@@ -583,3 +1010,48 @@ async def get_relations_overview_v2(admin: dict = Depends(get_admin_user)):
         c["enrollments"] = enrolls
 
     return {"teachers": teachers, "students": students, "courses": courses}
+
+
+# ─── Staff Codes ─────────────────────────────────────────────────────────────
+
+@admin_router.post("/staff-codes/generate")
+async def generate_staff_code(admin: dict = Depends(get_admin_user)):
+    import secrets
+    from datetime import datetime, timezone, timedelta
+    code = secrets.token_hex(4).upper()  # 8 uppercase hex chars
+    now = datetime.now(timezone.utc)
+    doc = {
+        "code": code,
+        "created_by": str(admin["_id"]),
+        "created_at": now,
+        "expires_at": now + timedelta(days=7),
+        "is_used": False,
+        "used_by": None,
+        "used_at": None,
+    }
+    await db.staff_codes.insert_one(doc)
+    return {"code": code, "expires_at": doc["expires_at"].isoformat()}
+
+
+@admin_router.get("/staff-codes")
+async def list_staff_codes(admin: dict = Depends(get_admin_user)):
+    codes = await db.staff_codes.find().sort("created_at", -1).to_list(200)
+    return [
+        {
+            "code": c["code"],
+            "is_used": c["is_used"],
+            "created_at": c["created_at"].isoformat(),
+            "expires_at": c["expires_at"].isoformat(),
+            "used_by": c.get("used_by"),
+            "used_at": c["used_at"].isoformat() if c.get("used_at") else None,
+        }
+        for c in codes
+    ]
+
+
+@admin_router.delete("/staff-codes/{code}")
+async def revoke_staff_code(code: str, admin: dict = Depends(get_admin_user)):
+    result = await db.staff_codes.delete_one({"code": code.upper(), "is_used": False})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Code not found or already used")
+    return {"ok": True}
