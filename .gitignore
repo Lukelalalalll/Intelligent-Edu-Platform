@@ -44,6 +44,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# 3.1 OAuth / API 密钥文件
+backend/client_secret_*.json
+
 # 4. 数据库文件 (不要把本地用户数据传到Git)
 *.sqlite3
 *.db
@@ -60,6 +63,13 @@ backend/script_results/
 backend/static/downloads/
 backend/static/uploads/
 backend/static/video_covers/
+backend/static/grading_annotated/
+backend/static/grading_pristine/
+backend/static/ppt_results/
+backend/static/script_results/
+backend/static/sub2/
+backend/static/sub4/
+backend/static/chat_files/
 backend/sub3/screenshots/
 backend/sub4/results/
 
