@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 import httpx
 from backend.config import Config
 from backend.prompts import prompt_registry
-from backend.infrastructure.telemetry import llm_telemetry
+from backend.infrastructure import llm_telemetry, TelemetryTimer
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,21 @@ class AIGatewayService:
         # Build additional_messages as real multi-turn conversation
         additional_msgs: list[Dict[str, str]] = []
 
+        # If a system_override is provided (e.g. Socratic prompt for students),
+        # inject it as the first user message so the Coze bot receives the instructions.
+        system_override = (context or {}).get("system_override")
+        if system_override:
+            additional_msgs.append({
+                "role": "user",
+                "content": f"[System Instructions — follow strictly]\n{system_override}",
+                "content_type": "text",
+            })
+            additional_msgs.append({
+                "role": "assistant",
+                "content": "Understood. I will follow these instructions for all subsequent messages.",
+                "content_type": "text",
+            })
+
         # Add chat history as proper alternating user/assistant turns
         chat_history = (context or {}).get("chat_history") or []
         for turn in chat_history:
@@ -101,8 +116,30 @@ class AIGatewayService:
 
         # Streaming mode: read SSE events and accumulate the answer
         answer_parts: list[str] = []
+        completed_answer = ""   # fallback: content from conversation.message.completed type=answer
+        stream_done = False
         async with client.stream("POST", self.chat_url, json=payload, headers=headers) as resp:
             resp.raise_for_status()
+
+            # Coze sometimes returns a plain JSON error body with status 200.
+            # Detect by checking Content-Type; SSE should be text/event-stream.
+            ct = (resp.headers.get("content-type") or "").lower()
+            if "text/event-stream" not in ct:
+                raw_body = ""
+                async for chunk in resp.aiter_text():
+                    raw_body += chunk
+                    if len(raw_body) > 4000:
+                        break
+                try:
+                    err_obj = json.loads(raw_body)
+                    code = err_obj.get("code", "")
+                    msg = err_obj.get("msg") or err_obj.get("message") or raw_body[:300]
+                    logger.error("Coze returned non-SSE response (code=%s): %s", code, msg)
+                    return f"Coze API error (code {code}): {msg}"
+                except json.JSONDecodeError:
+                    logger.error("Coze returned non-SSE, non-JSON response: %s", raw_body[:500])
+                    return f"Coze API returned unexpected response: {raw_body[:300]}"
+
             buffer = ""
             current_event = ""
             async for chunk in resp.aiter_text():
@@ -122,7 +159,7 @@ class AIGatewayService:
                         continue
 
                     data_str = line[len("data:"):].strip()
-                    if data_str == "[DONE]":
+                    if data_str in ("[DONE]", '""', ""):
                         continue
                     try:
                         data_obj = json.loads(data_str)
@@ -154,23 +191,31 @@ class AIGatewayService:
                                 msg_data = json.loads(msg_data)
                             except (json.JSONDecodeError, AttributeError):
                                 msg_data = {}
-                        if isinstance(msg_data, dict) and msg_data.get("type") == "answer" and msg_data.get("content"):
-                            return msg_data["content"]
+                        # Store as fallback; don't early-return so we can collect all parts
+                        if isinstance(msg_data, dict) and msg_data.get("type") == "answer":
+                            content = msg_data.get("content", "")
+                            if content:
+                                completed_answer = content
 
-                    elif event_type == "conversation.chat.completed":
+                    elif event_type in ("conversation.chat.completed", "done"):
+                        stream_done = True
                         break
 
-                    elif event_type in ("done", "error"):
-                        if event_type == "error":
-                            logger.error("Coze stream error: %s", data_obj)
-                            return f"Coze error: {data_obj}"
-                        break
+                    elif event_type == "error":
+                        logger.error("Coze stream error: %s", data_obj)
+                        return f"Coze error: {data_obj}"
 
                     # Reset after processing
                     current_event = ""
 
+                if stream_done:
+                    break
+
         if answer_parts:
             return "".join(answer_parts)
+        if completed_answer:
+            return completed_answer
+        logger.warning("Coze streaming returned no recognised answer content. bot_id=%s", self.bot_id)
         return "Coze completed but returned no answer content."
 
     async def _chat_legacy(self, client: httpx.AsyncClient, message: str, context: Optional[Dict[str, Any]] = None) -> str:
@@ -200,39 +245,30 @@ class AIGatewayService:
         if not self.api_key or not self.bot_id:
             return "[Mock AI] Coze.ai credentials missing; returning placeholder feedback."
 
-        start_time = time.perf_counter()
-        try:
-            async with httpx.AsyncClient(timeout=self.request_timeout_seconds) as client:
-                if "/v3/chat" in self.chat_url:
-                    result = await self._chat_v3(client, message=message, context=context)
-                else:
-                    result = await self._chat_legacy(client, message=message, context=context)
+        timer = TelemetryTimer(
+            provider="coze", model=self.bot_id,
+            endpoint="chat", api_type="chat",
+            credential_alias="COZE_TOKEN",
+        )
+        with timer:
+            try:
+                async with httpx.AsyncClient(timeout=self.request_timeout_seconds) as client:
+                    if "/v3/chat" in self.chat_url:
+                        result = await self._chat_v3(client, message=message, context=context)
+                    else:
+                        result = await self._chat_legacy(client, message=message, context=context)
+            except Exception as exc:  # noqa: BLE001
+                await timer.save(success=False, error=str(exc))
+                return f"Error calling Coze.ai: {exc}"
 
-            latency_ms = (time.perf_counter() - start_time) * 1000
-            # Estimate tokens: ~1 token per 2.5 chars for Chinese-heavy text
-            est_prompt_tokens = max(1, len(message) // 3)
-            est_completion_tokens = max(1, len(result) // 3)
-            await llm_telemetry.record(
-                provider="coze",
-                model=self.bot_id,
-                prompt_tokens=est_prompt_tokens,
-                completion_tokens=est_completion_tokens,
-                latency_ms=latency_ms,
-                endpoint="chat",
-                success=True,
-            )
-            return result
-        except Exception as exc:  # noqa: BLE001
-            latency_ms = (time.perf_counter() - start_time) * 1000
-            await llm_telemetry.record(
-                provider="coze",
-                model=self.bot_id,
-                latency_ms=latency_ms,
-                endpoint="chat",
-                success=False,
-                error=str(exc),
-            )
-            return f"Error calling Coze.ai: {exc}"
+        # Estimate tokens: ~1 token per 2.5 chars for Chinese-heavy text
+        est_prompt_tokens = max(1, len(message) // 3)
+        est_completion_tokens = max(1, len(result) // 3)
+        await timer.save(
+            prompt_tokens=est_prompt_tokens,
+            completion_tokens=est_completion_tokens,
+        )
+        return result
 
     async def analyze_submission(self, text: str, rubric: Dict[str, Any], assignment: str) -> Dict[str, Any]:
         """Analyze full submission with Coze.ai."""

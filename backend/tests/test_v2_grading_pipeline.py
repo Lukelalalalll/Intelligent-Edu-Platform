@@ -20,7 +20,7 @@ import pytest
 os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/test_edu_platform")
 os.environ.setdefault("JWT_SECRET", "test-secret")
 
-from backend.routes.grading_helpers import (
+from backend.services.grading_service import (
     create_course_section, create_assignment, create_submission,
     enroll_user, upsert_grade, get_submission_bundle,
     list_course_sections, list_assignments, list_submissions,
