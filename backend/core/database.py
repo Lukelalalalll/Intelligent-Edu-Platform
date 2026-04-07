@@ -78,6 +78,19 @@ async def ensure_indexes() -> None:
             expireAfterSeconds=90 * 24 * 3600,
             background=True,
         )
+        # v2 telemetry indexes for new aggregation queries
+        await db.llm_telemetry.create_index(
+            [("timestamp", -1), ("endpoint", 1)],
+            background=True,
+        )
+        await db.llm_telemetry.create_index(
+            [("success", 1), ("timestamp", -1)],
+            background=True,
+        )
+        await db.llm_telemetry.create_index(
+            [("api_type", 1), ("timestamp", -1)],
+            background=True,
+        )
 
         # Sub1 task tracking indexes
         await db.sub1_task_tracking.create_index("request_id", unique=True, background=True)
@@ -146,6 +159,30 @@ async def ensure_indexes() -> None:
             background=True,
         )
 
+        # --- Chat feature (contacts, rooms, messages) ---
+        await db.chat_contacts.create_index(
+            [("userId", 1), ("contactId", 1)], unique=True, background=True,
+        )
+        await db.chat_contacts.create_index(
+            [("userId", 1), ("status", 1)], background=True,
+        )
+        await db.chat_contacts.create_index(
+            [("contactId", 1), ("status", 1)], background=True,
+        )
+        await db.chat_rooms.create_index("members", background=True)
+        await db.chat_rooms.create_index(
+            [("members", 1), ("createdAt", -1)], background=True,
+        )
+        await db.chat_rooms.create_index(
+            [("courseId", 1), ("type", 1)], background=True,
+        )
+        await db.chat_messages.create_index(
+            [("roomId", 1), ("sentAt", -1)], background=True,
+        )
+        await db.chat_messages.create_index(
+            [("roomId", 1), ("readBy", 1), ("senderId", 1)], background=True,
+        )
+
         # --- AI Chat Sessions ---
         await db.ai_chat_sessions.create_index(
             [("userId", 1), ("updatedAt", -1)],
@@ -155,6 +192,16 @@ async def ensure_indexes() -> None:
         await db.ai_chat_sessions.create_index(
             "updatedAt",
             expireAfterSeconds=180 * 24 * 3600,
+            background=True,
+        )
+
+        # --- Staff codes (one-time teacher registration codes) ---
+        await db.staff_codes.create_index("code", unique=True, background=True)
+        await db.staff_codes.create_index("is_used", background=True)
+        # TTL: auto-delete expired codes
+        await db.staff_codes.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
             background=True,
         )
 

@@ -8,7 +8,7 @@ from fastapi import Request
 
 from backend.config import Config
 from backend.services.ai_gateway_service import AIGatewayService
-from backend.services.rag_service import LocalRagService
+from backend.services.tfidf_rag_service import LocalRagService
 
 
 @lru_cache(maxsize=1)
@@ -28,7 +28,7 @@ def get_local_rag_service() -> LocalRagService:
 @lru_cache(maxsize=1)
 def get_langchain_rag_service():
     try:
-        from backend.services.langchain_rag_service import LangChainRagService
+        from backend.services.vector_rag_service import LangChainRagService
 
         return LangChainRagService(
             persist_root=Config.RAG_VECTORSTORE_DIR,

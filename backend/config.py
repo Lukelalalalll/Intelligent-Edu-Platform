@@ -11,13 +11,18 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 class Config:
     BASE_DIR = BASE_DIR
 
+    ENV = os.getenv('ENV', 'development').lower()
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-this-in-prod')
     JWT_TOKEN_LOCATION = ['cookies']
-    JWT_COOKIE_CSRF_PROTECT = os.getenv('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+    # CSRF protection: defaults to True in production, False in dev
+    JWT_COOKIE_CSRF_PROTECT = os.getenv(
+        'JWT_COOKIE_CSRF_PROTECT',
+        'true' if os.getenv('ENV', 'development').lower() in ('production', 'prod') else 'false'
+    ).lower() == 'true'
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.getenv('JWT_EXPIRES_HOURS', '24')))
 

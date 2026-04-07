@@ -1,9 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from fastapi import Request, HTTPException, Depends
+from cachetools import TTLCache
 from backend.config import Config
 from backend.core.database import db
-from bson import ObjectId
+from backend.core.utils import safe_object_id
+
+# In-memory user cache — avoids hitting MongoDB on every authenticated request.
+# TTL=30s keeps it fresh enough; maxsize prevents unbounded growth.
+_user_cache: TTLCache = TTLCache(maxsize=512, ttl=30)
 
 
 def create_access_token(data: dict):
@@ -25,11 +30,14 @@ async def get_current_user(request: Request):
     except JWTError:
         raise HTTPException(status_code=401, detail="Token expired")
 
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    user = _user_cache.get(user_id)
     if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+        user = await db.users.find_one({"_id": safe_object_id(user_id, label="user")})
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        user["id"] = str(user["_id"])
+        _user_cache[user_id] = user
 
-    user["id"] = str(user["_id"])  # 将 ObjectId 转为字符串
     return user
 
 

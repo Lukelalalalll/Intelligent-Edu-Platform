@@ -19,15 +19,16 @@ from starlette.middleware.sessions import SessionMiddleware
 from backend.routes.auth_routes import auth_router
 from backend.routes.admin_routes import admin_router
 from backend.routes.ai_routes import ai_router
-from backend.routes.sub1_routes import sub1_router, public_sub1_router
-from backend.routes.sub2_routes import sub2_router
-from backend.routes.sub3_routes import sub3_router
-from backend.routes.sub4_routes import sub4_router
-from backend.routes.sub5_routes import sub5_router
+from backend.routes.slides_routes import slides_router, public_slides_router
+from backend.routes.questions_routes import questions_router
+from backend.routes.image_extractor_routes import image_extractor_router
+from backend.routes.diagram_routes import diagram_router
+from backend.routes.study_notes_routes import study_notes_router
 from backend.routes.teacher_routes import teacher_router
 from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
-from backend.routes.gmail_routes import gmail_router
+from backend.routes.email_routes import email_router
+from backend.routes.chat_routes import chat_router
 
 logger = logging.getLogger(__name__)
 
@@ -58,20 +59,22 @@ def _resolve_route_group(path: str) -> str:
         return "admin"
     if normalized.startswith("/api/ai"):
         return "ai"
-    if normalized.startswith("/api/sub1"):
-        return "sub1"
-    if normalized.startswith("/api/sub2"):
-        return "sub2"
-    if normalized.startswith("/api/sub3"):
-        return "sub3"
-    if normalized.startswith("/api/sub4"):
-        return "sub4"
-    if normalized.startswith("/api/sub5"):
-        return "sub5"
+    if normalized.startswith("/api/slides"):
+        return "slides"
+    if normalized.startswith("/api/questions"):
+        return "questions"
+    if normalized.startswith("/api/image-extractor"):
+        return "image_extractor"
+    if normalized.startswith("/api/diagram"):
+        return "diagram"
+    if normalized.startswith("/api/study-notes"):
+        return "study_notes"
     if normalized.startswith("/api/teacher"):
         return "teacher"
     if normalized.startswith("/api/grading"):
         return "grading"
+    if normalized.startswith("/api/email"):
+        return "email"
     if normalized.startswith("/data"):
         return "data"
     if normalized.startswith("/static"):
@@ -117,7 +120,7 @@ async def lifespan(app: FastAPI):
 
     # ── Clean up old sub2 temporary files ──
     try:
-        from backend.services.sub2_service import cleanup_old_files
+        from backend.services.questions_service import cleanup_old_files
         cleanup_old_files()
     except Exception:
         logger.exception("Failed to run sub2 file cleanup on startup")
@@ -243,16 +246,17 @@ app.mount("/grading_annotated", StaticFiles(directory=ANNOTATED_PDF_ROOT), name=
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(ai_router)
-app.include_router(sub1_router)
-app.include_router(public_sub1_router)
-app.include_router(sub2_router)
-app.include_router(sub3_router)
-app.include_router(sub4_router)
-app.include_router(sub5_router)
+app.include_router(slides_router)
+app.include_router(public_slides_router)
+app.include_router(questions_router)
+app.include_router(image_extractor_router)
+app.include_router(diagram_router)
+app.include_router(study_notes_router)
 app.include_router(teacher_router)
 app.include_router(grading_router)
 app.include_router(ai_gateway_router)
-app.include_router(gmail_router)
+app.include_router(email_router)
+app.include_router(chat_router)
 
 # === 启动命令 ===
 # 在根目录下终端运行：
