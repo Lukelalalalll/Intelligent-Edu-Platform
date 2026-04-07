@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from werkzeug.utils import secure_filename
 
 # 引入你的 Service 层工具
-from backend.services.sub2_service import (
+from backend.services.questions_service import (
     allowed_file, call_zhipu_ocr,
     call_coze_generate,
     extract_pdf_text_with_loader, call_zhipu_layout_from_text
@@ -23,9 +23,9 @@ from backend.schemas import (
     UploadScreenshotSchema
 )
 from backend.config import Config
-from backend.infrastructure.telemetry import llm_telemetry
+from backend.infrastructure import llm_telemetry, TelemetryTimer
 
-sub2_router = APIRouter(prefix="/api/sub2", tags=["Sub2 - Question Generator"])
+questions_router = APIRouter(prefix="/api/questions", tags=["Question Generator"])
 
 # ── Helpers for per-task session state ──
 
@@ -46,7 +46,7 @@ def _set_task(request: Request, task_id: str, data: dict):
     request.session['sub2_tasks'] = tasks
 
 
-@sub2_router.post("/upload")
+@questions_router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     try:
         if not file.filename:
@@ -94,132 +94,126 @@ async def upload_file(request: Request, file: UploadFile = File(...), user: dict
         return JSONResponse(content={'error': str(e)}, status_code=500)
 
 
-@sub2_router.post("/extract_questions")
+@questions_router.post("/extract_questions")
 async def extract_questions_route(req: ExtractQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
-    t0 = time.perf_counter()
-    try:
-        task = _get_task(request, req.task_id)
-        if not task:
-            return JSONResponse(content={'error': 'Invalid task_id, please re-upload'}, status_code=400)
-
-        uploaded_file = task.get('uploaded_file')
-        if not uploaded_file or not os.path.exists(uploaded_file):
-            return JSONResponse(content={'error': 'File expired, please re-upload'}, status_code=400)
-
-        if uploaded_file.lower().endswith('.pdf'):
-            extracted_markdown = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
-            structured_data = call_zhipu_layout_from_text(extracted_markdown, extract_prompt=req.prompt)
-        else:
-            structured_data = call_zhipu_ocr(uploaded_file, extract_prompt=req.prompt)
-
-        latency = (time.perf_counter() - t0) * 1000
-        await llm_telemetry.record(
-            provider="zhipu", model="glm-4v/glm-4-plus", endpoint="sub2/extract",
-            user_id=user.get('id', ''), latency_ms=latency, success=True,
-        )
-
-        cache_filename = f"extract_cache_{req.task_id}_{int(time.time())}.json"
-        cache_path = os.path.join(Config.GENERATED_FOLDER_SUB2, cache_filename)
-        with open(cache_path, 'w', encoding='utf-8') as f:
-            json.dump({'result': {'llm_json': structured_data}}, f, ensure_ascii=False)
-
-        task['extracted_content_path'] = cache_path
-        _set_task(request, req.task_id, task)
-        return {'success': True, 'data': {'result': {'llm_json': structured_data}}}
-
-    except Exception as e:
-        latency = (time.perf_counter() - t0) * 1000
-        await llm_telemetry.record(
-            provider="zhipu", model="glm-4v/glm-4-plus", endpoint="sub2/extract",
-            user_id=user.get('id', ''), latency_ms=latency, success=False, error=str(e),
-        )
-        traceback.print_exc()
-        return JSONResponse(content={'success': False, 'error': f'Extraction failed: {str(e)}'}, status_code=500)
-
-
-@sub2_router.post("/generate_questions")
-async def generate_questions_route(req: GenerateQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
-    t0 = time.perf_counter()
-    try:
-        task = _get_task(request, req.task_id)
-        if not task:
-            return JSONResponse(content={'success': False, 'error': 'Invalid task_id'}, status_code=400)
-
-        cache_path = task.get('extracted_content_path')
-        if not cache_path or not os.path.exists(cache_path):
-            return JSONResponse(content={'success': False, 'error': 'No extracted content found'}, status_code=400)
-
-        with open(cache_path, 'r', encoding='utf-8') as f:
-            extracted_data = json.load(f)
-
-        base_content = json.dumps(extracted_data['result']['llm_json'].get('exercises', []), ensure_ascii=False)
-        difficulty_label = Config.DIFFICULTY_MAP.get(int(req.difficulty), str(req.difficulty)) if str(req.difficulty).isdigit() else str(req.difficulty)
-        constraint_text = "; ".join(req.constraints) if req.constraints else "None"
-        user_reqs = (
-            f"Subject: {req.subject}, "
-            f"Type: {req.question_type}, "
-            f"Count: {req.num_questions}, "
-            f"Difficulty: {difficulty_label}, "
-            f"Constraints: {constraint_text}, "
-            f"Output Language: {req.output_language}"
-        )
-
-        result_text = call_coze_generate(
-            base_content,
-            user_reqs,
-            output_language=req.output_language,
-            question_basis=req.question_basis,
-            knowledge_points=req.knowledge_points,
-            saved_screenshots=req.saved_screenshots,
-        )
-
-        generated_filename = f"generated_questions_{req.task_id}_{int(time.time())}.md"
-        generated_path = os.path.join(Config.GENERATED_FOLDER_SUB2, generated_filename)
-        with open(generated_path, 'w', encoding='utf-8') as f:
-            f.write(result_text)
-
-        task['generated_questions_path'] = generated_path
-        _set_task(request, req.task_id, task)
-
-        # Save to generation history
+    timer = TelemetryTimer(
+        provider="zhipu", model="glm-4v/glm-4-plus",
+        endpoint="sub2/extract", user_id=user.get('id', ''),
+        api_type="vision", credential_alias="ZHIPU_API_KEY",
+    )
+    with timer:
         try:
-            await db.sub2_generation_history.insert_one({
-                'user_id': user.get('id', ''),
-                'params': {
-                    'subject': req.subject,
-                    'question_type': req.question_type,
-                    'num_questions': req.num_questions,
-                    'difficulty': req.difficulty,
-                    'constraints': req.constraints,
-                    'output_language': req.output_language,
-                    'question_basis': req.question_basis,
-                    'knowledge_points': req.knowledge_points,
-                },
-                'result_preview': result_text[:500],
-                'result_full': result_text,
-                'created_at': datetime.now(timezone.utc),
-            })
-        except Exception:
-            pass  # history save failure should not block the response
+            task = _get_task(request, req.task_id)
+            if not task:
+                return JSONResponse(content={'error': 'Invalid task_id, please re-upload'}, status_code=400)
 
-        latency = (time.perf_counter() - t0) * 1000
-        await llm_telemetry.record(
-            provider="coze", model="coze-bot", endpoint="sub2/generate",
-            user_id=user.get('id', ''), latency_ms=latency, success=True,
-        )
+            uploaded_file = task.get('uploaded_file')
+            if not uploaded_file or not os.path.exists(uploaded_file):
+                return JSONResponse(content={'error': 'File expired, please re-upload'}, status_code=400)
 
-        return {'success': True, 'questions': result_text}
+            if uploaded_file.lower().endswith('.pdf'):
+                extracted_markdown = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
+                structured_data = call_zhipu_layout_from_text(extracted_markdown, extract_prompt=req.prompt)
+            else:
+                structured_data = call_zhipu_ocr(uploaded_file, extract_prompt=req.prompt)
 
-    except Exception as e:
-        latency = (time.perf_counter() - t0) * 1000
-        await llm_telemetry.record(
-            provider="coze", model="coze-bot", endpoint="sub2/generate",
-            user_id=user.get('id', ''), latency_ms=latency, success=False, error=str(e),
-        )
-        return JSONResponse(content={'success': False, 'error': f'Generation failed: {str(e)}'}, status_code=500)
+        except Exception as e:
+            await timer.save(success=False, error=str(e))
+            traceback.print_exc()
+            return JSONResponse(content={'success': False, 'error': f'Extraction failed: {str(e)}'}, status_code=500)
+
+    await timer.save(success=True)
+
+    cache_filename = f"extract_cache_{req.task_id}_{int(time.time())}.json"
+    cache_path = os.path.join(Config.GENERATED_FOLDER_SUB2, cache_filename)
+    with open(cache_path, 'w', encoding='utf-8') as f:
+        json.dump({'result': {'llm_json': structured_data}}, f, ensure_ascii=False)
+
+    task['extracted_content_path'] = cache_path
+    _set_task(request, req.task_id, task)
+    return {'success': True, 'data': {'result': {'llm_json': structured_data}}}
 
 
-@sub2_router.post("/export_questions")
+@questions_router.post("/generate_questions")
+async def generate_questions_route(req: GenerateQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
+    timer = TelemetryTimer(
+        provider="coze", model="coze-bot",
+        endpoint="sub2/generate", user_id=user.get('id', ''),
+        api_type="chat", credential_alias="COZE_TOKEN",
+    )
+    with timer:
+        try:
+            task = _get_task(request, req.task_id)
+            if not task:
+                return JSONResponse(content={'success': False, 'error': 'Invalid task_id'}, status_code=400)
+
+            cache_path = task.get('extracted_content_path')
+            if not cache_path or not os.path.exists(cache_path):
+                return JSONResponse(content={'success': False, 'error': 'No extracted content found'}, status_code=400)
+
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                extracted_data = json.load(f)
+
+            base_content = json.dumps(extracted_data['result']['llm_json'].get('exercises', []), ensure_ascii=False)
+            difficulty_label = Config.DIFFICULTY_MAP.get(int(req.difficulty), str(req.difficulty)) if str(req.difficulty).isdigit() else str(req.difficulty)
+            constraint_text = "; ".join(req.constraints) if req.constraints else "None"
+            user_reqs = (
+                f"Subject: {req.subject}, "
+                f"Type: {req.question_type}, "
+                f"Count: {req.num_questions}, "
+                f"Difficulty: {difficulty_label}, "
+                f"Constraints: {constraint_text}, "
+                f"Output Language: {req.output_language}"
+            )
+
+            result_text = call_coze_generate(
+                base_content,
+                user_reqs,
+                output_language=req.output_language,
+                question_basis=req.question_basis,
+                knowledge_points=req.knowledge_points,
+                saved_screenshots=req.saved_screenshots,
+            )
+
+        except Exception as e:
+            await timer.save(success=False, error=str(e))
+            return JSONResponse(content={'success': False, 'error': f'Generation failed: {str(e)}'}, status_code=500)
+
+    await timer.save(success=True)
+
+    generated_filename = f"generated_questions_{req.task_id}_{int(time.time())}.md"
+    generated_path = os.path.join(Config.GENERATED_FOLDER_SUB2, generated_filename)
+    with open(generated_path, 'w', encoding='utf-8') as f:
+        f.write(result_text)
+
+    task['generated_questions_path'] = generated_path
+    _set_task(request, req.task_id, task)
+
+    # Save to generation history
+    try:
+        await db.sub2_generation_history.insert_one({
+            'user_id': user.get('id', ''),
+            'params': {
+                'subject': req.subject,
+                'question_type': req.question_type,
+                'num_questions': req.num_questions,
+                'difficulty': req.difficulty,
+                'constraints': req.constraints,
+                'output_language': req.output_language,
+                'question_basis': req.question_basis,
+                'knowledge_points': req.knowledge_points,
+            },
+            'result_preview': result_text[:500],
+            'result_full': result_text,
+            'created_at': datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass  # history save failure should not block the response
+
+    return {'success': True, 'questions': result_text}
+
+
+@questions_router.post("/export_questions")
 def export_questions_route(request: Request, task_id: str = Query(None), user: dict = Depends(get_current_user)):
     """Export generated questions as a Markdown file download.
     Accepts optional task_id query param to identify which task's output to export.
@@ -253,7 +247,7 @@ def export_questions_route(request: Request, task_id: str = Query(None), user: d
         return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@sub2_router.post("/upload_screenshot")
+@questions_router.post("/upload_screenshot")
 def upload_screenshot(req: UploadScreenshotSchema, user: dict = Depends(get_current_user)):
     try:
         img_data = base64.b64decode(req.image.split(',')[1])
@@ -286,7 +280,7 @@ def upload_screenshot(req: UploadScreenshotSchema, user: dict = Depends(get_curr
 
 # ── Generation History ──
 
-@sub2_router.get("/generation_history")
+@questions_router.get("/generation_history")
 async def get_generation_history(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
@@ -315,7 +309,7 @@ async def get_generation_history(
         return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@sub2_router.get("/generation_history/{history_id}")
+@questions_router.get("/generation_history/{history_id}")
 async def get_generation_detail(history_id: str, user: dict = Depends(get_current_user)):
     """Return full generation result for replay/review."""
     try:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from backend.core.security import get_current_user, can_access_course as _centralized_can_access_course
-from backend.routes.grading_helpers import (
+from backend.services.grading_service import (
     load_courses, find_submission, find_submission_v2, load_annotations, render_annotations_to_pdf,
     get_source_pdf_web_path,
     # v2 helpers

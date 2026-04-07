@@ -11,7 +11,7 @@ from backend.services.gmail_service import GmailService
 
 logger = logging.getLogger(__name__)
 
-gmail_router = APIRouter(prefix="/api/gmail", tags=["Gmail"])
+email_router = APIRouter(prefix="/api/email", tags=["Email"])
 
 _GMAIL_NOT_CONNECTED = "Gmail is not connected"
 
@@ -50,7 +50,7 @@ class GmailClassifySchema(BaseModel):
     sender: str | None = None
 
 
-@gmail_router.get("/auth_url")
+@email_router.get("/auth_url")
 async def get_gmail_auth_url(request: Request, current_user: dict = Depends(get_current_user)):
     try:
         # 🌟 修复：同时获取生成的 code_verifier
@@ -65,7 +65,7 @@ async def get_gmail_auth_url(request: Request, current_user: dict = Depends(get_
         raise HTTPException(status_code=500, detail=f"Failed to generate Gmail auth url: {exc}")
 
 
-@gmail_router.post("/callback")
+@email_router.post("/callback")
 async def gmail_oauth_callback(
     payload: GmailCallbackSchema,
     request: Request,
@@ -105,7 +105,7 @@ async def gmail_oauth_callback(
         raise HTTPException(status_code=500, detail=f"Failed to exchange Gmail token: {exc}")
 
 
-@gmail_router.get("/list")
+@email_router.get("/list")
 async def list_latest_emails(current_user: dict = Depends(get_current_user), page_token: str | None = None):
     user_doc = await db.users.find_one({"_id": current_user["_id"]})
     gmail_token_text = (user_doc or {}).get("gmail_token")
@@ -127,7 +127,7 @@ async def list_latest_emails(current_user: dict = Depends(get_current_user), pag
         raise HTTPException(status_code=500, detail=f"Failed to fetch Gmail emails: {exc}")
 
 
-@gmail_router.get("/message/{message_id}")
+@email_router.get("/message/{message_id}")
 async def get_email_detail(message_id: str, current_user: dict = Depends(get_current_user)):
     user_doc = await db.users.find_one({"_id": current_user["_id"]})
     gmail_token_text = (user_doc or {}).get("gmail_token")
@@ -170,7 +170,7 @@ async def _save_refreshed_token(user_id, refreshed_token: dict) -> None:
 
 # ─── Send Email ────────────────────────────────────────────────────────
 
-@gmail_router.post("/send")
+@email_router.post("/send")
 async def send_email(payload: GmailSendSchema, current_user: dict = Depends(get_current_user)):
     token_data = await _get_gmail_token(current_user)
     try:
@@ -188,7 +188,7 @@ async def send_email(payload: GmailSendSchema, current_user: dict = Depends(get_
 
 # ─── Reply to Email ───────────────────────────────────────────────────
 
-@gmail_router.post("/reply")
+@email_router.post("/reply")
 async def reply_to_email(payload: GmailReplySchema, current_user: dict = Depends(get_current_user)):
     token_data = await _get_gmail_token(current_user)
     try:
@@ -209,7 +209,7 @@ async def reply_to_email(payload: GmailReplySchema, current_user: dict = Depends
 
 # ─── Get Thread ────────────────────────────────────────────────────────
 
-@gmail_router.get("/thread/{thread_id}")
+@email_router.get("/thread/{thread_id}")
 async def get_thread(thread_id: str, current_user: dict = Depends(get_current_user)):
     token_data = await _get_gmail_token(current_user)
     try:
@@ -225,7 +225,7 @@ async def get_thread(thread_id: str, current_user: dict = Depends(get_current_us
 
 # ─── Create Draft ──────────────────────────────────────────────────────
 
-@gmail_router.post("/draft")
+@email_router.post("/draft")
 async def create_draft(payload: GmailDraftSchema, current_user: dict = Depends(get_current_user)):
     token_data = await _get_gmail_token(current_user)
     try:
@@ -244,7 +244,7 @@ async def create_draft(payload: GmailDraftSchema, current_user: dict = Depends(g
 
 # ─── Disconnect Gmail ─────────────────────────────────────────────────
 
-@gmail_router.post("/disconnect")
+@email_router.post("/disconnect")
 async def disconnect_gmail(current_user: dict = Depends(get_current_user)):
     """Remove stored Gmail token for the current user."""
     await db.users.update_one(
@@ -256,7 +256,7 @@ async def disconnect_gmail(current_user: dict = Depends(get_current_user)):
 
 # ─── AI: Classify Email ───────────────────────────────────────────────
 
-@gmail_router.post("/classify")
+@email_router.post("/classify")
 async def classify_email(payload: GmailClassifySchema, current_user: dict = Depends(get_current_user)):
     """Use AI to classify an email (category, urgency, summary, entities).
     Results are cached in MongoDB email_classifications collection."""
@@ -327,7 +327,7 @@ class GmailSuggestReplySchema(BaseModel):
 
 # ─── AI: Suggest Reply ────────────────────────────────────────────────
 
-@gmail_router.post("/suggest_reply/{message_id}")
+@email_router.post("/suggest_reply/{message_id}")
 async def suggest_reply(message_id: str, payload: GmailSuggestReplySchema | None = None, current_user: dict = Depends(get_current_user)):
     """Use AI to generate a suggested reply for an email."""
     from backend.prompts import prompt_registry

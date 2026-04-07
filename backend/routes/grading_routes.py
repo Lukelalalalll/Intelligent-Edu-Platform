@@ -1,14 +1,14 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.schemas import AnnotationPayload, SubmissionScoreSchema, FinalizeAnnotationsSchema
-from backend.routes.grading_helpers import (
+from backend.services.grading_service import (
     load_annotations, save_annotations, find_submission, render_annotations_to_pdf,
     upsert_grade, update_submission, find_submission_v2,
 )
 from backend.core.security import get_current_user, can_access_course
 
 
-grading_router = APIRouter(prefix="/api/teacher", tags=["Grading"])
+grading_router = APIRouter(prefix="/api/grading", tags=["Grading"])
 PERMISSION_DENIED = "Permission denied"
 
 

@@ -19,7 +19,7 @@ from backend.core.dependencies import (
     get_langchain_rag_service,
     get_process_pool,
 )
-from backend.routes.grading_helpers import find_submission, load_annotations, find_submission_v2
+from backend.services.grading_service import find_submission, load_annotations, find_submission_v2
 from backend.schemas import (
     AnalyzeSubmissionSchema,
     AnnotateSchema,
@@ -29,12 +29,12 @@ from backend.schemas import (
     RagContextSchema,
 )
 from backend.services.ai_gateway_service import AIGatewayService
-from backend.services.rag_service import LocalRagService
+from backend.services.tfidf_rag_service import LocalRagService
 from backend.utils.pdf_extractor import extract_text_from_pdf
 from backend.config import Config
 from backend.prompts import prompt_registry
 
-ai_gateway_router = APIRouter(prefix="/api/ai", tags=["AIGateway"])
+ai_gateway_router = APIRouter(prefix="/api/ai/gateway", tags=["AI Gateway"])
 logger = logging.getLogger(__name__)
 
 DEFAULT_RAG_TOP_K = 4

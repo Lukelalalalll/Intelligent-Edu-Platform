@@ -7,19 +7,18 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, R
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from werkzeug.utils import secure_filename
-from backend.services.sub1_service import Sub1Service
+from backend.services.slides_service import Sub1Service
 from backend.config import Config
 from backend.core.security import get_current_user
-import traceback
 from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema, PptProcessSchema, ClassifyHighlightsSchema, MapToSlidesSchema, ValidateSlidesSchema, EvaluateQualitySchema
-from backend.utils.sub1.list_plsholders import PPTTemplateManager
-from backend.utils.sub1.task_tracker import TaskTracker, StepStatus, TaskStatus, AuditLogger
+from backend.services.slides.list_placeholders import PPTTemplateManager
+from backend.services.slides.task_tracker import TaskTracker, StepStatus, TaskStatus, AuditLogger
 
 logger = logging.getLogger(__name__)
 
 
-sub1_router = APIRouter(prefix="/api/sub1", tags=["Sub1"])
-public_sub1_router = APIRouter(prefix="/sub1", tags=["Sub1Public"])
+slides_router = APIRouter(prefix="/api/slides", tags=["Slides"])
+public_slides_router = APIRouter(prefix="/slides", tags=["SlidesPublic"])
 
 # Parse cache: {(filepath, use_llm): {"mtime": float, "data": dict}}
 _SUB1_PARSE_CACHE = {}
@@ -37,18 +36,19 @@ def _get_parsed_data_with_cache(filepath: str, use_llm: bool):
     return parsed
 
 
-@sub1_router.get("/get_themes")
-@public_sub1_router.get("/get_themes", include_in_schema=False)
+@slides_router.get("/get_themes")
+@public_slides_router.get("/get_themes", include_in_schema=False)
 def get_themes():
     try:
         manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
         return manager.get_available_themes()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Failed to list themes")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.get("/get_placeholders/{theme_name}")
-@public_sub1_router.get("/get_placeholders/{theme_name}", include_in_schema=False)
+@slides_router.get("/get_placeholders/{theme_name}")
+@public_slides_router.get("/get_placeholders/{theme_name}", include_in_schema=False)
 def get_placeholders(theme_name: str):
     try:
         manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
@@ -56,14 +56,15 @@ def get_placeholders(theme_name: str):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Failed to get placeholders for theme")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/process-ppt")
-@sub1_router.post("/generate_ppt")
+@slides_router.post("/process-ppt")
+@slides_router.post("/generate_ppt")
 async def process_ppt(req: PptProcessSchema, request: Request):
     import asyncio
-    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    from backend.services.slides.checkpoint_manager import CheckpointManager
 
     request_id = request.headers.get("X-Request-ID") or None
     tracker = TaskTracker(request_id=request_id, task_type="ppt_generate")
@@ -99,10 +100,10 @@ async def process_ppt(req: PptProcessSchema, request: Request):
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] PPT generation failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.get("/download_ppt/{filename}")
+@slides_router.get("/download_ppt/{filename}")
 def download_ppt(filename: str):
     from fastapi.responses import FileResponse
 
@@ -121,7 +122,7 @@ def download_ppt(filename: str):
 
     raise HTTPException(status_code=404, detail="File not found")
 
-@sub1_router.post("/parse-md")
+@slides_router.post("/parse-md")
 async def parse_md(
         file: UploadFile = File(...),
         use_llm: bool = Form(False),
@@ -145,7 +146,7 @@ async def parse_md(
             target_md_path = os.path.join(Config.SUB1_MD_FOLDER, md_filename)
 
             with tracker.step("parse", filename=filename, use_llm=use_llm):
-                from backend.utils.sub1.pdf2md import convert_pdf_to_md
+                from backend.services.slides.pdf2md import convert_pdf_to_md
                 convert_pdf_to_md(upload_path, target_md_path)
             parsing_path = target_md_path
         else:
@@ -169,10 +170,10 @@ async def parse_md(
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Parse failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/combine")
+@slides_router.post("/combine")
 def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user)):
     """组合选中的章节"""
     try:
@@ -245,24 +246,21 @@ def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user))
         return {"filename": new_filename}
 
     except Exception as e:
-        # 🌟 核心：打印真实的报错堆栈到终端！
-        print("🚨 COMBINE ERROR OCCURRED:")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Combine sections failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/save_highlights")
+@slides_router.post("/save_highlights")
 def save_highlights(req: SaveHighlightsSchema, user: dict = Depends(get_current_user)):
     try:
         saved_file = Sub1Service.save_highlights(req.filename, req.highlights)
         return {"message": "Success", "file": saved_file}
     except Exception as e:
-        print("SAVE HIGHLIGHTS ERROR OCCURRED:")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Save highlights failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/classify-highlights")
+@slides_router.post("/classify-highlights")
 async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depends(get_current_user)):
     """
     Classify raw highlights into structured categories with confidence scores.
@@ -285,7 +283,7 @@ async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depend
         if not flat_highlights:
             return {"status": "success", "highlights": [], "stats": {}}
 
-        from backend.utils.sub1.highlight_classifier import HighlightClassifier
+        from backend.services.slides.highlight_classifier import HighlightClassifier
         classifier = HighlightClassifier()
 
         with tracker.step("classify_highlights", count=len(flat_highlights)):
@@ -318,10 +316,10 @@ async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depend
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Highlight classification failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.get("/download/{filename}")
+@slides_router.get("/download/{filename}")
 def download_combined(filename: str, user: dict = Depends(get_current_user)):
     from fastapi.responses import FileResponse
     for folder in [Config.SUB1_MD_FOLDER, Config.MARKDOWN_FOLDER]:
@@ -331,7 +329,7 @@ def download_combined(filename: str, user: dict = Depends(get_current_user)):
     raise HTTPException(status_code=404, detail="File not found")
 
 
-@sub1_router.get("/load_highlights/{filename}")
+@slides_router.get("/load_highlights/{filename}")
 def load_highlights(filename: str, user: dict = Depends(get_current_user)):
     """加载某个 combined 文件的已保存高亮（flat JSON 列表）"""
     try:
@@ -339,7 +337,7 @@ def load_highlights(filename: str, user: dict = Depends(get_current_user)):
         return {"highlights": highlights}
     except Exception as e:
         logger.exception("Failed to load highlights for %s", filename)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ── Coze Outline Generation ──
@@ -440,7 +438,7 @@ async def _call_coze_text_sub1(system_prompt: str, user_content: str) -> str:
         raise HTTPException(504, "AI service timed out")
 
 
-@sub1_router.post("/coze-generate-outline")
+@slides_router.post("/coze-generate-outline")
 async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(get_current_user)):
     """Use Coze AI to generate a structured Markdown outline from keywords."""
     keywords = req.keywords.strip()
@@ -456,7 +454,7 @@ async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(ge
         raise HTTPException(500, str(e))
 
 
-@sub1_router.post("/process-text")
+@slides_router.post("/process-text")
 async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current_user)):
     """Convert plain text/markdown into a combined MD file (section-break format)."""
     text = req.text.strip()
@@ -495,7 +493,7 @@ async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current
     return {"filename": filename, "sections": len(sections)}
 
 
-@sub1_router.post("/summarize")
+@slides_router.post("/summarize")
 async def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends(get_current_user), request: Request = None):
     """
     处理选中的高亮内容，利用 LLM 生成 PPT 的结构化数据。
@@ -504,10 +502,10 @@ async def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends
     request_id = (request.headers.get("X-Request-ID") if request else None)
     tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="summarize")
 
-    from backend.utils.sub1.checkpoint_manager import CheckpointManager, _compute_hash
+    from backend.services.slides.checkpoint_manager import CheckpointManager, _compute_hash
 
     try:
-        from backend.utils.sub1.section_summarizer import SectionSummarizer
+        from backend.services.slides.section_summarizer import SectionSummarizer
 
         structured_content = []
         for section in req.highlights:
@@ -589,16 +587,16 @@ async def summarize_highlights(req: SummarizeRequestSchema, user: dict = Depends
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Summarize failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/generate_talking_script")
+@slides_router.post("/generate_talking_script")
 async def generate_talking_script(req: GenerateScriptSchema, user: dict = Depends(get_current_user), request: Request = None):
     request_id = (request.headers.get("X-Request-ID") if request else None)
     tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="script_generate")
     try:
         with tracker.step("script_generate", slides_count=len(req.slides_results), style=req.script_style):
-            scripts, filename = Sub1Service.generate_script(
+            scripts, filename = await Sub1Service.generate_script(
                 slides_results=req.slides_results,
                 style=req.script_style,
                 title=req.presentation_title
@@ -628,9 +626,9 @@ async def generate_talking_script(req: GenerateScriptSchema, user: dict = Depend
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Script generation failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@sub1_router.get("/download_script/{filename}")
+@slides_router.get("/download_script/{filename}")
 def download_script(filename: str, user: dict = Depends(get_current_user)):
     from fastapi.responses import FileResponse
     path = os.path.join(Config.SCRIPT_RESULTS_FOLDER, filename)
@@ -643,12 +641,12 @@ def download_script(filename: str, user: dict = Depends(get_current_user)):
 
 
 
-@sub1_router.post("/summarize_in_chapters")
+@slides_router.post("/summarize_in_chapters")
 async def summarize_chapters(req: SummarizeChaptersSchema, user: dict = Depends(get_current_user), request: Request = None):
     request_id = (request.headers.get("X-Request-ID") if request else None)
     tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="summarize_chapters")
     try:
-        from backend.utils.sub1.section_summarizer import SectionSummarizer
+        from backend.services.slides.section_summarizer import SectionSummarizer
         summarizer = SectionSummarizer()
         with tracker.step("summarize", chapters_count=len(req.chapterData), total_pages=req.total_pages):
             results = await summarizer.summarize_sections(req.chapterData, req.num_of_bullets, req.words_each_bullet)
@@ -658,19 +656,19 @@ async def summarize_chapters(req: SummarizeChaptersSchema, user: dict = Depends(
     except Exception as e:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Chapter summarization failed", tracker.request_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ==================== Template Mapping Endpoints ====================
 
-@sub1_router.post("/map-to-slides")
+@slides_router.post("/map-to-slides")
 def map_summaries_to_slides_endpoint(req: MapToSlidesSchema, user: dict = Depends(get_current_user)):
     """
     Map structured summaries to PPT-ready slide data (decoupled from summarization).
     Template mapping failures can be retried independently without re-running summarization.
     """
     try:
-        from backend.utils.sub1.template_mapper import map_summaries_to_slides, validate_presentation
+        from backend.services.slides.template_mapper import map_summaries_to_slides, validate_presentation
         slides = map_summaries_to_slides(
             summaries=req.summaries,
             available_layouts=req.available_layouts,
@@ -684,28 +682,28 @@ def map_summaries_to_slides_endpoint(req: MapToSlidesSchema, user: dict = Depend
         }
     except Exception as e:
         logger.exception("Template mapping failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/validate-slides")
+@slides_router.post("/validate-slides")
 def validate_slides_endpoint(req: ValidateSlidesSchema, user: dict = Depends(get_current_user)):
     """Pre-generation quality check on slide data. Returns issues and quality score."""
     try:
-        from backend.utils.sub1.template_mapper import validate_presentation
+        from backend.services.slides.template_mapper import validate_presentation
         report = validate_presentation(req.slides)
         return report
     except Exception as e:
         logger.exception("Slide validation failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.post("/evaluate-quality")
+@slides_router.post("/evaluate-quality")
 def evaluate_quality(req: EvaluateQualitySchema, user: dict = Depends(get_current_user)):
     """
     Evaluate the quality of generated slides against source highlights.
     Returns: coverage, consistency, readability, hallucination, structural scores.
     """
-    from backend.utils.sub1.quality_evaluator import evaluate_pipeline_run
+    from backend.services.slides.quality_evaluator import evaluate_pipeline_run
 
     if not req.slides:
         raise HTTPException(status_code=400, detail="slides list is required")
@@ -716,7 +714,7 @@ def evaluate_quality(req: EvaluateQualitySchema, user: dict = Depends(get_curren
 
 # ==================== Observability Endpoints ====================
 
-@sub1_router.get("/pipeline-stats")
+@slides_router.get("/pipeline-stats")
 async def get_pipeline_stats(hours: int = 24, user: dict = Depends(get_current_user)):
     """Get Sub1 pipeline aggregate stats: success rate, avg/P95 latency, error breakdown."""
     try:
@@ -724,10 +722,10 @@ async def get_pipeline_stats(hours: int = 24, user: dict = Depends(get_current_u
         return stats
     except Exception as e:
         logger.exception("Failed to get pipeline stats")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@sub1_router.get("/task/{request_id}")
+@slides_router.get("/task/{request_id}")
 async def get_task_timeline(request_id: str, user: dict = Depends(get_current_user)):
     """Get step-level timeline for a specific task by request_id."""
     doc = await TaskTracker.get_task(request_id)
@@ -738,36 +736,36 @@ async def get_task_timeline(request_id: str, user: dict = Depends(get_current_us
 
 # ==================== Checkpoint & Resume Endpoints ====================
 
-@sub1_router.get("/checkpoints/{task_id}")
+@slides_router.get("/checkpoints/{task_id}")
 async def get_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
     """List all checkpoints for a task (without large output blobs)."""
-    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    from backend.services.slides.checkpoint_manager import CheckpointManager
     cps = await CheckpointManager.get_task_checkpoints(task_id)
     resumable = await CheckpointManager.get_resumable_step(task_id)
     return {"task_id": task_id, "checkpoints": cps, "last_successful_step": resumable}
 
 
-@sub1_router.get("/checkpoint/{task_id}/{step}")
+@slides_router.get("/checkpoint/{task_id}/{step}")
 async def get_checkpoint_output(task_id: str, step: str, user: dict = Depends(get_current_user)):
     """Load a specific checkpoint's full output."""
-    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    from backend.services.slides.checkpoint_manager import CheckpointManager
     doc = await CheckpointManager.load(task_id=task_id, step=step)
     if not doc:
         raise HTTPException(status_code=404, detail=f"No checkpoint for task={task_id} step={step}")
     return doc
 
 
-@sub1_router.delete("/checkpoints/{task_id}")
+@slides_router.delete("/checkpoints/{task_id}")
 async def delete_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
     """Delete all checkpoints for a task."""
-    from backend.utils.sub1.checkpoint_manager import CheckpointManager
+    from backend.services.slides.checkpoint_manager import CheckpointManager
     count = await CheckpointManager.delete_task(task_id)
     return {"deleted": count}
 
 
 # ==================== Audit Log Endpoints ====================
 
-@sub1_router.get("/audit-log")
+@slides_router.get("/audit-log")
 async def get_audit_log(
     hours: int = 24,
     action: str = None,
@@ -775,7 +773,7 @@ async def get_audit_log(
     user: dict = Depends(get_current_user)
 ):
     """Query Sub1 audit logs. Supports filtering by action and time range."""
-    from backend.utils.sub1.task_tracker import AuditLogger
+    from backend.services.slides.task_tracker import AuditLogger
     logs = await AuditLogger.get_logs(
         user_id=None,  # show all for now (admin view)
         action=action,

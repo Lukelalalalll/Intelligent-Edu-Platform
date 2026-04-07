@@ -6,21 +6,25 @@ import re
 import logging
 import httpx
 import requests
-import fitz
+import json
+import glob
+import tempfile
 from io import BytesIO
 from typing import Optional
 from docx import Document
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, Response
 from werkzeug.utils import secure_filename
+import opendataloader_pdf
 from backend.core.security import get_current_user
 from backend.core.safe_requests import safe_get
 from backend.schemas import SearchSvgSchema, DownloadSvgSchema
 from backend.config import Config
+from backend.infrastructure import TelemetryTimer
 
 logger = logging.getLogger(__name__)
 
-sub4_router = APIRouter(prefix="/api/sub4", tags=["Sub4"])
+diagram_router = APIRouter(prefix="/api/diagram", tags=["Diagram"])
 
 
 def get_sub4_paths():
@@ -31,7 +35,89 @@ def get_sub4_paths():
     return upload_folder, generated_folder
 
 
-@sub4_router.post("/upload_document")
+def _collect_image_nodes(node, results):
+    """Recursively collect image items from opendataloader_pdf JSON output."""
+    if str(node.get("type", "")).lower() == "image":
+        results.append(node)
+    for child in node.get("kids", []):
+        _collect_image_nodes(child, results)
+
+
+def _extract_pdf_diagrams_opendataloader(path: str):
+    """Primary: use opendataloader_pdf for fast image extraction."""
+    tmp_dir = tempfile.mkdtemp(prefix="sub4_pdf_")
+    try:
+        img_dir = os.path.join(tmp_dir, "images")
+        os.makedirs(img_dir, exist_ok=True)
+
+        opendataloader_pdf.convert(
+            input_path=path,
+            output_dir=tmp_dir,
+            format="json",
+            image_output="external",
+            image_format="png",
+            image_dir=img_dir,
+            quiet=True,
+        )
+
+        # Parse JSON for page-number mapping
+        json_files = glob.glob(os.path.join(tmp_dir, "*.json"))
+        page_map = {}
+        if json_files:
+            with open(json_files[0], "r") as f:
+                meta = json.load(f)
+            img_nodes = []
+            _collect_image_nodes(meta, img_nodes)
+            for node in img_nodes:
+                src = node.get("source", "")
+                page_map[os.path.basename(src)] = node.get("page number", 0)
+
+        extracted = []
+        for img_file in sorted(os.listdir(img_dir)):
+            img_path = os.path.join(img_dir, img_file)
+            if not os.path.isfile(img_path):
+                continue
+            try:
+                img_bytes = open(img_path, "rb").read()
+                b64 = base64.b64encode(img_bytes).decode("ascii")
+                page_num = page_map.get(img_file, 0)
+                extracted.append({
+                    "page": page_num if page_num else "Unknown",
+                    "data": f"data:image/png;base64,{b64}",
+                })
+            except Exception:
+                continue
+        return extracted
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _extract_pdf_diagrams_fitz(path: str):
+    """Fallback: use PyMuPDF (fitz) when opendataloader_pdf fails."""
+    import fitz
+    doc = fitz.open(path)
+    extracted = []
+    for i in range(doc.page_count):
+        for img in doc.get_page_images(i):
+            pix = fitz.Pixmap(doc, img[0])
+            if pix.n >= 5:
+                pix = fitz.Pixmap(fitz.csRGB, pix)
+            b64 = base64.b64encode(pix.tobytes("png")).decode("ascii")
+            extracted.append({"page": i + 1, "data": f"data:image/png;base64,{b64}"})
+    doc.close()
+    return extracted
+
+
+def _extract_pdf_diagrams(path: str):
+    """Extract images from PDF, with opendataloader_pdf primary and fitz fallback."""
+    try:
+        return _extract_pdf_diagrams_opendataloader(path)
+    except Exception as e:
+        logger.warning("opendataloader_pdf failed for %s, falling back to PyMuPDF: %s", path, e)
+    return _extract_pdf_diagrams_fitz(path)
+
+
+@diagram_router.post("/upload_document")
 def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     upload_folder, _ = get_sub4_paths()
     filename = secure_filename(file.filename)
@@ -43,14 +129,7 @@ def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(get_curr
     extracted = []
     try:
         if filename.lower().endswith('.pdf'):
-            doc = fitz.open(path)
-            for i in range(doc.page_count):
-                for img in doc.get_page_images(i):
-                    pix = fitz.Pixmap(doc, img[0])
-                    if pix.n >= 5: pix = fitz.Pixmap(fitz.csRGB, pix)
-                    b64 = base64.b64encode(pix.tobytes('png')).decode('ascii')
-                    extracted.append({'page': i + 1, 'data': f'data:image/png;base64,{b64}'})
-            doc.close()
+            extracted = _extract_pdf_diagrams(path)
         elif filename.lower().endswith(('.docx', '.doc')):
             docx = Document(path)
             for idx, shape in enumerate(docx.inline_shapes):
@@ -59,13 +138,14 @@ def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(get_curr
                     b64 = base64.b64encode(docx.part.related_parts[rel].blob).decode('ascii')
                     extracted.append({'page': f"Word-Img-{idx + 1}", 'data': f'data:image/png;base64,{b64}'})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Diagram extraction failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     return {'success': True, 'file': {'original_name': filename, 'extracted_count': len(extracted)},
             'extracted': extracted}
 
 
-@sub4_router.post("/search_svg")
+@diagram_router.post("/search_svg")
 def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
     if not Config.SERP_API_KEY:
         raise HTTPException(status_code=500, detail='SERP_API_KEY missing')
@@ -114,10 +194,8 @@ def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@sub4_router.post("/generate_diagram")
+        logger.exception("SVG search failed")
+        raise HTTPException(status_code=500, detail="Internal server error")
 async def generate_diagram(
     promptFile: Optional[UploadFile] = File(None),
     promptText: str = Form(default=''),
@@ -159,18 +237,31 @@ async def generate_diagram(
             f"Description:\n{text}"
         )
 
-        async with httpx.AsyncClient(timeout=60) as http_client:
-            resp = await http_client.post(
-                'https://api.deepseek.com/chat/completions',
-                json={
-                    'model': 'deepseek-chat',
-                    'messages': [{'role': 'user', 'content': chat_prompt}],
-                },
-                headers=headers,
-            )
-            resp.raise_for_status()
+        timer = TelemetryTimer(
+            provider="deepseek", model="deepseek-chat",
+            endpoint="sub4/generate_diagram", api_type="chat",
+            credential_alias="DEEPSEEK_API_KEY",
+        )
+        with timer:
+            try:
+                async with httpx.AsyncClient(timeout=60) as http_client:
+                    resp = await http_client.post(
+                        'https://api.deepseek.com/chat/completions',
+                        json={
+                            'model': 'deepseek-chat',
+                            'messages': [{'role': 'user', 'content': chat_prompt}],
+                        },
+                        headers=headers,
+                    )
+                    resp.raise_for_status()
+            except Exception as e:
+                await timer.save(success=False, error=str(e))
+                raise
 
         content = resp.json()['choices'][0]['message']['content']
+        est_prompt = max(1, len(chat_prompt) // 4)
+        est_completion = max(1, len(content) // 4)
+        await timer.save(prompt_tokens=est_prompt, completion_tokens=est_completion)
 
         # Extract SVG from possible markdown fences
         if '```svg' in content:
@@ -208,7 +299,7 @@ async def generate_diagram(
         raise HTTPException(status_code=500, detail=f"Diagram generation failed: {str(e)}")
 
 
-@sub4_router.post("/coze_generate_text")
+@diagram_router.post("/coze_generate_text")
 async def coze_generate_text(
     keywords: str = Form(...),
     user: dict = Depends(get_current_user),
@@ -255,49 +346,66 @@ async def coze_generate_text(
 
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds) as http_client:
-            # Start chat
-            start_resp = await http_client.post(
-                f"{api_root}/v3/chat", headers=headers, json=payload
+            timer = TelemetryTimer(
+                provider="coze", model=bot_id,
+                endpoint="sub4/coze_generate_text", api_type="chat",
+                credential_alias="COZE_TOKEN",
             )
-            if start_resp.status_code != 200:
-                logger.error("Coze start error %s: %s", start_resp.status_code, start_resp.text[:500])
-                raise HTTPException(502, "AI service error")
+            with timer:
+                # Start chat
+                start_resp = await http_client.post(
+                    f"{api_root}/v3/chat", headers=headers, json=payload
+                )
+                if start_resp.status_code != 200:
+                    logger.error("Coze start error %s: %s", start_resp.status_code, start_resp.text[:500])
+                    await timer.save(success=False, error=f"Coze start error {start_resp.status_code}")
+                    raise HTTPException(502, "AI service error")
 
-            start_data = start_resp.json().get("data", {})
-            chat_id = start_data.get("id")
-            conversation_id = start_data.get("conversation_id")
-            if not chat_id or not conversation_id:
-                raise HTTPException(502, "AI service returned invalid chat identifiers")
+                start_data = start_resp.json().get("data", {})
+                chat_id = start_data.get("id")
+                conversation_id = start_data.get("conversation_id")
+                if not chat_id or not conversation_id:
+                    await timer.save(success=False, error="Invalid chat identifiers")
+                    raise HTTPException(502, "AI service returned invalid chat identifiers")
 
-            # Poll for completion
-            import asyncio
-            for _ in range(poll_max_attempts):
-                retrieve_resp = await http_client.get(
-                    f"{api_root}/v3/chat/retrieve",
+                # Poll for completion
+                import asyncio
+                for _ in range(poll_max_attempts):
+                    retrieve_resp = await http_client.get(
+                        f"{api_root}/v3/chat/retrieve",
+                        headers=headers,
+                        params={"chat_id": chat_id, "conversation_id": conversation_id},
+                    )
+                    status = retrieve_resp.json().get("data", {}).get("status")
+                    if status == "completed":
+                        break
+                    if status == "failed":
+                        await timer.save(success=False, error="Coze chat failed")
+                        raise HTTPException(502, "AI service chat failed")
+                    await asyncio.sleep(poll_interval)
+                else:
+                    await timer.save(success=False, error="Coze timeout")
+                    raise HTTPException(504, "AI service timed out")
+
+                # Fetch messages
+                msg_resp = await http_client.get(
+                    f"{api_root}/v3/chat/message/list",
                     headers=headers,
                     params={"chat_id": chat_id, "conversation_id": conversation_id},
                 )
-                status = retrieve_resp.json().get("data", {}).get("status")
-                if status == "completed":
-                    break
-                if status == "failed":
-                    raise HTTPException(502, "AI service chat failed")
-                await asyncio.sleep(poll_interval)
-            else:
-                raise HTTPException(504, "AI service timed out")
+                messages = msg_resp.json().get("data", [])
+                for m in messages:
+                    if m.get("role") == "assistant" and m.get("type") == "answer":
+                        answer = m.get("content", "").strip()
+                        await timer.save(
+                            success=True,
+                            prompt_tokens=max(1, len(keywords) // 3),
+                            completion_tokens=max(1, len(answer) // 3),
+                        )
+                        return {"text": answer}
 
-            # Fetch messages
-            msg_resp = await http_client.get(
-                f"{api_root}/v3/chat/message/list",
-                headers=headers,
-                params={"chat_id": chat_id, "conversation_id": conversation_id},
-            )
-            messages = msg_resp.json().get("data", [])
-            for m in messages:
-                if m.get("role") == "assistant" and m.get("type") == "answer":
-                    return {"text": m.get("content", "").strip()}
-
-            raise HTTPException(502, "No answer received from AI service")
+                await timer.save(success=False, error="No answer received")
+                raise HTTPException(502, "No answer received from AI service")
 
     except HTTPException:
         raise
@@ -306,14 +414,14 @@ async def coze_generate_text(
         raise HTTPException(status_code=500, detail=f"Text generation failed: {str(e)}")
 
 
-@sub4_router.post("/download_svg")
+@diagram_router.post("/download_svg")
 def download_svg(req: DownloadSvgSchema, user: dict = Depends(get_current_user)):
     file_stream = BytesIO(req.svg.encode('utf-8'))
     return StreamingResponse(file_stream, media_type="image/svg+xml",
                              headers={"Content-Disposition": "attachment; filename=edited.svg"})
 
 
-@sub4_router.get("/fetch_external_svg")
+@diagram_router.get("/fetch_external_svg")
 def fetch_external_svg(url: str, user: dict = Depends(get_current_user)):
     try:
         if not isinstance(url, str) or not re.match(r"^https?://", url.strip(), re.IGNORECASE):
@@ -339,4 +447,5 @@ def fetch_external_svg(url: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("SVG proxy fetch failed")
+        raise HTTPException(status_code=500, detail="Internal server error")

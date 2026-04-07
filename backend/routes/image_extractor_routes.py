@@ -4,21 +4,28 @@ import tempfile
 import base64
 import zipfile
 import hashlib
+import json
+import glob
+import logging
 from PIL import Image
-import fitz  # PyMuPDF
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from io import BytesIO
 import requests
 import re
 import unicodedata
+import opendataloader_pdf
 from backend.core.security import get_current_user
 from backend.core.safe_requests import safe_get
 from backend.config import Config
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
-sub3_router = APIRouter(prefix="/api/sub3", tags=["Sub3"])
+image_extractor_router = APIRouter(prefix="/api/image-extractor", tags=["Image Extractor"])
+_limiter = Limiter(key_func=get_remote_address)
+_logger = logging.getLogger(__name__)
 
 SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
 MAGIC_API_URL = os.getenv("MAGIC_API_URL", "https://api.magicstudio.com/api/ai-art-generator")
@@ -37,60 +44,129 @@ def _img_md5(img: Image.Image) -> str:
     except Exception:
         return hashlib.md5(img.copy().tobytes()).hexdigest()
 
-def _open_pdf_file(data: bytes):
-    return fitz.open(stream=data, filetype="pdf")
+
+def _collect_image_nodes(node, results):
+    """Recursively collect all image items from opendataloader_pdf JSON output."""
+    if str(node.get("type", "")).lower() == "image":
+        results.append(node)
+    for child in node.get("kids", []):
+        _collect_image_nodes(child, results)
+
+
+def _extract_images_opendataloader(data: bytes):
+    """Primary: use opendataloader_pdf (fast Java-based extraction)."""
+    import shutil as _shutil
+    tmp_dir = tempfile.mkdtemp(prefix="sub3_pdf_")
+    try:
+        img_dir = os.path.join(tmp_dir, "images")
+        os.makedirs(img_dir, exist_ok=True)
+
+        pdf_path = os.path.join(tmp_dir, "input.pdf")
+        with open(pdf_path, "wb") as f:
+            f.write(data)
+
+        opendataloader_pdf.convert(
+            input_path=pdf_path,
+            output_dir=tmp_dir,
+            format="json",
+            image_output="external",
+            image_format="png",
+            image_dir=img_dir,
+            quiet=True,
+        )
+
+        # Parse JSON for page-number mapping
+        json_files = glob.glob(os.path.join(tmp_dir, "*.json"))
+        page_map = {}
+        if json_files:
+            with open(json_files[0], "r") as f:
+                meta = json.load(f)
+            img_nodes = []
+            _collect_image_nodes(meta, img_nodes)
+            for node in img_nodes:
+                src = node.get("source", "")
+                page_map[os.path.basename(src)] = node.get("page number", 0)
+
+        images = []
+        idx = 0
+        for img_file in sorted(os.listdir(img_dir)):
+            img_path = os.path.join(img_dir, img_file)
+            if not os.path.isfile(img_path):
+                continue
+            try:
+                image_bytes = open(img_path, "rb").read()
+                pil_img = Image.open(io.BytesIO(image_bytes))
+                width, height = pil_img.size
+                if width < 100 or height < 100:
+                    continue
+                colors = pil_img.getcolors(maxcolors=2)
+                if colors and len(colors) == 1:
+                    continue
+
+                pno = page_map.get(img_file, 0)
+                chapter = f"Page {pno}" if pno else "Unknown Page"
+                images.append({
+                    "bytes": image_bytes, "ext": "png", "index": idx,
+                    "chapter": chapter, "summary": "Extracted from PDF",
+                    "caption": f"Image from page {pno}" if pno else "Image from PDF",
+                })
+                idx += 1
+            except Exception as e:
+                print(f"[Error] Image {img_file}: {e}")
+        return images
+    finally:
+        _shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _extract_images_fitz(data: bytes):
+    """Fallback: use PyMuPDF (fitz) when opendataloader_pdf fails."""
+    import fitz
+    doc = fitz.open(stream=data, filetype="pdf")
+    images = []
+    idx = 0
+    for pno in range(len(doc)):
+        page = doc[pno]
+        chapter = f"Page {pno + 1}"
+        try:
+            image_list = page.get_images(full=True)
+        except Exception:
+            continue
+        for img_info in image_list:
+            xref = img_info[0]
+            try:
+                base = doc.extract_image(xref)
+                image_bytes = base["image"]
+                image_ext = base["ext"]
+                width = base.get("width", 0)
+                height = base.get("height", 0)
+                if width < 100 or height < 100:
+                    continue
+                try:
+                    pil_img = Image.open(io.BytesIO(image_bytes))
+                    colors = pil_img.getcolors(maxcolors=2)
+                    if colors and len(colors) == 1:
+                        continue
+                except Exception:
+                    pass
+                images.append({
+                    "bytes": image_bytes, "ext": image_ext, "index": idx,
+                    "chapter": chapter, "summary": "Extracted from PDF",
+                    "caption": f"Image from page {pno + 1}",
+                })
+                idx += 1
+            except Exception as e:
+                print(f"[Error] Page {pno} image {idx}: {e}")
+    doc.close()
+    return images
+
 
 def extract_images_with_info(data: bytes):
     try:
-        doc = _open_pdf_file(data)
-        images = []
-        idx = 0
-        for pno in range(len(doc)):
-            page = doc[pno]
-            chapter = f"Page {pno + 1}"
-
-            try:
-                # 获取当前页所有图片
-                image_list = page.get_images(full=True)
-            except Exception:
-                continue
-
-            for img_info in image_list:
-                xref = img_info[0]
-                try:
-                    base = doc.extract_image(xref)
-                    image_bytes = base["image"]  # 这是原生图片字节 (极快)
-                    image_ext = base["ext"]  # 'png', 'jpeg' 等
-
-                    # 1. 过滤尺寸太小的图片 (通常是排版用的占位符、小色块)
-                    width = base.get("width", 0)
-                    height = base.get("height", 0)
-                    if width < 100 or height < 100:
-                        continue
-
-                    # 2. 过滤纯色图片 (比如全是黑色的图片、无内容的背景图)
-                    try:
-                        pil_img = Image.open(io.BytesIO(image_bytes))
-                        # 转换并检查颜色，若图片只有1种颜色，则完全没有内容
-                        colors = pil_img.getcolors(maxcolors=2)
-                        if colors and len(colors) == 1:
-                            continue
-                    except Exception:
-                        pass
-
-                    images.append({
-                        "bytes": image_bytes,
-                        "ext": image_ext,
-                        "index": idx,
-                        "chapter": chapter,
-                        "summary": "Extracted from PDF",
-                        "caption": f"Image from page {pno + 1}"
-                    })
-                    idx += 1
-                except Exception as e:
-                    print(f"[Error] Page {pno} image {idx}: {e}")
-        doc.close()
-        return images
+        return _extract_images_opendataloader(data)
+    except Exception as e:
+        print(f"[Warning] opendataloader_pdf failed, falling back to PyMuPDF: {e}")
+    try:
+        return _extract_images_fitz(data)
     except Exception as e:
         print(f"[Error] PDF processing: {e}")
         return []
@@ -105,7 +181,7 @@ class GenerateAiImagesSchema(BaseModel):
 class ExportImagesSchema(BaseModel):
     images: List[Dict[str, Any]]
 
-@sub3_router.post("/extract-pdf-images")
+@image_extractor_router.post("/extract-pdf-images")
 async def api_extract_pdf_images(pdf: UploadFile = File(...), user: dict = Depends(get_current_user)):
     try:
         data = await pdf.read()
@@ -138,7 +214,7 @@ async def api_extract_pdf_images(pdf: UploadFile = File(...), user: dict = Depen
         print(f"Route Error: {e}")
         return JSONResponse({'success': False, 'error': str(e)})
 
-@sub3_router.post("/search-google-images")
+@image_extractor_router.post("/search-google-images")
 def api_search_google_images(req: SearchImagesSchema, user: dict = Depends(get_current_user)):
     query = req.query
     if not query:
@@ -168,15 +244,17 @@ def api_search_google_images(req: SearchImagesSchema, user: dict = Depends(get_c
     except Exception as e:
         return JSONResponse({'success': False, 'error': str(e)})
 
-@sub3_router.post("/generate-ai-images")
-def api_generate_ai_images(req: GenerateAiImagesSchema, user: dict = Depends(get_current_user)):
+@image_extractor_router.post("/generate-ai-images")
+@_limiter.limit("10/minute")
+def api_generate_ai_images(request: Request, req: GenerateAiImagesSchema, user: dict = Depends(get_current_user)):
     prompt = req.prompt
     num_images = req.num_images
     if not prompt:
         return JSONResponse({'success': False, 'error': 'No prompt provided'})
 
     if not MAGIC_API_URL:
-        # Mock logic
+        # Mock logic — warn so operators notice in production
+        _logger.warning("MAGIC_API_URL not set — returning placeholder images from picsum.photos")
         images = []
         for i in range(min(num_images, 8)):
             images.append({'src': f'https://picsum.photos/300/300?random={i + 100}&prompt={prompt}'})
@@ -210,7 +288,7 @@ def api_generate_ai_images(req: GenerateAiImagesSchema, user: dict = Depends(get
     except Exception as e:
         return JSONResponse({'success': False, 'error': str(e)})
 
-@sub3_router.post("/export-zip")
+@image_extractor_router.post("/export-zip")
 def api_export_zip(req: ExportImagesSchema, user: dict = Depends(get_current_user)):
     images_data = req.images
     if not images_data:
@@ -245,7 +323,7 @@ def api_export_zip(req: ExportImagesSchema, user: dict = Depends(get_current_use
         print(f"Export ZIP Error: {e}")
         return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
 
-@sub3_router.post("/export-pdf")
+@image_extractor_router.post("/export-pdf")
 def api_export_pdf(req: ExportImagesSchema, user: dict = Depends(get_current_user)):
     images_data = req.images
     if not images_data:

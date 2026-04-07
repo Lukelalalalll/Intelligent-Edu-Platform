@@ -1,4 +1,5 @@
 # backend/routes/auth_routes.py
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Form
@@ -7,9 +8,9 @@ from slowapi.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from backend.core.database import db
 from backend.core.security import create_access_token, get_current_user, teacher_owns_course, student_enrolled_in_course
-from backend.schemas import AuthSchema, UpdateProfileSchema, TeacherPreferencesSchema
+from backend.schemas import AuthSchema, UpdateProfileSchema, TeacherPreferencesSchema, ResetPasswordSchema
 from backend.config import Config
-from backend.routes.grading_helpers import (
+from backend.services.grading_service import (
     load_courses,
     # v2
     list_enrollments, list_course_sections, get_course_section,
@@ -66,15 +67,57 @@ async def register(request: Request, req: AuthSchema):
     if await db.users.find_one({"username": req.username}):
         raise HTTPException(status_code=409, detail="Username already exists")
 
+    # Determine role via staff code
+    role = "student"
+    if req.staff_code:
+        from datetime import datetime, timezone
+        code = req.staff_code.strip().upper()
+        code_doc = await db.staff_codes.find_one({"code": code, "is_used": False})
+        if not code_doc:
+            raise HTTPException(status_code=400, detail="Invalid or already-used staff code")
+        if code_doc["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Staff code has expired")
+        role = "teacher"
+
     user_doc = {
         "username": req.username,
         "email": req.email,
         "password_hash": generate_password_hash(req.password),
-        "role": "student",
+        "role": role,
         "teacherCourseIds": [],
     }
-    await db.users.insert_one(user_doc)
+    result = await db.users.insert_one(user_doc)
+
+    # Mark code as used after successful registration
+    if req.staff_code and role == "teacher":
+        from datetime import datetime, timezone
+        await db.staff_codes.update_one(
+            {"code": req.staff_code.strip().upper()},
+            {"$set": {"is_used": True, "used_by": str(result.inserted_id), "used_at": datetime.now(timezone.utc)}}
+        )
+
     return {"message": "Account created successfully"}
+
+
+@auth_router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, req: ResetPasswordSchema):
+    """Reset a user's password after verifying username + email match."""
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not any(c.isdigit() for c in req.new_password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one digit")
+
+    user = await db.users.find_one({"username": req.username})
+    # Use constant-time-like response to avoid user enumeration
+    if not user or (user.get("email") or "").lower() != req.email.strip().lower():
+        raise HTTPException(status_code=400, detail="Username and email do not match any account")
+
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"password_hash": generate_password_hash(req.new_password)}}
+    )
+    return {"message": "Password reset successfully"}
 
 
 @auth_router.post("/login")
@@ -87,9 +130,11 @@ async def login(request: Request, req: AuthSchema, response: Response):
     access_token = create_access_token(data={"sub": str(user["_id"])})
 
     # 设置 HttpOnly Cookie
+    is_production = os.getenv('ENV', 'development').lower() in ('production', 'prod')
     response.set_cookie(
         key=Config.JWT_ACCESS_COOKIE_NAME, value=access_token,
-        httponly=True, samesite="lax"
+        httponly=True, samesite="lax",
+        secure=is_production,
     )
 
     return {
