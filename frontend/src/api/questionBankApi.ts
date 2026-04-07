@@ -1,0 +1,72 @@
+/**
+ * Sub2 (Question Generator) API client layer.
+ * Centralizes all sub2 backend calls with consistent error handling.
+ *
+ * Request body types are sourced from the auto-generated schema (src/types/schema.d.ts).
+ * Response types reuse established interfaces from src/types/api.ts because the
+ * FastAPI routes return untyped `unknown` in the OpenAPI spec.
+ * Regenerate schema with: npm run openapi:sync
+ */
+import client from './client';
+import type { components, operations } from '../types/schema';
+import type {
+    Sub2UploadResponse,
+    Sub2ExtractResponse,
+    Sub2GenerateResponse,
+    GenerationHistoryItem,
+} from '../types/api';
+
+// ── Derived request-body types from generated schema ─────────────────────────
+type ExtractPayload = components['schemas']['ExtractQuestionsSchema'];
+type GeneratePayload = components['schemas']['GenerateQuestionsSchema'];
+type ScreenshotPayload = components['schemas']['UploadScreenshotSchema'];
+type HistoryParams = NonNullable<
+    operations['get_generation_history_api_sub2_generation_history_get']['parameters']['query']
+>;
+
+export async function uploadFile(file: File): Promise<Sub2UploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post('/questions/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+}
+
+export async function extractQuestions(
+    payload: ExtractPayload,
+): Promise<Sub2ExtractResponse> {
+    const res = await client.post('/questions/extract_questions', payload);
+    return res.data;
+}
+
+export async function generateQuestions(
+    payload: GeneratePayload,
+): Promise<Sub2GenerateResponse> {
+    const res = await client.post('/questions/generate_questions', payload);
+    return res.data;
+}
+
+export async function exportQuestions(taskId: string | null): Promise<Blob> {
+    const params: { task_id?: string } = taskId ? { task_id: taskId } : {};
+    const res = await client.post('/questions/export_questions', {}, { params, responseType: 'blob' });
+    return res.data;
+}
+
+export async function uploadScreenshot(
+    payload: ScreenshotPayload,
+): Promise<{ success: boolean; filename: string; error?: string }> {
+    const res = await client.post('/questions/upload_screenshot', payload);
+    return res.data;
+}
+
+export async function getGenerationHistory(page = 1, pageSize = 10): Promise<{ items: GenerationHistoryItem[]; total: number }> {
+    const params: HistoryParams = { page, page_size: pageSize };
+    const res = await client.get('/questions/generation_history', { params });
+    return res.data;
+}
+
+export async function getGenerationDetail(historyId: string): Promise<GenerationHistoryItem> {
+    const res = await client.get(`/questions/generation_history/${historyId}`);
+    return res.data;
+}
