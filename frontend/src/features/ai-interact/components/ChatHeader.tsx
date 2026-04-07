@@ -1,0 +1,44 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import styles from '../styles/AIInteract.module.css';
+import type { AIRoleInfo } from '../../../api/aiApi';
+
+interface ChatHeaderProps {
+    onOpenMemory?: () => void;
+    roleInfo?: AIRoleInfo | null;
+}
+
+export default function ChatHeader({ onOpenMemory, roleInfo }: ChatHeaderProps) {
+    const isSocratic = roleInfo?.mode === 'socratic';
+
+    return (
+        <header className={styles['chat-main-header']}>
+            <div className={styles['header-info']}>
+                <h2><i className="fas fa-sparkles"></i> HKU Coze AI Assistant</h2>
+                <p>
+                    Advanced Academic Model
+                    {isSocratic && (
+                        <span className={styles['mode-badge-socratic']}>
+                            <i className="fas fa-graduation-cap"></i> Socratic Tutoring
+                            {roleInfo?.rag_active && ' · RAG'}
+                        </span>
+                    )}
+                    {roleInfo && !isSocratic && (
+                        <span className={styles['mode-badge-direct']}>
+                            <i className="fas fa-chalkboard-teacher"></i> Direct Mode
+                        </span>
+                    )}
+                </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button className={styles['memory-btn']} onClick={onOpenMemory} title="AI Memory — personalize your experience">
+                    <i className="fas fa-brain"></i> Memory
+                </button>
+                <Link to="/" className={styles['back-home-btn']}>
+                    <i className="fas fa-sign-out-alt"></i> Exit Workspace
+                </Link>
+            </div>
+        </header>
+    );
+}
+

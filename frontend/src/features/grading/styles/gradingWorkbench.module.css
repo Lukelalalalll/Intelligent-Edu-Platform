@@ -1,0 +1,740 @@
+main {
+    padding: 25px;
+}
+
+/* Tokens inherited from base.css */
+
+.page {
+    background: transparent;
+    width: 100%;
+    padding: 18px 24px 24px;
+    min-height: calc(100vh - 72px);
+    overflow-x: hidden;
+}
+
+/* =========================================
+   1. 主工作区布局
+   ========================================= */
+.contentShell {
+    max-width: 1920px;
+    width: 100%;
+    height: calc(100vh - 110px);
+    min-height: 680px;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding-bottom: 8px;
+}
+
+.topTabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(15, 118, 110, 0.16);
+    border-radius: 999px;
+    padding: 6px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 14px rgba(15, 118, 110, 0.1);
+}
+
+.topTabBtn {
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.86rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.topTabBtn:hover {
+    background: rgba(15, 118, 110, 0.08);
+    color: #0f766e;
+}
+
+.topTabBtnActive {
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(15, 118, 110, 0.26);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1.4fr 1fr;
+    gap: 18px;
+    align-items: stretch;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.gridTwoCols {
+    display: grid;
+    grid-template-columns: 1.9fr 1.1fr;
+    gap: 18px;
+    align-items: stretch;
+    height: calc(100% - 58px);
+    min-height: 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.pane {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.pdfPane,
+.scorePane {
+    display: flex;
+    flex-direction: column;
+}
+
+.pdfPane> :nth-child(2) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.scorePane> :first-child {
+    flex: 1;
+    min-height: 0;
+}
+
+/* =========================================
+   3. 动画体系 (继承你的 slideInRight 需求)
+   ========================================= */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideDownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 统一入场动画挂载点 */
+.animatedElement {
+    opacity: 0;
+    animation: slideInRight 0.5s var(--ease-spring) forwards;
+}
+
+/* 阶梯延迟：形成瀑布流视觉感 */
+.delay1 {
+    animation-delay: 0.2s;
+}
+
+.delay2 {
+    animation-delay: 0.3s;
+}
+
+.delay3 {
+    animation-delay: 0.4s;
+}
+
+@keyframes paneSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(16px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.rightPaneAnimated {
+    animation: paneSlideIn 0.35s var(--ease-spring) both;
+}
+
+/* =========================================
+   4. 通用卡片样式 (用于 PDF & 打分面板)
+   ========================================= */
+.card {
+    background: #ffffff;
+    backdrop-filter: blur(12px);
+    border-radius: var(--radius-md) !important;
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: rgba(0, 123, 85, 0.15);
+}
+
+/* 顶部的渐变装饰线 */
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    opacity: 0.9;
+}
+
+/* =========================================
+   5. PDF 卡片内细节
+   ========================================= */
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-dark);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.subCard {
+    margin-top: 20px;
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 184, 217, 0.2) !important;
+    border-left: 4px solid var(--aurora-cyan) !important;
+    opacity: 1;
+    /* 避免再次执行入场动画 */
+    animation: none;
+}
+
+.subCard::before {
+    display: none;
+}
+
+.annotationBox textarea {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    resize: vertical;
+}
+
+.annotationBox textarea:focus {
+    border-color: var(--aurora-cyan);
+    box-shadow: 0 0 0 4px rgba(0, 184, 217, 0.1);
+    outline: none;
+}
+
+.annotationFooter {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: var(--aurora-blue);
+    background: rgba(32, 101, 209, 0.05);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border-left: 3px solid var(--aurora-blue);
+}
+
+/* =========================================
+    6. Coze 聊天区样式
+    ========================================= */
+.cozeWrapper {
+    width: 100%;
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 500px;
+    overflow: hidden;
+    position: relative;
+}
+
+.cozeWrapper::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.cozeCard {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.chatPane {
+    min-height: 0;
+}
+
+/* 🌟 恢复内部元素的排版 */
+.cozeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 12px;
+    padding: 14px 16px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cozeTitle {
+    font-weight: 800;
+    color: var(--primary-dark);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cozeTitle i {
+    color: var(--primary-color);
+}
+
+.cozeSub {
+    font-size: 0.9rem;
+    color: var(--text-sub);
+}
+
+.cozeActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* 🌟 恢复聊天气泡和面板样式 */
+.chatArea {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    padding: 18px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chatArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chatArea::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 999px;
+}
+
+.msg {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    line-height: 1.55;
+    font-size: 0.95rem;
+    animation: slideDownFade 0.25s ease;
+}
+
+.msgAuthor {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.msgAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.msgBubble {
+    padding: 13px 18px;
+    border-radius: 16px;
+    width: auto;
+    max-width: min(560px, 86%);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.msgUser {
+    flex-direction: row-reverse;
+}
+
+.msgUser .msgAuthor {
+    display: none;
+}
+
+.msgUser .msgAvatar {
+    background: #f0f2f5;
+    color: #555;
+}
+
+.msgUser .msgBubble {
+    background: linear-gradient(120deg, #007B55, #004D40);
+    color: #fff;
+    border-top-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.2);
+}
+
+.msgAssistant {
+    flex-direction: row;
+}
+
+.msgAssistant .msgAvatar {
+    background: linear-gradient(135deg, #007B55, #004D40);
+    color: #fff;
+}
+
+.msgAssistant .msgBubble {
+    background: #fff;
+    color: #1a1a1a;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 4px;
+}
+
+.typingBubble {
+    width: 78px;
+    max-width: 78px;
+    padding: 12px 14px;
+}
+
+.typingDots {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.typingDots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #007B55;
+    animation: cozeTyping 1.2s infinite ease-in-out;
+}
+
+.typingDots span:nth-child(2) {
+    animation-delay: 0.16s;
+}
+
+.typingDots span:nth-child(3) {
+    animation-delay: 0.32s;
+}
+
+@keyframes cozeTyping {
+
+    0%,
+    80%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.45;
+    }
+
+    40% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
+}
+
+/* 🌟 恢复输入框样式 */
+.inputRow {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    background: #fff;
+    padding: 8px 10px 8px 18px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.25s ease;
+}
+
+.inputRow:focus-within {
+    border-color: rgba(0, 123, 85, 0.42);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1), 0 8px 18px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.textInput {
+    flex: 1;
+    padding: 11px 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 1rem;
+    color: var(--text-main);
+    font-family: inherit;
+    resize: none;
+    max-height: 140px;
+    min-height: 24px;
+}
+
+.sendBtn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #007B55;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.2);
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+}
+
+.sendBtn:hover:not(:disabled) {
+    background: #004D40;
+    transform: scale(1.06) rotate(-4deg);
+}
+
+.sendBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.stopBtn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #eef2f7;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.stopBtn:hover:not(:disabled) {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.stopBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.inputHint {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: #9aa3af;
+}
+
+/* =========================================
+   7. 按钮与全局杂项
+   ========================================= */
+.primaryBtn {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.primaryBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.3);
+}
+
+.ghostBtn {
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--text-main);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ghostBtn:hover {
+    background: #fff0f0;
+    color: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.loading {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: var(--radius-md);
+    padding: 3rem;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.spinnerBorder {
+    display: inline-block;
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(0, 123, 85, 0.1);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.alertDanger {
+    background: #FFEBEE;
+    color: #B71C1C;
+    border-left: 4px solid #F44336;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-sm);
+    animation: slideDownFade 0.4s var(--ease-spring);
+}
+
+/* 响应式调整 */
+@media (max-width: 1400px) {
+    .page {
+        padding: 16px 14px 18px;
+    }
+
+    .contentShell {
+        height: calc(100vh - 102px);
+        min-height: 620px;
+    }
+
+    .grid {
+        grid-template-columns: 1.8fr 1.2fr 1fr;
+        gap: 14px;
+        min-height: 0;
+        width: 100%;
+    }
+
+    .gridTwoCols {
+        grid-template-columns: 1.6fr 1fr;
+        gap: 14px;
+    }
+
+    .chatPane {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 1024px) {
+    .page {
+        width: 100%;
+        padding: 14px 10px 16px;
+    }
+
+    .contentShell {
+        height: auto;
+        min-height: 0;
+        overflow-y: visible;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        width: 100%;
+    }
+
+    .gridTwoCols {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        height: auto;
+    }
+
+    .topTabs {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-radius: 16px;
+    }
+
+    .chatPane {
+        min-height: 480px;
+    }
+}

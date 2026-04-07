@@ -12,6 +12,7 @@
     /* 中性色板 */
     --bg-body: #FAFAFA;
     --bg-card: rgba(255, 255, 255, 0.85);
+    --card-bg: rgba(255, 255, 255, 0.95);
     /* 玻璃态背景 */
     --bg-input: #F1F5F9;
     --text-main: #212B36;
@@ -42,6 +43,8 @@
 
     /* 尺寸变量 */
     --nav-height: 72px;
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 60px;
 
     /* 动画曲线 */
     --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -486,6 +489,7 @@ main {
    ========================================= */
 main:has(.auth-wrapper),
 main:has(.global-ai-wrapper),
+main:has(.global-chat-wrapper),
 main:has([class*="ai-workspace-wrapper"]) {
     padding: 0 !important;
     max-width: 100% !important;
@@ -494,8 +498,10 @@ main:has([class*="ai-workspace-wrapper"]) {
 }
 
 /* 确保 AI 工作区容器能占满剩余高度 */
-.ai-workspace-wrapper {
+.ai-workspace-wrapper,
+.chat-workspace-wrapper {
     flex: 1;
+    overflow: hidden;
 }
 
 /* 确保 auth-wrapper 能填满剩余的整个屏幕高度 */
@@ -584,16 +590,34 @@ main:has([class*="ai-workspace-wrapper"]) {
 .page-header,
 .header {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 3.5rem;
     padding: 3.5rem 2rem;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
-    animation: gradientFlow 8s ease infinite;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 15px 30px -5px rgba(0, 123, 85, 0.25);
+    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    border-radius: 35px;
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
+    opacity: 0;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes tabPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .page-header::before,
@@ -601,11 +625,17 @@ main:has([class*="ai-workspace-wrapper"]) {
     content: '';
     position: absolute;
     top: -50%;
-    right: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
     border-radius: 50%;
+    animation: floatOrb 10s ease-in-out infinite;
+}
+
+@keyframes floatOrb {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, 40px); }
 }
 
 .page-header h1,
@@ -613,23 +643,33 @@ main:has([class*="ai-workspace-wrapper"]) {
     font-size: 2.2rem;
     font-weight: 800;
     margin-bottom: 0.8rem;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     opacity: 0;
     transform: translateY(20px);
-    animation: slideUpFade 1s var(--ease-out-back) forwards 0.1s;
+    animation: slideUpFade 0.8s forwards 0.2s;
+    justify-content: center;
+    gap: 12px;
 }
 
 .page-header p,
 .page-header .subtitle,
 .header .subtitle,
 .header p {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.9);
-    max-width: 600px;
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.95);
+    max-width: 640px;
     margin: 0 auto;
     opacity: 0;
     transform: translateY(20px);
-    animation: slideUpFade 0.8s var(--ease-out-back) forwards 0.3s;
+    animation: slideUpFade 0.8s forwards 0.4s;
+    font-weight: 400;
+}
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 3. 通用玻璃态卡片 (涵盖各页面的 .card, .step-container, 以及各 section) */
@@ -652,8 +692,7 @@ main:has([class*="ai-workspace-wrapper"]) {
     overflow: hidden;
     transition: var(--transition);
     opacity: 0;
-    animation: fadeInUp 1s var(--ease-cinematic) forwards 0.2s;
-
+    animation: tabPopIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
 }
 
 .card::before,

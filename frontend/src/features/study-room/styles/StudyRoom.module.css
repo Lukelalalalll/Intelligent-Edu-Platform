@@ -1,0 +1,886 @@
+/* ========== Study Room – Left/Right Split Layout ========== */
+
+.studyRoomWrapper {
+    width: 100%;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.uploadZone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px 32px;
+    border: 2.5px dashed rgba(0, 123, 85, 0.25);
+    border-radius: 18px;
+    background: rgba(0, 123, 85, 0.03);
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+    text-align: center;
+}
+.uploadZone:hover {
+    border-color: var(--primary-color);
+    background: rgba(0, 123, 85, 0.07);
+}
+.uploadIcon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    opacity: 0.7;
+}
+.uploadTitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.uploadHint {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.uploadBtns {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+.uploadBtn {
+    padding: 8px 20px !important;
+    border-radius: 10px !important;
+    border: 1.5px solid rgba(0, 123, 85, 0.2) !important;
+    background: #fff !important;
+    color: var(--primary-color) !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.25s !important;
+    box-shadow: none !important;
+}
+.uploadBtn:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ========== Split Layout ========== */
+
+.splitLayout {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 16px;
+    height: calc(100vh - var(--nav-height, 72px) - 120px);
+    min-height: 500px;
+}
+
+.leftPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+}
+
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ========== PDF / MD Viewer ========== */
+
+.viewerCard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.viewerToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.04), rgba(0, 184, 217, 0.04));
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.fileInfo i {
+    font-size: 1rem;
+}
+.pageIndicator {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 10px;
+    border-radius: 8px;
+    margin-left: 4px;
+}
+
+.pageNav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pageNav span {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    min-width: 80px;
+    text-align: center;
+}
+.pageNavBtn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    background: #fff !important;
+    color: var(--text-primary) !important;
+    font-size: 0.85rem !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.pageNavBtn:hover:not(:disabled) {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    border-color: var(--primary-color) !important;
+}
+.pageNavBtn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.viewerBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    min-height: 0;
+    position: relative;
+}
+
+.pdfCanvas {
+    display: flex;
+    justify-content: center;
+}
+.pdfCanvas canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+.mdContent {
+    line-height: 1.7;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+}
+.mdContent h1, .mdContent h2, .mdContent h3 {
+    color: var(--primary-color);
+    margin-top: 1.2em;
+}
+.mdContent code {
+    background: rgba(0, 123, 85, 0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+}
+
+.viewerCloseBtn {
+    padding: 6px 14px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(220, 53, 69, 0.2) !important;
+    background: rgba(220, 53, 69, 0.05) !important;
+    color: #b91c1c !important; /* NOSONAR */
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+}
+.viewerCloseBtn:hover {
+    background: #dc3545 !important;
+    color: #fff !important;
+}
+
+/* Highlight styling in MD content */
+.mdContent :global(.study-highlight) {
+    background: rgba(255, 235, 59, 0.45);
+    border-radius: 3px;
+    padding: 1px 2px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.mdContent :global(.study-highlight:hover) {
+    background: rgba(255, 235, 59, 0.7);
+}
+
+/* PDF text layer selection styling */
+.pdfCanvas :global(.react-pdf__Page__textContent) {
+    user-select: text !important;
+    cursor: text;
+}
+.pdfCanvas :global(.react-pdf__Page__textContent)::selection,
+.pdfCanvas :global(.react-pdf__Page__textContent) span::selection {
+    background: rgba(255, 230, 0, 0.45);
+}
+.mdContent::selection,
+.mdContent *::selection {
+    background: rgba(255, 230, 0, 0.45);
+}
+
+/* ========== Selection Popover (floating toolbar) ========== */
+.selPopover {
+    position: fixed;
+    transform: translateX(-50%) translateY(-100%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 6px;
+    background: #1a1a2e;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.06);
+    z-index: 9999;
+    animation: popoverIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.selPopover::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 7px solid #1a1a2e;
+}
+@keyframes popoverIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-100%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-100%) scale(1);
+    }
+}
+
+.selBtn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 6px 12px !important;
+    border: none !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    color: rgba(255,255,255,0.85) !important;
+    font-size: 0.76rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.15s !important;
+    white-space: nowrap;
+    box-shadow: none !important;
+}
+.selBtn:hover {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+.selBtn i {
+    font-size: 0.72rem;
+}
+.selBtnClose {
+    padding: 6px 8px !important;
+    color: rgba(255,255,255,0.4) !important;
+}
+.selBtnClose:hover {
+    color: #7f1d1d !important;
+    background: rgba(255,107,107,0.22) !important; /* NOSONAR */
+}
+
+/* ========== PDF Highlighter Wrapper ========== */
+
+.pdfHighlighterWrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    /* Must NOT be overflow:hidden — PDFViewer scroll detection requires overflow:auto on the container */
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+/* Let PdfHighlighter fill the wrapper fully and scroll itself */
+.pdfHighlighterWrap :global(.PdfHighlighter) {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: auto !important;
+}
+.pdfHighlighterWrap :global(.PdfHighlighter__highlight-layer) {
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Selection tip inside react-pdf-highlighter (Tip slot) */
+.selTipBar {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 6px;
+    background: #1a1a2e;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.06);
+    z-index: 9999;
+    white-space: nowrap;
+}
+
+/* PDF text layer selection color */
+.pdfHighlighterWrap :global(.textLayer) ::selection {
+    background: rgba(255, 230, 0, 0.45);
+}
+.pdfHighlighterWrap :global(.textLayer) {
+    user-select: text !important;
+}
+
+/* ========== Study Coach (Right Panel) ========== */
+
+.coachCard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.coachHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.04), rgba(0, 184, 217, 0.04));
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
+}
+.coachAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-color), #00B8D9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #06281f;
+    font-size: 1.1rem;
+}
+.coachTitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.coachSubtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Action Card (highlight detected) */
+.actionCard {
+    margin: 12px 14px 0;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #FFF9E6, #FFF3CD);
+    border: 1.5px solid rgba(255, 193, 7, 0.3);
+    border-radius: 12px;
+    animation: srSlideDown 0.35s ease-out;
+    flex-shrink: 0;
+}
+.actionText {
+    font-size: 0.82rem;
+    color: #664D03;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+.actionText strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+.actionQuote {
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 3px solid rgba(255, 193, 7, 0.6);
+    padding: 6px 10px;
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    word-break: break-word;
+    white-space: pre-wrap;
+    max-height: 80px;
+    overflow-y: auto;
+}
+.actionBtns {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.actionBtn {
+    padding: 6px 14px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+}
+.btnExplain {
+    background: linear-gradient(135deg, #007B55, #009966) !important;
+    color: #fff !important;
+}
+.btnExplain:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 10px rgba(0, 123, 85, 0.3) !important;
+}
+.btnHint {
+    background: linear-gradient(135deg, #0077B6, #00B8D9) !important;
+    color: #fff !important;
+}
+.btnHint:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 10px rgba(0, 119, 182, 0.3) !important;
+}
+.btnDismiss {
+    background: rgba(0, 0, 0, 0.06) !important;
+    color: var(--text-secondary) !important;
+}
+.btnDismiss:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Messages Area */
+.coachMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 184, 217, 0.25) transparent;
+}
+.coachMessages::-webkit-scrollbar {
+    width: 5px;
+}
+.coachMessages::-webkit-scrollbar-thumb {
+    background: rgba(0, 184, 217, 0.25);
+    border-radius: 10px;
+}
+.coachMessages::-webkit-scrollbar-track {
+    background: transparent;
+}
+.emptyCoach {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 32px;
+}
+.emptyCoach i {
+    font-size: 2.5rem;
+    opacity: 0.3;
+}
+.emptyCoach p {
+    font-size: 0.88rem;
+    max-width: 260px;
+    line-height: 1.5;
+}
+
+.msgBubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    word-break: break-word;
+    animation: srSlideUp 0.25s ease-out;
+}
+.msgUser {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #006b4a, #007a55);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    white-space: pre-wrap;
+}
+.msgAssistant {
+    align-self: flex-start;
+    background: #f4f6f8;
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+.msgAssistant code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+.msgAssistant pre {
+    background: rgba(0,0,0,0.05);
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.82em;
+    margin: 6px 0;
+}
+.msgAssistant pre code {
+    background: none;
+    padding: 0;
+}
+.msgAssistant p {
+    margin: 4px 0;
+}
+.msgAssistant p:first-child {
+    margin-top: 0;
+}
+.msgAssistant p:last-child {
+    margin-bottom: 0;
+}
+.msgAssistant ul, .msgAssistant ol {
+    padding-left: 18px;
+    margin: 4px 0;
+}
+.msgAssistant strong {
+    font-weight: 700;
+}
+.msgAssistant blockquote {
+    border-left: 3px solid rgba(0, 123, 85, 0.3);
+    padding-left: 10px;
+    margin: 6px 0;
+    color: var(--text-secondary);
+}
+.saveNoteBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 3px 10px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(0, 123, 85, 0.15) !important;
+    background: rgba(0, 123, 85, 0.04) !important;
+    color: var(--primary-color) !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+}
+.saveNoteBtn:hover {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+}
+.savedTag {
+    font-size: 0.72rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+/* Streaming indicator */
+.streamingDot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    animation: srBlink 1s ease-in-out infinite;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Input Bar */
+.coachInputBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+.coachInput {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fafafa;
+}
+.coachInput:focus {
+    border-color: var(--primary-color);
+    background: #fff;
+}
+.coachSendBtn {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: linear-gradient(135deg, #006b4a, #007a55) !important;
+    color: #fff !important;
+    font-size: 1rem !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    flex-shrink: 0;
+}
+.coachSendBtn:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3) !important;
+}
+.coachSendBtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* ========== Notes Panel (Collapsible) ========== */
+
+.notesToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 12px;
+    flex-shrink: 0;
+}
+.notesToggle:hover {
+    background: rgba(0, 123, 85, 0.03);
+}
+.notesToggleLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.notesBadge {
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 700;
+}
+.notesChevron {
+    transition: transform 0.3s;
+    color: var(--text-secondary);
+}
+.notesChevronOpen {
+    transform: rotate(180deg);
+}
+
+.notesBody {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s ease-out, padding 0.35s ease-out;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+}
+.notesBodyOpen {
+    max-height: 400px;
+    padding: 12px 14px;
+    overflow-y: auto;
+}
+
+.notesInputRow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.notesInput {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 0.84rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.notesInput:focus {
+    border-color: var(--primary-color);
+}
+
+.colorDots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.colorDot {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    border: 2px solid transparent !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+.colorDot:hover {
+    transform: scale(1.15) !important;
+}
+.colorDotActive {
+    border-color: var(--text-primary) !important;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1) !important;
+}
+
+.addNoteBtn {
+    padding: 8px 16px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+}
+.addNoteBtn:hover {
+    transform: translateY(-1px) !important;
+}
+
+.notesList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.noteItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    animation: srSlideUp 0.25s ease-out;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.noteItem:hover {
+    transform: translateX(3px);
+}
+.noteColorBar {
+    width: 4px;
+    min-height: 100%;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+.noteContent {
+    flex: 1;
+    min-width: 0;
+}
+.noteText {
+    font-size: 0.84rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    word-break: break-word;
+}
+.noteHighlightRef {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 2px;
+}
+.noteMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+.noteDeleteBtn {
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: rgba(220, 53, 69, 0.08) !important;
+    color: #991b1b !important; /* NOSONAR */
+    font-size: 0.7rem !important;
+    cursor: pointer;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+}
+.noteDeleteBtn:hover {
+    background: #b91c1c !important;
+    color: #fff !important;
+}
+
+.emptyNotes {
+    text-align: center;
+    padding: 16px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+/* ========== Animations ========== */
+
+@keyframes srFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes srSlideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes srSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes srBlink {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* ========== Responsive ========== */
+
+@media (max-width: 900px) {
+    .splitLayout {
+        grid-template-columns: 1fr;
+    }
+    .coachCard {
+        max-height: 500px;
+    }
+}
