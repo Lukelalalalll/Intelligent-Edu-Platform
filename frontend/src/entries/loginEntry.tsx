@@ -26,6 +26,11 @@ export default function LoginEntry() {
             return;
         }
 
+        if (!navigator.onLine) {
+            setErrorMsg('No internet connection. Please check your network and try again.');
+            return;
+        }
+
         setIsLoading(true);
         setErrorMsg('');
         setSuccessMsg('');

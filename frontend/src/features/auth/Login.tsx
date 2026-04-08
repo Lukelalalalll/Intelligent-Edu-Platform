@@ -84,7 +84,7 @@ export default function Login({
                         style={{
                             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
                             background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.4), transparent 70%)',
-                            opacity: '0', pointerEvents: 'none', borderRadius: '24px', zIndex: '10',
+                            opacity: '0', pointerEvents: 'none', borderRadius: 'var(--auth-radius-lg, var(--radius-lg))', zIndex: '10',
                             mixBlendMode: 'overlay', transition: 'opacity 0.4s ease'
                         }}
                     ></div>

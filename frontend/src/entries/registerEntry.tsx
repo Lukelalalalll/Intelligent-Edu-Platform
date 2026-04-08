@@ -36,6 +36,11 @@ export default function RegisterEntry() {
             return;
         }
 
+        if (!navigator.onLine) {
+            showToast('No internet connection. Please check your network and try again.', 'error');
+            return;
+        }
+
         setLoading(true);
         try {
             const payload: Record<string, string> = {
