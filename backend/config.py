@@ -104,6 +104,15 @@ class Config:
     # OCR 引擎配置
     TESSERACT_CMD = os.getenv('TESSERACT_CMD')
 
+    # ==========================
+    # Chat AI & Transfer Station
+    # ==========================
+    CHAT_AI_ENABLED = os.getenv('CHAT_AI_ENABLED', 'true').lower() == 'true'
+    CHAT_TRANSFER_ENABLED = os.getenv('CHAT_TRANSFER_ENABLED', 'true').lower() == 'true'
+    CHAT_TRANSFER_TICKET_TTL_HOURS = int(os.getenv('CHAT_TRANSFER_TICKET_TTL_HOURS', '24'))
+    CHAT_AI_CONTEXT_WINDOW = int(os.getenv('CHAT_AI_CONTEXT_WINDOW', '50'))
+    CHAT_FILE_MAX_MB = int(os.getenv('CHAT_FILE_MAX_MB', '20'))
+
     # 业务常量映射
     DIFFICULTY_MAP = {1: "Basic", 2: "Easy", 3: "Medium", 4: "Difficult", 5: "Competition Level"}
 
