@@ -3,13 +3,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.schemas import AnnotationPayload, SubmissionScoreSchema, FinalizeAnnotationsSchema
 from backend.services.grading_service import (
     load_annotations, save_annotations, find_submission, render_annotations_to_pdf,
-    upsert_grade, update_submission, find_submission_v2,
+    upsert_grade, update_submission, find_submission_v2, load_courses,
 )
 from backend.core.security import get_current_user, can_access_course
 
 
 grading_router = APIRouter(prefix="/api/grading", tags=["Grading"])
 PERMISSION_DENIED = "Permission denied"
+
+
+@grading_router.get("/courses")
+async def get_courses(current_user: dict = Depends(get_current_user)):
+    data = await load_courses()
+    role = current_user.get("role")
+    if role == "admin":
+        return data
+    filtered = [c for c in data.get("courses", []) if can_access_course(c, current_user)]
+    return {"courses": filtered}
 
 
 def _can_access_course(course: dict, user: dict) -> bool:

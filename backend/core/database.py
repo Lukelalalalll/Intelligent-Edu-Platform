@@ -173,8 +173,23 @@ async def ensure_indexes() -> None:
         await db.chat_rooms.create_index(
             [("members", 1), ("createdAt", -1)], background=True,
         )
+        # Unique index for course groups — prevents duplicate course rooms
+        try:
+            await db.chat_rooms.drop_index("courseId_1_type_1")
+        except Exception:
+            pass  # index may not exist yet
         await db.chat_rooms.create_index(
-            [("courseId", 1), ("type", 1)], background=True,
+            [("courseId", 1), ("type", 1)],
+            unique=True,
+            partialFilterExpression={"courseId": {"$exists": True}},
+            background=True,
+        )
+        # Unique index for direct pair rooms — prevents duplicate DMs
+        await db.chat_rooms.create_index(
+            "directPairKey",
+            unique=True,
+            partialFilterExpression={"directPairKey": {"$exists": True}},
+            background=True,
         )
         await db.chat_messages.create_index(
             [("roomId", 1), ("sentAt", -1)], background=True,
@@ -202,6 +217,45 @@ async def ensure_indexes() -> None:
         await db.staff_codes.create_index(
             "expires_at",
             expireAfterSeconds=0,
+            background=True,
+        )
+
+        # --- Chat AI Jobs (audit log for AI usage) ---
+        await db.chat_ai_jobs.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.chat_ai_jobs.create_index(
+            [("room_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        # TTL: auto-delete AI job records older than 90 days
+        await db.chat_ai_jobs.create_index(
+            "created_at",
+            expireAfterSeconds=90 * 24 * 3600,
+            background=True,
+        )
+
+        # --- Chat File Transfers ---
+        await db.chat_file_transfers.create_index(
+            "transfer_id", unique=True, background=True,
+        )
+        await db.chat_file_transfers.create_index(
+            [("owner_user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.chat_file_transfers.create_index(
+            [("status", 1), ("expires_at", 1)],
+            background=True,
+        )
+        await db.chat_file_transfers.create_index(
+            [("source_room_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        # TTL: auto-delete expired transfer records after 7 days past expiry
+        await db.chat_file_transfers.create_index(
+            "expires_at",
+            expireAfterSeconds=7 * 24 * 3600,
             background=True,
         )
 
