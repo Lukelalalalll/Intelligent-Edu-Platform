@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { aiSessionApi, aiMemoryApi, createChatStream } from '../api/aiApi';
+import { networkBus } from './useNetworkStatus';
 import type { AISession, ChatMessage, RagCitation } from '../types/api';
 
 interface ModalConfig {
@@ -216,6 +217,20 @@ export function useAISessions() {
         if (targetId !== currentSessionId) setCurrentSessionId(targetId);
 
         const trimmed = text.trim();
+
+        // Refuse to stream while offline — show an inline error message
+        if (networkBus.isOffline) {
+            setSessions(prev => prev.map(s => s.id !== targetId ? s : {
+                ...s,
+                messages: [
+                    ...s.messages,
+                    { role: 'user' as const, content: trimmed },
+                    { role: 'assistant' as const, content: 'You appear to be offline. Please check your network connection and try again.' },
+                ],
+            }));
+            return;
+        }
+
         setIsTyping(true);
 
         setSessions(prev => prev.map(s => {

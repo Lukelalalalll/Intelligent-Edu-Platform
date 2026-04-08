@@ -14,8 +14,8 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const boxStyle: React.CSSProperties = {
-    background: '#fff', width: 340, borderRadius: 24,
-    padding: '24px 24px 20px', textAlign: 'center',
+    background: '#fff', width: 340, borderRadius: 'var(--radius-lg)',
+    padding: '32px 32px 28px', textAlign: 'center',
     boxShadow: '0 24px 48px rgba(0,0,0,0.15)',
 };
 

@@ -5,6 +5,7 @@ import logoImg from '../assets/hku_logo.png';
 import { log } from '../utils/logger';
 import type { User } from '../types/api';
 import { useChatStore } from '../features/chat/store/chatStore';
+import NetworkBanner from './NetworkBanner';
 
 // 1. 引入全局样式
 import '../styles/base.css';
@@ -66,6 +67,7 @@ export default function Layout() {
         return stored === null ? true : stored === 'true';
     });
     const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+    const isChatPage = location.pathname.startsWith('/chat');
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -132,6 +134,9 @@ export default function Layout() {
 
     return (
         <div className={`${styles.appShell} ${!isAuthPage && user ? styles.withSidebar : ''} ${sidebarOpen ? styles.sidebarExpanded : ''}`}>
+            {/* ── Offline detection banner ── */}
+            <NetworkBanner />
+
             {/* ── Top Navbar ── */}
             <header className={styles.navbar}>
                 <div className={styles.navContainer}>
@@ -215,15 +220,17 @@ export default function Layout() {
                 </aside>
             )}
 
-            <main className={styles.mainContent}>
+            <main className={styles.mainContent} style={isChatPage ? { gridRow: '2 / span 2' } : {}}>
                 <Outlet />
             </main>
 
-            <footer className={styles.footer}>
-                <div className={styles.footerContent}>
-                    <p>&copy; 2025 HKU Intelligent Education Platform. All rights reserved.</p>
-                </div>
-            </footer>
+            {!isChatPage && (
+                <footer className={styles.footer}>
+                    <div className={styles.footerContent}>
+                        <p>&copy; 2025 HKU Intelligent Education Platform. All rights reserved.</p>
+                    </div>
+                </footer>
+            )}
         </div>
     );
 }

@@ -118,7 +118,7 @@ export default function HomeStudent({
     };
 
     return (
-        <div className={styles.pageContainer}>
+        <div className={`${styles.pageContainer} ${activeTab === 'study' ? styles.pageContainerFull : ''}`}>
             {/* 1. 顶部动态渐变横幅（带退出/入场动画） */}
             {bannerState !== 'hidden' && (
                 <section
