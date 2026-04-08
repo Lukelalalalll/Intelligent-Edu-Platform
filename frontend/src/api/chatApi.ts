@@ -3,6 +3,63 @@
 import client from './client';
 import type { ChatContact, CourseInfo, FriendRequest, ChatRoom, ChatMessage } from '../features/chat/types';
 
+// ── AI Assistant Types ──
+export interface AiSummaryResult {
+  ok: boolean;
+  summary: string;
+  mode: string;
+  message_count: number;
+}
+
+export interface AiReplySuggestionsResult {
+  ok: boolean;
+  suggestions: string[];
+}
+
+export interface AiRewriteResult {
+  ok: boolean;
+  rewritten_text: string;
+}
+
+export interface AiAssistantResult {
+  ok: boolean;
+  answer: string;
+}
+
+// ── Transfer Types ──
+export interface TransferStartResult {
+  ok: boolean;
+  transfer_id: string;
+  status: string;
+  redirect_url: string;
+  target_module: string;
+}
+
+export interface TransferStatus {
+  ok: boolean;
+  transfer: {
+    transfer_id: string;
+    status: string;
+    target_module: string;
+    file_meta: { name: string; ext: string; size: number; mime: string };
+    target_options: Record<string, unknown>;
+    error_message?: string;
+    created_at: string;
+    consumed_at?: string | null;
+    expires_at: string;
+  };
+}
+
+export interface TransferConsumeResult {
+  ok: boolean;
+  transfer_id: string;
+  status: string;
+  file_meta: { name: string; ext: string; size: number; mime: string };
+  source_file_url: string;
+  target_module: string;
+  target_options: Record<string, unknown>;
+}
+
 export const chatApi = {
   // ── Contacts ──
   getContacts: (): Promise<{ contacts: ChatContact[] }> =>
@@ -73,4 +130,81 @@ export const chatApi = {
 
   createCourseGroup: (courseId: string): Promise<{ ok: boolean; roomId: string }> =>
     client.post('/chat/rooms/from-course', { courseId }).then(r => r.data),
+
+  // ── Room Info & Management ──
+  getRoomInfo: (roomId: string): Promise<{
+    ok: boolean;
+    room: ChatRoom;
+    members: ChatContact[];
+    isOwner: boolean;
+  }> => client.get(`/chat/rooms/${roomId}/info`).then(r => r.data),
+
+  addRoomMember: (roomId: string, userId: string): Promise<{ ok: boolean }> =>
+    client.post(`/chat/rooms/${roomId}/members/add`, { userId }).then(r => r.data),
+
+  kickRoomMember: (roomId: string, userId: string): Promise<{ ok: boolean }> =>
+    client.post(`/chat/rooms/${roomId}/members/kick`, { userId }).then(r => r.data),
+
+  leaveRoom: (roomId: string): Promise<{ ok: boolean }> =>
+    client.post(`/chat/rooms/${roomId}/leave`).then(r => r.data),
+
+  deleteRoom: (roomId: string): Promise<{ ok: boolean }> =>
+    client.delete(`/chat/rooms/${roomId}`).then(r => r.data),
+
+  // ── AI Assistant ──
+  aiSummary: (roomId: string, mode = 'summary', windowSize = 30, unreadSince?: string): Promise<AiSummaryResult> =>
+    client.post(`/chat/rooms/${roomId}/ai/summary`, {
+      mode, window_size: windowSize, unread_since: unreadSince,
+    }).then(r => r.data),
+
+  aiReplySuggestions: (roomId: string, tone = 'concise', latestCount = 10): Promise<AiReplySuggestionsResult> =>
+    client.post(`/chat/rooms/${roomId}/ai/reply-suggestions`, {
+      tone, latest_count: latestCount,
+    }).then(r => r.data),
+
+  aiRewrite: (roomId: string, draftText: string, style = 'concise'): Promise<AiRewriteResult> =>
+    client.post(`/chat/rooms/${roomId}/ai/rewrite`, {
+      draft_text: draftText, style,
+    }).then(r => r.data),
+
+  aiAssistant: (roomId: string, query: string, contextWindow = 20): Promise<AiAssistantResult> =>
+    client.post(`/chat/rooms/${roomId}/ai/assistant`, {
+      query, context_window: contextWindow,
+    }).then(r => r.data),
+
+  // ── Transfer Station ──
+  transferStart: (
+    roomId: string, messageId: string, targetModule: string,
+    targetOptions: Record<string, unknown> = {},
+  ): Promise<TransferStartResult> =>
+    client.post('/chat/transfers/start', {
+      room_id: roomId, message_id: messageId,
+      target_module: targetModule, target_options: targetOptions,
+    }).then(r => r.data),
+
+  transferGet: (transferId: string): Promise<TransferStatus> =>
+    client.get(`/chat/transfers/${transferId}`).then(r => r.data),
+
+  transferConsume: (transferId: string): Promise<TransferConsumeResult> =>
+    client.post(`/chat/transfers/${transferId}/consume`).then(r => r.data),
+
+  transferRetry: (transferId: string): Promise<TransferConsumeResult> =>
+    client.post(`/chat/transfers/${transferId}/retry`).then(r => r.data),
+
+  /**
+   * Consume a transfer and download the file as a File object ready for upload.
+   * Returns the File + metadata from the transfer ticket.
+   */
+  transferConsumeAndDownload: async (transferId: string): Promise<{
+    file: File;
+    meta: TransferConsumeResult;
+  }> => {
+    const meta = await client.post(`/chat/transfers/${transferId}/consume`).then(r => r.data) as TransferConsumeResult;
+    // Download the file directly (static files are NOT under /api, use root-relative URL)
+    const resp = await fetch(meta.source_file_url);
+    if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
+    const blob = await resp.blob();
+    const file = new File([blob], meta.file_meta.name, { type: meta.file_meta.mime });
+    return { file, meta };
+  },
 };

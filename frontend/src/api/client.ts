@@ -1,6 +1,7 @@
 // frontend/src/api/client.ts
 import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
 import { log } from '../utils/logger';
+import { networkBus } from '../hooks/useNetworkStatus';
 
 const client = axios.create({
   baseURL: (import.meta.env.VITE_API_ROOT || 'http://localhost:5009') + '/api',
@@ -38,6 +39,7 @@ client.interceptors.response.use(
     const url = String(response?.config?.url || '');
     const status = response?.status;
     log.info('api', 'Request completed', { method, url, status });
+    networkBus.reportOnline();
     return response;
   },
   (error: AxiosError) => {
@@ -51,6 +53,11 @@ client.interceptors.response.use(
       status: status || null,
       message: error?.message,
     });
+
+    // Detect network-level failure (no HTTP response at all)
+    if (!error.response && (error.message?.includes('Network Error') || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')) {
+      networkBus.reportNetworkError();
+    }
 
     if (status === 401 && !isLoginRequest) {
       localStorage.removeItem('user');
