@@ -78,4 +78,9 @@ from backend.schemas.chat import (  # noqa: F401
     ChatTranslateSchema,
     ChatBatchDeleteSchema,
     ChatForwardSchema,
+    ChatAiSummarySchema,
+    ChatAiReplySuggestionsSchema,
+    ChatAiRewriteSchema,
+    ChatAiAssistantSchema,
+    ChatTransferStartSchema,
 )
