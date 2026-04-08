@@ -29,6 +29,7 @@
     grid-area: main;
     overflow-x: hidden;
     background: transparent;
+    container-type: inline-size;
 }
 
 /* ─── Top Navbar ─── */

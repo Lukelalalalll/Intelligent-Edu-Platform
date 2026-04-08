@@ -7,7 +7,7 @@
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    border-radius: 35px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;

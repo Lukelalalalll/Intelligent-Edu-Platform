@@ -144,7 +144,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.8);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 28px 24px;
     text-align: center;
     cursor: pointer;
@@ -345,7 +345,7 @@
     margin-bottom: 20px;
     background: var(--bg-card);
     padding: 16px 24px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
 }
 
@@ -393,7 +393,7 @@
     padding: 16px 24px;
     background: var(--bg-card);
     border: 1px solid rgba(255, 255, 255, 0.8);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
     opacity: 0;

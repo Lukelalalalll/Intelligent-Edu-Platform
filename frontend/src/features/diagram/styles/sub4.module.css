@@ -476,8 +476,8 @@
 
 .modalContent {
     background: #fff;
-    border-radius: var(--radius-md);
-    padding: 24px;
+    border-radius: var(--radius-lg);
+    padding: 32px;
     max-width: 1000px;
     width: 90%;
     max-height: 90vh;

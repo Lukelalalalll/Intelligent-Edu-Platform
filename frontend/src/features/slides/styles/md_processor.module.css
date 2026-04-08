@@ -2,7 +2,7 @@
 
 .card {
     margin-bottom: 3rem !important;
-    border-radius: var(--radius-md) !important;
+    border-radius: var(--radius-lg) !important;
     opacity: 0;
     animation: tabPopIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.3s;
 }

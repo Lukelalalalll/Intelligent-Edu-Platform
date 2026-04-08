@@ -4,6 +4,12 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px 40px;
+    transition: max-width 0.3s ease, padding 0.3s ease;
+}
+
+.pageContainerFull {
+    max-width: 100% !important;
+    padding: 0 0 40px 0 !important;
 }
 
 .welcomeBanner {
@@ -13,7 +19,7 @@
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite, bannerEnter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
@@ -174,9 +180,10 @@
 /* Study Room fullscreen (banner hidden → extra vertical space) */
 /* Study Room section: always full-width, fills available height */
 .studySection {
-    max-width: calc(100% + 48px);
-    margin: 8px -24px 0;
-    padding: 0;
+    width: 100cqi;
+    margin: 8px 0 0 calc(-50cqi + 50%);
+    padding: 0 40px;
+    box-sizing: border-box;
     animation: tabPopIn 0.4s ease-out forwards 0.15s;
     opacity: 0;
 }
@@ -328,7 +335,7 @@
 .selectionCard {
     background: #fff;
     border: 1px solid rgba(0, 123, 85, 0.1);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 24px;
     cursor: pointer;
     transition: var(--transition);
@@ -510,7 +517,7 @@
 .chatInterfaceContainer {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(24px);
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
     overflow: hidden;
     position: relative;
@@ -542,7 +549,7 @@
 .overlayContent {
     background: #fff;
     padding: 2.5rem 2rem;
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
     text-align: center;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     width: 90%;

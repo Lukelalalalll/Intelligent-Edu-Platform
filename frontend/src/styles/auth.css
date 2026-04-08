@@ -1,7 +1,7 @@
 /*auth.css*/
 .auth-wrapper {
     --auth-bg-input: #E2E8F0;
-    --auth-radius-lg: 24px;
+    --auth-radius-lg: var(--radius-lg);
     --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
     /* 容器基础样式 */

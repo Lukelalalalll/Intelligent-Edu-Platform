@@ -110,7 +110,7 @@
     position: relative;
     overflow: hidden;
     border: none;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 0;
     cursor: pointer;
     background: #fff;
@@ -134,7 +134,7 @@
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
 }
 
 .card:hover .cardGlow {
@@ -228,7 +228,7 @@
     bottom: 0;
     width: 4px;
     background: linear-gradient(to bottom, #EA4335, #4285F4, #FBBC05, #34A853);
-    border-radius: 20px 0 0 20px;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
     z-index: 2;
 }
 
@@ -341,7 +341,7 @@
     background-position: 100% 0;
     transition: background-position 0.6s ease;
     pointer-events: none;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
 }
 
 .cardHKU:hover::after {

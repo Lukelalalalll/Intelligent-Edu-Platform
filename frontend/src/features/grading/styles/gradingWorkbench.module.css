@@ -200,7 +200,7 @@ main {
 .card {
     background: #ffffff;
     backdrop-filter: blur(12px);
-    border-radius: var(--radius-md) !important;
+    border-radius: var(--radius-lg) !important;
     padding: 24px;
     box-shadow: var(--shadow-sm);
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -225,7 +225,7 @@ main {
     right: 0;
     height: 4px;
     background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     opacity: 0.9;
 }
 

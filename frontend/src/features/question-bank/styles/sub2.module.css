@@ -25,7 +25,7 @@
     padding: 2rem;
     /* 采用主题变量兼容旧版绿色渐变 */
     background: linear-gradient(135deg, var(--primary-color, #4CAF50), #45a049);
-    border-radius: var(--radius-md, 12px);
+    border-radius: var(--radius-lg);
     box-shadow: 0 5px 20px rgba(0, 123, 85, 0.2);
     color: white;
     position: relative;
@@ -66,7 +66,7 @@
 .stepContainer {
     background-color: var(--bg-card);
     backdrop-filter: blur(12px);
-    border-radius: var(--radius-md, 12px);
+    border-radius: var(--radius-lg, 16px);
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: var(--shadow-sm);
     padding: 2.5rem;

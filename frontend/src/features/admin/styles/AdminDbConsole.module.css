@@ -10,7 +10,7 @@
 }
 
 .headline {
-    border-radius: 35px;
+    border-radius: var(--radius-lg);
     padding: 60px 60px;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
@@ -68,7 +68,7 @@
     box-shadow: 0 18px 35px rgba(0, 0, 0, 0.06);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
     opacity: 0;
     animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     height: calc(100vh - 280px);
@@ -759,7 +759,7 @@
     }
 
     .headline {
-        border-radius: 20px;
+        border-radius: var(--radius-lg);
         padding: 22px 18px;
     }
 

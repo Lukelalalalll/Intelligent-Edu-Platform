@@ -604,8 +604,8 @@
 
 .modal {
   background: #fff;
-  border-radius: 16px;
-  width: 420px;
+  border-radius: var(--radius-lg);
+  width: 440px;
   max-width: 90vw;
   max-height: 80vh;
   overflow-y: auto;
@@ -616,7 +616,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
@@ -646,11 +646,11 @@
 }
 
 .modalBody {
-  padding: 16px 20px;
+  padding: 20px 24px;
 }
 
 .modalFooter {
-  padding: 12px 20px;
+  padding: 16px 24px;
   border-top: 1px solid rgba(0,0,0,0.06);
   display: flex;
   justify-content: flex-end;
@@ -1550,4 +1550,493 @@
 }
 .failedMsgRow button:hover {
   background: rgba(220,38,38,0.08);
+}
+
+/* ── Chat Header Actions ── */
+.chatHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.chatHeaderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,123,85,0.08);
+  color: #007B55;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.chatHeaderBtn:hover {
+  background: rgba(0,123,85,0.16);
+}
+
+/* ── AI Input Buttons & Suggestions ── */
+.aiInputBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, color 0.15s;
+}
+.aiInputBtn:hover {
+  background: rgba(0,123,85,0.08);
+  color: #007B55;
+}
+.rewriteDropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  padding: 4px 0;
+  z-index: 100;
+  min-width: 140px;
+}
+.rewriteDropdownItem {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 0.84rem;
+  color: #1e293b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.rewriteDropdownItem:hover {
+  background: rgba(0,123,85,0.06);
+  color: #007B55;
+}
+.suggestionsBar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+.suggestionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: rgba(0,123,85,0.08);
+  color: #007B55;
+  font-size: 0.8rem;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.suggestionChip:hover {
+  background: rgba(0,123,85,0.16);
+}
+.suggestionChipDismiss {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  cursor: pointer;
+  margin-left: 2px;
+}
+.suggestionChipDismiss:hover {
+  opacity: 1;
+}
+
+/* ── File Card Transfer Button ── */
+.fileCardMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.transferBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  margin-top: 6px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.transferBtn:hover {
+  background: #fff;
+  color: #1e293b;
+  border-color: rgba(0,0,0,0.22);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.transferBtn i {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+/* Own-message override: lighter look on green bg */
+.messageBubbleOwn .transferBtn {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.9);
+}
+.messageBubbleOwn .transferBtn:hover {
+  background: rgba(255,255,255,0.35);
+  border-color: rgba(255,255,255,0.5);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* ── Assistant Panel ── */
+.assistantPanel {
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  border-left: 1px solid rgba(0,0,0,0.06);
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.assistantPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.assistantPanelClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.assistantPanelClose:hover {
+  background: rgba(0,0,0,0.06);
+  color: #1e293b;
+}
+.assistantPanelBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.assistantSection {
+  margin-bottom: 8px;
+}
+.assistantSectionTitle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.assistantBtnRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.assistantBtn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  color: #334155;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.assistantBtn:hover {
+  background: rgba(0,123,85,0.06);
+  border-color: rgba(0,123,85,0.2);
+  color: #007B55;
+}
+.assistantBtnActive {
+  background: #007B55;
+  border-color: #007B55;
+  color: #fff;
+}
+.assistantBtnActive:hover {
+  background: #006b4a;
+}
+.assistantLoading {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+.assistantError {
+  padding: 8px 12px;
+  background: rgba(220,38,38,0.06);
+  border: 1px solid rgba(220,38,38,0.15);
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.8rem;
+}
+.assistantResult {
+  margin-top: 12px;
+}
+.assistantResultText {
+  font-size: 0.84rem;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+  font-family: inherit;
+  margin: 0;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.assistantQaRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.assistantQaInput {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.assistantQaInput:focus {
+  border-color: #007B55;
+}
+.assistantInsertBtn {
+  margin-top: 6px;
+  padding: 3px 10px;
+  border: 1px solid rgba(0,123,85,0.2);
+  border-radius: 6px;
+  background: rgba(0,123,85,0.06);
+  color: #007B55;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.assistantInsertBtn:hover {
+  background: rgba(0,123,85,0.14);
+}
+
+/* ── Transfer Modal ── */
+.transferModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+.transferModal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  width: 440px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleIn 0.18s ease;
+}
+.transferModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.transferModalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.transferModalClose:hover {
+  background: rgba(0,0,0,0.06);
+  color: #1e293b;
+}
+.transferModalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+.transferFileInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(0,123,85,0.04);
+  border: 1px solid rgba(0,123,85,0.1);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+.transferFileExt {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+.transferModuleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.transferGroupLabel {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0 0;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  margin-top: 2px;
+}
+.transferModuleCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 8px;
+  border: 2px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.transferModuleCard:hover {
+  border-color: rgba(0,123,85,0.25);
+  background: rgba(0,123,85,0.03);
+}
+.transferModuleCardActive {
+  border-color: #007B55;
+  background: rgba(0,123,85,0.06);
+}
+.transferModuleCardDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.transferModuleName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.transferModuleExts {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.transferOptions {
+  margin-bottom: 12px;
+}
+.transferOptionsLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+  display: block;
+}
+.transferOptionsBtns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.transferModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.transferCancelBtn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  color: #64748b;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.transferCancelBtn:hover {
+  background: #f1f5f9;
+}
+.transferConfirmBtn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #007B55;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.transferConfirmBtn:hover {
+  background: #006b4a;
+}
+.transferConfirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }

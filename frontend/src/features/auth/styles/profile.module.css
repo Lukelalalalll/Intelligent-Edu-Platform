@@ -472,10 +472,10 @@
 
 .modalBox {
     background: #fff;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-lg);
     width: 90%;
     max-width: 400px;
-    padding: 30px;
+    padding: 34px 30px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
     text-align: center;
     animation: profileModalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;

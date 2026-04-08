@@ -2,7 +2,7 @@
 
 .studyRoomWrapper {
     width: 100%;
-    padding: 0 16px;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -66,32 +66,44 @@
 
 .splitLayout {
     display: grid;
-    grid-template-columns: 60% 40%;
-    gap: 16px;
-    height: calc(100vh - var(--nav-height, 72px) - 120px);
-    min-height: 500px;
+    grid-template-columns: 55% 45%;
+    gap: 20px;
+    height: calc(100vh - var(--nav-height, 72px) - 130px);
+    min-height: 600px;
 }
 
 .leftPanel {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 16px;
     min-height: 0;
+    background: #fff;
+    border-radius: var(--radius-lg, 24px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    box-sizing: border-box;
 }
 
 .rightPanel {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    background: #fff;
+    border-radius: var(--radius-lg, 24px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    box-sizing: border-box;
 }
 
 /* ========== PDF / MD Viewer ========== */
 
 .viewerCard {
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -361,10 +373,10 @@
 /* ========== Study Coach (Right Panel) ========== */
 
 .coachCard {
-    background: #fff;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     height: 100%;

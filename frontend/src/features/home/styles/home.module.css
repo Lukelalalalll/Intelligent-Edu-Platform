@@ -38,7 +38,6 @@ main {
     color: white;
     position: relative;
     overflow: hidden;
-    border-radius: 35px;
     opacity: 0;
 }
 
@@ -197,7 +196,7 @@ main {
 
 .card {
     background-color: #FFFFFF;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     position: relative;
     overflow: hidden;
     height: 100%;
@@ -411,7 +410,7 @@ main {
     bottom: -20px;
     background: radial-gradient(circle at 50% 50%, rgba(0, 123, 85, 0.15), transparent 70%);
     z-index: -1;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     filter: blur(20px);
     opacity: 0;
     transition: opacity 0.5s ease;
@@ -425,7 +424,7 @@ main {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-sizing: border-box;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
     overflow: hidden;
