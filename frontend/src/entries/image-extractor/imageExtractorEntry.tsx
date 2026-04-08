@@ -1,8 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
+import { chatApi } from '../../api/chatApi';
 import ImageExtractorPage from '../../features/image-extractor/ImageExtractor';
 
 export default function ImageExtractorEntry() {
+    const [searchParams, setSearchParams] = useSearchParams();
+
     // --- 状态管理 ---
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
@@ -40,10 +44,8 @@ export default function ImageExtractorEntry() {
         formData.append('pdf', file);
 
         try {
-            // ⚠️ 确保后端有这个接口 /api/image-extractor/extract-pdf-images
             const res = await client.post('/image-extractor/extract-pdf-images', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             if (res.data.success) {
-                // 适配后端返回结构：假设返回 { imagesByChapter: { 'Chapter 1': [{src: 'base64...'}...] } }
                 const extractedDict = res.data.imagesByChapter || {};
                 setImagesByChapter(extractedDict);
 
@@ -61,6 +63,29 @@ export default function ImageExtractorEntry() {
             setLoading(false);
         }
     };
+
+    // --- Transfer auto-consumption ---
+    const transferConsumedRef = useRef(false);
+    useEffect(() => {
+        const transferId = searchParams.get('transfer_id');
+        if (!transferId || transferConsumedRef.current) return;
+        transferConsumedRef.current = true;
+
+        (async () => {
+            try {
+                const { file: transferFile } = await chatApi.transferConsumeAndDownload(transferId);
+                processUpload(transferFile);
+                setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('transfer_id');
+                    return next;
+                }, { replace: true });
+            } catch (err) {
+                console.error('[Transfer] consume failed', err);
+                notify('Failed to load transferred file', 'error');
+            }
+        })();
+    }, [searchParams, setSearchParams]);
 
     // --- 交互处理 ---
     const handleDragOver = e => { e.preventDefault(); setIsDragging(true); };

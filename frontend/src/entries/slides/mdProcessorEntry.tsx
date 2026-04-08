@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
+import { chatApi } from '../../api/chatApi';
 import MdProcessorPage from '../../features/slides/pages/MdProcessorPage';
 
 export default function MdProcessorEntry() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // === 状态管理 ===
     const [file, setFile] = useState(null);
@@ -30,6 +32,9 @@ export default function MdProcessorEntry() {
     const [cozeLoading, setCozeLoading] = useState(false);
     const [cozeError, setCozeError] = useState('');
     const [textProcessing, setTextProcessing] = useState(false);
+
+    // === Transfer auto-consumption ===
+    const transferConsumedRef = useRef(false);
 
     // === 文件与拖拽操作 ===
     const handleDragOver = (e) => {
@@ -81,11 +86,10 @@ export default function MdProcessorEntry() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // === API 请求：上传文件 ===
-    const handleUpload = async (e) => {
-        e.preventDefault();
-        if (!file) { setErrorMsg('Please select a file'); return; }
-        if (file.size > 10 * 1024 * 1024) { setErrorMsg('File size exceeds 10MB limit'); return; }
+    // === API 请求：上传文件 (核心逻辑) ===
+    const processFile = async (targetFile) => {
+        if (!targetFile) { setErrorMsg('Please select a file'); return; }
+        if (targetFile.size > 10 * 1024 * 1024) { setErrorMsg('File size exceeds 10MB limit'); return; }
 
         setUploadStatus('start');
         setUploadProgress(0);
@@ -93,12 +97,11 @@ export default function MdProcessorEntry() {
         setErrorMsg('');
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', targetFile);
         formData.append('use_llm', useLLM ? 'true' : 'false');
 
         try {
-            // 使用 axios 替代原来的 XMLHttpRequest，代码更优雅
-            const response = await client.post('/slides/parse-md', formData, { // 注意：后端的路由名字要对应
+            const response = await client.post('/slides/parse-md', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 onUploadProgress: (progressEvent) => {
                     const percentComplete = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -128,6 +131,39 @@ export default function MdProcessorEntry() {
             setLoading(false);
         }
     };
+
+    const handleUpload = async (e) => {
+        e.preventDefault();
+        await processFile(file);
+    };
+
+    // === Transfer auto-consumption (after processFile is defined) ===
+    useEffect(() => {
+        const transferId = searchParams.get('transfer_id');
+        if (!transferId || transferConsumedRef.current) return;
+        transferConsumedRef.current = true;
+
+        (async () => {
+            try {
+                const { file: transferFile } = await chatApi.transferConsumeAndDownload(transferId);
+                setFile(transferFile);
+                setErrorMsg('');
+
+                // Auto-trigger upload processing
+                await processFile(transferFile);
+
+                // Remove transfer_id from URL
+                setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('transfer_id');
+                    return next;
+                }, { replace: true });
+            } catch (err) {
+                console.error('[Transfer] consume failed', err);
+                setErrorMsg('Failed to load transferred file');
+            }
+        })();
+    }, [searchParams, setSearchParams]);
 
     const handleCheckboxChange = (index) => {
         setSelectedIndices(prev =>

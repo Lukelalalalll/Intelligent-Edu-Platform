@@ -14,8 +14,9 @@ export default function DiagramTool({
     extractState, searchState, genState, editorState, modalState,
     extractHandlers, searchHandlers, genHandlers, editorHandlers, modalHandlers,
     imageState, imageHandlers,
+    initialTab,
 }) {
-    const [activeService, setActiveService] = useState('extract');
+    const [activeService, setActiveService] = useState(initialTab || 'extract');
 
     return (
         <div className="container">

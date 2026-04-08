@@ -1,9 +1,11 @@
 // frontend/entries/diagram/diagramToolEntry.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DiagramToolPage from '../../features/diagram/DiagramTool';
 import { useDiagramExtractSearch } from './hooks/useDiagramExtractSearch';
 import { useDiagramGenerate } from './hooks/useDiagramGenerate';
 import { useDiagramImageExtract } from './hooks/useDiagramImageExtract';
+import { chatApi } from '../../api/chatApi';
 
 export default function DiagramToolEntry() {
     const { extractState, extractHandlers, searchState, searchHandlers, editorState, editorHandlers } = useDiagramExtractSearch();
@@ -11,6 +13,44 @@ export default function DiagramToolEntry() {
     const { imageState, imageHandlers } = useDiagramImageExtract();
 
     const [modal, setModal] = useState({ isOpen: false, imgSrc: '', pageNum: '' });
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [initialTab, setInitialTab] = useState<string | undefined>(undefined);
+
+    // Transfer ticket auto-consumption
+    useEffect(() => {
+        const transferId = searchParams.get('transfer_id');
+        const tab = searchParams.get('tab');
+        if (!transferId) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const { file } = await chatApi.transferConsumeAndDownload(transferId);
+                if (cancelled) return;
+
+                // Determine which tab to target (default: extract)
+                const targetTab = tab === 'images' ? 'images' : 'extract';
+                setInitialTab(targetTab);
+
+                if (targetTab === 'images') {
+                    // Feed file to image extract handler
+                    imageHandlers.handleFileInput({ target: { files: [file], value: '' } });
+                } else {
+                    // Feed file to extract handler
+                    extractHandlers.handleFileChange({ target: { files: [file] } });
+                }
+
+                // Clean up URL params
+                searchParams.delete('transfer_id');
+                searchParams.delete('tab');
+                setSearchParams(searchParams, { replace: true });
+            } catch (err) {
+                console.error('Transfer consume failed:', err);
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const modalHandlers = {
         openModal: (imgSrc: string, pageNum: string) => {
@@ -43,6 +83,7 @@ export default function DiagramToolEntry() {
             modalHandlers={modalHandlers}
             imageState={imageState}
             imageHandlers={imageHandlers}
+            initialTab={initialTab}
         />
     );
 }

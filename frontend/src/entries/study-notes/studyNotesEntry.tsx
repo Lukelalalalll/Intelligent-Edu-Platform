@@ -1,10 +1,13 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
+import { chatApi } from '../../api/chatApi';
 import StudyNotes from '../../features/study-notes/StudyNotes';
 import styles from '../../features/study-notes/styles/sub5.module.css';
 
 export default function StudyNotesEntry() {
     const fileInputRef = useRef(null);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [file, setFile] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -15,6 +18,46 @@ export default function StudyNotesEntry() {
     const [loadingText, setLoadingText] = useState('');
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('notes');
+
+    // Transfer ticket auto-consumption
+    useEffect(() => {
+        const transferId = searchParams.get('transfer_id');
+        if (!transferId) return;
+
+        let cancelled = false;
+        (async () => {
+            setIsLoading(true);
+            setLoadingText('Receiving file from chat...');
+            setError('');
+            try {
+                const { file: transferFile, meta } = await chatApi.transferConsumeAndDownload(transferId);
+                if (cancelled) return;
+
+                // Set the file so the normal upload flow works
+                setFile(transferFile);
+
+                // Apply transfer options
+                const transferStyle = (meta.target_options?.style && typeof meta.target_options.style === 'string')
+                    ? meta.target_options.style : style;
+                if (transferStyle !== style) setStyle(transferStyle);
+
+                // Clean up transfer_id from URL
+                searchParams.delete('transfer_id');
+                setSearchParams(searchParams, { replace: true });
+
+                // Auto-trigger generation
+                await generateFromFile(transferFile, transferStyle);
+            } catch (err) {
+                if (cancelled) return;
+                const msg = err instanceof Error ? err.message : 'Transfer failed';
+                setError(`Transfer error: ${msg}`);
+                setIsLoading(false);
+                setLoadingText('');
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = () => setIsDragging(false);
@@ -30,8 +73,8 @@ export default function StudyNotesEntry() {
         e.target.value = '';
     };
 
-    const handleGenerate = useCallback(async () => {
-        if (!file) return;
+    const generateFromFile = useCallback(async (targetFile, targetStyle) => {
+        if (!targetFile) return;
         setIsLoading(true);
         setLoadingText('Extracting text and generating study notes...');
         setError('');
@@ -39,8 +82,8 @@ export default function StudyNotesEntry() {
         try {
             // Generate notes
             const formData = new FormData();
-            formData.append('file', file);
-            formData.append('style', style);
+            formData.append('file', targetFile);
+            formData.append('style', targetStyle);
             const notesRes = await client.post('/study-notes/generate-notes', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -52,7 +95,7 @@ export default function StudyNotesEntry() {
             // Generate flashcards
             setLoadingText('Generating flashcards...');
             const flashForm = new FormData();
-            flashForm.append('file', file);
+            flashForm.append('file', targetFile);
             const flashRes = await client.post('/study-notes/generate-flashcards', flashForm, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -66,7 +109,11 @@ export default function StudyNotesEntry() {
             setIsLoading(false);
             setLoadingText('');
         }
-    }, [file, style]);
+    }, []);
+
+    const handleGenerate = useCallback(async () => {
+        await generateFromFile(file, style);
+    }, [file, style, generateFromFile]);
 
     return (
         <div className={styles.container}>
