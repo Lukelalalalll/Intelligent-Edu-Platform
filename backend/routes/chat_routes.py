@@ -24,12 +24,33 @@ from backend.schemas import (
     ChatTranslateSchema,
     ChatBatchDeleteSchema,
     ChatForwardSchema,
+    ChatAiSummarySchema,
+    ChatAiReplySuggestionsSchema,
+    ChatAiRewriteSchema,
+    ChatAiAssistantSchema,
+    ChatTransferStartSchema,
 )
 
 # Allowed file types for chat uploads
 ALLOWED_EXTENSIONS = {
     'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls',
     'md', 'txt', 'zip', 'png', 'jpg', 'jpeg', 'gif', 'webp'
+}
+# Magic bytes for content-based validation
+_MAGIC_SIGNATURES: dict[str, list[bytes]] = {
+    'pdf': [b'%PDF'],
+    'png': [b'\x89PNG'],
+    'jpg': [b'\xff\xd8\xff'],
+    'jpeg': [b'\xff\xd8\xff'],
+    'gif': [b'GIF87a', b'GIF89a'],
+    'zip': [b'PK\x03\x04', b'PK\x05\x06'],
+    'docx': [b'PK\x03\x04'],  # OOXML uses ZIP container
+    'pptx': [b'PK\x03\x04'],
+    'xlsx': [b'PK\x03\x04'],
+    'doc': [b'\xd0\xcf\x11\xe0'],  # OLE2
+    'ppt': [b'\xd0\xcf\x11\xe0'],
+    'xls': [b'\xd0\xcf\x11\xe0'],
+    'webp': [b'RIFF'],
 }
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB
 CHAT_FILES_DIR = os.path.join(Config.BASE_DIR, 'static', 'chat_files')
@@ -70,16 +91,30 @@ async def get_contacts(user: dict = Depends(get_current_user)):
             {"contactId": uid, "status": "accepted"},
         ]
     })
-    contacts = []
+    # Collect all other-user IDs first, then batch-fetch
+    other_ids: list[str] = []
     async for doc in cursor:
         other_id = doc["contactId"] if doc["userId"] == uid else doc["userId"]
-        other_user = await db.users.find_one({"_id": ObjectId(other_id)})
-        if other_user:
+        other_ids.append(other_id)
+
+    if not other_ids:
+        return {"contacts": []}
+
+    # Batch lookup
+    oid_list = [ObjectId(oid) for oid in other_ids]
+    user_map: dict[str, dict] = {}
+    async for u in db.users.find({"_id": {"$in": oid_list}}, {"_id": 1, "username": 1, "email": 1, "role": 1}):
+        user_map[str(u["_id"])] = u
+
+    contacts = []
+    for oid in other_ids:
+        u = user_map.get(oid)
+        if u:
             contacts.append({
-                "id": other_id,
-                "username": other_user.get("username", ""),
-                "email": other_user.get("email", ""),
-                "role": other_user.get("role", "student"),
+                "id": oid,
+                "username": u.get("username", ""),
+                "email": u.get("email", ""),
+                "role": u.get("role", "student"),
             })
     return {"contacts": contacts}
 
@@ -132,9 +167,25 @@ async def get_friend_requests(user: dict = Depends(get_current_user)):
     """Get pending friend requests received by current user."""
     uid = str(user["id"])
     cursor = db.chat_contacts.find({"contactId": uid, "status": "pending"})
-    requests = []
+    # Collect all sender IDs first
+    docs = []
+    sender_ids: list[str] = []
     async for doc in cursor:
-        sender = await db.users.find_one({"_id": ObjectId(doc["userId"])})
+        docs.append(doc)
+        sender_ids.append(doc["userId"])
+
+    if not docs:
+        return {"requests": []}
+
+    # Batch-fetch sender info
+    oid_list = [ObjectId(sid) for sid in sender_ids]
+    sender_map: dict[str, dict] = {}
+    async for u in db.users.find({"_id": {"$in": oid_list}}, {"_id": 1, "username": 1, "email": 1, "role": 1}):
+        sender_map[str(u["_id"])] = u
+
+    requests = []
+    for doc in docs:
+        sender = sender_map.get(doc["userId"])
         if sender:
             requests.append({
                 "id": str(doc["_id"]),
@@ -264,6 +315,19 @@ async def create_group_room(body: ChatCreateRoomSchema, user: dict = Depends(get
     if len(member_ids) < 3:
         raise HTTPException(status_code=400, detail="Group chat requires at least 3 members (you + 2)")
 
+    # Validate all memberIds exist in the users collection
+    other_ids = [mid for mid in member_ids if mid != uid]
+    if other_ids:
+        valid_oids = []
+        for mid in other_ids:
+            try:
+                valid_oids.append(ObjectId(mid))
+            except Exception:
+                raise HTTPException(status_code=400, detail=f"Invalid member ID: {mid}")
+        found_count = await db.users.count_documents({"_id": {"$in": valid_oids}})
+        if found_count != len(valid_oids):
+            raise HTTPException(status_code=400, detail="One or more member IDs do not exist")
+
     now = _utcnow()
     result = await db.chat_rooms.insert_one({
         "type": "group",
@@ -293,31 +357,34 @@ async def create_group_room(body: ChatCreateRoomSchema, user: dict = Depends(get
 
 @chat_router.post("/rooms/direct")
 async def create_or_get_direct_room(body: ChatCreateDirectRoomSchema, user: dict = Depends(get_current_user)):
-    """Find or create a direct message room between two users."""
+    """Find or create a direct message room between two users (atomic upsert)."""
     uid = str(user["id"])
     target_id = body.targetUserId
     if target_id == uid:
         raise HTTPException(status_code=400, detail="Cannot create DM with yourself")
 
-    # Check existing direct room
-    existing = await db.chat_rooms.find_one({
-        "type": "direct",
-        "members": {"$all": [uid, target_id], "$size": 2},
-    })
-    if existing:
-        return {"ok": True, "roomId": str(existing["_id"])}
-
+    # Normalised pair key to guarantee uniqueness regardless of who initiates
+    pair_key = "|".join(sorted([uid, target_id]))
     now = _utcnow()
-    result = await db.chat_rooms.insert_one({
-        "type": "direct",
-        "name": None,
-        "members": [uid, target_id],
-        "createdBy": uid,
-        "avatarColor": None,
-        "createdAt": now,
-        "lastMessage": None,
-    })
-    return {"ok": True, "roomId": str(result.inserted_id)}
+
+    # Atomic find-or-create using the unique directPairKey index
+    from pymongo import ReturnDocument
+    doc = await db.chat_rooms.find_one_and_update(
+        {"directPairKey": pair_key, "type": "direct"},
+        {"$setOnInsert": {
+            "type": "direct",
+            "name": None,
+            "members": sorted([uid, target_id]),
+            "directPairKey": pair_key,
+            "createdBy": uid,
+            "avatarColor": None,
+            "createdAt": now,
+            "lastMessage": None,
+        }},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return {"ok": True, "roomId": str(doc["_id"])}
 
 
 # ──────────────────────────────────────────────────────────────
@@ -628,6 +695,15 @@ async def upload_file(
     if len(data) > MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=413, detail="File exceeds 20 MB limit")
 
+    # Magic-number validation for binary types (skip for plain text formats)
+    sigs = _MAGIC_SIGNATURES.get(ext)
+    if sigs:
+        if not any(data[:len(sig)] == sig for sig in sigs):
+            raise HTTPException(
+                status_code=400,
+                detail=f"File content does not match .{ext} format (possible disguised file)",
+            )
+
     # Save to static/chat_files/{room_id}/
     room_dir = os.path.join(CHAT_FILES_DIR, room_id)
     os.makedirs(room_dir, exist_ok=True)
@@ -667,11 +743,6 @@ async def create_room_from_course(
 
     course_name = course.get("name") or course.get("title") or "Course"
 
-    # Return existing if already created
-    existing = await db.chat_rooms.find_one({"courseId": body.courseId, "type": "group"})
-    if existing:
-        return {"ok": True, "roomId": str(existing["_id"]), "isExisting": True}
-
     # Collect enrolled student IDs
     student_ids: list[str] = []
     async for enroll in db.enrollments.find({"courseId": body.courseId}, {"userId": 1}):
@@ -679,17 +750,28 @@ async def create_room_from_course(
 
     member_ids = list(set([uid] + student_ids))
     now = _utcnow()
-    result = await db.chat_rooms.insert_one({
-        "type": "group",
-        "name": f"{course_name} 群聊",
-        "members": member_ids,
-        "createdBy": uid,
-        "courseId": body.courseId,
-        "avatarColor": _hash_color(course_name),
-        "createdAt": now,
-        "lastMessage": None,
-    })
-    room_id = str(result.inserted_id)
+
+    # Atomic find-or-create using unique courseId+type index
+    from pymongo import ReturnDocument
+    doc = await db.chat_rooms.find_one_and_update(
+        {"courseId": body.courseId, "type": "group"},
+        {"$setOnInsert": {
+            "type": "group",
+            "name": f"{course_name} 群聊",
+            "members": member_ids,
+            "createdBy": uid,
+            "courseId": body.courseId,
+            "avatarColor": _hash_color(course_name),
+            "createdAt": now,
+            "lastMessage": None,
+        }},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    room_id = str(doc["_id"])
+    is_existing = doc.get("createdAt") != now
+    if is_existing:
+        return {"ok": True, "roomId": room_id, "isExisting": True}
 
     # System message
     await db.chat_messages.insert_one({
@@ -734,6 +816,425 @@ async def list_courses_for_group(user: dict = Depends(get_current_user)):
                 "existingRoomId": str(existing["_id"]) if existing else None,
             })
     return {"courses": courses}
+
+
+# ──────────────────────────────────────────────────────────────
+# Group Management
+# ──────────────────────────────────────────────────────────────
+
+@chat_router.get("/rooms/{room_id}/info")
+async def get_room_info(room_id: str, user: dict = Depends(get_current_user)):
+    """Get detailed room info including member profiles."""
+    uid = str(user["id"])
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    room_data = _str_id(room)
+
+    # Batch-fetch member info
+    member_ids = room.get("members", [])
+    oid_list = [ObjectId(mid) for mid in member_ids if mid]
+    members = []
+    user_map: dict[str, dict] = {}
+    if oid_list:
+        async for u in db.users.find({"_id": {"$in": oid_list}}, {"_id": 1, "username": 1, "email": 1, "role": 1}):
+            uid_str = str(u["_id"])
+            user_map[uid_str] = {
+                "id": uid_str,
+                "username": u.get("username", ""),
+                "email": u.get("email", ""),
+                "role": u.get("role", "student"),
+            }
+    for mid in member_ids:
+        if mid in user_map:
+            members.append(user_map[mid])
+
+    return {
+        "ok": True,
+        "room": room_data,
+        "members": members,
+        "isOwner": room_data.get("createdBy") == uid,
+    }
+
+
+@chat_router.post("/rooms/{room_id}/members/add")
+async def add_room_member(room_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Add a member to a group room. Only the owner can add members."""
+    uid = str(user["id"])
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.get("type") != "group":
+        raise HTTPException(status_code=400, detail="Can only add members to group rooms")
+    if room.get("createdBy") != uid:
+        raise HTTPException(status_code=403, detail="Only the group owner can add members")
+
+    new_member_id = body.get("userId", "")
+    if not new_member_id:
+        raise HTTPException(status_code=400, detail="userId is required")
+
+    # Validate user exists
+    target = await db.users.find_one({"_id": safe_object_id(new_member_id, label="user")})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if new_member_id in room.get("members", []):
+        raise HTTPException(status_code=400, detail="User is already a member")
+
+    now = _utcnow()
+    await db.chat_rooms.update_one(
+        {"_id": safe_object_id(room_id, label="room")},
+        {"$addToSet": {"members": new_member_id}},
+    )
+
+    # System message
+    await db.chat_messages.insert_one({
+        "roomId": room_id,
+        "senderId": uid,
+        "senderName": user.get("username", ""),
+        "content": f"{target.get('username', '')} was added to the group",
+        "type": "system",
+        "messageType": "text",
+        "recalled": False,
+        "readBy": [uid],
+        "deletedFor": [],
+        "sentAt": now,
+    })
+
+    # Notify via WS
+    updated_room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room")})
+    if updated_room:
+        await manager.broadcast_to_room(
+            updated_room.get("members", []),
+            {"type": "room_updated", "roomId": room_id},
+        )
+
+    return {"ok": True}
+
+
+@chat_router.post("/rooms/{room_id}/members/kick")
+async def kick_room_member(room_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Remove a member from a group room. Only the owner can kick members."""
+    uid = str(user["id"])
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.get("type") != "group":
+        raise HTTPException(status_code=400, detail="Can only kick members from group rooms")
+    if room.get("createdBy") != uid:
+        raise HTTPException(status_code=403, detail="Only the group owner can kick members")
+
+    target_id = body.get("userId", "")
+    if not target_id:
+        raise HTTPException(status_code=400, detail="userId is required")
+    if target_id == uid:
+        raise HTTPException(status_code=400, detail="Cannot kick yourself — use leave instead")
+
+    if target_id not in room.get("members", []):
+        raise HTTPException(status_code=400, detail="User is not a member")
+
+    # Fetch target username for system message
+    target = await db.users.find_one({"_id": safe_object_id(target_id, label="user")})
+    target_name = target.get("username", "Unknown") if target else "Unknown"
+
+    now = _utcnow()
+    await db.chat_rooms.update_one(
+        {"_id": safe_object_id(room_id, label="room")},
+        {"$pull": {"members": target_id}},
+    )
+
+    await db.chat_messages.insert_one({
+        "roomId": room_id,
+        "senderId": uid,
+        "senderName": user.get("username", ""),
+        "content": f"{target_name} was removed from the group",
+        "type": "system",
+        "messageType": "text",
+        "recalled": False,
+        "readBy": [uid],
+        "deletedFor": [],
+        "sentAt": now,
+    })
+
+    # Notify remaining members + kicked user
+    await manager.broadcast_to_room(
+        room.get("members", []),
+        {"type": "room_updated", "roomId": room_id},
+    )
+    await manager.send_to_user(target_id, {"type": "kicked_from_room", "roomId": room_id})
+
+    return {"ok": True}
+
+
+@chat_router.post("/rooms/{room_id}/leave")
+async def leave_room(room_id: str, user: dict = Depends(get_current_user)):
+    """Leave a group room. Owner cannot leave (must transfer or delete)."""
+    uid = str(user["id"])
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.get("type") != "group":
+        raise HTTPException(status_code=400, detail="Cannot leave a direct room — use delete chat instead")
+    if room.get("createdBy") == uid:
+        raise HTTPException(status_code=400, detail="Group owner cannot leave. Transfer ownership or delete the group.")
+
+    now = _utcnow()
+    await db.chat_rooms.update_one(
+        {"_id": safe_object_id(room_id, label="room")},
+        {"$pull": {"members": uid}},
+    )
+
+    await db.chat_messages.insert_one({
+        "roomId": room_id,
+        "senderId": uid,
+        "senderName": user.get("username", ""),
+        "content": f"{user.get('username', '')} left the group",
+        "type": "system",
+        "messageType": "text",
+        "recalled": False,
+        "readBy": [uid],
+        "deletedFor": [],
+        "sentAt": now,
+    })
+
+    # Notify remaining members
+    updated_room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room")})
+    if updated_room:
+        await manager.broadcast_to_room(
+            updated_room.get("members", []),
+            {"type": "room_updated", "roomId": room_id},
+        )
+
+    return {"ok": True}
+
+
+@chat_router.delete("/rooms/{room_id}")
+async def delete_room(room_id: str, user: dict = Depends(get_current_user)):
+    """Delete a chat room (hide for current user; owner can delete group entirely)."""
+    uid = str(user["id"])
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    if room.get("type") == "direct":
+        # For direct rooms, just remove the user from members (soft delete)
+        await db.chat_rooms.update_one(
+            {"_id": safe_object_id(room_id, label="room")},
+            {"$pull": {"members": uid}},
+        )
+    elif room.get("createdBy") == uid:
+        # Owner can delete entire group
+        await db.chat_rooms.delete_one({"_id": safe_object_id(room_id, label="room")})
+        await db.chat_messages.delete_many({"roomId": room_id})
+        # Notify all members
+        await manager.broadcast_to_room(
+            room.get("members", []),
+            {"type": "room_deleted", "roomId": room_id},
+            exclude=uid,
+        )
+    else:
+        raise HTTPException(status_code=403, detail="Only the group owner can delete the group")
+
+    return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────
+# AI Assistant Endpoints
+# ──────────────────────────────────────────────────────────────
+
+async def _verify_room_member(room_id: str, user_id: str):
+    """Helper: verify user is a member of the room, return room doc or raise 404."""
+    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": user_id})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found or not a member")
+    return room
+
+
+@chat_router.post("/rooms/{room_id}/ai/summary")
+async def ai_summary(
+    room_id: str,
+    body: ChatAiSummarySchema,
+    user: dict = Depends(get_current_user),
+):
+    """Generate an AI summary of recent chat messages."""
+    uid = str(user["id"])
+    await _verify_room_member(room_id, uid)
+
+    from backend.services.chat_ai_service import run_summary
+    try:
+        result = await run_summary(
+            room_id=room_id,
+            user_id=uid,
+            mode=body.mode,
+            window_size=body.window_size,
+            unread_since=body.unread_since,
+        )
+        return {"ok": True, **result}
+    except Exception as exc:
+        logger.exception("AI summary failed: room=%s user=%s", room_id, uid)
+        raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
+
+
+@chat_router.post("/rooms/{room_id}/ai/reply-suggestions")
+async def ai_reply_suggestions(
+    room_id: str,
+    body: ChatAiReplySuggestionsSchema,
+    user: dict = Depends(get_current_user),
+):
+    """Generate reply suggestions for the current conversation."""
+    uid = str(user["id"])
+    await _verify_room_member(room_id, uid)
+
+    from backend.services.chat_ai_service import run_reply_suggestions
+    try:
+        result = await run_reply_suggestions(
+            room_id=room_id,
+            user_id=uid,
+            tone=body.tone,
+            latest_count=body.latest_count,
+        )
+        return {"ok": True, **result}
+    except Exception as exc:
+        logger.exception("AI reply suggestions failed: room=%s user=%s", room_id, uid)
+        raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
+
+
+@chat_router.post("/rooms/{room_id}/ai/rewrite")
+async def ai_rewrite(
+    room_id: str,
+    body: ChatAiRewriteSchema,
+    user: dict = Depends(get_current_user),
+):
+    """Rewrite draft text with AI in a given style."""
+    uid = str(user["id"])
+    await _verify_room_member(room_id, uid)
+
+    from backend.services.chat_ai_service import run_rewrite
+    try:
+        result = await run_rewrite(
+            room_id=room_id,
+            user_id=uid,
+            draft_text=body.draft_text,
+            style=body.style,
+        )
+        return {"ok": True, **result}
+    except Exception as exc:
+        logger.exception("AI rewrite failed: room=%s user=%s", room_id, uid)
+        raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
+
+
+@chat_router.post("/rooms/{room_id}/ai/assistant")
+async def ai_assistant(
+    room_id: str,
+    body: ChatAiAssistantSchema,
+    user: dict = Depends(get_current_user),
+):
+    """Ask the AI assistant a question based on chat context."""
+    uid = str(user["id"])
+    await _verify_room_member(room_id, uid)
+
+    from backend.services.chat_ai_service import run_assistant
+    try:
+        result = await run_assistant(
+            room_id=room_id,
+            user_id=uid,
+            query=body.query,
+            context_window=body.context_window,
+        )
+        return {"ok": True, **result}
+    except Exception as exc:
+        logger.exception("AI assistant failed: room=%s user=%s", room_id, uid)
+        raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
+
+
+# ──────────────────────────────────────────────────────────────
+# File Transfer Station Endpoints
+# ──────────────────────────────────────────────────────────────
+
+@chat_router.post("/transfers/start")
+async def transfer_start(
+    body: ChatTransferStartSchema,
+    user: dict = Depends(get_current_user),
+):
+    """Start a file transfer from a chat message to a target module."""
+    uid = str(user["id"])
+    await _verify_room_member(body.room_id, uid)
+
+    from backend.services.transfer_dispatch_service import create_transfer
+    try:
+        result = await create_transfer(
+            room_id=body.room_id,
+            message_id=body.message_id,
+            owner_user_id=uid,
+            target_module=body.target_module,
+            target_options=body.target_options,
+        )
+        return {"ok": True, **result}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@chat_router.get("/transfers/{transfer_id}")
+async def transfer_get(
+    transfer_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Get the current status of a transfer ticket."""
+    uid = str(user["id"])
+    from backend.services.transfer_dispatch_service import get_transfer
+    result = await get_transfer(transfer_id, uid)
+    if not result:
+        raise HTTPException(status_code=404, detail="Transfer not found")
+
+    # Serialize datetimes for JSON response
+    for key in ("created_at", "consumed_at", "expires_at"):
+        if result.get(key):
+            result[key] = result[key].isoformat()
+
+    return {"ok": True, "transfer": result}
+
+
+@chat_router.post("/transfers/{transfer_id}/consume")
+async def transfer_consume(
+    transfer_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Consume a transfer ticket — dispatch the file to the target module."""
+    uid = str(user["id"])
+    from backend.services.transfer_dispatch_service import consume_transfer
+    try:
+        result = await consume_transfer(transfer_id, uid)
+        return {"ok": True, **result}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Transfer consume failed: transfer_id=%s", transfer_id)
+        raise HTTPException(status_code=502, detail=f"Dispatch error: {exc}")
+
+
+@chat_router.post("/transfers/{transfer_id}/retry")
+async def transfer_retry(
+    transfer_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Retry a failed transfer."""
+    uid = str(user["id"])
+    from backend.services.transfer_dispatch_service import retry_transfer
+    try:
+        result = await retry_transfer(transfer_id, uid)
+        return {"ok": True, **result}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Transfer retry failed: transfer_id=%s", transfer_id)
+        raise HTTPException(status_code=502, detail=f"Dispatch error: {exc}")
 
 
 # ──────────────────────────────────────────────────────────────

@@ -1,0 +1,135 @@
+# =============================================================================
+# Chat Assistant Prompts — Used by Chat AI Service for smart assistant features
+# =============================================================================
+
+summary:
+  description: "Summarize recent chat messages"
+  version: "1.0"
+  template: |
+    You are a concise meeting/chat summarizer. Analyze the following chat messages and provide a structured summary.
+
+    Chat messages (newest first):
+    {messages}
+
+    Requirements:
+    1. Write a clear summary in 3-5 bullet points covering the main discussion topics.
+    2. Use the same language as the majority of the messages.
+    3. Keep each bullet point to 1-2 sentences.
+    4. Focus on decisions, questions, and action items.
+
+    Output format (use these exact section headers):
+    ## Summary
+    - bullet point 1
+    - bullet point 2
+    ...
+
+unread_summary:
+  description: "Summarize messages since user last read"
+  version: "1.0"
+  template: |
+    You are a helpful assistant summarizing what a user missed in a chat conversation.
+
+    Messages since the user was last active:
+    {messages}
+
+    Requirements:
+    1. Summarize what happened while the user was away, in 3-5 bullet points.
+    2. Highlight any questions directed at the user or important announcements.
+    3. Use the same language as the majority of the messages.
+
+    Output format (use these exact section headers):
+    ## What You Missed
+    - bullet point 1
+    - bullet point 2
+    ...
+
+action_items:
+  description: "Extract action items, decisions, and risks from chat"
+  version: "1.0"
+  template: |
+    You are a meeting analyst. Extract structured action items from the following chat messages.
+
+    Chat messages:
+    {messages}
+
+    Requirements:
+    1. Identify action items (tasks someone should do).
+    2. Identify decisions that were made.
+    3. Identify risks or unresolved questions.
+    4. Use the same language as the majority of the messages.
+
+    Output format (use these exact section headers, leave section empty with "None" if nothing found):
+    ## Action Items
+    - [ ] item 1
+    - [ ] item 2
+
+    ## Decisions
+    - decision 1
+
+    ## Risks / Open Questions
+    - risk 1
+
+rewrite:
+  description: "Rewrite draft text with specified style"
+  version: "1.0"
+  template: |
+    You are a writing assistant. Rewrite the following draft text with the specified style.
+
+    Draft text:
+    {draft_text}
+
+    Target style: {style}
+
+    Style definitions:
+    - concise: Make it shorter and more direct, remove filler words
+    - polite: Make it more courteous and professional
+    - professional: Use formal business language
+    - assertive: Make it more confident and action-oriented
+    - friendly: Make it warm and approachable
+
+    Requirements:
+    1. Keep the original meaning intact.
+    2. Use the same language as the draft text.
+    3. Return ONLY the rewritten text, no explanation.
+
+reply_suggestions:
+  description: "Generate quick reply suggestions"
+  version: "1.0"
+  template: |
+    You are a chat assistant. Based on the recent conversation context, suggest 3 short reply options.
+
+    Recent messages:
+    {messages}
+
+    Desired tone: {tone}
+
+    Tone definitions:
+    - concise: Short and direct replies
+    - polite: Courteous and professional
+    - professional: Formal business language
+    - action: Focus on next steps and execution
+
+    Requirements:
+    1. Generate exactly 3 reply suggestions.
+    2. Each reply should be 1-2 sentences max.
+    3. Use the same language as the conversation.
+    4. Each reply should be different in approach (e.g., agree, ask question, suggest action).
+    5. Return ONLY the 3 replies, one per line, no numbering, no explanation.
+
+assistant_qa:
+  description: "Answer a question based on chat context"
+  version: "1.0"
+  template: |
+    You are a helpful AI assistant embedded in a group chat. Answer the user's question based on the recent conversation context.
+
+    Recent chat context:
+    {context}
+
+    User's question:
+    {query}
+
+    Requirements:
+    1. Answer based on the available context. If the context doesn't contain enough info, say so honestly.
+    2. Keep your answer concise (2-4 sentences).
+    3. Use the same language as the question.
+    4. Do not make up information not present in the context.
