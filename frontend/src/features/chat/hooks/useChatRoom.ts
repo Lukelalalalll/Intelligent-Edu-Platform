@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatApi } from '../../../api/chatApi';
 import { useCurrentUser } from './useCurrentUser';
+import { networkBus } from '../../../hooks/useNetworkStatus';
 import type { ChatMessage } from '../types';
 
 export function useChatRoom(roomId: string) {
     const {
         rooms, messages, setMessages, prependMessages, appendMessage,
-        updateRoomLastMessage, clearUnread, markMessageFailed, wsSend,
+        updateRoomLastMessage, clearUnread, markMessageFailed, replaceOptimisticMessage, wsSend,
+        recordLastSeen,
     } = useChatStore();
 
     const [hasMore, setHasMore] = useState(false);
@@ -47,24 +49,23 @@ export function useChatRoom(roomId: string) {
             } catch { /* ignore */ }
         };
         load();
+        recordLastSeen(roomId);
         clearUnread(roomId);
         chatApi.markRead(roomId).catch(() => {});
         setHasNewMessage(false);
         return () => { alive = false; };
     }, [roomId, setMessages, clearUnread]);
 
-    // Smart auto-scroll: only scroll if user is near bottom or it's own message
+    // 自动滚动到底部已被移除
     useEffect(() => {
         const lastMsg = roomMessages[roomMessages.length - 1];
         if (!lastMsg) return;
-        if (lastMsg.senderId === userId || isNearBottom()) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-            setHasNewMessage(false);
+        
+        // 只有非自己的消息，且不在底部时，才显示新消息横幅
+        if (lastMsg.senderId !== userId && !isNearBottom()) {
+            setHasNewMessage(true);
         } else {
-            // Only show banner for messages from others
-            if (lastMsg.senderId !== userId) {
-                setHasNewMessage(true);
-            }
+            setHasNewMessage(false);
         }
     }, [roomMessages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -197,10 +198,19 @@ export function useChatRoom(roomId: string) {
             updateRoomLastMessage(roomId, { content, senderId: userId, sentAt: now });
             setQuotedMessage(null);
 
+            // Refuse to send while offline
+            if (networkBus.isOffline) {
+                markMessageFailed(roomId, optimisticMsg.id);
+                return;
+            }
+
             // Use store-based wsSend instead of window global
             if (fileData || !wsSend) {
                 try {
-                    await chatApi.sendMessage(roomId, content, fileData, quotedMessage?.id);
+                    const res = await chatApi.sendMessage(roomId, content, fileData, quotedMessage?.id);
+                    if (res.message) {
+                        replaceOptimisticMessage(roomId, optimisticMsg.id, res.message);
+                    }
                 } catch {
                     markMessageFailed(roomId, optimisticMsg.id);
                 }
@@ -208,7 +218,7 @@ export function useChatRoom(roomId: string) {
             }
             wsSend({ type: 'new_message', roomId, content, localId: optimisticMsg.id, replyTo: quotedMessage?.id || '' });
         },
-        [roomId, userId, currentUser, appendMessage, updateRoomLastMessage, quotedMessage, wsSend, markMessageFailed],
+        [roomId, userId, currentUser, appendMessage, updateRoomLastMessage, quotedMessage, wsSend, markMessageFailed, replaceOptimisticMessage],
     );
 
     // Retry a failed message

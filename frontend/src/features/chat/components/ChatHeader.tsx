@@ -7,6 +7,8 @@ import styles from '../styles/Chat.module.css';
 interface Props {
     room: ChatRoom;
     typingUser: string | null;
+    onToggleAssistant?: () => void;
+    onToggleGroupInfo?: () => void;
 }
 
 function hashColor(str: string): string {
@@ -18,7 +20,7 @@ function hashColor(str: string): string {
     return `hsl(${h}, 55%, 45%)`;
 }
 
-export default function ChatHeader({ room, typingUser }: Props) {
+export default function ChatHeader({ room, typingUser, onToggleAssistant, onToggleGroupInfo }: Props) {
     const displayName = room.name || 'Chat';
     const initial = displayName.charAt(0).toUpperCase();
     const color = room.avatarColor || hashColor(room.id);
@@ -41,6 +43,26 @@ export default function ChatHeader({ room, typingUser }: Props) {
                             ? `${room.members.length} members`
                             : 'Direct message'}
                 </div>
+            </div>
+            <div className={styles.chatHeaderActions}>
+                {onToggleAssistant && (
+                    <button
+                        className={styles.chatHeaderBtn}
+                        onClick={onToggleAssistant}
+                        title="AI Assistant"
+                    >
+                        <i className="fas fa-robot" />
+                    </button>
+                )}
+                {onToggleGroupInfo && (
+                    <button
+                        className={styles.chatHeaderBtn}
+                        onClick={onToggleGroupInfo}
+                        title="Chat Info"
+                    >
+                        <i className="fas fa-info-circle" />
+                    </button>
+                )}
             </div>
         </div>
     );

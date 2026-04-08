@@ -13,12 +13,27 @@ interface Props {
     onClearQuote?: () => void;
 }
 
+const REWRITE_STYLES = [
+    { value: 'concise', label: 'Concise', icon: 'fa-compress-alt' },
+    { value: 'polite', label: 'Polite', icon: 'fa-handshake' },
+    { value: 'professional', label: 'Professional', icon: 'fa-briefcase' },
+    { value: 'assertive', label: 'Assertive', icon: 'fa-bolt' },
+    { value: 'friendly', label: 'Friendly', icon: 'fa-smile' },
+];
+
 export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, onClearQuote }: Props) {
     const [text, setText] = useState('');
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // AI features
+    const [rewriting, setRewriting] = useState(false);
+    const [showRewriteMenu, setShowRewriteMenu] = useState(false);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
 
     const handleChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,12 +53,16 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
     const handleSend = useCallback(async () => {
         if (pendingFile) {
             setUploading(true);
+            setUploadError(null);
             try {
                 const meta = await chatApi.uploadFile(roomId, pendingFile);
                 onSend(pendingFile.name, { ...meta, messageType: 'file' });
+                setPendingFile(null);
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : 'Upload failed';
+                setUploadError(msg);
             } finally {
                 setUploading(false);
-                setPendingFile(null);
             }
             return;
         }
@@ -51,6 +70,7 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
         if (!trimmed) return;
         onSend(trimmed);
         setText('');
+        setSuggestions([]);
     }, [text, pendingFile, roomId, onSend]);
 
     const handleKeyDown = useCallback(
@@ -63,8 +83,63 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
         [handleSend],
     );
 
+    // AI Rewrite
+    const handleRewrite = useCallback(async (style: string) => {
+        setShowRewriteMenu(false);
+        if (!text.trim()) return;
+        setRewriting(true);
+        try {
+            const res = await chatApi.aiRewrite(roomId, text.trim(), style);
+            setText(res.rewritten_text);
+        } catch {
+            // silently ignore
+        } finally {
+            setRewriting(false);
+        }
+    }, [roomId, text]);
+
+    // AI Reply Suggestions
+    const handleGetSuggestions = useCallback(async () => {
+        setLoadingSuggestions(true);
+        try {
+            const res = await chatApi.aiReplySuggestions(roomId);
+            setSuggestions(res.suggestions);
+        } catch {
+            // silently ignore
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    }, [roomId]);
+
+    const handleUseSuggestion = useCallback((s: string) => {
+        setText(s);
+        setSuggestions([]);
+    }, []);
+
     return (
         <div className={styles.messageInputWrapper}>
+            {/* Reply suggestions chips */}
+            {suggestions.length > 0 && (
+                <div className={styles.suggestionsBar}>
+                    {suggestions.map((s, i) => (
+                        <button
+                            key={i}
+                            className={styles.suggestionChip}
+                            onClick={() => handleUseSuggestion(s)}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                    <button
+                        className={styles.suggestionChipDismiss}
+                        onClick={() => setSuggestions([])}
+                        title="Dismiss"
+                    >
+                        <i className="fas fa-times" />
+                    </button>
+                </div>
+            )}
+
             {quotedMessage && (
                 <div className={styles.quotePreview}>
                     <div className={styles.quotePreviewBar} />
@@ -79,6 +154,12 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
                     <button className={styles.quotePreviewClose} onClick={onClearQuote}>
                         <i className="fas fa-times" />
                     </button>
+                </div>
+            )}
+            {uploadError && (
+                <div style={{ padding: '4px 12px', color: '#ef4444', fontSize: '0.8rem', background: '#fef2f2', borderRadius: 4 }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: 4 }} />
+                    {uploadError}
                 </div>
             )}
             {pendingFile && (
@@ -110,14 +191,55 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
                 >
                     <i className="fas fa-paperclip" />
                 </button>
+
+                {/* AI Suggest button */}
+                <button
+                    className={styles.aiInputBtn}
+                    onClick={handleGetSuggestions}
+                    disabled={loadingSuggestions || uploading}
+                    title="Get AI reply suggestions"
+                >
+                    {loadingSuggestions
+                        ? <i className="fas fa-circle-notch fa-spin" />
+                        : <i className="fas fa-lightbulb" />}
+                </button>
+
                 <input
                     className={styles.messageInput}
                     placeholder={pendingFile ? 'Add a message (optional)...' : 'Type a message...'}
                     value={text}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    disabled={uploading}
+                    disabled={uploading || rewriting}
                 />
+
+                {/* AI Rewrite button with dropdown */}
+                <div style={{ position: 'relative' }}>
+                    <button
+                        className={styles.aiInputBtn}
+                        onClick={() => setShowRewriteMenu(!showRewriteMenu)}
+                        disabled={!text.trim() || rewriting || uploading}
+                        title="AI Rewrite"
+                    >
+                        {rewriting
+                            ? <i className="fas fa-circle-notch fa-spin" />
+                            : <i className="fas fa-magic" />}
+                    </button>
+                    {showRewriteMenu && (
+                        <div className={styles.rewriteDropdown}>
+                            {REWRITE_STYLES.map((s) => (
+                                <button
+                                    key={s.value}
+                                    className={styles.rewriteDropdownItem}
+                                    onClick={() => handleRewrite(s.value)}
+                                >
+                                    <i className={`fas ${s.icon}`} /> {s.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 <button
                     className={styles.sendBtn}
                     onClick={handleSend}

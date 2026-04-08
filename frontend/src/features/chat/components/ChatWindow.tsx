@@ -1,11 +1,16 @@
 // frontend/src/features/chat/components/ChatWindow.tsx
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChatHeader from './ChatHeader';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ForwardModal from './ForwardModal';
+import AssistantPanel from './AssistantPanel';
+import TransferModal from './TransferModal';
+import GroupInfoPanel from './GroupInfoPanel';
 import { useChatRoom } from '../hooks/useChatRoom';
 import { useChatStore } from '../store/chatStore';
+import type { ChatMessage } from '../types';
 import styles from '../styles/Chat.module.css';
 
 interface Props {
@@ -14,6 +19,10 @@ interface Props {
 
 export default function ChatWindow({ roomId }: Props) {
     const { wsStatus } = useChatStore();
+    const navigate = useNavigate();
+    const [showAssistant, setShowAssistant] = useState(false);
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
+    const [transferMessage, setTransferMessage] = useState<ChatMessage | null>(null);
 
     const {
         room, roomMessages, userId,
@@ -25,6 +34,13 @@ export default function ChatWindow({ roomId }: Props) {
         handleSend, handleRetry, handleTyping, scrollToBottom, setShowForwardModal,
     } = useChatRoom(roomId);
 
+    const handleToggleAssistant = useCallback(() => setShowAssistant(prev => !prev), []);
+    const handleToggleGroupInfo = useCallback(() => setShowGroupInfo(prev => !prev), []);
+    const handleTransfer = useCallback((msg: ChatMessage) => setTransferMessage(msg), []);
+    const handleLeaveOrDelete = useCallback(() => {
+        navigate('/chat');
+    }, [navigate]);
+
     if (!room) {
         return (
             <div className={styles.rightPaneEmpty}>
@@ -35,7 +51,7 @@ export default function ChatWindow({ roomId }: Props) {
 
     return (
         <>
-            <ChatHeader room={room} typingUser={typingUser} />
+            <ChatHeader room={room} typingUser={typingUser} onToggleAssistant={handleToggleAssistant} onToggleGroupInfo={handleToggleGroupInfo} />
 
             {wsStatus === 'closed' && (
                 <div className={styles.wsBanner}>
@@ -71,6 +87,7 @@ export default function ChatWindow({ roomId }: Props) {
                                 onToggleSelect={handleToggleSelect}
                                 onQuote={handleQuote}
                                 onEnterMultiSelect={handleEnterMultiSelect}
+                                onTransfer={msg.messageType === 'file' ? handleTransfer : undefined}
                             />
                             {msg.failed && (
                                 <div className={styles.failedMsgRow}>
@@ -139,6 +156,27 @@ export default function ChatWindow({ roomId }: Props) {
                     onDone={() => { setShowForwardModal(false); handleExitMultiSelect(); }}
                 />
             )}
+
+            <AssistantPanel
+                roomId={roomId}
+                visible={showAssistant}
+                onClose={() => setShowAssistant(false)}
+            />
+
+            {transferMessage && (
+                <TransferModal
+                    message={transferMessage}
+                    roomId={roomId}
+                    onClose={() => setTransferMessage(null)}
+                />
+            )}
+
+            <GroupInfoPanel
+                roomId={roomId}
+                visible={showGroupInfo}
+                onClose={() => setShowGroupInfo(false)}
+                onLeaveOrDelete={handleLeaveOrDelete}
+            />
         </>
     );
 }

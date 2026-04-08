@@ -14,6 +14,7 @@ interface Props {
     onQuote: () => void;
     onRecall: () => void;
     onMultiSelect: () => void;
+    onAiRewrite?: (text: string) => void;
 }
 
 const LANG_OPTIONS = [
@@ -28,7 +29,7 @@ const LANG_OPTIONS = [
 
 export default function MessageContextMenu({
     x, y, isOwn, canRecall, messageContent, messageId,
-    onClose, onCopy, onQuote, onRecall, onMultiSelect,
+    onClose, onCopy, onQuote, onRecall, onMultiSelect, onAiRewrite,
 }: Props) {
     const menuRef = useRef<HTMLDivElement>(null);
     const [showTranslateSub, setShowTranslateSub] = useState(false);
@@ -129,6 +130,13 @@ export default function MessageContextMenu({
                     <i className="fas fa-quote-right" />
                     <span>Quote</span>
                 </button>
+
+                {onAiRewrite && messageContent && (
+                    <button className={styles.contextMenuItem} onClick={() => { onAiRewrite(messageContent); onClose(); }}>
+                        <i className="fas fa-magic" />
+                        <span>AI Rewrite</span>
+                    </button>
+                )}
 
                 <button className={styles.contextMenuItem} onClick={() => { onMultiSelect(); onClose(); }}>
                     <i className="fas fa-check-double" />

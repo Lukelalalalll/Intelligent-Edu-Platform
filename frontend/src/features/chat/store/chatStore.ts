@@ -12,6 +12,7 @@ interface ChatStore {
   unreadCounts: Record<string, number>;
   wsStatus: WsStatus;
   wsSend: ((data: unknown) => void) | null;
+  lastSeenAt: Record<string, string>;
 
   // Actions
   setRooms: (rooms: ChatRoom[]) => void;
@@ -30,6 +31,7 @@ interface ChatStore {
   setWsStatus: (status: WsStatus) => void;
   setWsSend: (fn: ((data: unknown) => void) | null) => void;
   recallMessage: (roomId: string, messageId: string) => void;
+  recordLastSeen: (roomId: string) => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -41,6 +43,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   unreadCounts: {},
   wsStatus: 'closed',
   wsSend: null,
+  lastSeenAt: {},
 
   setRooms: (rooms) => set({ rooms }),
 
@@ -139,5 +142,10 @@ export const useChatStore = create<ChatStore>((set) => ({
           m.id === messageId ? { ...m, recalled: true } : m
         ),
       },
+    })),
+
+  recordLastSeen: (roomId) =>
+    set((state) => ({
+      lastSeenAt: { ...state.lastSeenAt, [roomId]: new Date().toISOString() },
     })),
 }));

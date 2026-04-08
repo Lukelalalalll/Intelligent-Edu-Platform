@@ -16,6 +16,7 @@ interface Props {
     onToggleSelect: (id: string) => void;
     onQuote: (msg: ChatMessage) => void;
     onEnterMultiSelect: (id: string) => void;
+    onTransfer?: (msg: ChatMessage) => void;
 }
 
 function formatMsgTime(iso: string): string {
@@ -42,7 +43,16 @@ function getFileIcon(mimeType?: string): string {
     return 'fa-file';
 }
 
-export default function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect }: Props) {
+function isImageFile(mimeType?: string, fileName?: string): boolean {
+    if (mimeType && mimeType.startsWith('image/')) return true;
+    if (fileName) {
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext || '');
+    }
+    return false;
+}
+
+export default function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
     const [hovering, setHovering] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
     const bubbleRef = useRef<HTMLDivElement>(null);
@@ -103,22 +113,9 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
 
     const handleDownload = (e: React.MouseEvent) => {
         e.preventDefault();
-        let url = message.fileUrl;
-        if (!url) return;
-
-        // Normalize: strip any absolute origin prefix so the Vite proxy can serve it
-        // as same-origin (avoids CORS issues in dev and works in prod too).
-        try {
-            const parsed = new URL(url);
-            url = parsed.pathname + parsed.search;  // Keep only /static/chat_files/...
-        } catch {
-            // url is already relative — leave as-is
-        }
-
-        // Synchronous anchor-click avoids losing the user-activation context
-        // that async fetch/blob would break (Safari/Firefox block the download).
+        if (!fileUrl) return;
         const a = document.createElement('a');
-        a.href = url;
+        a.href = fileUrl;
         a.download = message.fileName || 'file';
         document.body.appendChild(a);
         a.click();
@@ -147,6 +144,19 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
     }
 
     const isFile = message.messageType === 'file';
+    const isImage = isFile && isImageFile(message.mimeType, message.fileName);
+
+    // Normalize file URL for display/download (strip absolute origin if present)
+    const normalizeUrl = (url?: string) => {
+        if (!url) return '';
+        try {
+            const parsed = new URL(url);
+            return parsed.pathname + parsed.search;
+        } catch {
+            return url;
+        }
+    };
+    const fileUrl = normalizeUrl(message.fileUrl);
 
     return (
         <div
@@ -196,23 +206,69 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                 )}
 
                 {isFile ? (
-                    <div
-                        className={styles.fileCard}
-                        onClick={handleDownload}
-                        role="button"
-                        tabIndex={0}
-                        aria-busy={false}
-                    >
-                        <i className={`fas ${getFileIcon(message.mimeType)} ${styles.fileCardIcon}`} />
-                        <div className={styles.fileCardInfo}>
-                            <span className={styles.fileCardName}>{message.fileName}</span>
-                            <span className={styles.fileCardSize}>{formatFileSize(message.fileSize)}</span>
+                    isImage ? (
+                        /* ── Image thumbnail ── */
+                        <div className={styles.imageMsgWrapper}>
+                            <a
+                                href={fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <img
+                                    src={fileUrl}
+                                    alt={message.fileName || 'image'}
+                                    className={styles.imageMsgThumb}
+                                    onError={(e) => {
+                                        // Fallback to file card on broken image
+                                        (e.currentTarget.closest(`.${styles.imageMsgWrapper}`) as HTMLElement | null)
+                                            ?.setAttribute('data-broken', 'true');
+                                    }}
+                                />
+                            </a>
+                            <div className={styles.imageMsgMeta}>
+                                <span className={styles.imageMsgName}>{message.fileName}</span>
+                                <button
+                                    className={styles.imageMsgDownload}
+                                    onClick={handleDownload}
+                                    title="Download"
+                                >
+                                    <i className="fas fa-download" />
+                                </button>
+                            </div>
                         </div>
-                        <i
-                            className={`fas fa-download`}
-                            style={{ marginLeft: 'auto', opacity: 0.6 }}
-                        />
-                    </div>
+                    ) : (
+                        /* ── Generic file card ── */
+                        <div className={styles.fileCard}>
+                            <div
+                                className={styles.fileCardMain}
+                                onClick={handleDownload}
+                                role="button"
+                                tabIndex={0}
+                                aria-busy={false}
+                            >
+                                <i className={`fas ${getFileIcon(message.mimeType)} ${styles.fileCardIcon}`} />
+                                <div className={styles.fileCardInfo}>
+                                    <span className={styles.fileCardName}>{message.fileName}</span>
+                                    <span className={styles.fileCardSize}>{formatFileSize(message.fileSize)}</span>
+                                </div>
+                                <i
+                                    className={`fas fa-download`}
+                                    style={{ marginLeft: 'auto', opacity: 0.6 }}
+                                />
+                            </div>
+                            {onTransfer && !multiSelect && (
+                                <button
+                                    className={styles.transferBtn}
+                                    onClick={(e) => { e.stopPropagation(); onTransfer(message); }}
+                                    title="Send to module"
+                                >
+                                    <i className="fas fa-exchange-alt" style={{ marginRight: 4 }} />
+                                    Transfer
+                                </button>
+                            )}
+                        </div>
+                    )
                 ) : (
                     <div>{message.content}</div>
                 )}

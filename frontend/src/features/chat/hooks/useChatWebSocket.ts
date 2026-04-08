@@ -108,6 +108,24 @@ export function useChatWebSocket() {
                         import('../../../api/chatApi').then(({ chatApi }) => {
                             chatApi.getRooms().then((r) => setRooms(r.rooms));
                         });
+                    } else if (type === 'room_updated') {
+                        // Refresh room list + notify GroupInfoPanel
+                        import('../../../api/chatApi').then(({ chatApi }) => {
+                            chatApi.getRooms().then((r) => setRooms(r.rooms));
+                        });
+                        window.dispatchEvent(
+                            new CustomEvent('chat_room_updated', { detail: data }),
+                        );
+                    } else if (type === 'room_deleted' || type === 'kicked_from_room') {
+                        // Refresh room list + if current room, navigate away
+                        import('../../../api/chatApi').then(({ chatApi }) => {
+                            chatApi.getRooms().then((r) => setRooms(r.rooms));
+                        });
+                        const store = useChatStore.getState();
+                        const kickedRoomId = data.roomId as string;
+                        if (store.activeRoomId === kickedRoomId) {
+                            store.setActiveRoom(null);
+                        }
                     } else if (type === 'typing') {
                         window.dispatchEvent(
                             new CustomEvent('chat_typing', { detail: data }),
@@ -135,12 +153,10 @@ export function useChatWebSocket() {
                 setWsSend(null);
                 wsRef.current = null;
 
-                // Auto-reconnect with exponential backoff (max 5 retries)
-                if (reconnectCount.current < 5) {
-                    const delay = Math.min(1000 * 2 ** reconnectCount.current, 30000);
-                    reconnectCount.current++;
-                    reconnectTimer.current = setTimeout(connect, delay);
-                }
+                // Auto-reconnect with exponential backoff (no retry limit)
+                const delay = Math.min(1000 * 2 ** reconnectCount.current, 30000);
+                reconnectCount.current++;
+                reconnectTimer.current = setTimeout(connect, delay);
             };
 
             ws.onerror = () => {
@@ -150,7 +166,22 @@ export function useChatWebSocket() {
 
         connect();
 
+        // Visibility API: force reconnect when tab comes back to foreground
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                const ws = wsRef.current;
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    // Clear any pending reconnect and try immediately
+                    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+                    reconnectTimer.current = null;
+                    connect();
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
             if (wsRef.current) {
                 wsRef.current.close();
