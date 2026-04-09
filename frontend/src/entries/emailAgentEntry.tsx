@@ -58,6 +58,8 @@ export default function EmailAgentEntry() {
                         isLoadingMore={email.isLoadingMore}
                         activeProvider={email.activeProvider}
                         onBackToSelect={email.backToSelect}
+                        aiProvider={email.aiProvider}
+                        onChangeAiProvider={email.setAiProvider}
                     />
                 </motion.div>
             )}

@@ -36,6 +36,8 @@ interface EmailAgentProps {
     isLoadingMore?: boolean;
     activeProvider?: string;
     onBackToSelect?: () => void;
+    aiProvider?: string;
+    onChangeAiProvider?: (provider: 'coze' | 'local_ollama') => void;
 }
 
 export default function EmailAgent({
@@ -45,6 +47,7 @@ export default function EmailAgent({
     selectedEmailId, selectedEmailDetail, emailClassification, isClassifying, classifyFailed,
     error, setError, successMessage, hasMoreEmails, isLoadingMore,
     activeProvider, onBackToSelect,
+    aiProvider, onChangeAiProvider,
 }: EmailAgentProps) {
     const selectedListItem = emails.find((mail) => mail.id === selectedEmailId) || null;
     const selectedSubject = selectedEmailDetail?.subject || selectedListItem?.subject || '(No Subject)';
@@ -71,6 +74,14 @@ export default function EmailAgent({
                     </div>
 
                     <div className={styles.actions}>
+                        <select
+                            value={aiProvider || 'local_ollama'}
+                            onChange={(e) => onChangeAiProvider?.(e.target.value as 'coze' | 'local_ollama')}
+                            style={{ borderRadius: 8, padding: '6px 8px' }}
+                        >
+                            <option value="coze">Coze</option>
+                            <option value="local_ollama">llama3.2</option>
+                        </select>
                         <span className={`${styles.connectionBadge} ${isConnected ? styles.connected : styles.disconnected}`}>
                             {isConnected ? 'Connected' : 'Not connected'}
                         </span>

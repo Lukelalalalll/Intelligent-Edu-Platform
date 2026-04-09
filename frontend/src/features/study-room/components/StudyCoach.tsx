@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import client from '../../../api/client';
 import styles from '../styles/StudyRoom.module.css';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 interface StudyCoachProps {
     pendingHighlight?: string | { text?: string; mode?: string };
@@ -15,6 +16,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     const [input, setInput] = useState('');
     const [streaming, setStreaming] = useState(false);
     const [savedMsgIds, setSavedMsgIds] = useState(new Set());
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
     const messagesRef = useRef(null);
     const rafIdRef = useRef(null);
 
@@ -28,6 +30,10 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     useEffect(() => {
         return () => { if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
     }, []);
+
+    useEffect(() => {
+        setStoredAIProvider(provider);
+    }, [provider]);
 
     // Helpers to update a single message by id (extracted to avoid deep nesting)
     const updateMessage = useCallback((msgId, content) => {
@@ -69,6 +75,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
                 content,
                 mode,
                 messages: history,
+                provider,
             };
             if (pdfText) {
                 payload.context = pdfText.slice(0, 8000);
@@ -81,7 +88,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
             updateMessage(msgId, 'Error: ' + (err?.response?.data?.detail || err.message));
             setStreaming(false);
         }
-    }, [pdfText, revealTypewriter]);
+    }, [pdfText, revealTypewriter, provider]);
 
     const handleAction = useCallback((mode) => {
         const hlText = typeof pendingHighlight === 'object' ? pendingHighlight?.text : pendingHighlight;
@@ -146,6 +153,16 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
                 <div>
                     <div className={styles.coachTitle}>AI Study Coach</div>
                     <div className={styles.coachSubtitle}>Highlight text to get explanations & hints</div>
+                    <div style={{ marginTop: 8 }}>
+                        <select
+                            value={provider}
+                            onChange={(e) => setProvider(e.target.value as AIProvider)}
+                            disabled={streaming}
+                        >
+                            <option value="coze">Coze</option>
+                            <option value="local_ollama">llama3.2</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

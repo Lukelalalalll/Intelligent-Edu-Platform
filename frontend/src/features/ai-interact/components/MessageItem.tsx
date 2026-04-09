@@ -79,7 +79,13 @@ function CitationPanel({ citations }: { citations: RagCitation[] }) {
 }
 
 interface MessageItemProps {
-    msg: { role: string; content: string; files?: { file_name: string; mime_type: string }[]; citations?: RagCitation[] };
+    msg: {
+        role: string;
+        content: string;
+        images?: string[];
+        files?: { file_name: string; mime_type: string }[];
+        citations?: RagCitation[];
+    };
     isUser: boolean;
     onCopy: (text: string, el: HTMLElement | null) => void;
     isLastAssistant: boolean;
@@ -104,7 +110,7 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
         setIsEditing(false);
     };
 
-    const renderContent = (content) => {
+    const renderContent = (content: string) => {
         if (!content) return { __html: "" };
         try {
             const rawHtml = typeof marked.parse === 'function' ? marked.parse(content) as string : marked(content) as string;
@@ -118,6 +124,18 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
         }
     };
 
+    const getFileIcon = (mimeType?: string) => {
+        if (!mimeType) return 'fa-file-alt';
+        if (mimeType.startsWith('image/')) return 'fa-file-image';
+        if (mimeType === 'application/pdf') return 'fa-file-pdf';
+        if (mimeType.includes('word') || mimeType.includes('document')) return 'fa-file-word';
+        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fa-file-excel';
+        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fa-file-powerpoint';
+        if (mimeType.includes('zip') || mimeType.includes('compressed') || mimeType.includes('tar')) return 'fa-file-archive';
+        if (mimeType.includes('markdown') || mimeType.includes('text/md')) return 'fa-file-code';
+        return 'fa-file-alt';
+    };
+
     return (
         <div className={`${styles.message} ${isUser ? styles['user-message'] : styles['ai-message']}`}>
             <div className={styles.avatar}>
@@ -126,12 +144,27 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
 
             {isUser ? (
                 <div className={styles.bubble} style={{ minHeight: '20px', position: 'relative' }}>
+                    {msg.images && msg.images.length > 0 && (
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            {msg.images.map((base64, i) => (
+                                <img
+                                    key={i}
+                                    src={`data:image/jpeg;base64,${base64}`}
+                                    alt="attachment"
+                                    style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '6px', objectFit: 'contain', background: 'rgba(255,255,255,0.2)' }}
+                                />
+                            ))}
+                        </div>
+                    )}
                     {msg.files && msg.files.length > 0 && (
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: msg.content ? '8px' : '0' }}>
                             {msg.files.map((f, i) => (
-                                <div key={i} style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <i className={f.mime_type.startsWith('image') ? 'fas fa-image' : 'fas fa-file-alt'}></i>
-                                    {f.file_name}
+                                <div key={i} className={styles.fileCard} title={f.file_name}>
+                                    <i className={`fas ${getFileIcon(f.mime_type)} ${styles.fileCardIcon}`}></i>
+                                    <div className={styles.fileCardInfo}>
+                                        <span className={styles.fileCardName}>{f.file_name}</span>
+                                        <span className={styles.fileCardSize}>Document</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -195,6 +228,7 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
         prevProps.msg.role === nextProps.msg.role &&
         prevProps.isTyping === nextProps.isTyping &&
         prevProps.isLastAssistant === nextProps.isLastAssistant &&
+        JSON.stringify(prevProps.msg.images) === JSON.stringify(nextProps.msg.images) &&
         JSON.stringify(prevProps.msg.files) === JSON.stringify(nextProps.msg.files) &&
         JSON.stringify(prevProps.msg.citations) === JSON.stringify(nextProps.msg.citations);
 });

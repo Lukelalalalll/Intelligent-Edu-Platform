@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../styles/pptTemplate.module.css';
+import WelcomeBanner from '../../home/components/WelcomeBanner';
 
 export default function PptTemplate({
     states, handlers
@@ -22,10 +23,10 @@ export default function PptTemplate({
 
     return (
         <div className={`container ${styles.pageShell}`}>
-            <header className={`page-header ${styles.pageHeader}`}>
-                <h1 className={styles.pageTitle}><i className="fas fa-palette"></i> PowerPoint Template Selection</h1>
-                <p className={`subtitle ${styles.pageSubtitle}`}>Design your presentation by selecting a theme and layouts</p>
-            </header>
+            <WelcomeBanner 
+                title={<><i className="fas fa-palette"></i> PowerPoint Template Selection</>}
+                subtitle="Design your presentation by selecting a theme and layouts"
+            />
 
             <div className={styles.workflowHint}>
                 <i className="fas fa-info-circle"></i>

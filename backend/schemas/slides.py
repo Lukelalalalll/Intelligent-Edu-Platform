@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Literal, List, Optional
 
 from pydantic import BaseModel
 
@@ -13,11 +13,13 @@ class SaveHighlightsSchema(BaseModel):
     highlights: List[dict]
 
 class SummarizeRequestSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     highlights: List[dict]
     num_of_bullets: int = 3
     words_each_bullet: int = 15
 
 class ClassifyHighlightsSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     highlights: List[dict]
 
 class BatchHighlightActionSchema(BaseModel):
@@ -27,28 +29,34 @@ class BatchHighlightActionSchema(BaseModel):
     highlight_ids: Optional[List[str]] = None
 
 class GenerateScriptSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     slides_results: List[dict]
     script_style: str = "academic"
     presentation_title: str = ""
     generate_word: bool = True
 
 class MapToSlidesSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     summaries: List[dict]
     available_layouts: Optional[List[str]] = None
     start_number: int = 1
 
 class ValidateSlidesSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     slides: List[dict]
 
 class EvaluateQualitySchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     highlights: List[dict] = []
     slides: List[dict]
 
 class SummarizeChaptersSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     chapterData: List[dict]
     total_pages: int
     num_of_bullets: int
     words_each_bullet: int
 
 class PptProcessSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     ppt_schema: dict

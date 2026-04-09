@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Literal, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,7 @@ class ChatSendMessageSchema(BaseModel):
 
 
 class ChatTranslateSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     text: str
     targetLang: str = "en"
 
@@ -43,22 +44,26 @@ class ChatCreateCourseGroupSchema(BaseModel):
 # ── AI Assistant Schemas ──
 
 class ChatAiSummarySchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     window_size: int = Field(default=30, ge=5, le=100)
     mode: str = Field(default="summary", pattern=r"^(summary|unread|action_items)$")
     unread_since: Optional[str] = None
 
 
 class ChatAiReplySuggestionsSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     tone: str = Field(default="concise", pattern=r"^(concise|polite|professional|action)$")
     latest_count: int = Field(default=10, ge=3, le=50)
 
 
 class ChatAiRewriteSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     draft_text: str = Field(..., min_length=1, max_length=2000)
     style: str = Field(default="concise", pattern=r"^(concise|polite|professional|assertive|friendly)$")
 
 
 class ChatAiAssistantSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     query: str = Field(..., min_length=1, max_length=1000)
     context_window: int = Field(default=20, ge=5, le=50)
 

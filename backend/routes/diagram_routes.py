@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, StreamingResponse, Response
 from werkzeug.utils import secure_filename
 import opendataloader_pdf
 from backend.core.security import get_current_user
+from backend.core.ai_provider import resolve_provider
 from backend.core.safe_requests import safe_get
 from backend.schemas import SearchSvgSchema, DownloadSvgSchema
 from backend.config import Config
@@ -302,19 +303,15 @@ async def generate_diagram(
 @diagram_router.post("/coze_generate_text")
 async def coze_generate_text(
     keywords: str = Form(...),
+    provider: str | None = Form(None),
     user: dict = Depends(get_current_user),
 ):
-    """Use Coze AI to expand keywords into a detailed diagram description."""
+    """Expand keywords into a diagram description with selectable provider."""
     keywords = keywords.strip()
     if not keywords:
         raise HTTPException(status_code=400, detail="Keywords are required")
 
-    api_key = Config.COZE_TOKEN
-    bot_id = Config.COZE_BOT_ID
-    api_root = (Config.COZE_API_ROOT or "https://api.coze.com").rstrip("/")
-
-    if not api_key or not bot_id:
-        raise HTTPException(503, "Coze API key or bot id not configured")
+    resolved_provider = resolve_provider(provider, feature="diagram.generate_text", user=user)
 
     system_prompt = (
         "You are an expert educator and diagram designer. "
@@ -327,85 +324,31 @@ async def coze_generate_text(
     )
 
     full_prompt = f"{system_prompt}\n\nKeywords/Topic: {keywords}"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "bot_id": bot_id,
-        "user_id": "sub4_diagram_gen",
-        "stream": False,
-        "additional_messages": [
-            {"role": "user", "content": full_prompt, "content_type": "text"}
-        ],
-    }
-
-    timeout_seconds = float(Config.COZE_REQUEST_TIMEOUT_SECONDS)
-    poll_interval = float(Config.COZE_POLL_INTERVAL_SECONDS)
-    poll_max_attempts = int(Config.COZE_POLL_MAX_ATTEMPTS)
 
     try:
-        async with httpx.AsyncClient(timeout=timeout_seconds) as http_client:
-            timer = TelemetryTimer(
-                provider="coze", model=bot_id,
-                endpoint="sub4/coze_generate_text", api_type="chat",
-                credential_alias="COZE_TOKEN",
+        from backend.services.ai_gateway_service import AIGatewayService
+
+        ai_service = AIGatewayService()
+        timer = TelemetryTimer(
+            provider=resolved_provider,
+            model="diagram-text-generator",
+            endpoint="sub4/coze_generate_text",
+            api_type="chat",
+            credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
+        )
+        with timer:
+            answer = await ai_service.chat_with_provider(
+                message=full_prompt,
+                context={"coze_user_id": f"sub4_{user.get('id', 'anon')}"},
+                provider=resolved_provider,
             )
-            with timer:
-                # Start chat
-                start_resp = await http_client.post(
-                    f"{api_root}/v3/chat", headers=headers, json=payload
-                )
-                if start_resp.status_code != 200:
-                    logger.error("Coze start error %s: %s", start_resp.status_code, start_resp.text[:500])
-                    await timer.save(success=False, error=f"Coze start error {start_resp.status_code}")
-                    raise HTTPException(502, "AI service error")
+            await timer.save(
+                success=True,
+                prompt_tokens=max(1, len(keywords) // 3),
+                completion_tokens=max(1, len(answer) // 3),
+            )
 
-                start_data = start_resp.json().get("data", {})
-                chat_id = start_data.get("id")
-                conversation_id = start_data.get("conversation_id")
-                if not chat_id or not conversation_id:
-                    await timer.save(success=False, error="Invalid chat identifiers")
-                    raise HTTPException(502, "AI service returned invalid chat identifiers")
-
-                # Poll for completion
-                import asyncio
-                for _ in range(poll_max_attempts):
-                    retrieve_resp = await http_client.get(
-                        f"{api_root}/v3/chat/retrieve",
-                        headers=headers,
-                        params={"chat_id": chat_id, "conversation_id": conversation_id},
-                    )
-                    status = retrieve_resp.json().get("data", {}).get("status")
-                    if status == "completed":
-                        break
-                    if status == "failed":
-                        await timer.save(success=False, error="Coze chat failed")
-                        raise HTTPException(502, "AI service chat failed")
-                    await asyncio.sleep(poll_interval)
-                else:
-                    await timer.save(success=False, error="Coze timeout")
-                    raise HTTPException(504, "AI service timed out")
-
-                # Fetch messages
-                msg_resp = await http_client.get(
-                    f"{api_root}/v3/chat/message/list",
-                    headers=headers,
-                    params={"chat_id": chat_id, "conversation_id": conversation_id},
-                )
-                messages = msg_resp.json().get("data", [])
-                for m in messages:
-                    if m.get("role") == "assistant" and m.get("type") == "answer":
-                        answer = m.get("content", "").strip()
-                        await timer.save(
-                            success=True,
-                            prompt_tokens=max(1, len(keywords) // 3),
-                            completion_tokens=max(1, len(answer) // 3),
-                        )
-                        return {"text": answer}
-
-                await timer.save(success=False, error="No answer received")
-                raise HTTPException(502, "No answer received from AI service")
+        return {"text": answer.strip()}
 
     except HTTPException:
         raise

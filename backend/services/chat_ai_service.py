@@ -93,6 +93,7 @@ async def run_summary(
     mode: str = "summary",
     window_size: int = 30,
     unread_since: Optional[str] = None,
+    provider: str = "local_ollama",
 ) -> dict:
     """Generate a summary of recent chat messages.
 
@@ -118,7 +119,7 @@ async def run_summary(
 
         prompt = prompt_registry.render("chat_assistant", prompt_name, messages=formatted)
         svc = _get_ai_svc()
-        result = await svc.chat(prompt)
+        result = await svc.chat_with_provider(message=prompt, context=None, provider=provider)
 
         latency = (time.perf_counter() - start) * 1000
         await _log_ai_job(user_id, room_id, f"summary_{mode}", latency, True)
@@ -139,6 +140,7 @@ async def run_reply_suggestions(
     user_id: str,
     tone: str = "concise",
     latest_count: int = 10,
+    provider: str = "local_ollama",
 ) -> dict:
     """Generate 3 reply suggestions based on recent context."""
     start = time.perf_counter()
@@ -153,7 +155,7 @@ async def run_reply_suggestions(
             messages=formatted, tone=tone,
         )
         svc = _get_ai_svc()
-        result = await svc.chat(prompt)
+        result = await svc.chat_with_provider(message=prompt, context=None, provider=provider)
 
         # Parse 3 lines
         lines = [line.strip() for line in result.strip().split("\n") if line.strip()]
@@ -174,6 +176,7 @@ async def run_rewrite(
     user_id: str,
     draft_text: str,
     style: str = "concise",
+    provider: str = "local_ollama",
 ) -> dict:
     """Rewrite draft text with a given style."""
     start = time.perf_counter()
@@ -186,7 +189,7 @@ async def run_rewrite(
             draft_text=draft_text[:2000], style=style,
         )
         svc = _get_ai_svc()
-        result = await svc.chat(prompt)
+        result = await svc.chat_with_provider(message=prompt, context=None, provider=provider)
 
         latency = (time.perf_counter() - start) * 1000
         await _log_ai_job(user_id, room_id, "rewrite", latency, True)
@@ -203,6 +206,7 @@ async def run_assistant(
     user_id: str,
     query: str,
     context_window: int = 20,
+    provider: str = "local_ollama",
 ) -> dict:
     """Answer a question using recent chat context."""
     start = time.perf_counter()
@@ -215,7 +219,7 @@ async def run_assistant(
             context=formatted, query=query[:1000],
         )
         svc = _get_ai_svc()
-        result = await svc.chat(prompt)
+        result = await svc.chat_with_provider(message=prompt, context=None, provider=provider)
 
         latency = (time.perf_counter() - start) * 1000
         await _log_ai_job(user_id, room_id, "assistant", latency, True)

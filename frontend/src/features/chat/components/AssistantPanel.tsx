@@ -2,11 +2,13 @@
 
 import React, { useState, useCallback } from 'react';
 import { chatApi } from '../../../api/chatApi';
+import type { AIProvider } from '../../../shared/aiProvider';
 import { useChatStore } from '../store/chatStore';
 import styles from '../styles/Chat.module.css';
 
 interface Props {
     roomId: string;
+    provider: AIProvider;
     visible: boolean;
     onClose: () => void;
     onInsertText?: (text: string) => void;
@@ -14,7 +16,7 @@ interface Props {
 
 type SummaryMode = 'summary' | 'unread' | 'action_items';
 
-export default function AssistantPanel({ roomId, visible, onClose, onInsertText }: Props) {
+export default function AssistantPanel({ roomId, provider, visible, onClose, onInsertText }: Props) {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export default function AssistantPanel({ roomId, visible, onClose, onInsertText 
         setResult(null);
         try {
             const unreadSince = mode === 'unread' ? lastSeenAt : undefined;
-            const res = await chatApi.aiSummary(roomId, mode, 30, unreadSince);
+            const res = await chatApi.aiSummary(roomId, mode, 30, unreadSince, provider);
             setResult(res.summary);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to generate summary';
@@ -41,7 +43,7 @@ export default function AssistantPanel({ roomId, visible, onClose, onInsertText 
         } finally {
             setLoading(false);
         }
-    }, [roomId]);
+    }, [roomId, lastSeenAt, provider]);
 
     const handleAsk = useCallback(async () => {
         if (!question.trim()) return;
@@ -49,7 +51,7 @@ export default function AssistantPanel({ roomId, visible, onClose, onInsertText 
         setAnswer(null);
         setError(null);
         try {
-            const res = await chatApi.aiAssistant(roomId, question.trim());
+            const res = await chatApi.aiAssistant(roomId, question.trim(), 20, provider);
             setAnswer(res.answer);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to get answer';
@@ -57,7 +59,7 @@ export default function AssistantPanel({ roomId, visible, onClose, onInsertText 
         } finally {
             setAnswerLoading(false);
         }
-    }, [roomId, question]);
+    }, [roomId, question, provider]);
 
     if (!visible) return null;
 

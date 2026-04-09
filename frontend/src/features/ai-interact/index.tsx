@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import styles from './styles/AIInteract.module.css';
 import type { AIRoleInfo } from '../../api/aiApi';
+import type { AIProvider } from '../../api/aiApi';
+import type { AITutorMode } from '../../api/aiApi';
 
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';
@@ -38,10 +40,15 @@ interface AIInteractPageProps {
     removeAttachedFile?: (index: number) => void;
     memoryModalOpen?: boolean;
     setMemoryModalOpen?: (open: boolean) => void;
-    aiMemory?: Record<string, string>;
-    saveMemory?: (data: Record<string, string>) => void;
+    aiMemory?: Record<string, unknown>;
+    saveMemory?: (data: Record<string, unknown>) => void;
     savingMemory?: boolean;
     roleInfo?: AIRoleInfo | null;
+    selectedProvider?: AIProvider;
+    setSelectedProvider?: (provider: AIProvider) => void;
+    providerHealth?: { ok: boolean; detail: string };
+    tutorMode?: AITutorMode;
+    setTutorMode?: (mode: AITutorMode) => void;
 }
 
 export default function AIInteractPage({
@@ -55,6 +62,11 @@ export default function AIInteractPage({
     memoryModalOpen, setMemoryModalOpen, aiMemory, saveMemory, savingMemory,
     // Role info
     roleInfo,
+    selectedProvider,
+    setSelectedProvider,
+    providerHealth,
+    tutorMode,
+    setTutorMode,
 }: AIInteractPageProps) {
     const currentSession = (sessions || []).find(s => s.id === currentSessionId) || (sessions || [])[0];
 
@@ -104,6 +116,9 @@ export default function AIInteractPage({
                             deletingId={deletingId}
                             createNewSession={createNewSession}
                             deleteSession={deleteSession}
+                            selectedProvider={selectedProvider}
+                            setSelectedProvider={setSelectedProvider}
+                            providerHealth={providerHealth}
                         />
                     </div>
 
@@ -114,7 +129,12 @@ export default function AIInteractPage({
                     />
 
                     <main className={styles['chat-main']}>
-                        <ChatHeader onOpenMemory={() => setMemoryModalOpen(true)} roleInfo={roleInfo} />
+                        <ChatHeader
+                            onOpenMemory={() => setMemoryModalOpen(true)}
+                            roleInfo={roleInfo}
+                            tutorMode={tutorMode}
+                            setTutorMode={setTutorMode}
+                        />
 
                         <MessageList
                             currentSession={currentSession}

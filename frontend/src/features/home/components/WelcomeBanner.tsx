@@ -11,17 +11,23 @@ const itemVariants = {
     }
 };
 
-const WelcomeBanner = () => {
+interface WelcomeBannerProps {
+    title?: React.ReactNode;
+    subtitle?: React.ReactNode;
+    className?: string;
+}
+
+const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ title, subtitle, className }) => {
     return (
         <motion.section
             variants={itemVariants}
-            className={styles['welcome-banner']}
+            className={`${styles['welcome-banner']} ${className || ''}`}
         >
             <motion.h1 variants={itemVariants}>
-                Welcome to HKU Educational Tools Platform
+                {title || 'Welcome to HKU Educational Tools Platform'}
             </motion.h1>
             <motion.p variants={itemVariants}>
-                Your gateway to intelligent learning and educational resources
+                {subtitle || 'Your gateway to intelligent learning and educational resources'}
             </motion.p>
         </motion.section>
     );

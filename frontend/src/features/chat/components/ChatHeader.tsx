@@ -2,11 +2,14 @@
 
 import React from 'react';
 import type { ChatRoom } from '../types';
+import type { AIProvider } from '../../../shared/aiProvider';
 import styles from '../styles/Chat.module.css';
 
 interface Props {
     room: ChatRoom;
     typingUser: string | null;
+    provider: AIProvider;
+    onProviderChange: (provider: AIProvider) => void;
     onToggleAssistant?: () => void;
     onToggleGroupInfo?: () => void;
 }
@@ -20,7 +23,7 @@ function hashColor(str: string): string {
     return `hsl(${h}, 55%, 45%)`;
 }
 
-export default function ChatHeader({ room, typingUser, onToggleAssistant, onToggleGroupInfo }: Props) {
+export default function ChatHeader({ room, typingUser, provider, onProviderChange, onToggleAssistant, onToggleGroupInfo }: Props) {
     const displayName = room.name || 'Chat';
     const initial = displayName.charAt(0).toUpperCase();
     const color = room.avatarColor || hashColor(room.id);
@@ -45,6 +48,15 @@ export default function ChatHeader({ room, typingUser, onToggleAssistant, onTogg
                 </div>
             </div>
             <div className={styles.chatHeaderActions}>
+                <select
+                    value={provider}
+                    onChange={(e) => onProviderChange(e.target.value as AIProvider)}
+                    style={{ borderRadius: 8, padding: '4px 8px' }}
+                    title="AI Provider"
+                >
+                    <option value="coze">Coze</option>
+                    <option value="local_ollama">llama3.2</option>
+                </select>
                 {onToggleAssistant && (
                     <button
                         className={styles.chatHeaderBtn}

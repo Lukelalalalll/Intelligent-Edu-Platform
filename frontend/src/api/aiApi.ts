@@ -3,6 +3,19 @@ import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '..
 
 const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
 
+export type AIProvider = 'coze' | 'local_ollama';
+export type AITutorMode = 'tutor' | 'hint_only';
+
+export interface AIProviderHealth {
+    provider: AIProvider;
+    ok: boolean;
+    detail: string;
+}
+
+interface AIMemoryResponse {
+    memory: AIMemory;
+}
+
 export const aiSessionApi = {
     list: (): Promise<AISessionListResponse> => client.get('/ai/sessions').then(r => r.data),
     get: (id: string): Promise<AISession> => client.get(`/ai/sessions/${id}`).then(r => r.data),
@@ -12,8 +25,8 @@ export const aiSessionApi = {
 };
 
 export const aiMemoryApi = {
-    get: (): Promise<AIMemory> => client.get('/ai/memory').then(r => r.data),
-    update: (form: Record<string, unknown>) => client.put('/ai/memory', form).then(r => r.data),
+    get: (): Promise<AIMemoryResponse> => client.get('/ai/memory').then(r => r.data),
+    update: (form: Record<string, unknown>): Promise<AIMemoryResponse> => client.put('/ai/memory', form).then(r => r.data),
 };
 
 export interface AIRoleInfo {
@@ -27,12 +40,29 @@ export function getRoleInfo(): Promise<AIRoleInfo> {
     return client.get('/ai/role-info').then(r => r.data);
 }
 
-export function createChatStream(messages: ChatMessage[], signal?: AbortSignal): Promise<Response> {
+export function getProviderHealth(provider: AIProvider): Promise<AIProviderHealth> {
+    return client.get('/ai/provider-health', { params: { provider } }).then(r => r.data);
+}
+
+export async function extractPdfText(file: File): Promise<{ filename: string; text: string; char_count: number; has_text: boolean }> {
+    const form = new FormData();
+    form.append('file', file);
+    return client.post('/ai/extract-pdf-text', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+}
+
+export function createChatStream(
+    messages: ChatMessage[],
+    provider: AIProvider,
+    tutorMode: AITutorMode,
+    signal?: AbortSignal,
+): Promise<Response> {
     return fetch(`${API_ROOT}/api/ai/chat`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, provider, tutor_mode: tutorMode }),
         signal,
     });
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import client from '../../../api/client';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 function extractErrorMessage(err: any): string {
     const detail = err?.response?.data?.detail;
@@ -21,6 +22,7 @@ export function useDiagramGenerate() {
     const [cozeKeywords, setCozeKeywords] = useState('');
     const [cozeLoading, setCozeLoading] = useState(false);
     const [cozeText, setCozeText] = useState('');
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
 
     const handleGenerate = async () => {
         setGenLoading(true); setGenError(''); setGenData(null);
@@ -48,6 +50,7 @@ export function useDiagramGenerate() {
         setCozeLoading(true); setGenError(''); setCozeText('');
         const formData = new FormData();
         formData.append('keywords', cozeKeywords);
+        formData.append('provider', provider);
         try {
             const res = await client.post('/diagram/coze_generate_text', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
             setCozeText(res.data.text || '');
@@ -55,11 +58,12 @@ export function useDiagramGenerate() {
             setGenError(extractErrorMessage(err));
         } finally {
             setCozeLoading(false);
+            setStoredAIProvider(provider);
         }
     };
 
     return {
-        genState: { file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError, inputMode: genInputMode, text: genText, cozeKeywords, cozeLoading, cozeText },
+        genState: { file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError, inputMode: genInputMode, text: genText, cozeKeywords, cozeLoading, cozeText, provider },
         genHandlers: {
             handleFileChange: (e: any) => setGenFile(e.target.files[0]),
             handleDragOver: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsGenDragging(true); },
@@ -69,6 +73,10 @@ export function useDiagramGenerate() {
             setInputMode: setGenInputMode,
             setText: setGenText,
             setCozeKeywords,
+            setProvider: (next: AIProvider) => {
+                setProvider(next);
+                setStoredAIProvider(next);
+            },
             handleCozeGenerate,
             setCozeText,
         },

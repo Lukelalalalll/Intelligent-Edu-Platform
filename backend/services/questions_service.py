@@ -11,6 +11,7 @@ import tempfile
 import fitz
 from backend.config import Config
 import opendataloader_pdf
+from backend.services.ai_gateway_service import AIGatewayService
 
 def get_proxies():
     """如果在香港调 coze.com 报错，请取消下面 return 的注释"""
@@ -331,3 +332,46 @@ def call_coze_generate(base_content, user_requirements, output_language="Chinese
         time.sleep(wait_time)
 
     return "Coze 生成题目超时，请稍后再试"
+
+
+async def call_provider_generate(
+    *,
+    base_content: str,
+    user_requirements: str,
+    provider: str,
+    output_language: str = "Chinese",
+    question_basis: str | None = None,
+    knowledge_points: str = "",
+    saved_screenshots: list[str] | None = None,
+) -> str:
+    saved_screenshots = saved_screenshots or []
+    basis_hint = ""
+    if question_basis == "knowledge_points" and knowledge_points.strip():
+        basis_hint = f"\n[Knowledge Constraints]\n{knowledge_points.strip()}\nPlease strictly generate questions around these knowledge points."
+    elif question_basis == "example_images" and saved_screenshots:
+        basis_hint = (
+            "\n[Reference Screenshots]\n"
+            f"{len(saved_screenshots)} screenshots provided for style reference: {', '.join(saved_screenshots[:12])}\n"
+            "Use them as style inspiration only; do not copy wording from source questions."
+        )
+
+    language_rule = "请使用中文输出全部题干、选项、答案与解析。"
+    if str(output_language).strip().lower().startswith("english"):
+        language_rule = "Please output the full question set in English, including stem, options, answers, and explanations."
+
+    prompt = f"""你是出题专家。请基于以下原始题目内容进行裂变，生成全新的题目：
+【原始题目内容】：{base_content}
+【生成要求】：{user_requirements}
+{basis_hint}
+【强制要求】：
+1) 包含详细的选项、答案和解析。
+2) 所有数学公式必须使用 LaTeX (用 $ 包裹)。
+3) 严禁与原题文字重复；应保持同知识点但换叙述与数据。
+4) {language_rule}"""
+
+    ai_service = AIGatewayService()
+    return await ai_service.chat_with_provider(
+        message=prompt,
+        context={"coze_user_id": "sub2_user"},
+        provider=provider,
+    )

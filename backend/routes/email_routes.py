@@ -1,10 +1,12 @@
 # backend/routes/gmail_routes.py
 import json
 import logging
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.core.ai_provider import resolve_provider
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.services.gmail_service import GmailService
@@ -44,6 +46,7 @@ class GmailDraftSchema(BaseModel):
 
 
 class GmailClassifySchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     messageId: str
     subject: str | None = None
     body: str | None = None
@@ -264,6 +267,7 @@ async def classify_email(payload: GmailClassifySchema, current_user: dict = Depe
     from backend.core.dependencies import get_ai_gateway_service
 
     token_data = await _get_gmail_token(current_user)
+    resolved_provider = resolve_provider(payload.provider, feature="email.classify", user=current_user)
 
     try:
         # Check cache first
@@ -292,7 +296,7 @@ async def classify_email(payload: GmailClassifySchema, current_user: dict = Depe
 
         # Call AI
         ai_service = get_ai_gateway_service()
-        response = await ai_service.chat(prompt)
+        response = await ai_service.chat_with_provider(message=prompt, context=None, provider=resolved_provider)
 
         # Try to parse as JSON
         try:
@@ -320,6 +324,7 @@ async def classify_email(payload: GmailClassifySchema, current_user: dict = Depe
 
 
 class GmailSuggestReplySchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     subject: str | None = None
     body: str | None = None
     sender: str | None = None
@@ -334,6 +339,7 @@ async def suggest_reply(message_id: str, payload: GmailSuggestReplySchema | None
     from backend.core.dependencies import get_ai_gateway_service
 
     token_data = await _get_gmail_token(current_user)
+    resolved_provider = resolve_provider((payload.provider if payload else None), feature="email.suggest_reply", user=current_user)
 
     try:
         # Use provided content or fetch from Gmail
@@ -358,7 +364,7 @@ async def suggest_reply(message_id: str, payload: GmailSuggestReplySchema | None
         )
 
         ai_service = get_ai_gateway_service()
-        reply_suggestion = await ai_service.chat(prompt)
+        reply_suggestion = await ai_service.chat_with_provider(message=prompt, context=None, provider=resolved_provider)
 
         return {
             "suggestion": reply_suggestion,

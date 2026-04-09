@@ -1,14 +1,16 @@
-from typing import List, Optional
+from typing import Literal, List, Optional
 
 from pydantic import BaseModel
 
 
 class ExtractQuestionsSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     task_id: str
     page_numbers: List[int] = []
     prompt: str = "exercise"
 
 class GenerateQuestionsSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     task_id: str
     subject: str
     question_type: str

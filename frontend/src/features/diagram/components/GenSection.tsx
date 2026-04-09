@@ -19,7 +19,7 @@ function downloadSvgBlob(svgString) {
 }
 
 export default function GenSection({ genState, genHandlers }) {
-    const { inputMode, file, isDragging, loading, data, error, text, cozeKeywords, cozeLoading, cozeText } = genState;
+    const { inputMode, file, isDragging, loading, data, error, text, cozeKeywords, cozeLoading, cozeText, provider } = genState;
     const canGenerate =
         (inputMode === 'file' && !!file) ||
         (inputMode === 'text' && !!text?.trim()) ||
@@ -43,6 +43,14 @@ export default function GenSection({ genState, genHandlers }) {
                             <i className={tab.icon}></i> {tab.label}
                         </button>
                     ))}
+                </div>
+
+                <div style={{ margin: '8px 0 12px 0' }}>
+                    <label style={{ marginRight: 8 }}>Model</label>
+                    <select value={provider || 'local_ollama'} onChange={(e) => genHandlers.setProvider?.(e.target.value)}>
+                        <option value="coze">Coze</option>
+                        <option value="local_ollama">llama3.2</option>
+                    </select>
                 </div>
 
                 {/* ─── File Upload Panel ─── */}

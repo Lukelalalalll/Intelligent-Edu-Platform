@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import * as sub2Api from '../../../api/questionBankApi';
 import { useToast } from '../../../hooks/useToast';
 import { log } from '../../../utils/logger';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 export function useQuestionGenerator() {
     const { toasts, showToast, removeToast } = useToast();
@@ -42,6 +43,11 @@ export function useQuestionGenerator() {
     const [knowledgePoints, setKnowledgePoints] = useState('');
     const [generateLoading, setGenerateLoading] = useState(false);
     const [generatedQuestions, setGeneratedQuestions] = useState(null);
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+
+    useEffect(() => {
+        setStoredAIProvider(provider);
+    }, [provider]);
 
     const canEnterStep2 = Boolean(file) && (fileType !== 'pdf' || selectedPages.length > 0);
     const canEnterStep3 = (Array.isArray(exercises) && exercises.length > 0) || Boolean(rawExtractText);
@@ -169,6 +175,7 @@ export function useQuestionGenerator() {
             .split('\n').map((c) => c.trim()).filter(Boolean);
 
         const payload = {
+            provider,
             task_id: taskId,
             subject: String(subject || 'Mathematics').trim() || 'Mathematics',
             question_type: String(questionType || 'Multiple choice').trim() || 'Multiple choice',
@@ -215,12 +222,13 @@ export function useQuestionGenerator() {
         currentStep, file, fileName, fileType, totalPages, selectedPages, uploadLoading,
         extractPrompt, extractLoading, exercises, selectedExercises, rawExtractText,
         subject, questionType, numQuestions, difficulty, constraints, outputLanguage,
-        questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging,
+        questionBasis, knowledgePoints, savedScreenshots, generateLoading, generatedQuestions, isDragging, provider,
     };
 
     const handlers = {
         setExtractPrompt, setSubject, setQuestionType, setNumQuestions, setDifficulty,
         setConstraints, setOutputLanguage, setQuestionBasis, setKnowledgePoints,
+        setProvider,
         goToStep1: () => setCurrentStep(1),
         goToStep2: () => { if (canEnterStep2) setCurrentStep(2); },
         goToStep3: () => { if (canEnterStep3) setCurrentStep(3); },

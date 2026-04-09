@@ -9,6 +9,8 @@ interface TextInputSectionProps {
     cozeLoading: boolean;
     cozeError: string;
     textProcessing: boolean;
+    provider?: string;
+    setProvider?: (v: 'coze' | 'local_ollama') => void;
     handleCozeGenerate: () => void;
     handleProcessText: (path: string) => void;
 }
@@ -16,6 +18,7 @@ interface TextInputSectionProps {
 export default function TextInputSection({
     textContent, setTextContent, textTitle, setTextTitle,
     cozeLoading, cozeError, textProcessing,
+    provider, setProvider,
     handleCozeGenerate, handleProcessText,
 }: TextInputSectionProps) {
     const wordCount = textContent ? textContent.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -28,6 +31,14 @@ export default function TextInputSection({
                 </h5>
 
                 <div className={styles.cozeRow}>
+                    <select
+                        value={provider || 'local_ollama'}
+                        onChange={(e) => setProvider?.(e.target.value as 'coze' | 'local_ollama')}
+                        style={{ borderRadius: 8, padding: '6px 10px' }}
+                    >
+                        <option value="coze">Coze</option>
+                        <option value="local_ollama">llama3.2</option>
+                    </select>
                     <div className={styles.cozeInputGroup}>
                         <i className="fas fa-lightbulb"></i>
                         <input

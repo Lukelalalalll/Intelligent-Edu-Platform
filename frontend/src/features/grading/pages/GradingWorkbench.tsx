@@ -5,6 +5,7 @@ import CozeAssistant from '../../../shared/CozeAssistant';
 import RubricPanel from '../../../shared/RubricPanel';
 import { teacherApi } from '../../../api/api';
 import styles from '../styles/gradingWorkbench.module.css';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
 
@@ -47,6 +48,11 @@ export default function GradingWorkbench() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [activePane, setActivePane] = useState('assistant');
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+
+    useEffect(() => {
+        setStoredAIProvider(provider);
+    }, [provider]);
 
     useEffect(() => {
         const load = async () => {
@@ -235,6 +241,8 @@ export default function GradingWorkbench() {
                                     rubric={detail?.assignment?.rubric}
                                     onAnalysis={() => { }}
                                     className={styles}
+                                    provider={provider}
+                                    setProvider={setProvider}
                                 />
                             </div>
                         ) : (

@@ -4,8 +4,8 @@ import styles from '../styles/sub2.module.css';
 import ReactMarkdown from "react-markdown";
 import HistoryPanel from './HistoryPanel';
 export default function Step3Generate({ states, handlers }) {
-    const { exercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, questionBasis, knowledgePoints, savedScreenshots, outputLanguage, generateLoading, generatedQuestions } = states;
-    const { setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setQuestionBasis, setKnowledgePoints, setOutputLanguage, goToStep2, generateQuestions, exportQuestions } = handlers;
+    const { exercises, rawExtractText, subject, questionType, numQuestions, difficulty, constraints, questionBasis, knowledgePoints, savedScreenshots, outputLanguage, generateLoading, generatedQuestions, provider } = states;
+    const { setSubject, setQuestionType, setNumQuestions, setDifficulty, setConstraints, setQuestionBasis, setKnowledgePoints, setOutputLanguage, setProvider, goToStep2, generateQuestions, exportQuestions } = handlers;
 
     const handleReplay = (params) => {
         if (params.subject) setSubject(params.subject);
@@ -69,6 +69,14 @@ export default function Step3Generate({ states, handlers }) {
                 <select className={styles.formControl} value={outputLanguage} onChange={e => setOutputLanguage(e.target.value)}>
                     <option value="Chinese">Chinese</option>
                     <option value="English">English</option>
+                </select>
+            </div>
+
+            <div className={styles.formGroup}>
+                <label>AI Provider:</label>
+                <select className={styles.formControl} value={provider || 'local_ollama'} onChange={e => setProvider(e.target.value)}>
+                    <option value="coze">Coze</option>
+                    <option value="local_ollama">llama3.2</option>
                 </select>
             </div>
 

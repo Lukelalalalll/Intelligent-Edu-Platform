@@ -13,9 +13,10 @@ from werkzeug.utils import secure_filename
 # 引入你的 Service 层工具
 from backend.services.questions_service import (
     allowed_file, call_zhipu_ocr,
-    call_coze_generate,
+    call_provider_generate,
     extract_pdf_text_with_loader, call_zhipu_layout_from_text
 )
+from backend.core.ai_provider import resolve_provider
 from backend.core.security import get_current_user
 from backend.core.database import db
 from backend.schemas import (
@@ -136,10 +137,11 @@ async def extract_questions_route(req: ExtractQuestionsSchema, request: Request,
 
 @questions_router.post("/generate_questions")
 async def generate_questions_route(req: GenerateQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
+    resolved_provider = resolve_provider(req.provider, feature="questions.generate", user=user)
     timer = TelemetryTimer(
-        provider="coze", model="coze-bot",
+        provider=resolved_provider, model="question-generator",
         endpoint="sub2/generate", user_id=user.get('id', ''),
-        api_type="chat", credential_alias="COZE_TOKEN",
+        api_type="chat", credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
     )
     with timer:
         try:
@@ -166,9 +168,10 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
                 f"Output Language: {req.output_language}"
             )
 
-            result_text = call_coze_generate(
-                base_content,
-                user_reqs,
+            result_text = await call_provider_generate(
+                base_content=base_content,
+                user_requirements=user_reqs,
+                provider=resolved_provider,
                 output_language=req.output_language,
                 question_basis=req.question_basis,
                 knowledge_points=req.knowledge_points,

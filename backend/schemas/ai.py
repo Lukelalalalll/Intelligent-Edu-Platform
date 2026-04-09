@@ -1,11 +1,34 @@
 from typing import List, Optional, Literal
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, Field, JsonValue, ConfigDict
 
 
 class ChatMessageSchema(BaseModel):
     role: Literal['user', 'assistant', 'system']
     content: str = ""
+
+
+class SessionAttachmentMetaSchema(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    file_name: str = Field(..., min_length=1, max_length=200)
+    mime_type: str = Field(default="application/octet-stream", min_length=1, max_length=100)
+
+
+class SessionMessageSchema(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    role: Literal['user', 'assistant', 'system']
+    content: str = Field(default="", max_length=12000)
+    images: List[str] = Field(default_factory=list, max_length=8)
+    files: List[SessionAttachmentMetaSchema] = Field(default_factory=list, max_length=20)
+
+
+class UpdateAiSessionSchema(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    title: Optional[str] = Field(default=None, max_length=200)
+    messages: Optional[List[SessionMessageSchema]] = Field(default=None, max_length=200)
 
 
 class RagChunkSchema(BaseModel):
@@ -32,9 +55,12 @@ class GradingContextSchema(BaseModel):
 
 class AiChatSchema(BaseModel):
     messages: List[dict] = Field(..., max_length=100)
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    tutor_mode: Literal['tutor', 'hint_only'] = 'tutor'
 
 
 class StudyCozeSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     content: str = Field(..., min_length=1, max_length=5000)
     mode: Literal['chat', 'hint', 'explain'] = 'chat'
     context: Optional[str] = Field(None, max_length=20000)
@@ -42,10 +68,12 @@ class StudyCozeSchema(BaseModel):
 
 
 class AnalyzeSubmissionSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     submissionId: str
 
 
 class FeedbackSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     submissionId: str
     selectedText: str
     assignment: str | None = None
@@ -56,6 +84,7 @@ class FeedbackSchema(BaseModel):
 
 
 class AnnotateSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     submissionId: str
     selectedText: str
     assignment: str | None = None

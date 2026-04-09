@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AIInteract.module.css';
+import type { AIProvider } from '../../../api/aiApi';
 
 function SidebarSkeleton() {
     return (
@@ -18,8 +19,34 @@ function SidebarSkeleton() {
     );
 }
 
-export default function Sidebar({ sessions, currentSessionId, deletingId, createNewSession, deleteSession }) {
+interface SidebarProps {
+    sessions: Array<{ id: string; title?: string }> | null;
+    currentSessionId: string | null;
+    deletingId: string | null;
+    createNewSession: (switchImmediately?: boolean, forceId?: string | null) => void;
+    deleteSession: (id: string) => void;
+    selectedProvider?: AIProvider;
+    setSelectedProvider?: (provider: AIProvider) => void;
+    providerHealth?: { ok: boolean; detail: string };
+}
+
+export default function Sidebar({
+    sessions,
+    currentSessionId,
+    deletingId,
+    createNewSession,
+    deleteSession,
+    selectedProvider = 'local_ollama',
+    setSelectedProvider,
+    providerHealth,
+}: SidebarProps) {
     const isLoading = sessions === null;
+    const isLocal = selectedProvider === 'local_ollama';
+    const localReady = !!providerHealth?.ok;
+
+    const statusText = isLocal
+        ? (localReady ? 'llama3.2 Ready' : 'llama3.2 Offline')
+        : 'HKU Coze AI Ready';
 
     return (
         <aside className={styles['chat-sidebar']}>
@@ -54,10 +81,31 @@ export default function Sidebar({ sessions, currentSessionId, deletingId, create
                 </div>
             )}
             <div className={styles['sidebar-footer']}>
-                <div className={styles['user-status']}>
-                    <div className={styles['status-dot']}></div>
-                    <span>HKU Coze AI Ready</span>
+                <div className={styles['provider-switch-wrap']}>
+                    <button
+                        type="button"
+                        className={`${styles['provider-chip']} ${!isLocal ? styles['provider-chip-active'] : ''}`}
+                        onClick={() => setSelectedProvider?.('coze')}
+                    >
+                        Coze
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles['provider-chip']} ${isLocal ? styles['provider-chip-active'] : ''}`}
+                        onClick={() => setSelectedProvider?.('local_ollama')}
+                    >
+                        llama3.2
+                    </button>
                 </div>
+                <div className={styles['user-status']}>
+                    <div className={`${styles['status-dot']} ${isLocal && !localReady ? styles['status-dot-offline'] : ''}`}></div>
+                    <span>{statusText}</span>
+                </div>
+                {isLocal && !localReady && providerHealth?.detail && (
+                    <div className={styles['provider-detail']} title={providerHealth.detail}>
+                        {providerHealth.detail}
+                    </div>
+                )}
             </div>
         </aside>
     );

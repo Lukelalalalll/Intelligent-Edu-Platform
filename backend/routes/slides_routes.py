@@ -3,12 +3,14 @@ import re
 import shutil
 import logging
 import httpx
+from typing import Literal, Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from werkzeug.utils import secure_filename
 from backend.services.slides_service import Sub1Service
 from backend.config import Config
+from backend.core.ai_provider import resolve_provider
 from backend.core.security import get_current_user
 from backend.schemas import CombineSchema, SaveHighlightsSchema, SummarizeRequestSchema, GenerateScriptSchema, SummarizeChaptersSchema, PptProcessSchema, ClassifyHighlightsSchema, MapToSlidesSchema, ValidateSlidesSchema, EvaluateQualitySchema
 from backend.services.slides.list_placeholders import PPTTemplateManager
@@ -355,6 +357,8 @@ Requirements:
 
 
 class CozeOutlineRequest(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+
     keywords: str
 
 
@@ -363,81 +367,11 @@ class ProcessTextRequest(BaseModel):
     title: str
 
 
-async def _call_coze_text_sub1(system_prompt: str, user_content: str) -> str:
-    """Call Coze v3 chat API with polling (mirrors sub5 pattern)."""
-    api_key = Config.COZE_TOKEN
-    bot_id = Config.COZE_BOT_ID
-    api_root = (Config.COZE_API_ROOT or "https://api.coze.com").rstrip("/")
-
-    if not api_key or not bot_id:
-        raise HTTPException(503, "Coze API key or bot id not configured")
-
-    full_prompt = f"{system_prompt}\n\n{user_content}"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "bot_id": bot_id,
-        "user_id": "sub1_outline_gen",
-        "stream": False,
-        "additional_messages": [
-            {"role": "user", "content": full_prompt, "content_type": "text"}
-        ],
-    }
-
-    timeout_seconds = float(getattr(Config, 'COZE_REQUEST_TIMEOUT_SECONDS', 120))
-    poll_interval = float(getattr(Config, 'COZE_POLL_INTERVAL_SECONDS', 2))
-    poll_max_attempts = int(getattr(Config, 'COZE_POLL_MAX_ATTEMPTS', 60))
-
-    async with httpx.AsyncClient(timeout=timeout_seconds) as http_client:
-        start_resp = await http_client.post(f"{api_root}/v3/chat", headers=headers, json=payload)
-        if start_resp.status_code != 200:
-            logger.error("Coze start chat error %s: %s", start_resp.status_code, start_resp.text[:500])
-            raise HTTPException(502, f"AI service error: {start_resp.status_code}")
-
-        start_data = start_resp.json().get("data", {})
-        chat_id = start_data.get("id")
-        conversation_id = start_data.get("conversation_id")
-        if not chat_id or not conversation_id:
-            raise HTTPException(502, "AI service returned invalid chat identifiers")
-
-        import asyncio
-        for _ in range(poll_max_attempts):
-            retrieve_resp = await http_client.get(
-                f"{api_root}/v3/chat/retrieve",
-                headers=headers,
-                params={"chat_id": chat_id, "conversation_id": conversation_id},
-            )
-            if retrieve_resp.status_code != 200:
-                raise HTTPException(502, f"AI service error: {retrieve_resp.status_code}")
-
-            status = retrieve_resp.json().get("data", {}).get("status")
-            if status == "completed":
-                message_resp = await http_client.get(
-                    f"{api_root}/v3/chat/message/list",
-                    headers=headers,
-                    params={"chat_id": chat_id, "conversation_id": conversation_id},
-                )
-                if message_resp.status_code != 200:
-                    raise HTTPException(502, f"AI service error: {message_resp.status_code}")
-
-                messages = message_resp.json().get("data", [])
-                for msg in messages:
-                    if msg.get("type") in {"answer", "assistant_answer"} and msg.get("content"):
-                        return str(msg.get("content"))
-                    if msg.get("role") == "assistant" and msg.get("content"):
-                        return str(msg.get("content"))
-                raise HTTPException(502, "AI service returned no content")
-
-            if status == "failed":
-                raise HTTPException(502, "AI service generation failed")
-
-            await asyncio.sleep(poll_interval)
-
-        raise HTTPException(504, "AI service timed out")
-
-
+async def _call_coze_text_sub1(system_prompt: str, user_content: str, provider: str = "local_ollama") -> str:
+    from backend.services.ai_gateway_service import AIGatewayService
+    ai_service = AIGatewayService()
+    context = {"system_override": system_prompt}
+    return await ai_service.chat_with_provider(message=user_content, context=context, provider=provider)
 @slides_router.post("/coze-generate-outline")
 async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(get_current_user)):
     """Use Coze AI to generate a structured Markdown outline from keywords."""
@@ -445,7 +379,8 @@ async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(ge
     if not keywords:
         raise HTTPException(400, "Keywords must not be empty")
     try:
-        text = await _call_coze_text_sub1(OUTLINE_SYSTEM_PROMPT, keywords)
+        resolved_provider = resolve_provider(req.provider, feature="slides.generate_outline")
+        text = await _call_coze_text_sub1(OUTLINE_SYSTEM_PROMPT, keywords, provider=resolved_provider)
         return {"text": text}
     except HTTPException:
         raise

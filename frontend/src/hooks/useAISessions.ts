@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { aiSessionApi, aiMemoryApi, createChatStream } from '../api/aiApi';
+import {
+    aiSessionApi,
+    aiMemoryApi,
+    createChatStream,
+    getProviderHealth,
+    extractPdfText as extractPdfTextFromServer,
+    type AIProvider,
+    type AITutorMode,
+} from '../api/aiApi';
 import { networkBus } from './useNetworkStatus';
 import type { AISession, ChatMessage, RagCitation } from '../types/api';
 
@@ -8,7 +16,89 @@ interface ModalConfig {
     sessionId: string | null;
 }
 
+interface PdfTextItem {
+    str?: string;
+}
+
+interface PdfPage {
+    getTextContent(): Promise<{ items?: PdfTextItem[] }>;
+}
+
+interface PdfDocumentProxy {
+    numPages: number;
+    getPage(pageNumber: number): Promise<PdfPage>;
+    destroy(): Promise<void> | void;
+}
+
+interface PdfJsModule {
+    getDocument(options: { data: ArrayBuffer; disableWorker: boolean }): { promise: Promise<PdfDocumentProxy> };
+}
+
+interface PendingAttachment {
+    file?: File;
+}
+
+type AttachmentInput = PendingAttachment | File;
+
+function getErrorMessage(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    return String(err || 'unknown error');
+}
+
 const SYSTEM_MSG: ChatMessage = { role: 'system', content: 'You are a helpful academic AI assistant for HKU.' };
+const PROVIDER_STORAGE_KEY = 'ai_provider';
+const TUTOR_MODE_STORAGE_KEY = 'ai_tutor_mode';
+const MAX_PDF_EXTRACT_CHARS = 12000;
+
+async function fileToBase64Payload(file: File): Promise<string> {
+    return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = String(reader.result || '');
+            const payload = result.includes(',') ? result.split(',')[1] : result;
+            resolve(payload || '');
+        };
+        reader.onerror = () => reject(new Error('Failed to read file as base64'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function extractPdfTextFromBrowser(file: File, maxChars: number = MAX_PDF_EXTRACT_CHARS): Promise<string> {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs') as unknown as PdfJsModule;
+    const loadingTask = pdfjs.getDocument({ data: await file.arrayBuffer(), disableWorker: true });
+    const doc = await loadingTask.promise;
+    const chunks: string[] = [];
+    let totalChars = 0;
+
+    try {
+        for (let pageNo = 1; pageNo <= doc.numPages; pageNo += 1) {
+            const page = await doc.getPage(pageNo);
+            const content = await page.getTextContent();
+            const pageText = (content.items || [])
+                .map((it: PdfTextItem) => String(it?.str || '').trim())
+                .filter(Boolean)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (!pageText) continue;
+            const remaining = maxChars - totalChars;
+            if (remaining <= 0) break;
+            const sliced = pageText.slice(0, remaining);
+            chunks.push(`[Page ${pageNo}] ${sliced}`);
+            totalChars += sliced.length;
+            if (totalChars >= maxChars) break;
+        }
+    } finally {
+        try {
+            await doc.destroy();
+        } catch {
+            // no-op
+        }
+    }
+
+    return chunks.join('\n\n');
+}
 
 function buildSession(raw: Partial<AISession>): AISession {
     return {
@@ -24,9 +114,19 @@ export function useAISessions() {
     const [isTyping, setIsTyping] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [modalConfig, setModalConfig] = useState<ModalConfig>({ show: false, sessionId: null });
+    const [selectedProvider, setSelectedProvider] = useState<AIProvider>(() => {
+        const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
+        return stored === 'coze' ? 'coze' : 'local_ollama';
+    });
+    const [tutorMode, setTutorMode] = useState<AITutorMode>(() => {
+        const stored = localStorage.getItem(TUTOR_MODE_STORAGE_KEY);
+        return stored === 'hint_only' ? 'hint_only' : 'tutor';
+    });
+    const [providerHealth, setProviderHealth] = useState<{ ok: boolean; detail: string }>({ ok: true, detail: 'ok' });
 
     const abortRef = useRef<AbortController | null>(null);
     const rafRef = useRef<number | null>(null);
+    const sendingRef = useRef(false);
     const sessionsRef = useRef(sessions);
     sessionsRef.current = sessions;
 
@@ -55,6 +155,31 @@ export function useAISessions() {
             return { ...s, messages: msgs };
         }));
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
+    }, [selectedProvider]);
+
+    useEffect(() => {
+        localStorage.setItem(TUTOR_MODE_STORAGE_KEY, tutorMode);
+    }, [tutorMode]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const health = await getProviderHealth(selectedProvider);
+                if (!cancelled) {
+                    setProviderHealth({ ok: !!health.ok, detail: String(health.detail || '') });
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setProviderHealth({ ok: false, detail: getErrorMessage(err) || 'health check failed' });
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedProvider]);
 
     // ── Load sessions on mount ──
     useEffect(() => {
@@ -151,8 +276,8 @@ export function useAISessions() {
     }, [modalConfig.sessionId, currentSessionId, createNewSession]);
 
     // ── SSE streaming with rAF batching ──
-    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, signal: AbortSignal) => { // NOSONAR
-        const response = await createChatStream(apiMessages, signal);
+    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal) => { // NOSONAR
+        const response = await createChatStream(apiMessages, provider, mode, signal);
 
         if (!response.ok) {
             setSessions(prev => prev.map(s => s.id === targetId
@@ -167,10 +292,11 @@ export function useAISessions() {
         let full = '';
         let buffer = '';
         let citations: RagCitation[] | undefined;
+        let providerNotice = '';
 
         const flush = () => {
             rafRef.current = null;
-            const snapshot = full;
+            const snapshot = providerNotice ? `${providerNotice}\n\n${full}` : full;
             applyAssistantSnapshot(targetId, snapshot, citations);
         };
 
@@ -192,6 +318,14 @@ export function useAISessions() {
                     // Handle metadata (RAG citations)
                     if (obj.meta?.citations) {
                         citations = obj.meta.citations;
+                    }
+                    if (obj.meta?.fallback_from && obj.meta?.fallback_to) {
+                        providerNotice = `Provider switched: ${obj.meta.fallback_from} -> ${obj.meta.fallback_to}`;
+                        schedule();
+                        continue;
+                    }
+                    if (obj.meta?.warning && !providerNotice) {
+                        providerNotice = `Provider notice: ${obj.meta.warning}`;
                         schedule();
                         continue;
                     }
@@ -207,16 +341,64 @@ export function useAISessions() {
     }, [applyAssistantSnapshot]);
 
     // ── Send message ──
-    const sendMessage = useCallback(async (text: string) => {
-        if (isTyping || !text.trim()) return;
+    const sendMessage = useCallback(async (text: string, attachedFiles: AttachmentInput[] = []) => {
+        if (sendingRef.current || isTyping || (!text.trim() && attachedFiles.length === 0)) return;
+        sendingRef.current = true;
         if (abortRef.current) abortRef.current.abort();
         abortRef.current = new AbortController();
 
         let targetId = currentSessionId || (sessions || [])[0]?.id;
-        if (!targetId) return;
+        if (!targetId) {
+            sendingRef.current = false;
+            return;
+        }
         if (targetId !== currentSessionId) setCurrentSessionId(targetId);
 
         const trimmed = text.trim();
+
+        // Process attachments: images -> base64, pdf -> extracted text summary
+        const images: string[] = [];
+        const attachmentNotes: string[] = [];
+        const filesMeta: { file_name: string, mime_type: string }[] = [];
+        for (const f of attachedFiles) {
+            const file = (typeof f === 'object' && f && 'file' in f && f.file instanceof File ? f.file : f) as File | undefined;
+            if (!file) continue;
+
+            if ((file.type || '').startsWith('image/')) {
+                const base64 = await fileToBase64Payload(file);
+                if (base64) images.push(base64);
+                continue;
+            }
+
+            filesMeta.push({ file_name: file.name, mime_type: file.type || 'application/octet-stream' });
+            if ((file.type || '') === 'application/pdf' || (file.name || '').toLowerCase().endsWith('.pdf')) {
+                try {
+                    let extracted = await extractPdfTextFromBrowser(file);
+                    if (!extracted) {
+                        const serverResult = await extractPdfTextFromServer(file);
+                        extracted = String(serverResult?.text || '');
+                    }
+                    if (extracted) {
+                        attachmentNotes.push(`Attached PDF: ${file.name}\n${extracted}`);
+                    } else {
+                        attachmentNotes.push(`Attached PDF: ${file.name} (No extractable text found)`);
+                    }
+                } catch {
+                    attachmentNotes.push(`Attached PDF: ${file.name} (Text extraction failed; please summarize manually)`);
+                }
+                continue;
+            }
+
+            attachmentNotes.push(`Attached file: ${file.name} (${file.type || 'unknown type'})`);
+        }
+
+        const combinedUserContent = trimmed;
+        const attachedText = attachmentNotes.length > 0 ? attachmentNotes.join('\n\n') : undefined;
+
+        if (!combinedUserContent && !attachedText && images.length === 0) {
+            sendingRef.current = false;
+            return;
+        }
 
         // Refuse to stream while offline — show an inline error message
         if (networkBus.isOffline) {
@@ -224,10 +406,11 @@ export function useAISessions() {
                 ...s,
                 messages: [
                     ...s.messages,
-                    { role: 'user' as const, content: trimmed },
+                    { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined },
                     { role: 'assistant' as const, content: 'You appear to be offline. Please check your network connection and try again.' },
                 ],
             }));
+            sendingRef.current = false;
             return;
         }
 
@@ -237,26 +420,52 @@ export function useAISessions() {
             if (s.id !== targetId) return s;
             let title = s.title;
             if (s.messages.length <= 1) {
-                title = trimmed.length > 20 ? `${trimmed.slice(0, 20)}...` : trimmed;
+                let display = combinedUserContent || filesMeta[0]?.file_name || attachmentNotes[0];
+                title = display.length > 20 ? `${display.slice(0, 20)}...` : (display || "Attachment only");
             }
-            return { ...s, title, messages: [...s.messages, { role: 'user', content: trimmed }, { role: 'assistant', content: '' }] };
+            return {
+                ...s,
+                title,
+                messages: [
+                    ...s.messages,
+                    { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined },
+                    { role: 'assistant' as const, content: '' }
+                ]
+            };
         }));
 
         try {
             const sess = (sessions || []).find(s => s.id === targetId);
-            const apiMsgs: ChatMessage[] = sess ? [...sess.messages, { role: 'user' as const, content: trimmed }] : [];
-            await streamSSE(apiMsgs.filter(m => m.role !== 'system' || apiMsgs.length < 5), targetId, abortRef.current.signal);
-        } catch (err) {
-            if (err.name === 'AbortError') return;
+            const apiMsgs: ChatMessage[] = sess
+                ? [...sess.messages, { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined }]
+                : [];
+            
+            // Map the messages before sending to API so the backend receives the combined text
+            const payloadMsgs = apiMsgs.map(m => ({
+                role: m.role,
+                content: [m.content, m.attachedText].filter(Boolean).join('\n\n'),
+                images: m.images
+            })).filter(m => m.role !== 'system' || apiMsgs.length < 5);
+
+            await streamSSE(
+                payloadMsgs,
+                targetId,
+                selectedProvider,
+                tutorMode,
+                abortRef.current.signal,
+            );
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             setSessions(prev => prev.map(s => s.id === targetId
-                ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: `Network Error: ${err.message}` }] } : s));
+                ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: `Network Error: ${getErrorMessage(err)}` }] } : s));
         } finally {
             setIsTyping(false);
             abortRef.current = null;
+            sendingRef.current = false;
             const final = (sessionsRef.current || []).find(s => s.id === targetId);
             if (final) syncToServer(targetId, final);
         }
-    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer]);
+    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode]);
 
     // ── Regenerate ──
     const regenerate = useCallback(async (msgIndex: number) => {
@@ -274,18 +483,30 @@ export function useAISessions() {
         setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: 'assistant', content: '' }] } : s));
 
         try {
-            await streamSSE(history.filter(m => m.role !== 'system' || history.length < 5), targetId, abortRef.current.signal);
-        } catch (err) {
-            if (err.name === 'AbortError') return;
+            const payloadMsgs = history.map(m => ({
+                role: m.role,
+                content: [m.content, m.attachedText].filter(Boolean).join('\n\n'),
+                images: m.images
+            })).filter(m => m.role !== 'system' || history.length < 5);
+
+            await streamSSE(
+                payloadMsgs,
+                targetId,
+                selectedProvider,
+                tutorMode,
+                abortRef.current.signal,
+            );
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             setSessions(prev => prev.map(s => s.id === targetId
-                ? { ...s, messages: [...history, { role: 'assistant', content: `Network Error: ${err.message}` }] } : s));
+                ? { ...s, messages: [...history, { role: 'assistant', content: `Network Error: ${getErrorMessage(err)}` }] } : s));
         } finally {
             setIsTyping(false);
             abortRef.current = null;
             const final = (sessionsRef.current || []).find(s => s.id === targetId);
             if (final) syncToServer(targetId, final);
         }
-    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer]);
+    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode]);
 
     // ── Edit user message ──
     const editUserMsg = useCallback(async (msgIndex: number, newVal: string) => {
@@ -303,18 +524,30 @@ export function useAISessions() {
         setSessions(prev => prev.map(s => s.id === targetId ? { ...s, messages: [...history, { role: 'assistant', content: '' }] } : s));
 
         try {
-            await streamSSE(history.filter(m => m.role !== 'system' || history.length < 5), targetId, abortRef.current.signal);
-        } catch (err) {
-            if (err.name === 'AbortError') return;
+            const payloadMsgs = history.map(m => ({
+                role: m.role,
+                content: [m.content, m.attachedText].filter(Boolean).join('\n\n'),
+                images: m.images
+            })).filter(m => m.role !== 'system' || history.length < 5);
+
+            await streamSSE(
+                payloadMsgs,
+                targetId,
+                selectedProvider,
+                tutorMode,
+                abortRef.current.signal,
+            );
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             setSessions(prev => prev.map(s => s.id === targetId
-                ? { ...s, messages: [...history, { role: 'assistant', content: `Network Error: ${err.message}` }] } : s));
+                ? { ...s, messages: [...history, { role: 'assistant', content: `Network Error: ${getErrorMessage(err)}` }] } : s));
         } finally {
             setIsTyping(false);
             abortRef.current = null;
             const final = (sessionsRef.current || []).find(s => s.id === targetId);
             if (final) syncToServer(targetId, final);
         }
-    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer]);
+    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode]);
 
     // ── Stop streaming ──
     const stopStream = useCallback(() => {
@@ -328,11 +561,13 @@ export function useAISessions() {
         setCurrentSessionId, setModalConfig,
         createNewSession, promptDelete, confirmDelete,
         sendMessage, regenerate, editUserMsg, stopStream,
+        selectedProvider, setSelectedProvider, providerHealth,
+        tutorMode, setTutorMode,
     };
 }
 
 export function useAIMemory() {
-    const [memory, setMemory] = useState({});
+    const [memory, setMemory] = useState<Record<string, unknown>>({});
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -340,11 +575,11 @@ export function useAIMemory() {
         aiMemoryApi.get().then(d => setMemory(d.memory || {})).catch(() => {});
     }, []);
 
-    const save = useCallback(async (form) => {
+    const save = useCallback(async (form: Record<string, unknown>) => {
         setSaving(true);
         try {
             const res = await aiMemoryApi.update(form);
-            setMemory(res.memory || form);
+            setMemory((res.memory || form) as Record<string, unknown>);
             setOpen(false);
         } catch { /* keep modal open for retry */ }
         finally { setSaving(false); }

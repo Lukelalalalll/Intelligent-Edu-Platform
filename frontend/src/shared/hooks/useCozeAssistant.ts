@@ -3,15 +3,17 @@ import { cozeApi } from '../../api/api';
 import { useLLMStream } from '../../hooks/useLLMStream';
 import type { ChatMessage, ChatRole } from '../../types/llm';
 import { usePretextMeasure } from '../../hooks/usePretextMeasure';
+import type { AIProvider } from '../aiProvider';
 
 interface UseCozeAssistantOptions {
     submissionId?: string;
     assignment?: { title?: string; description?: string };
     rubric?: Record<string, unknown>;
     onAnalysis?: (analysis: Record<string, unknown>) => void;
+    provider?: AIProvider;
 }
 
-export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis }: UseCozeAssistantOptions) {
+export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis, provider = 'local_ollama' }: UseCozeAssistantOptions) {
     const [messages, setMessages] = useState<ChatMessage[]>([
         { role: 'assistant' as ChatRole, content: 'Hi! I can help you grade, generate rubric scores, or suggest annotations.' },
     ]);
@@ -116,7 +118,7 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis 
                 payload: {
                     submissionId, selectedText: question,
                     assignment: assignment?.description, rubric,
-                    messages: streamInputMessages, useRag: true, ragTopK: 4,
+                    messages: streamInputMessages, useRag: true, ragTopK: 4, provider,
                 },
                 onDelta: (fullText) => {
                     setMessages((prev) => {
@@ -146,14 +148,14 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis 
         } catch (err: any) {
             if (err?.name !== 'AbortError') setLocalError('Stream request failed unexpectedly.');
         }
-    }, [input, messages, submissionId, assignment, rubric, startStream]);
+    }, [input, messages, submissionId, assignment, rubric, startStream, provider]);
 
     const handleStop = useCallback(() => stopStream(), [stopStream]);
 
     const handleAnalyze = useCallback(async () => {
         setAnalyzeLoading(true);
         try {
-            const res = await cozeApi.analyzeSubmission(submissionId);
+            const res = await cozeApi.analyzeSubmission(submissionId, provider);
             const rawResponse = res.analysis?.raw_response || 'Analysis complete';
             appendMessage('assistant', formatAnalyzeResponse(rawResponse));
             onAnalysis?.({ ...res.analysis, parsed: tryParseAnalysisJson(rawResponse) });
@@ -162,7 +164,7 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis 
         } finally {
             setAnalyzeLoading(false);
         }
-    }, [submissionId, onAnalysis]);
+    }, [submissionId, onAnalysis, provider]);
 
     const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {

@@ -4,6 +4,7 @@ import client from '../../api/client';
 import { chatApi } from '../../api/chatApi';
 import StudyNotes from '../../features/study-notes/StudyNotes';
 import styles from '../../features/study-notes/styles/sub5.module.css';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../shared/aiProvider';
 
 export default function StudyNotesEntry() {
     const fileInputRef = useRef(null);
@@ -18,6 +19,11 @@ export default function StudyNotesEntry() {
     const [loadingText, setLoadingText] = useState('');
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('notes');
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+
+    useEffect(() => {
+        setStoredAIProvider(provider);
+    }, [provider]);
 
     // Transfer ticket auto-consumption
     useEffect(() => {
@@ -84,6 +90,7 @@ export default function StudyNotesEntry() {
             const formData = new FormData();
             formData.append('file', targetFile);
             formData.append('style', targetStyle);
+            formData.append('provider', provider);
             const notesRes = await client.post('/study-notes/generate-notes', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -96,6 +103,7 @@ export default function StudyNotesEntry() {
             setLoadingText('Generating flashcards...');
             const flashForm = new FormData();
             flashForm.append('file', targetFile);
+            flashForm.append('provider', provider);
             const flashRes = await client.post('/study-notes/generate-flashcards', flashForm, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -109,7 +117,7 @@ export default function StudyNotesEntry() {
             setIsLoading(false);
             setLoadingText('');
         }
-    }, []);
+    }, [provider]);
 
     const handleGenerate = useCallback(async () => {
         await generateFromFile(file, style);
@@ -139,6 +147,10 @@ export default function StudyNotesEntry() {
 
                 <div className={styles.controls}>
                     <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-sub)' }}>Style:</span>
+                    <select value={provider} onChange={(e) => setProvider(e.target.value as AIProvider)}>
+                        <option value="coze">Coze</option>
+                        <option value="local_ollama">llama3.2</option>
+                    </select>
                     {['detailed', 'concise', 'exam'].map((s) => (
                         <button
                             key={s}

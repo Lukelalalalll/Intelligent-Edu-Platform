@@ -43,9 +43,10 @@ export default function AIInteractEntry() {
     };
 
     const handleSend = () => {
-        if (!inputText.trim()) return;
-        ai.sendMessage(inputText);
+        if (!inputText.trim() && attachedFiles.length === 0) return;
+        ai.sendMessage(inputText, attachedFiles);
         setInputText('');
+        setAttachedFiles([]);
         if (inputRef.current) inputRef.current.style.height = 'auto';
     };
 
@@ -127,6 +128,11 @@ export default function AIInteractEntry() {
             handleFileChange={handleFileChange}
             removeAttachedFile={removeAttachedFile}
             roleInfo={roleInfo}
+            selectedProvider={ai.selectedProvider}
+            setSelectedProvider={ai.setSelectedProvider}
+            providerHealth={ai.providerHealth}
+            tutorMode={ai.tutorMode}
+            setTutorMode={ai.setTutorMode}
         />
     );
 }

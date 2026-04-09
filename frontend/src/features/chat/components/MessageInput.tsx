@@ -4,9 +4,11 @@ import React, { useState, useRef, useCallback } from 'react';
 import styles from '../styles/Chat.module.css';
 import { chatApi } from '../../../api/chatApi';
 import type { ChatMessage } from '../types';
+import type { AIProvider } from '../../../shared/aiProvider';
 
 interface Props {
     roomId: string;
+    provider: AIProvider;
     onSend: (content: string, fileData?: { fileUrl: string; fileName: string; fileSize: number; mimeType: string; messageType: 'file' }) => void;
     onTyping: () => void;
     quotedMessage?: ChatMessage | null;
@@ -21,7 +23,7 @@ const REWRITE_STYLES = [
     { value: 'friendly', label: 'Friendly', icon: 'fa-smile' },
 ];
 
-export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, onClearQuote }: Props) {
+export default function MessageInput({ roomId, provider, onSend, onTyping, quotedMessage, onClearQuote }: Props) {
     const [text, setText] = useState('');
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -89,27 +91,27 @@ export default function MessageInput({ roomId, onSend, onTyping, quotedMessage, 
         if (!text.trim()) return;
         setRewriting(true);
         try {
-            const res = await chatApi.aiRewrite(roomId, text.trim(), style);
+            const res = await chatApi.aiRewrite(roomId, text.trim(), style, provider);
             setText(res.rewritten_text);
         } catch {
             // silently ignore
         } finally {
             setRewriting(false);
         }
-    }, [roomId, text]);
+    }, [roomId, text, provider]);
 
     // AI Reply Suggestions
     const handleGetSuggestions = useCallback(async () => {
         setLoadingSuggestions(true);
         try {
-            const res = await chatApi.aiReplySuggestions(roomId);
+            const res = await chatApi.aiReplySuggestions(roomId, 'concise', 10, provider);
             setSuggestions(res.suggestions);
         } catch {
             // silently ignore
         } finally {
             setLoadingSuggestions(false);
         }
-    }, [roomId]);
+    }, [roomId, provider]);
 
     const handleUseSuggestion = useCallback((s: string) => {
         setText(s);

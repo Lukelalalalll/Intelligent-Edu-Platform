@@ -5,37 +5,67 @@ export default function ChatInput({
     inputText, handleInput, handleKeyDown, handleSend, isTyping, inputRef,
     attachedFiles, isUploadingFile, fileInputRef, handleFileChange, removeAttachedFile, handleStop
 }) {
+    const getFileIcon = (file: File) => {
+        const mimeType = file.type;
+        if (!mimeType) return 'fa-file-alt';
+        if (mimeType.startsWith('image/')) return 'fa-file-image';
+        if (mimeType === 'application/pdf') return 'fa-file-pdf';
+        if (mimeType.includes('word') || mimeType.includes('document')) return 'fa-file-word';
+        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fa-file-excel';
+        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fa-file-powerpoint';
+        if (mimeType.includes('zip') || mimeType.includes('compressed') || mimeType.includes('tar')) return 'fa-file-archive';
+        if (mimeType.includes('markdown') || mimeType.includes('text/md')) return 'fa-file-code';
+        return 'fa-file-alt';
+    };
+
     return (
         <div className={styles['input-area']}>
-            {/* 附件功能暂未接入后端推理 —— 隐藏附件预览与按钮 */}
+            {/* Attachment preview */}
+            {attachedFiles && attachedFiles.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', paddingBottom: '8px', flexWrap: 'wrap' }}>
+                    {attachedFiles.map((fileObj, idx) => {
+                        const file = fileObj?.file instanceof File ? fileObj.file : fileObj;
+                        return (
+                            <div key={idx} className={styles.fileCard} style={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', maxWidth: '200px', cursor: 'default' }}>
+                                <i className={`fas ${getFileIcon(file)} ${styles.fileCardIcon}`} style={{ fontSize: '1.2rem' }}></i>
+                                <div className={styles.fileCardInfo}>
+                                    <span className={styles.fileCardName}>{file.name}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.preventDefault(); removeAttachedFile(idx); }}
+                                    style={{ background: 'none', border: 'none', marginLeft: 'auto', paddingLeft: '4px', cursor: 'pointer', color: '#ff4d4f' }}
+                                    title="Remove attachment"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             <div className={styles['input-wrapper']} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Attachment button hidden: file uploads are not yet processed by the AI backend.
-                    Uncomment when the backend attachment pipeline (upload → parse → RAG) is implemented. */}
                 <input
                     type="file"
                     ref={fileInputRef}
                     style={{ display: 'none' }}
                     accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     onChange={handleFileChange}
-                    disabled
                 />
 
-                {/* Attachment button disabled — feature not yet connected to backend
                 <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
                     style={{
                         background: 'none', border: 'none', fontSize: '20px', color: '#6b7280',
-                        cursor: 'not-allowed',
+                        cursor: 'pointer',
                         padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.2s',
-                        opacity: 0.4,
                     }}
-                    disabled
-                    title="File attachment coming soon"
+                    title="Attach File"
                 >
                     <i className="fas fa-paperclip"></i>
                 </button>
-                */}
 
                 <textarea
                     className={styles['workspace-input']}

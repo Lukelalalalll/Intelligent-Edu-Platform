@@ -75,7 +75,7 @@ export function useLLMStream() {
         const startedAt = performance.now();
 
         try {
-            const response = await fetch(`${apiRoot}/api/ai/feedback/stream`, {
+            const response = await fetch(`${apiRoot}/api/ai/gateway/feedback/stream`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

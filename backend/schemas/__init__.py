@@ -13,6 +13,9 @@ from backend.schemas.auth import (  # noqa: F401
 
 from backend.schemas.ai import (  # noqa: F401
     ChatMessageSchema,
+    SessionAttachmentMetaSchema,
+    SessionMessageSchema,
+    UpdateAiSessionSchema,
     RagChunkSchema,
     RagContextSchema,
     GradingContextSchema,

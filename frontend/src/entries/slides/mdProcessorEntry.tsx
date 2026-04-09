@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
 import { chatApi } from '../../api/chatApi';
 import MdProcessorPage from '../../features/slides/pages/MdProcessorPage';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../shared/aiProvider';
 
 export default function MdProcessorEntry() {
     const navigate = useNavigate();
@@ -32,6 +33,11 @@ export default function MdProcessorEntry() {
     const [cozeLoading, setCozeLoading] = useState(false);
     const [cozeError, setCozeError] = useState('');
     const [textProcessing, setTextProcessing] = useState(false);
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+
+    useEffect(() => {
+        setStoredAIProvider(provider);
+    }, [provider]);
 
     // === Transfer auto-consumption ===
     const transferConsumedRef = useRef(false);
@@ -220,7 +226,10 @@ export default function MdProcessorEntry() {
         setCozeLoading(true);
         setCozeError('');
         try {
-            const res = await client.post('/slides/coze-generate-outline', { keywords: textTitle.trim() });
+            const res = await client.post('/slides/coze-generate-outline', {
+                keywords: textTitle.trim(),
+                provider,
+            });
             setTextContent(res.data.text || '');
         } catch (error) {
             setCozeError(error.response?.data?.detail || 'AI generation failed: ' + error.message);
@@ -292,6 +301,7 @@ export default function MdProcessorEntry() {
         // Tab 2 props
         inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
         cozeLoading, cozeError, textProcessing,
+        provider, setProvider,
         handleCozeGenerate, handleProcessText,
     };
 

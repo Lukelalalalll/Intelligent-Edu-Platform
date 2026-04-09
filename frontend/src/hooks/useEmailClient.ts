@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { gmailApi } from '../api/emailApi';
 import type { EmailSummary, EmailDetail, EmailClassification } from '../types/api';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../shared/aiProvider';
 
 function extractError(err: unknown, fallback: string): string {
     const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -34,6 +35,7 @@ export function useEmailClient() {
     const [replyBody, setReplyBody] = useState('');
     const [isSendingReply, setIsSendingReply] = useState(false);
     const [isSuggestingReply, setIsSuggestingReply] = useState(false);
+    const [aiProvider, setAiProvider] = useState<AIProvider>(() => getStoredAIProvider());
 
     // Pagination
     const [nextPageToken, setNextPageToken] = useState<string | null>(null);
@@ -43,6 +45,10 @@ export function useEmailClient() {
         setSuccessMessage(msg);
         setTimeout(() => setSuccessMessage(''), 3000);
     }, []);
+
+    useEffect(() => {
+        setStoredAIProvider(aiProvider);
+    }, [aiProvider]);
 
     const resetSelection = useCallback(() => {
         setSelectedEmailId('');
@@ -95,7 +101,8 @@ export function useEmailClient() {
         setIsClassifying(true);
         setClassifyFailed(false);
         try {
-            const payload: { messageId: string; subject?: string; body?: string; sender?: string } = { messageId: emailId };
+            const payload: { messageId: string; subject?: string; body?: string; sender?: string; provider?: AIProvider } = { messageId: emailId };
+            payload.provider = aiProvider;
             if (detail) {
                 payload.subject = detail.subject || '';
                 payload.body = detail.bodyText || detail.snippet || '';
@@ -109,7 +116,7 @@ export function useEmailClient() {
         } finally {
             setIsClassifying(false);
         }
-    }, []);
+    }, [aiProvider]);
 
     const loadEmailDetail = useCallback(async (emailId: string) => {
         if (!emailId) { setSelectedEmailDetail(null); setEmailClassification(null); return; }
@@ -191,6 +198,7 @@ export function useEmailClient() {
                 payload.body = selectedEmailDetail.bodyText || selectedEmailDetail.snippet || '';
                 payload.sender = selectedEmailDetail.from || '';
             }
+            payload.provider = aiProvider;
             const data = await gmailApi.suggestReply(selectedEmailId, payload);
             if (data.suggestion) setReplyBody(data.suggestion);
         } catch (err) {
@@ -198,7 +206,7 @@ export function useEmailClient() {
         } finally {
             setIsSuggestingReply(false);
         }
-    }, [selectedEmailId, selectedEmailDetail]);
+    }, [selectedEmailId, selectedEmailDetail, aiProvider]);
 
     // ── OAuth callback handling ──
     useEffect(() => {
@@ -252,6 +260,7 @@ export function useEmailClient() {
         error, setError, successMessage,
         isReplying, setIsReplying, replyBody, setReplyBody,
         isSendingReply, isSuggestingReply,
+        aiProvider, setAiProvider,
         hasMoreEmails: !!nextPageToken, isLoadingMore,
         connect, disconnect, loadEmails, loadMore,
         sendReply, suggestReply,

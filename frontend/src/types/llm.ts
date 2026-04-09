@@ -6,6 +6,7 @@ export interface ChatMessage {
 }
 
 export interface FeedbackRequestPayload {
+    provider?: 'coze' | 'local_ollama';
     submissionId: string;
     selectedText: string;
     assignment?: string;

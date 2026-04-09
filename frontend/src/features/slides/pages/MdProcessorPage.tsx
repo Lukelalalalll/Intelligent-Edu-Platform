@@ -23,6 +23,7 @@ export default function MdProcessor({
     // Tab 2 props
     inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
     cozeLoading, cozeError, textProcessing,
+    provider, setProvider,
     handleCozeGenerate, handleProcessText,
 }) {
     const navigate = useNavigate();
@@ -84,6 +85,8 @@ export default function MdProcessor({
                     cozeLoading={cozeLoading}
                     cozeError={cozeError}
                     textProcessing={textProcessing}
+                    provider={provider}
+                    setProvider={setProvider}
                     handleCozeGenerate={handleCozeGenerate}
                     handleProcessText={handleProcessText}
                 />

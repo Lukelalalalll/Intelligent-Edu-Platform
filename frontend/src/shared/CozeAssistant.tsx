@@ -1,4 +1,5 @@
 import { useCozeAssistant } from './hooks/useCozeAssistant';
+import type { AIProvider } from './aiProvider';
 
 interface CozeAssistantClassNames {
     cozeCard?: string;
@@ -30,23 +31,37 @@ interface CozeAssistantProps {
     rubric?: Record<string, unknown>;
     onAnalysis?: (analysis: Record<string, unknown>) => void;
     className?: CozeAssistantClassNames;
+    provider?: AIProvider;
+    setProvider?: (provider: AIProvider) => void;
 }
 
-export default function CozeAssistant({ submissionId, assignment, rubric, onAnalysis, className }: CozeAssistantProps) {
+export default function CozeAssistant({ submissionId, assignment, rubric, onAnalysis, className, provider = 'local_ollama', setProvider }: CozeAssistantProps) {
     const {
         messages, input, setInput,
         loading, analyzeLoading, localError, streamError,
         lastRagInfo, lastLatencyMs, lastFailedQuestion,
         chatAreaRef,
         handleAsk, handleStop, handleAnalyze, handleInputKeyDown,
-    } = useCozeAssistant({ submissionId, assignment, rubric, onAnalysis });
+    } = useCozeAssistant({ submissionId, assignment, rubric, onAnalysis, provider });
 
     return (
         <div className={className?.cozeCard || ''} style={className ? undefined : { display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className={className?.cozeHeader || ''}>
                 <div>
-                    <div className={className?.cozeTitle || ''}><i className="fas fa-robot" /> Coze.ai Assistant</div>
+                    <div className={className?.cozeTitle || ''}><i className="fas fa-robot" /> AI Assistant</div>
                     <div className={className?.cozeSub || ''}>{assignment?.title}</div>
+                    {setProvider && (
+                        <div style={{ marginTop: 8 }}>
+                            <select
+                                value={provider}
+                                onChange={(e) => setProvider(e.target.value as AIProvider)}
+                                style={{ padding: '4px 8px', borderRadius: 8 }}
+                            >
+                                <option value="coze">Coze</option>
+                                <option value="local_ollama">llama3.2</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
                 <div className={className?.cozeActions || ''}>
                     <button onClick={handleAnalyze} disabled={loading || analyzeLoading} className={className?.primaryBtn || ''}>Analyze Submission</button>

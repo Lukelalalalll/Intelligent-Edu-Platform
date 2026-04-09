@@ -1,3 +1,4 @@
+from backend.services.ai_gateway_service import AIGatewayService
 # backend/routes/sub5_routes.py
 """AI Study Notes Generator – extracts text from uploaded PDF and generates
 structured study notes, key concepts, and flashcards via Coze."""
@@ -14,6 +15,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from backend.config import Config
+from backend.core.ai_provider import resolve_provider
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 
@@ -109,109 +111,15 @@ Generate 8-15 flashcards covering the key concepts. Use the same language as the
 Example: [{"question":"What is X?","answer":"X is..."}]"""
 
 
-async def _call_coze_text(system_prompt: str, user_content: str, endpoint_label: str = "sub5/notes") -> str:
-    """Call Coze v3 chat API (text-only) with polling."""
-    api_key = Config.COZE_TOKEN
-    bot_id = Config.COZE_BOT_ID
-    api_root = (Config.COZE_API_ROOT or "https://api.coze.com").rstrip("/")
-
-    if not api_key or not bot_id:
-        raise HTTPException(503, "Coze API key or bot id not configured")
-
-    full_prompt = f"{system_prompt}\n\n{user_content}"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "bot_id": bot_id,
-        "user_id": "sub5_study_notes",
-        "stream": False,
-        "additional_messages": [
-            {"role": "user", "content": full_prompt, "content_type": "text"}
-        ],
-    }
-
-    timeout_seconds = float(Config.COZE_REQUEST_TIMEOUT_SECONDS)
-    poll_interval = float(Config.COZE_POLL_INTERVAL_SECONDS)
-    poll_max_attempts = int(Config.COZE_POLL_MAX_ATTEMPTS)
-
-    timer = TelemetryTimer(
-        provider="coze", model=bot_id,
-        endpoint=endpoint_label, api_type="chat",
-        credential_alias="COZE_TOKEN",
-    )
-    with timer:
-        async with httpx.AsyncClient(timeout=timeout_seconds) as client:
-            start_resp = await client.post(f"{api_root}/v3/chat", headers=headers, json=payload)
-            if start_resp.status_code != 200:
-                logger.error("Coze start chat error %s: %s", start_resp.status_code, start_resp.text[:500])
-                await timer.save(success=False, error=f"Coze start error {start_resp.status_code}")
-                raise HTTPException(502, f"AI service error: {start_resp.status_code}")
-
-            start_data = start_resp.json().get("data", {})
-            chat_id = start_data.get("id")
-            conversation_id = start_data.get("conversation_id")
-            if not chat_id or not conversation_id:
-                await timer.save(success=False, error="Invalid chat identifiers")
-                raise HTTPException(502, "AI service returned invalid chat identifiers")
-
-            for _ in range(poll_max_attempts):
-                retrieve_resp = await client.get(
-                    f"{api_root}/v3/chat/retrieve",
-                    headers=headers,
-                    params={"chat_id": chat_id, "conversation_id": conversation_id},
-                )
-                if retrieve_resp.status_code != 200:
-                    logger.error("Coze retrieve error %s: %s", retrieve_resp.status_code, retrieve_resp.text[:500])
-                    await timer.save(success=False, error=f"Coze retrieve error {retrieve_resp.status_code}")
-                    raise HTTPException(502, f"AI service error: {retrieve_resp.status_code}")
-
-                status = retrieve_resp.json().get("data", {}).get("status")
-                if status == "completed":
-                    message_resp = await client.get(
-                        f"{api_root}/v3/chat/message/list",
-                        headers=headers,
-                        params={"chat_id": chat_id, "conversation_id": conversation_id},
-                    )
-                    if message_resp.status_code != 200:
-                        logger.error("Coze message list error %s: %s", message_resp.status_code, message_resp.text[:500])
-                        await timer.save(success=False, error=f"Coze message error {message_resp.status_code}")
-                        raise HTTPException(502, f"AI service error: {message_resp.status_code}")
-
-                    messages = message_resp.json().get("data", [])
-                    for msg in messages:
-                        if msg.get("type") in {"answer", "assistant_answer"} and msg.get("content"):
-                            answer = str(msg.get("content"))
-                            await timer.save(
-                                prompt_tokens=max(1, len(full_prompt) // 3),
-                                completion_tokens=max(1, len(answer) // 3),
-                            )
-                            return answer
-                        if msg.get("role") == "assistant" and msg.get("content"):
-                            answer = str(msg.get("content"))
-                            await timer.save(
-                                prompt_tokens=max(1, len(full_prompt) // 3),
-                                completion_tokens=max(1, len(answer) // 3),
-                            )
-                            return answer
-                    await timer.save(success=False, error="No answer in completed chat")
-                    raise HTTPException(502, "AI service completed but returned no answer")
-
-                if status in {"failed", "canceled", "requires_action"}:
-                    await timer.save(success=False, error=f"Coze status: {status}")
-                    raise HTTPException(502, f"AI service ended with status: {status}")
-
-                await asyncio.sleep(poll_interval)
-
-    await timer.save(success=False, error="Coze timeout")
-    raise HTTPException(504, "AI service timeout")
-
-
+async def _call_coze_text(system_prompt: str, user_content: str, endpoint_label: str = "sub5/notes", provider: str = "local_ollama") -> str:
+    ai_service = AIGatewayService()
+    context = {"system_override": system_prompt}
+    return await ai_service.chat_with_provider(message=user_content, context=context, provider=provider)
 @study_notes_router.post("/generate-notes")
 async def generate_notes(
     file: UploadFile = File(...),
     style: str = Form("detailed"),
+    provider: str | None = Form(None),
     _user=Depends(get_current_user),
 ):
     """Upload PDF and generate structured study notes."""
@@ -239,7 +147,13 @@ async def generate_notes(
             style_hint = "\n\nFocus on exam-relevant material. Emphasize definitions, formulas, and common exam questions."
 
         prompt = f"Generate study notes for the following lecture material:{style_hint}\n\n---\n{text}\n---"
-        notes_md = await _call_coze_text(NOTES_SYSTEM_PROMPT, prompt, endpoint_label="sub5/generate_notes")
+        resolved_provider = resolve_provider(provider, feature="study_notes.generate_notes")
+        notes_md = await _call_coze_text(
+            NOTES_SYSTEM_PROMPT,
+            prompt,
+            endpoint_label="sub5/generate_notes",
+            provider=resolved_provider,
+        )
 
         return JSONResponse({
             "success": True,
@@ -264,6 +178,7 @@ async def generate_notes(
 async def generate_flashcards(
     file: UploadFile = File(None),
     text: str = Form(None),
+    provider: str | None = Form(None),
     _user=Depends(get_current_user),
 ):
     """Generate flashcards from PDF or raw text."""
@@ -296,10 +211,12 @@ async def generate_flashcards(
         raise HTTPException(400, "Insufficient content for flashcard generation")
 
     try:
+        resolved_provider = resolve_provider(provider, feature="study_notes.generate_flashcards")
         raw = await _call_coze_text(
             FLASHCARD_SYSTEM_PROMPT,
             f"Generate flashcards from:\n\n{source_text}",
             endpoint_label="sub5/generate_flashcards",
+            provider=resolved_provider,
         )
         # Try to parse JSON from response
         import json

@@ -228,6 +228,36 @@
     border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.provider-switch-wrap {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.provider-chip {
+    flex: 1;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.85);
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.provider-chip:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.provider-chip-active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.25);
+}
+
 .user-status {
     display: flex;
     align-items: center;
@@ -242,6 +272,20 @@
     background-color: #00e676;
     border-radius: 50%;
     box-shadow: 0 0 8px #00e676;
+}
+
+.status-dot-offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.provider-detail {
+    margin-top: 6px;
+    font-size: 0.74rem;
+    color: #9f1239;
+    line-height: 1.35;
+    max-height: 3.8em;
+    overflow: hidden;
 }
 
 
@@ -327,6 +371,22 @@
     color: white;
 }
 
+.tutor-mode-select {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.tutor-mode-select:focus {
+    outline: none;
+    border-color: rgba(0, 123, 85, 0.45);
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.12);
+}
+
 /* 消息区 */
 
 .chat-messages.full-workspace {
@@ -365,6 +425,56 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.fileCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    width: fit-content;
+    max-width: 250px;
+    cursor: default;
+}
+
+.fileCard:hover {
+    background: rgba(0, 123, 85, 0.05);
+    border-color: rgba(0, 123, 85, 0.2);
+}
+
+.fileCardIcon {
+    font-size: 1.5rem;
+    color: #007B55;
+    flex-shrink: 0;
+}
+
+.fileCardInfo {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fileCardName {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f1f1f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fileCardSize {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.user-message .fileCard {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.05);
 }
 
 /* AI和User的对齐方式重构，适应居中的 max-width 容器 */

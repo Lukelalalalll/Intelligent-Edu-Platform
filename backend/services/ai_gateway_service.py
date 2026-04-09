@@ -9,6 +9,7 @@ import httpx
 from backend.config import Config
 from backend.prompts import prompt_registry
 from backend.infrastructure import llm_telemetry, TelemetryTimer
+from backend.services.local_llm_service import LocalLLMService, LocalLLMUnavailableError
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,21 @@ class AIGatewayService:
         self.poll_interval_seconds = Config.COZE_POLL_INTERVAL_SECONDS
         self.poll_max_attempts = Config.COZE_POLL_MAX_ATTEMPTS
         self.request_timeout_seconds = Config.COZE_REQUEST_TIMEOUT_SECONDS
+        self.default_provider = Config.AI_DEFAULT_PROVIDER
+        self.local_llm = LocalLLMService()
 
         if not self.bot_id:
             logger.warning("COZE_BOT_ID is not configured — Coze AI features will be degraded")
+
+    async def check_provider_health(self, provider: str) -> tuple[bool, str]:
+        p = str(provider or "").strip().lower()
+        if p == "local_ollama":
+            return await self.local_llm.health_check()
+        if p == "coze":
+            if not self.api_key or not self.bot_id:
+                return False, "COZE_TOKEN or COZE_BOT_ID is missing"
+            return True, "ok"
+        return False, "Unknown provider"
 
     def _serialize_context(self, context: Optional[Dict[str, Any]] = None) -> str:
         """Convert context to bounded text payload to keep Coze requests stable."""
@@ -241,7 +254,38 @@ class AIGatewayService:
         return str(data)
 
     async def chat(self, message: str, context: Optional[Dict[str, Any]] = None) -> str:
-        """Send a message to Coze.ai and get response."""
+        """Backward compatible signature. Default to local_ollama."""
+        return await self.chat_with_provider(message=message, context=context, provider="local_ollama")
+
+    async def chat_with_provider(
+        self,
+        *,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        provider: str,
+    ) -> str:
+        p = str(provider or self.default_provider or "local_ollama").strip().lower()
+        if p == "local_ollama":
+            from backend.services.local_llm_service import LocalLLMService, LocalLLMUnavailableError
+            logger.info("Using local_ollama provider")
+            local_service = LocalLLMService()
+            try:
+                # Check health before generation
+                is_healthy, msg = await local_service.health_check()
+                if not is_healthy:
+                    raise LocalLLMUnavailableError(f"Health check failed: {msg}")
+                result = await local_service.chat(message=message, context=context)
+                return result
+            except LocalLLMUnavailableError as e:
+                logger.error(f"Local LLM unavailable: {str(e)}. Falling back to Coze.")
+                if context is None:
+                    context = {}
+                context["fallback_from"] = "local_ollama"
+                p = "coze"
+        
+        if p != "coze":
+            raise ValueError(f"Unsupported provider: {p}")
+
         if not self.api_key or not self.bot_id:
             return "[Mock AI] Coze.ai credentials missing; returning placeholder feedback."
 
@@ -270,8 +314,14 @@ class AIGatewayService:
         )
         return result
 
-    async def analyze_submission(self, text: str, rubric: Dict[str, Any], assignment: str) -> Dict[str, Any]:
-        """Analyze full submission with Coze.ai."""
+    async def analyze_submission(
+        self,
+        text: str,
+        rubric: Dict[str, Any],
+        assignment: str,
+        provider: str = "local_ollama",
+    ) -> Dict[str, Any]:
+        """Analyze full submission with the selected provider."""
         trimmed_text = (text or "")[:12000]
         rubric_json = json.dumps(rubric or {}, ensure_ascii=False)
         prompt = prompt_registry.render(
@@ -280,7 +330,7 @@ class AIGatewayService:
             rubric_json=rubric_json,
             text=trimmed_text,
         )
-        response = await self.chat(prompt)
+        response = await self.chat_with_provider(message=prompt, context=None, provider=provider)
         return {"raw_response": response}
 
     async def suggest_annotation(self, selected_text: str, rubric: Dict[str, Any], assignment: str) -> str:

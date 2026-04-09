@@ -11,6 +11,7 @@ import GroupInfoPanel from './GroupInfoPanel';
 import { useChatRoom } from '../hooks/useChatRoom';
 import { useChatStore } from '../store/chatStore';
 import type { ChatMessage } from '../types';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 import styles from '../styles/Chat.module.css';
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
 export default function ChatWindow({ roomId }: Props) {
     const { wsStatus } = useChatStore();
     const navigate = useNavigate();
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
     const [showAssistant, setShowAssistant] = useState(false);
     const [showGroupInfo, setShowGroupInfo] = useState(false);
     const [transferMessage, setTransferMessage] = useState<ChatMessage | null>(null);
@@ -41,6 +43,11 @@ export default function ChatWindow({ roomId }: Props) {
         navigate('/chat');
     }, [navigate]);
 
+    const handleProviderChange = useCallback((next: AIProvider) => {
+        setProvider(next);
+        setStoredAIProvider(next);
+    }, []);
+
     if (!room) {
         return (
             <div className={styles.rightPaneEmpty}>
@@ -51,7 +58,14 @@ export default function ChatWindow({ roomId }: Props) {
 
     return (
         <>
-            <ChatHeader room={room} typingUser={typingUser} onToggleAssistant={handleToggleAssistant} onToggleGroupInfo={handleToggleGroupInfo} />
+            <ChatHeader
+                room={room}
+                typingUser={typingUser}
+                provider={provider}
+                onProviderChange={handleProviderChange}
+                onToggleAssistant={handleToggleAssistant}
+                onToggleGroupInfo={handleToggleGroupInfo}
+            />
 
             {wsStatus === 'closed' && (
                 <div className={styles.wsBanner}>
@@ -142,6 +156,7 @@ export default function ChatWindow({ roomId }: Props) {
             ) : (
                 <MessageInput
                     roomId={roomId}
+                    provider={provider}
                     onSend={handleSend}
                     onTyping={handleTyping}
                     quotedMessage={quotedMessage}
@@ -159,6 +174,7 @@ export default function ChatWindow({ roomId }: Props) {
 
             <AssistantPanel
                 roomId={roomId}
+                provider={provider}
                 visible={showAssistant}
                 onClose={() => setShowAssistant(false)}
             />

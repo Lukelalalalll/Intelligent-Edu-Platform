@@ -101,7 +101,10 @@ export interface RagCitation {
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  attachedText?: string;
+  files?: { file_name: string; mime_type: string }[];
   citations?: RagCitation[];
+  images?: string[];
 }
 
 /* ── AI Session ────────────────────────────────────────── */
