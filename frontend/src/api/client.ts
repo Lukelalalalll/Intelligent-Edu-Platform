@@ -3,8 +3,26 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosResp
 import { log } from '../utils/logger';
 import { networkBus } from '../hooks/useNetworkStatus';
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
+
+const resolveApiRoot = (): string => {
+  const raw = String(import.meta.env.VITE_API_ROOT || 'http://localhost:5009').trim();
+  try {
+    const parsed = new URL(raw);
+    const browserHost = window.location.hostname;
+
+    // Keep loopback host aligned with current page host so auth cookies stay same-site.
+    if (LOOPBACK_HOSTS.has(parsed.hostname) && LOOPBACK_HOSTS.has(browserHost) && parsed.hostname !== browserHost) {
+      parsed.hostname = browserHost;
+    }
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return raw.replace(/\/$/, '');
+  }
+};
+
 const client = axios.create({
-  baseURL: (import.meta.env.VITE_API_ROOT || 'http://localhost:5009') + '/api',
+  baseURL: `${resolveApiRoot()}/api`,
   withCredentials: true,
 });
 

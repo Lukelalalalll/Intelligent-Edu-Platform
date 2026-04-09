@@ -1,5 +1,6 @@
 # backend/routes/auth_routes.py
 import os
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Form
@@ -17,6 +18,11 @@ from backend.services.grading_service import (
     list_assignments, get_assignment, list_submissions_for_student, create_submission,
     create_document,
 )
+from backend.services.file_asset_service import register_file_asset
+from backend.services.security_audit import log_security_event
+
+
+logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 auth_router = APIRouter(prefix="/api", tags=["Auth"])
@@ -123,18 +129,51 @@ async def reset_password(request: Request, req: ResetPasswordSchema):
 @auth_router.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, req: AuthSchema, response: Response):
+    request_id = getattr(request.state, "request_id", "unknown")
     user = await db.users.find_one({"username": req.username})
     if not user or not check_password_hash(user['password_hash'], req.password):
+        log_security_event(
+            level="warning",
+            request_id=request_id,
+            user_id="anonymous",
+            endpoint="/api/login",
+            action="login_failed",
+            detail="invalid credentials",
+            extra={"username": req.username[:64]},
+        )
         raise HTTPException(status_code=401, detail="Wrong username or password")
 
     access_token = create_access_token(data={"sub": str(user["_id"])})
 
     # 设置 HttpOnly Cookie
     is_production = os.getenv('ENV', 'development').lower() in ('production', 'prod')
+    samesite = Config.JWT_COOKIE_SAMESITE
+    secure_cookie = Config.JWT_COOKIE_SECURE
+
+    if is_production and (not secure_cookie or samesite == "none" and not secure_cookie):
+        logger.error(
+            "Refusing insecure auth cookie settings in production | rid=%s user=%s secure=%s samesite=%s",
+            request_id,
+            str(user.get("_id") or ""),
+            secure_cookie,
+            samesite,
+        )
+        raise HTTPException(status_code=500, detail="Server authentication cookie policy is misconfigured")
+
     response.set_cookie(
         key=Config.JWT_ACCESS_COOKIE_NAME, value=access_token,
-        httponly=True, samesite="lax",
-        secure=is_production,
+        httponly=True,
+        samesite=samesite,
+        secure=secure_cookie if is_production else bool(secure_cookie),
+    )
+
+    log_security_event(
+        level="info",
+        request_id=request_id,
+        user_id=str(user.get("_id") or ""),
+        endpoint="/api/login",
+        action="login_success",
+        detail="user authenticated and cookie issued",
     )
 
     return {
@@ -274,8 +313,16 @@ async def get_profile_courses_v2(current_user: dict = Depends(get_current_user))
                 user_enrollment = next((e for e in enrollments if e["courseSectionId"] == sid), None)
                 course["roleInCourse"] = user_enrollment.get("roleInCourse", "student") if user_enrollment else "student"
                 courses.append(course)
-        except Exception:
-            pass
+        except Exception as exc:
+            log_security_event(
+                level="warning",
+                request_id="n/a",
+                user_id=user_id,
+                endpoint="/api/v2/profile/courses",
+                action="course_section_resolve_failed",
+                detail=str(exc)[:240],
+                extra={"course_section_id": sid},
+            )
 
     return {
         "role": role,
@@ -384,6 +431,33 @@ async def student_submit(
         {"_id": OID(doc_record["id"])},
         {"$set": {"ownerId": submission["id"]}},
     )
+
+    try:
+        await register_file_asset(
+            file_type="submission_pdf",
+            storage_path=storage_key,
+            size=len(content),
+            owner_type="submission_document",
+            owner_id=str(doc_record["id"]),
+            created_by=user_id,
+            filename=file.filename,
+            mime_type=file.content_type or "application/pdf",
+            checksum=hashlib.sha256(content).hexdigest(),
+            course_id=str(course_section_id or ""),
+            scope="submission",
+            user_id=user_id,
+            metadata={"assignmentId": assignment_id, "submissionId": submission["id"]},
+        )
+    except Exception as exc:
+        log_security_event(
+            level="warning",
+            request_id="n/a",
+            user_id=user_id,
+            endpoint="/api/v2/student/submit",
+            action="file_asset_register_failed",
+            detail=str(exc)[:240],
+            extra={"assignment_id": assignment_id, "submission_id": submission.get("id", "")},
+        )
 
     return {
         "message": "Submission uploaded successfully",

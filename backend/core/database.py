@@ -203,10 +203,13 @@ async def ensure_indexes() -> None:
             [("userId", 1), ("updatedAt", -1)],
             background=True,
         )
-        # TTL: auto-delete sessions not updated for 180 days
+        # Keep AI sessions permanently: remove legacy TTL index if present.
+        try:
+            await db.ai_chat_sessions.drop_index("updatedAt_1")
+        except Exception:
+            pass
         await db.ai_chat_sessions.create_index(
             "updatedAt",
-            expireAfterSeconds=180 * 24 * 3600,
             background=True,
         )
 
@@ -256,6 +259,61 @@ async def ensure_indexes() -> None:
         await db.chat_file_transfers.create_index(
             "expires_at",
             expireAfterSeconds=7 * 24 * 3600,
+            background=True,
+        )
+
+        # --- Knowledge indexing jobs ---
+        await db.indexing_jobs.create_index(
+            [("job_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.indexing_jobs.create_index(
+            [("course_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.indexing_jobs.create_index(
+            "created_at",
+            expireAfterSeconds=180 * 24 * 3600,
+            background=True,
+        )
+
+        # --- File assets registry ---
+        await db.file_assets.create_index(
+            [("file_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("file_type", 1), ("status", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("owner_type", 1), ("owner_id", 1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("course_id", 1), ("status", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("scope", 1), ("status", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("room_id", 1), ("status", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("user_id", 1), ("scope", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("session_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.file_assets.create_index(
+            [("conversation_date", 1), ("user_id", 1), ("created_at", -1)],
             background=True,
         )
 

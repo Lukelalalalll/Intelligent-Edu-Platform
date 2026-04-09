@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from bson.objectid import ObjectId
@@ -7,6 +8,7 @@ from werkzeug.security import generate_password_hash
 from backend.core.database import db
 from backend.core.security import get_admin_user
 from backend.core.utils import safe_object_id
+from backend.config import Config
 from backend.schemas import (
     AuthSchema,
     UpdateProfileSchema,
@@ -23,6 +25,16 @@ from backend.services.grading_service import (
     create_assignment as v2_create_assignment, update_assignment as v2_update_assignment,
     delete_assignment as v2_delete_assignment, list_assignments as v2_list_assignments,
 )
+from backend.services.file_asset_service import (
+    list_assets,
+    get_asset,
+    soft_delete_asset,
+    restore_asset,
+    hard_delete_asset,
+    run_audit,
+    ensure_ai_session_image_assets,
+)
+from backend.services.admin_query_service import build_admin_collection_search_filter
 
 admin_router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -350,27 +362,7 @@ async def list_db_documents(
     collection_name = _validate_collection_name(collection_name)
     coll = db[collection_name]
     keyword = (q or "").strip()
-    filter_query = {}
-
-    if keyword:
-        safe_keyword = re.escape(keyword)
-        if collection_name == "users":
-            filter_query = {
-                "$or": [
-                    {"username": {"$regex": safe_keyword, "$options": "i"}},
-                    {"email": {"$regex": safe_keyword, "$options": "i"}},
-                    {"role": {"$regex": safe_keyword, "$options": "i"}},
-                ]
-            }
-        else:
-            filter_query = {
-                "$or": [
-                    {"name": {"$regex": safe_keyword, "$options": "i"}},
-                    {"title": {"$regex": safe_keyword, "$options": "i"}},
-                    {"id": {"$regex": safe_keyword, "$options": "i"}},
-                    {"courseId": {"$regex": safe_keyword, "$options": "i"}},
-                ]
-            }
+    filter_query = build_admin_collection_search_filter(collection_name, keyword)
 
     total = await coll.count_documents(filter_query)
     docs = await coll.find(filter_query).skip(skip).limit(limit).to_list(length=limit)
@@ -880,6 +872,296 @@ def _mask_key(value: str | None) -> str:
     if len(value) <= 10:
         return value[:2] + "***" + value[-2:]
     return value[:4] + "***" + value[-4:]
+
+
+# ── File Center endpoints ─────────────────────────────────────────────
+
+@admin_router.get("/files/assets")
+async def list_file_assets(
+    file_type: str = Query(default="", max_length=64),
+    status: str = Query(default="", max_length=32),
+    owner_type: str = Query(default="", max_length=64),
+    course_id: str = Query(default="", max_length=128),
+    created_by: str = Query(default="", max_length=64),
+    q: str = Query(default="", max_length=120),
+    limit: int = Query(default=100, ge=1, le=300),
+    skip: int = Query(default=0, ge=0),
+    admin: dict = Depends(get_admin_user),
+):
+    data = await list_assets(
+        file_type=file_type,
+        status=status,
+        owner_type=owner_type,
+        course_id=course_id,
+        created_by=created_by,
+        q=q,
+        limit=limit,
+        skip=skip,
+    )
+    return data
+
+
+@admin_router.get("/files/assets/{asset_id}")
+async def get_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
+    asset = await get_asset(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return {"asset": asset}
+
+
+@admin_router.post("/files/assets/{asset_id}/soft-delete")
+async def soft_delete_file_asset(asset_id: str, req: dict, admin: dict = Depends(get_admin_user)):
+    actor_id = str(admin.get("_id", ""))
+    reason = str((req or {}).get("reason", "") or "").strip()
+    asset = await soft_delete_asset(asset_id, actor_id=actor_id, reason=reason)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return {"asset": asset}
+
+
+@admin_router.post("/files/assets/{asset_id}/restore")
+async def restore_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
+    actor_id = str(admin.get("_id", ""))
+    asset = await restore_asset(asset_id, actor_id=actor_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found or not soft deleted")
+    return {"asset": asset}
+
+
+@admin_router.post("/files/assets/{asset_id}/hard-delete")
+async def hard_delete_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
+    actor_id = str(admin.get("_id", ""))
+    result = await hard_delete_asset(asset_id, actor_id=actor_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    if result.get("blocked"):
+        raise HTTPException(status_code=409, detail=f"Delete blocked: {result.get('reason', 'referenced')}")
+    return {"asset": result}
+
+
+@admin_router.get("/files/assets/{asset_id}/download")
+async def download_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
+    from backend.services.file_asset_service import get_asset, _absolute_from_storage_path
+    from fastapi.responses import FileResponse, Response
+    import base64
+    asset = await get_asset(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+        
+    storage_path = str(asset.get("storage_path", ""))
+    if storage_path.startswith("mongo://"):
+        session_id = asset.get("session_id")
+        meta = asset.get("metadata", {})
+        msg_idx = meta.get("message_index")
+        img_idx = meta.get("image_index")
+        if ObjectId.is_valid(session_id):
+            sess = await db.ai_chat_sessions.find_one({"_id": ObjectId(session_id)})
+            if sess:
+                msgs = sess.get("messages", [])
+                if 0 <= msg_idx < len(msgs):
+                    imgs = msgs[msg_idx].get("images", [])
+                    if 0 <= img_idx < len(imgs):
+                        b64_data = imgs[img_idx]
+                        if b64_data.startswith("data:image"):
+                            _, b64_data = b64_data.split(",", 1)
+                        content = base64.b64decode(b64_data)
+                        return Response(content=content, media_type="image/jpeg", headers={"Content-Disposition": f"attachment; filename=\"{asset.get('filename')}\""})
+        raise HTTPException(status_code=404, detail="Mongo base64 image not found")
+
+    path = _absolute_from_storage_path(storage_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="File missing from disk")
+    return FileResponse(path, filename=asset.get("filename", "download"))
+
+
+@admin_router.get("/files/audit")
+async def audit_file_assets(admin: dict = Depends(get_admin_user)):
+    result = await run_audit()
+    return result
+
+
+@admin_router.get("/files/stats")
+async def file_asset_stats(admin: dict = Depends(get_admin_user)):
+    pipeline = [
+        {
+            "$group": {
+                "_id": {"file_type": "$file_type", "status": "$status"},
+                "count": {"$sum": 1},
+                "total_size": {"$sum": "$size"},
+            }
+        },
+        {"$sort": {"_id.file_type": 1, "_id.status": 1}},
+    ]
+
+    rows = []
+    async for item in db.file_assets.aggregate(pipeline):
+        rows.append({
+            "file_type": item.get("_id", {}).get("file_type", ""),
+            "status": item.get("_id", {}).get("status", ""),
+            "count": int(item.get("count", 0) or 0),
+            "total_size": int(item.get("total_size", 0) or 0),
+        })
+    return {"rows": rows}
+
+
+def _date_bucket(value, group_by: str) -> str:
+    if isinstance(value, datetime):
+        if group_by == "month":
+            return value.strftime("%Y-%m")
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, str) and value:
+        if group_by == "month":
+            return value[:7]
+        return value[:10]
+    return "unknown"
+
+
+@admin_router.get("/files/chat/rooms")
+async def list_chat_rooms_for_file_center(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    admin: dict = Depends(get_admin_user)
+):
+    pipeline = [
+        {"$match": {"type": "group"}},
+        {
+            "$lookup": {
+                "from": "file_assets",
+                "let": {"rid": {"$toString": "$_id"}},
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$and": [
+                                    {"$eq": ["$room_id", "$$rid"]},
+                                    {"$eq": ["$scope", "chat_group"]},
+                                    {"$ne": ["$status", "hard_deleted"]},
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "as": "assets",
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "room_id": {"$toString": "$_id"},
+                "name": "$name",
+                "type": "$type",
+                "course_id": "$courseId",
+                "member_count": {"$size": {"$ifNull": ["$members", []]}},
+                "asset_count": {"$size": "$assets"},
+                "created_at": "$createdAt",
+            }
+        },
+        {"$sort": {"asset_count": -1, "name": 1}},
+        {"$skip": skip},
+        {"$limit": limit}
+    ]
+    rooms = []
+    async for doc in db.chat_rooms.aggregate(pipeline):
+        rooms.append(_serialize_mongo_value(doc))
+    
+    total = await db.chat_rooms.count_documents({"type": "group"})
+    return {"rooms": rooms, "total": total, "skip": skip, "limit": limit}
+
+
+@admin_router.get("/files/chat/rooms/{room_id}/assets")
+async def list_chat_room_assets(
+    room_id: str,
+    status: str = Query(default="", max_length=32),
+    admin: dict = Depends(get_admin_user),
+):
+    query: dict = {"room_id": room_id, "scope": "chat_group"}
+    if status:
+        query["status"] = status
+    else:
+        query["status"] = {"$ne": "hard_deleted"}
+
+    room = None
+    if ObjectId.is_valid(room_id):
+        room = await db.chat_rooms.find_one({"_id": ObjectId(room_id)}, {"name": 1, "courseId": 1, "type": 1})
+
+    assets = []
+    async for doc in db.file_assets.find(query).sort("created_at", -1):
+        item = _serialize_mongo_value(doc)
+        storage_path = str(item.get("storage_path", "") or "").lstrip("/")
+        item["exists_on_disk"] = os.path.exists(os.path.join(Config.BASE_DIR, storage_path))
+        assets.append(item)
+    return {
+        "room": _serialize_mongo_value(room) if room else {"id": room_id},
+        "assets": assets,
+        "total": len(assets),
+    }
+
+
+@admin_router.get("/files/ai/users")
+async def list_ai_users_for_file_center(
+    role: str = Query(default="student", pattern="^(teacher|student)$"),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    admin: dict = Depends(get_admin_user),
+):
+    users = []
+    cursor = db.users.find({"role": role}, {"username": 1, "email": 1, "role": 1}).sort("username", 1).skip(skip).limit(limit)
+    async for u in cursor:
+        uid = str(u.get("_id"))
+        await ensure_ai_session_image_assets(uid)
+        session_count = await db.ai_chat_sessions.count_documents({"userId": ObjectId(uid)})
+        asset_count = await db.file_assets.count_documents(
+            {"scope": "ai_personal", "user_id": uid, "status": {"$ne": "hard_deleted"}}
+        )
+        users.append(
+            {
+                "user_id": uid,
+                "username": u.get("username", ""),
+                "email": u.get("email", ""),
+                "role": u.get("role", role),
+                "session_count": session_count,
+                "asset_count": asset_count,
+            }
+        )
+    total = await db.users.count_documents({"role": role})
+    return {"users": users, "total": total, "skip": skip, "limit": limit}
+
+
+@admin_router.get("/files/ai/users/{user_id}/assets")
+async def list_ai_user_assets(
+    user_id: str,
+    group_by: str = Query(default="day", pattern="^(day|month)$"),
+    status: str = Query(default="", max_length=32),
+    admin: dict = Depends(get_admin_user),
+):
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user id")
+
+    await ensure_ai_session_image_assets(user_id)
+
+    query: dict = {"scope": "ai_personal", "user_id": user_id}
+    if status:
+        query["status"] = status
+    else:
+        query["status"] = {"$ne": "hard_deleted"}
+
+    grouped: dict[str, dict] = {}
+    async for doc in db.file_assets.find(query).sort("created_at", -1):
+        item = _serialize_mongo_value(doc)
+        bucket = _date_bucket(doc.get("created_at") or item.get("conversation_date"), group_by)
+        if bucket not in grouped:
+            grouped[bucket] = {"date": bucket, "count": 0, "total_size": 0, "items": []}
+        grouped[bucket]["count"] += 1
+        grouped[bucket]["total_size"] += int(item.get("size", 0) or 0)
+        grouped[bucket]["items"].append(item)
+
+    groups = sorted(grouped.values(), key=lambda x: x["date"], reverse=True)
+    return {
+        "user_id": user_id,
+        "group_by": group_by,
+        "groups": groups,
+        "total": sum(g["count"] for g in groups),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════

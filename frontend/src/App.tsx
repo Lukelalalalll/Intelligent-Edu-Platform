@@ -16,6 +16,7 @@ const AIInteractEntry = React.lazy(() => import('./entries/aiInteractEntry'));
 const HighlighterEntry = React.lazy(() => import('./entries/slides/highlighterEntry'));
 const AdminDashboardEntry = React.lazy(() => import('./entries/adminDashboardEntry'));
 const AdminDbConsoleEntry = React.lazy(() => import('./entries/adminDbConsoleEntry'));
+const AdminFileCenterEntry = React.lazy(() => import('./entries/adminFileCenterEntry'));
 const DiagramToolEntry = React.lazy(() => import('./entries/diagram/diagramToolEntry'));
 const QuestionGeneratorEntry = React.lazy(() => import('./entries/question-bank/questionGeneratorEntry'));
 const QuickProcessEntry = React.lazy(() => import('./entries/slides/quickProcessEntry'));
@@ -134,6 +135,7 @@ function App() {
           <Route path="questions" element={<RouteErrorBoundary><ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/dashboard" element={<RouteErrorBoundary><ProtectedRoute><AdminDashboardEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/db-console" element={<RouteErrorBoundary><ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="admin/file-center" element={<RouteErrorBoundary><ProtectedRoute><AdminFileCenterEntry /></ProtectedRoute></RouteErrorBoundary>} />
 
           <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramToolEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesEntry /></ProtectedRoute></RouteErrorBoundary>} />

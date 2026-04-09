@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from jose import jwt, JWTError
 
 from backend.config import Config
+from backend.core.ai_provider import resolve_provider
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.core.utils import safe_object_id
@@ -30,6 +31,8 @@ from backend.schemas import (
     ChatAiAssistantSchema,
     ChatTransferStartSchema,
 )
+from backend.services.chat_search_service import sanitize_user_search_query
+from backend.services.file_asset_service import register_file_asset
 
 # Allowed file types for chat uploads
 ALLOWED_EXTENSIONS = {
@@ -75,6 +78,10 @@ def _str_id(doc: dict) -> dict:
         doc["id"] = str(doc["_id"])
         del doc["_id"]
     return doc
+
+
+def _storage_path_from_file_url(file_url: str) -> str:
+    return str(file_url or "").strip().lstrip("/")
 
 
 # ──────────────────────────────────────────────────────────────
@@ -237,8 +244,13 @@ async def delete_contact(contact_id: str, user: dict = Depends(get_current_user)
 async def search_users(q: str = Query(..., min_length=1, max_length=50), user: dict = Depends(get_current_user)):
     """Search platform users by username (for adding friends)."""
     uid = str(user["id"])
+    try:
+        safe_pattern = sanitize_user_search_query(q)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     cursor = db.users.find(
-        {"username": {"$regex": q, "$options": "i"}},
+        {"username": {"$regex": safe_pattern, "$options": "i"}},
         {"_id": 1, "username": 1, "email": 1, "role": 1},
     ).limit(20)
     users = []
@@ -468,6 +480,45 @@ async def send_message_rest(
     msg_doc["id"] = str(result.inserted_id)
     msg_doc.pop("_id", None)
 
+    if msg_doc.get("fileUrl"):
+        try:
+            matched = await db.file_assets.update_one(
+                {
+                    "file_type": "chat_attachment",
+                    "public_url": str(msg_doc.get("fileUrl") or ""),
+                    "status": {"$ne": "hard_deleted"},
+                },
+                {
+                    "$set": {
+                        "owner_type": "chat_message",
+                        "owner_id": msg_doc["id"],
+                        "scope": "chat_group",
+                        "room_id": room_id,
+                        "user_id": uid,
+                        "updated_at": datetime.now(timezone.utc),
+                        "status": "active",
+                    }
+                },
+            )
+            if matched.matched_count == 0:
+                await register_file_asset(
+                    file_type="chat_attachment",
+                    storage_path=_storage_path_from_file_url(msg_doc.get("fileUrl", "")),
+                    size=int(msg_doc.get("fileSize") or 0),
+                    owner_type="chat_message",
+                    owner_id=msg_doc["id"],
+                    created_by=uid,
+                    filename=str(msg_doc.get("fileName") or ""),
+                    mime_type=str(msg_doc.get("mimeType") or ""),
+                    course_id=str(room.get("courseId") or ""),
+                    public_url=str(msg_doc.get("fileUrl") or ""),
+                    scope="chat_group",
+                    room_id=room_id,
+                    user_id=uid,
+                )
+        except Exception:
+            logger.exception("Failed to register chat attachment asset")
+
     await db.chat_rooms.update_one(
         {"_id": safe_object_id(room_id, label="room")},
         {"$set": {"lastMessage": {
@@ -559,9 +610,10 @@ async def translate_message(
     lang_name = lang_map.get(body.targetLang, body.targetLang)
 
     from backend.services.ai_gateway_service import AIGatewayService
+    resolved_provider = resolve_provider(body.provider, feature="chat.translate", user=user)
     svc = AIGatewayService()
     prompt = f"Translate the following text to {lang_name}. Return ONLY the translation, no explanation:\n\n{text}"
-    result = await svc.chat(prompt)
+    result = await svc.chat_with_provider(message=prompt, context=None, provider=resolved_provider)
     return {"ok": True, "translated": result.strip()}
 
 
@@ -713,6 +765,27 @@ async def upload_file(
         f_out.write(data)
 
     file_url = f"/static/chat_files/{room_id}/{safe_name}"
+
+    try:
+        await register_file_asset(
+            file_type="chat_attachment",
+            storage_path=_storage_path_from_file_url(file_url),
+            size=len(data),
+            owner_type="chat_upload",
+            owner_id=room_id,
+            created_by=uid,
+            filename=original_name,
+            mime_type=file.content_type or "application/octet-stream",
+            course_id=str(room.get("courseId") or ""),
+            public_url=file_url,
+            scope="chat_group",
+            room_id=room_id,
+            user_id=uid,
+            metadata={"upload_only": True},
+        )
+    except Exception:
+        logger.exception("Failed to register uploaded chat file asset")
+
     return {
         "ok": True,
         "fileUrl": file_url,
@@ -733,34 +806,67 @@ async def create_room_from_course(
 ):
     """Create (or return existing) a group chat room for a course."""
     uid = str(user["id"])
+    role = user.get("role", "student")
 
-    # Fetch course — allow teacher or admin
-    course = await db.courses.find_one({"_id": safe_object_id(body.courseId, label="course")})
-    if not course:
+    # Prefer v2 course section id, fall back to legacy courses collection.
+    section = None
+    if ObjectId.is_valid(body.courseId):
+        section = await db.course_sections.find_one({"_id": ObjectId(body.courseId)})
+
+    legacy_course = None
+    if not section:
+        if ObjectId.is_valid(body.courseId):
+            legacy_course = await db.courses.find_one({"_id": ObjectId(body.courseId)})
+        if not legacy_course:
+            legacy_course = await db.courses.find_one({"courseId": body.courseId})
+
+    if not section and not legacy_course:
         raise HTTPException(status_code=404, detail="Course not found")
-    if user.get("role") not in ("teacher", "admin") and str(course.get("teacherId", "")) != uid:
-        raise HTTPException(status_code=403, detail="Only the course teacher can create a course group")
 
-    course_name = course.get("name") or course.get("title") or "Course"
+    # Resolve course identity and permissions.
+    if section:
+        course_identity = str(section["_id"])
+        course_name = section.get("courseName") or section.get("courseCode") or "Course"
+        owner_teacher_id = str(section.get("ownerTeacherId", ""))
+        enrollment = await db.enrollments.find_one({"courseSectionId": course_identity, "userId": uid})
+        if role != "admin" and uid != owner_teacher_id and not enrollment:
+            raise HTTPException(status_code=403, detail="You are not enrolled in this course")
 
-    # Collect enrolled student IDs
-    student_ids: list[str] = []
-    async for enroll in db.enrollments.find({"courseId": body.courseId}, {"userId": 1}):
-        student_ids.append(str(enroll["userId"]))
+        member_ids_set: set[str] = set()
+        async for enroll in db.enrollments.find({"courseSectionId": course_identity}, {"userId": 1}):
+            user_id = str(enroll.get("userId", "")).strip()
+            if user_id:
+                member_ids_set.add(user_id)
+        if owner_teacher_id:
+            member_ids_set.add(owner_teacher_id)
+    else:
+        course_identity = str(legacy_course["_id"]) if "_id" in legacy_course else body.courseId
+        course_name = legacy_course.get("name") or legacy_course.get("title") or legacy_course.get("courseId") or "Course"
+        teacher_id = str(legacy_course.get("teacherId", ""))
+        if role != "admin" and uid != teacher_id:
+            raise HTTPException(status_code=403, detail="Only course members can create this group")
 
-    member_ids = list(set([uid] + student_ids))
+        member_ids_set: set[str] = {teacher_id} if teacher_id else set()
+        # Legacy enrollments schema fallback.
+        async for enroll in db.enrollments.find({"courseId": body.courseId}, {"userId": 1}):
+            user_id = str(enroll.get("userId", "")).strip()
+            if user_id:
+                member_ids_set.add(user_id)
+
+    member_ids_set.add(uid)
+    member_ids = sorted(member_ids_set)
     now = _utcnow()
 
     # Atomic find-or-create using unique courseId+type index
     from pymongo import ReturnDocument
     doc = await db.chat_rooms.find_one_and_update(
-        {"courseId": body.courseId, "type": "group"},
+        {"courseId": course_identity, "type": "group"},
         {"$setOnInsert": {
             "type": "group",
             "name": f"{course_name} 群聊",
             "members": member_ids,
             "createdBy": uid,
-            "courseId": body.courseId,
+            "courseId": course_identity,
             "avatarColor": _hash_color(course_name),
             "createdAt": now,
             "lastMessage": None,
@@ -806,10 +912,44 @@ async def list_courses_for_group(user: dict = Depends(get_current_user)):
     role = user.get("role", "student")
     courses = []
 
-    if role in ("teacher", "admin"):
-        async for c in db.courses.find({"teacherId": uid}, {"_id": 1, "name": 1, "title": 1}):
+    section_ids: set[str] = set()
+
+    if role == "admin":
+        async for sec in db.course_sections.find({}, {"_id": 1}):
+            section_ids.add(str(sec["_id"]))
+    else:
+        # Any enrolled user should see their course groups (teacher/student).
+        async for enroll in db.enrollments.find({"userId": uid}, {"courseSectionId": 1}):
+            sid = str(enroll.get("courseSectionId", "")).strip()
+            if sid:
+                section_ids.add(sid)
+
+        # Owner teacher should also see owned sections.
+        if role in ("teacher", "ta"):
+            async for sec in db.course_sections.find({"ownerTeacherId": uid}, {"_id": 1}):
+                section_ids.add(str(sec["_id"]))
+
+    if section_ids:
+        oid_ids = [ObjectId(sid) for sid in section_ids if ObjectId.is_valid(sid)]
+        async for c in db.course_sections.find(
+            {"_id": {"$in": oid_ids}},
+            {"_id": 1, "courseCode": 1, "courseName": 1},
+        ):
             c_id = str(c["_id"])
-            existing = await db.chat_rooms.find_one({"courseId": c_id, "type": "group"})
+            existing = await db.chat_rooms.find_one({"courseId": c_id, "type": "group"}, {"_id": 1})
+            display_name = c.get("courseName") or c.get("courseCode") or "Untitled"
+            courses.append({
+                "id": c_id,
+                "name": display_name,
+                "existingRoomId": str(existing["_id"]) if existing else None,
+            })
+
+    # Legacy fallback so old teacher-only data still appears when v2 is empty.
+    if not courses and role in ("teacher", "admin"):
+        q = {} if role == "admin" else {"teacherId": uid}
+        async for c in db.courses.find(q, {"_id": 1, "name": 1, "title": 1}):
+            c_id = str(c["_id"])
+            existing = await db.chat_rooms.find_one({"courseId": c_id, "type": "group"}, {"_id": 1})
             courses.append({
                 "id": c_id,
                 "name": c.get("name") or c.get("title") or "Untitled",
@@ -1060,6 +1200,7 @@ async def ai_summary(
     """Generate an AI summary of recent chat messages."""
     uid = str(user["id"])
     await _verify_room_member(room_id, uid)
+    resolved_provider = resolve_provider(body.provider, feature="chat.summary", user=user)
 
     from backend.services.chat_ai_service import run_summary
     try:
@@ -1069,6 +1210,7 @@ async def ai_summary(
             mode=body.mode,
             window_size=body.window_size,
             unread_since=body.unread_since,
+            provider=resolved_provider,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -1085,6 +1227,7 @@ async def ai_reply_suggestions(
     """Generate reply suggestions for the current conversation."""
     uid = str(user["id"])
     await _verify_room_member(room_id, uid)
+    resolved_provider = resolve_provider(body.provider, feature="chat.reply_suggestions", user=user)
 
     from backend.services.chat_ai_service import run_reply_suggestions
     try:
@@ -1093,6 +1236,7 @@ async def ai_reply_suggestions(
             user_id=uid,
             tone=body.tone,
             latest_count=body.latest_count,
+            provider=resolved_provider,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -1109,6 +1253,7 @@ async def ai_rewrite(
     """Rewrite draft text with AI in a given style."""
     uid = str(user["id"])
     await _verify_room_member(room_id, uid)
+    resolved_provider = resolve_provider(body.provider, feature="chat.rewrite", user=user)
 
     from backend.services.chat_ai_service import run_rewrite
     try:
@@ -1117,6 +1262,7 @@ async def ai_rewrite(
             user_id=uid,
             draft_text=body.draft_text,
             style=body.style,
+            provider=resolved_provider,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -1133,6 +1279,7 @@ async def ai_assistant(
     """Ask the AI assistant a question based on chat context."""
     uid = str(user["id"])
     await _verify_room_member(room_id, uid)
+    resolved_provider = resolve_provider(body.provider, feature="chat.assistant", user=user)
 
     from backend.services.chat_ai_service import run_assistant
     try:
@@ -1141,6 +1288,7 @@ async def ai_assistant(
             user_id=uid,
             query=body.query,
             context_window=body.context_window,
+            provider=resolved_provider,
         )
         return {"ok": True, **result}
     except Exception as exc:
@@ -1253,8 +1401,8 @@ class ConnectionManager:
         if user_id in self._connections:
             try:
                 await self._connections[user_id].close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to close old WS connection | user=%s err=%s", user_id, str(exc)[:200])
         self._connections[user_id] = ws
 
     def disconnect(self, user_id: str):
@@ -1386,8 +1534,8 @@ async def websocket_endpoint(ws: WebSocket):
                         "readBy": [uid],
                     }}},
                 )
-                except HTTPException:
-                    pass
+                except HTTPException as exc:
+                    logger.warning("Skipping lastMessage update due to invalid room id | user=%s room=%s detail=%s", uid, room_id, exc.detail)
 
                 # Broadcast to other members (exclude sender to avoid duplicate)
                 await manager.broadcast_to_room(

@@ -19,6 +19,7 @@ from backend.core.dependencies import (
     get_langchain_rag_service,
     get_process_pool,
 )
+from backend.core.ai_provider import resolve_provider
 from backend.services.grading_service import find_submission, load_annotations, find_submission_v2
 from backend.schemas import (
     AnalyzeSubmissionSchema,
@@ -328,12 +329,18 @@ async def analyze_submission(
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),
 ):
+    resolved_provider = resolve_provider(payload.provider, feature="grading.analyze")
     _, assignment, submission = await _get_submission_bundle(payload.submissionId)
     text = await _read_submission_text(submission, process_pool)
     rubric = assignment.get("rubric", {})
     assignment_desc = assignment.get("description", "")
 
-    response = await ai_gateway_service.analyze_submission(text=text, rubric=rubric, assignment=assignment_desc)
+    response = await ai_gateway_service.analyze_submission(
+        text=text,
+        rubric=rubric,
+        assignment=assignment_desc,
+        provider=resolved_provider,
+    )
     annotations = await load_annotations(payload.submissionId)
     return {
         "analysis": response,
@@ -350,6 +357,7 @@ async def request_feedback(
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),
     langchain_rag_service=Depends(get_langchain_rag_service),
 ):
+    resolved_provider = resolve_provider(payload.provider, feature="grading.feedback")
     _, assignment, submission = await _get_submission_bundle(payload.submissionId)
     assignment_desc = payload.assignment or assignment.get("description", "")
     rubric = payload.rubric or assignment.get("rubric", {})
@@ -378,7 +386,11 @@ async def request_feedback(
         rubric=rubric,
         rag_context=rag_context,
     )
-    reply = await ai_gateway_service.chat(message=message, context=context.model_dump())
+    reply = await ai_gateway_service.chat_with_provider(
+        message=message,
+        context=context.model_dump(),
+        provider=resolved_provider,
+    )
     return {
         "feedback": reply,
         "rag": {
@@ -405,6 +417,7 @@ async def request_feedback_stream(  # NOSONAR
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),
     langchain_rag_service=Depends(get_langchain_rag_service),
 ):  # noqa: C901
+    resolved_provider = resolve_provider(payload.provider, feature="grading.feedback_stream")
     _, assignment, submission = await _get_submission_bundle(payload.submissionId)
     assignment_desc = payload.assignment or assignment.get("description", "")
     rubric = payload.rubric or assignment.get("rubric", {})
@@ -439,7 +452,11 @@ async def request_feedback_stream(  # NOSONAR
         try:
             coze_timeout = min(Config.COZE_REQUEST_TIMEOUT_SECONDS, STREAM_MAX_WAIT_SECONDS)
             reply = await asyncio.wait_for(
-                ai_gateway_service.chat(message=prompt, context=context.model_dump()),
+                ai_gateway_service.chat_with_provider(
+                    message=prompt,
+                    context=context.model_dump(),
+                    provider=resolved_provider,
+                ),
                 timeout=coze_timeout,
             )
             if _should_fallback_to_deepseek(reply):
@@ -485,6 +502,7 @@ async def request_annotation(
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),
     langchain_rag_service=Depends(get_langchain_rag_service),
 ):
+    resolved_provider = resolve_provider(payload.provider, feature="grading.annotate")
     _, assignment, submission = await _get_submission_bundle(payload.submissionId)
 
     rubric = payload.rubric or assignment.get("rubric", {})
@@ -517,7 +535,11 @@ async def request_annotation(
         rag_context=rag_context,
     )
 
-    reply = await ai_gateway_service.chat(message=prompt, context=context.model_dump())
+    reply = await ai_gateway_service.chat_with_provider(
+        message=prompt,
+        context=context.model_dump(),
+        provider=resolved_provider,
+    )
     return {
         "annotation": reply,
         "rag": {

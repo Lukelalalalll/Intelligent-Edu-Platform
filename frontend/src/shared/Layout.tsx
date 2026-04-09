@@ -54,6 +54,7 @@ const ADMIN_SECTION: NavSection = {
     title: 'Admin',
     links: [
         { to: '/admin/dashboard', label: 'Dashboard', icon: 'fa-shield-alt', tone: 'admin' },
+        { to: '/admin/file-center', label: 'File Center', icon: 'fa-folder-tree', tone: 'admin' },
         { to: '/admin/db-console', label: 'Database', icon: 'fa-database', tone: 'database' },
     ],
 };
