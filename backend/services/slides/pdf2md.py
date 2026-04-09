@@ -1,9 +1,12 @@
 import glob
 import json
+import logging
 import os
 import re
 
 import opendataloader_pdf
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +129,21 @@ def _enrich_md_with_json(md_path, json_path):
         f.write(md_text)
 
 
+def _fallback_pdf_to_md(file_path: str, output_path: str) -> None:
+    """Fallback conversion when OpenDataLoader cannot run (e.g., Java missing)."""
+    import fitz
+
+    doc = fitz.open(file_path)
+    sections: list[str] = [f"# {os.path.splitext(os.path.basename(file_path))[0]}"]
+    for i, page in enumerate(doc, 1):
+        page_text = page.get_text("text") or ""
+        sections.append(f"## Page {i}\n\n{page_text.strip()}")
+    doc.close()
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n\n".join(sections).strip() + "\n")
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -135,13 +153,26 @@ def convert_pdf_to_md(file_path, output_path):
     os.makedirs(output_dir, exist_ok=True)
 
     # Generate both markdown and JSON so we can enrich headers if needed.
-    opendataloader_pdf.convert(
-        input_path=file_path,
-        output_dir=output_dir,
-        format="json,markdown",
-        quiet=True,
-        image_output="off",
-    )
+    # If Java is unavailable, degrade gracefully to a PyMuPDF-based converter.
+    try:
+        opendataloader_pdf.convert(
+            input_path=file_path,
+            output_dir=output_dir,
+            format="json,markdown",
+            quiet=True,
+            image_output="off",
+        )
+    except FileNotFoundError as exc:
+        logger.warning("OpenDataLoader unavailable (likely missing Java), using fallback parser: %s", exc)
+        _fallback_pdf_to_md(file_path, output_path)
+        return
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc).lower()
+        if "java" in msg:
+            logger.warning("OpenDataLoader Java runtime error, using fallback parser: %s", exc)
+            _fallback_pdf_to_md(file_path, output_path)
+            return
+        raise
 
     stem = os.path.splitext(os.path.basename(file_path))[0]
 

@@ -63,7 +63,7 @@ export async function setBaseline(runId: string, courseId: string) {
 
 export async function getBaseline(courseId: string) {
     const { data } = await client.get(`/admin/rag-eval/baseline/${courseId}`);
-    return data as { baseline: any; run: EvalRun | null };
+    return data as { baseline: BaselineSummary | null; run: EvalRun | null };
 }
 
 /* ── Compare ──────────────────────────────────────────────────── */
@@ -132,7 +132,7 @@ export interface EvalResult {
     hit: boolean;
     latency_ms: number;
     top_k: number;
-    retrieved: any[];
+    retrieved: RetrievedChunk[];
 }
 
 export interface CaseTestResult {
@@ -141,7 +141,23 @@ export interface CaseTestResult {
     top_k: number;
     use_hybrid: boolean;
     latency_ms: number;
-    results: any[];
+    results: RetrievedChunk[];
+}
+
+export interface RetrievedChunk {
+    course_id?: string;
+    doc_name?: string;
+    score?: number;
+    text?: string;
+    [key: string]: unknown;
+}
+
+export interface BaselineSummary {
+    run_id?: string;
+    dataset_id?: string;
+    dataset_name?: string;
+    metrics?: EvalMetrics;
+    [key: string]: unknown;
 }
 
 export interface MetricDiff {

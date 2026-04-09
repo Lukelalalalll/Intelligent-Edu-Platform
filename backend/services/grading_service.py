@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 import fitz
 from bson import ObjectId
+from pymongo import UpdateOne
 from backend.core.database import db
 
 logger = logging.getLogger(__name__)
@@ -57,14 +58,43 @@ async def save_courses(data: Dict[str, Any]) -> None:
     normalized = normalize_courses_data(data)
     courses = normalized.get("courses", [])
     courses_coll = db[COURSES_COLLECTION]
-    await courses_coll.delete_many({})
 
     # Keep a JSON snapshot for backup and compatibility with existing scripts.
-    # Write BEFORE insert_many because Motor mutates dicts in-place (adds _id).
+    # Write before DB sync because Motor mutates dicts in-place (adds _id).
     COURSES_PATH.write_text(json.dumps(normalized, indent=2))
 
-    if courses:
-        await courses_coll.insert_many(courses)
+    if not courses:
+        await courses_coll.delete_many({})
+        return
+
+    now = _utcnow()
+    sync_version = f"sync_{ObjectId()}"
+    operations: list[UpdateOne] = []
+    course_ids: list[str] = []
+
+    for course in courses:
+        cid = str(course.get("courseId") or course.get("id") or "").strip()
+        if not cid:
+            continue
+        course_ids.append(cid)
+        payload = dict(course)
+        payload["id"] = cid
+        payload["courseId"] = cid
+        payload["updatedAt"] = now
+        payload["syncVersion"] = sync_version
+        operations.append(
+            UpdateOne(
+                {"courseId": cid},
+                {"$set": payload, "$setOnInsert": {"createdAt": now}},
+                upsert=True,
+            )
+        )
+
+    if operations:
+        await courses_coll.bulk_write(operations, ordered=False)
+
+    # Delete stale records after all target docs are present to avoid transient empty windows.
+    await courses_coll.delete_many({"courseId": {"$nin": course_ids}})
 
 
 def _normalize_student_list(course: Dict[str, Any]) -> list[Dict[str, Any]]:

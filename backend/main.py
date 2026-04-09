@@ -94,7 +94,9 @@ def _get_route_logger(path: str) -> logging.Logger:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup validation ──
-    Config.validate_startup()
+    validation_warnings = Config.validate_startup()
+    for item in validation_warnings:
+        logger.warning("Startup security warning: %s", item)
 
     max_workers = max(1, (os.cpu_count() or 2) - 1)
     http2_enabled = True

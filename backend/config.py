@@ -1,4 +1,6 @@
 import os
+import math
+from collections import Counter
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -24,6 +26,13 @@ class Config:
         'true' if os.getenv('ENV', 'development').lower() in ('production', 'prod') else 'false'
     ).lower() == 'true'
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
+    JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'lax').strip().lower()
+    _jwt_cookie_secure_env = os.getenv('JWT_COOKIE_SECURE')
+    JWT_COOKIE_SECURE = (
+        _jwt_cookie_secure_env.strip().lower() == 'true'
+        if isinstance(_jwt_cookie_secure_env, str) and _jwt_cookie_secure_env.strip()
+        else (os.getenv('ENV', 'development').lower() in ('production', 'prod', 'staging', 'preprod'))
+    )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.getenv('JWT_EXPIRES_HOURS', '24')))
 
     SERP_API_KEY = os.getenv('SERP_API_KEY')
@@ -38,6 +47,13 @@ class Config:
     COZE_REQUEST_TIMEOUT_SECONDS = float(os.getenv('COZE_REQUEST_TIMEOUT_SECONDS', '90'))
     COZE_POLL_INTERVAL_SECONDS = float(os.getenv('COZE_POLL_INTERVAL_SECONDS', '1.2'))
     COZE_POLL_MAX_ATTEMPTS = int(os.getenv('COZE_POLL_MAX_ATTEMPTS', '50'))
+
+    AI_DEFAULT_PROVIDER = os.getenv('AI_DEFAULT_PROVIDER', 'local_ollama').strip().lower()
+    AI_ALLOW_PROVIDER_SWITCH = os.getenv('AI_ALLOW_PROVIDER_SWITCH', 'true').strip().lower() == 'true'
+
+    OLLAMA_BASE_URL = (os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434') or '').strip().rstrip('/')
+    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2-vision:11b').strip()
+    OLLAMA_REQUEST_TIMEOUT_SECONDS = float(os.getenv('OLLAMA_REQUEST_TIMEOUT_SECONDS', '180'))
 
     # RAG / Vector Store
     RAG_VECTORSTORE_DIR = os.getenv(
@@ -85,6 +101,7 @@ class Config:
     UPLOAD_FOLDER_SUB2 = os.path.join(BASE_DIR, 'uploads', 'sub2')
     GENERATED_FOLDER_SUB2 = os.path.join(BASE_DIR, 'generated', 'sub2')
     SCREENSHOTS_FOLDER_SUB2 = os.path.join(BASE_DIR, 'static', 'sub2', 'screenshots')
+    KNOWLEDGE_BASE_UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads', 'knowledge_base')
 
     ALLOWED_EXTENSIONS_SUB2 = {'pdf', 'png', 'jpg', 'jpeg'}
 
@@ -138,6 +155,7 @@ class Config:
 
         os.path.join(BASE_DIR, 'uploads/sub5'),
         os.path.join(BASE_DIR, 'generated/sub5'),
+        KNOWLEDGE_BASE_UPLOAD_DIR,
         RAG_VECTORSTORE_DIR,
     ]
 
@@ -156,20 +174,89 @@ class Config:
         _logger = logging.getLogger("config.validation")
         warnings: list[str] = []
 
-        _insecure_defaults = {'your-secret-key', 'jwt-secret-key-change-this-in-prod', ''}
-        if cls.SECRET_KEY in _insecure_defaults:
-            msg = "CRITICAL: SECRET_KEY is using an insecure default. Set SECRET_KEY env variable!"
-            warnings.append(msg)
-            _logger.critical(msg)
-        if cls.JWT_SECRET_KEY in _insecure_defaults:
-            msg = "CRITICAL: JWT_SECRET_KEY is using an insecure default. Set JWT_SECRET_KEY env variable!"
-            warnings.append(msg)
-            _logger.critical(msg)
+        def _is_sensitive_env(env_name: str) -> bool:
+            return env_name in ('production', 'prod', 'staging', 'preprod')
 
-        # In production, refuse to start with insecure keys
-        if os.getenv('ENV', 'development').lower() in ('production', 'prod'):
-            if cls.SECRET_KEY in _insecure_defaults or cls.JWT_SECRET_KEY in _insecure_defaults:
-                raise SystemExit("Refusing to start: SECRET_KEY and JWT_SECRET_KEY must be set in production.")
+        def _shannon_entropy_per_char(value: str) -> float:
+            if not value:
+                return 0.0
+            counts = Counter(value)
+            length = len(value)
+            entropy = 0.0
+            for count in counts.values():
+                p = count / length
+                entropy -= p * math.log2(p)
+            return entropy
+
+        def _key_strength_issues(key_value: str, key_name: str) -> list[str]:
+            value = str(key_value or "")
+            lowered = value.lower()
+            issues: list[str] = []
+
+            weak_markers = {
+                'your-secret-key',
+                'jwt-secret-key-change-this-in-prod',
+                'change-this',
+                'secret',
+                'default',
+                'password',
+            }
+            if not value.strip():
+                issues.append(f"{key_name} is empty")
+                return issues
+
+            if len(value) < 32:
+                issues.append(f"{key_name} length must be >= 32")
+
+            classes = 0
+            classes += 1 if any(c.islower() for c in value) else 0
+            classes += 1 if any(c.isupper() for c in value) else 0
+            classes += 1 if any(c.isdigit() for c in value) else 0
+            classes += 1 if any(not c.isalnum() for c in value) else 0
+            if classes < 3:
+                issues.append(f"{key_name} must include at least 3 character classes")
+
+            entropy = _shannon_entropy_per_char(value)
+            if entropy < 3.0:
+                issues.append(f"{key_name} entropy too low ({entropy:.2f} bits/char)")
+
+            if lowered in weak_markers or any(marker in lowered for marker in weak_markers):
+                issues.append(f"{key_name} appears to use a weak/default pattern")
+
+            return issues
+
+        env_name = os.getenv('ENV', 'development').lower()
+        sensitive_env = _is_sensitive_env(env_name)
+
+        secret_issues = _key_strength_issues(cls.SECRET_KEY, 'SECRET_KEY')
+        jwt_issues = _key_strength_issues(cls.JWT_SECRET_KEY, 'JWT_SECRET_KEY')
+
+        for msg in [*secret_issues, *jwt_issues]:
+            if sensitive_env:
+                _logger.critical("CRITICAL CONFIG: %s", msg)
+            else:
+                _logger.warning("DEV SECURITY WARNING: %s", msg)
+                warnings.append(msg)
+
+        if sensitive_env and (secret_issues or jwt_issues):
+            raise SystemExit(
+                "Refusing to start: SECRET_KEY/JWT_SECRET_KEY failed security checks. "
+                "Use strong random values with >=32 chars and high entropy."
+            )
+
+        valid_samesite = {'lax', 'strict', 'none'}
+        if cls.JWT_COOKIE_SAMESITE not in valid_samesite:
+            msg = f"JWT_COOKIE_SAMESITE must be one of {sorted(valid_samesite)}"
+            if sensitive_env:
+                _logger.critical(msg)
+                raise SystemExit(f"Refusing to start: {msg}")
+            _logger.warning("DEV SECURITY WARNING: %s", msg)
+            warnings.append(msg)
+
+        if sensitive_env and not cls.JWT_COOKIE_SECURE:
+            msg = "JWT_COOKIE_SECURE must be true in production/staging environments"
+            _logger.critical(msg)
+            raise SystemExit(f"Refusing to start: {msg}")
 
         optional_keys = {
             'DEEPSEEK_API_KEY': cls.DEEPSEEK_API_KEY,
