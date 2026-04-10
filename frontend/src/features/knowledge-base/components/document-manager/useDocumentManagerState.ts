@@ -1,0 +1,178 @@
+import { useEffect, useState } from 'react';
+import { knowledgeBaseApi } from '../../../../api/knowledgeBaseApi';
+import type { ChapterDraft, RetrievalResult } from './types';
+
+function toErrorMessage(err: unknown, fallback: string): string {
+    const maybeErr = err as { response?: { data?: { detail?: unknown } }; message?: string };
+    const detail = maybeErr?.response?.data?.detail;
+    if (typeof detail === 'string') return detail;
+    if (typeof maybeErr?.message === 'string' && maybeErr.message.trim()) return maybeErr.message;
+    return fallback;
+}
+
+export function useDocumentManagerState({
+    courseId,
+    selectedChapterId,
+    selectedChapterConfig,
+    chapters,
+    onCreateChapter,
+    onUpdateChapter,
+    onDeleteChapter,
+}: {
+    courseId: string;
+    selectedChapterId: string;
+    selectedChapterConfig: any;
+    chapters: any[];
+    onCreateChapter: (chapterName: string, description?: string) => Promise<void>;
+    onUpdateChapter: (chapterId: string, payload: any) => Promise<void>;
+    onDeleteChapter: (chapterId: string) => Promise<void>;
+}) {
+    const [testQuery, setTestQuery] = useState('');
+    const [testTopK, setTestTopK] = useState(5);
+    const [testResults, setTestResults] = useState<RetrievalResult[] | null>(null);
+    const [testLatency, setTestLatency] = useState<number | null>(null);
+    const [testLoading, setTestLoading] = useState(false);
+
+    const [newChapterName, setNewChapterName] = useState('');
+    const [newChapterDescription, setNewChapterDescription] = useState('');
+    const [isAddChapterModalOpen, setIsAddChapterModalOpen] = useState(false);
+    const [chapterBusy, setChapterBusy] = useState(false);
+    const [chapterActionError, setChapterActionError] = useState('');
+    const [chapterActionSuccess, setChapterActionSuccess] = useState('');
+
+    const [reportCommentMap, setReportCommentMap] = useState<Record<string, string>>({});
+    const [chapterDraftMap, setChapterDraftMap] = useState<Record<string, ChapterDraft>>({});
+    const [configDraft, setConfigDraft] = useState<{ question_count: number; pass_score: number; time_limit_minutes: number }>({
+        question_count: 5,
+        pass_score: 70,
+        time_limit_minutes: 20,
+    });
+
+    useEffect(() => {
+        const next: Record<string, ChapterDraft> = {};
+        for (const c of chapters) {
+            next[c.chapter_id] = {
+                chapter_name: c.chapter_name || '',
+                chapter_order: Number(c.chapter_order || 1),
+                description: c.description || '',
+                diagnostic_enabled: Boolean(c.diagnostic_enabled),
+            };
+        }
+        setChapterDraftMap(next);
+    }, [chapters]);
+
+    useEffect(() => {
+        if (!selectedChapterConfig) {
+            setConfigDraft({ question_count: 5, pass_score: 70, time_limit_minutes: 20 });
+            return;
+        }
+        setConfigDraft({
+            question_count: Number(selectedChapterConfig.question_count || 5),
+            pass_score: Number(selectedChapterConfig.pass_score || 70),
+            time_limit_minutes: Number(selectedChapterConfig.time_limit_minutes || 20),
+        });
+    }, [selectedChapterConfig]);
+
+    const handleTestRetrieval = async () => {
+        if (!testQuery.trim() || testLoading) return;
+        setTestLoading(true);
+        setTestResults(null);
+        try {
+            const res = await knowledgeBaseApi.testRetrieval(courseId, testQuery.trim(), selectedChapterId, testTopK);
+            setTestResults(res.results);
+            setTestLatency(res.latency_ms);
+        } catch {
+            setTestResults([]);
+        } finally {
+            setTestLoading(false);
+        }
+    };
+
+    const runChapterAction = async (action: () => Promise<void>, successMessage: string, failureMessage: string) => {
+        setChapterBusy(true);
+        setChapterActionError('');
+        setChapterActionSuccess('');
+        try {
+            await action();
+            setChapterActionSuccess(successMessage);
+        } catch (err) {
+            setChapterActionError(toErrorMessage(err, failureMessage));
+        } finally {
+            setChapterBusy(false);
+        }
+    };
+
+    const handleCreateChapter = async () => {
+        const chapterName = newChapterName.trim();
+        if (!chapterName) {
+            setChapterActionError('Please enter a chapter name before creating.');
+            setChapterActionSuccess('');
+            return;
+        }
+        await runChapterAction(
+            async () => {
+                await onCreateChapter(chapterName, newChapterDescription.trim());
+                setNewChapterName('');
+                setNewChapterDescription('');
+                setIsAddChapterModalOpen(false);
+            },
+            'Chapter created successfully.',
+            'Failed to create chapter',
+        );
+    };
+
+    const handleUpdateChapter = async (chapterId: string, draft: ChapterDraft) => {
+        await runChapterAction(
+            async () => onUpdateChapter(chapterId, draft),
+            'Chapter updated successfully.',
+            'Failed to update chapter',
+        );
+    };
+
+    const handleDeleteChapter = async (chapterId: string) => {
+        if (!window.confirm('Are you sure you want to delete this chapter?')) return;
+        await runChapterAction(
+            async () => onDeleteChapter(chapterId),
+            'Chapter deleted successfully.',
+            'Failed to delete chapter',
+        );
+    };
+
+    const openAddChapterModal = () => {
+        setNewChapterName('');
+        setNewChapterDescription('');
+        setChapterActionError('');
+        setChapterActionSuccess('');
+        setIsAddChapterModalOpen(true);
+    };
+
+    return {
+        testQuery,
+        setTestQuery,
+        testTopK,
+        setTestTopK,
+        testResults,
+        testLatency,
+        testLoading,
+        handleTestRetrieval,
+        newChapterName,
+        setNewChapterName,
+        newChapterDescription,
+        setNewChapterDescription,
+        isAddChapterModalOpen,
+        setIsAddChapterModalOpen,
+        chapterBusy,
+        chapterActionError,
+        chapterActionSuccess,
+        reportCommentMap,
+        setReportCommentMap,
+        chapterDraftMap,
+        setChapterDraftMap,
+        configDraft,
+        setConfigDraft,
+        handleCreateChapter,
+        handleUpdateChapter,
+        handleDeleteChapter,
+        openAddChapterModal,
+    };
+}
