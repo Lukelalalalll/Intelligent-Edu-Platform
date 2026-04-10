@@ -1,10 +1,10 @@
 import React from 'react';
 import styles from '../styles/sub2.module.css';
-import GenerationSourceSelector from './Step3Generate/components/GenerationSourceSelector';
-import GenerationConfigForm from './Step3Generate/components/GenerationConfigForm';
-import GeneratedQuestionsPanel from './Step3Generate/components/GeneratedQuestionsPanel';
-import QuestionOpsPanel from './Step3Generate/components/QuestionOpsPanel';
-import type { Step3GenerateProps } from './Step3Generate/types';
+import GenerationSourceSelector from './components/GenerationSourceSelector';
+import GenerationConfigForm from './components/GenerationConfigForm';
+import GeneratedQuestionsPanel from './components/GeneratedQuestionsPanel';
+import QuestionOpsPanel from './components/QuestionOpsPanel';
+import type { Step3GenerateProps } from './types';
 
 export default function Step3Generate({ states, handlers }: Step3GenerateProps) {
     const {

@@ -1,8 +1,8 @@
 // frontend/src/pages/sub2/QuestionGenerator.jsx
 import React, { useState } from 'react';
 import Step1Upload from './components/Step1Upload';
-import Step2Extract from './components/Step2Extract';
-import Step3Generate from './components/Step3Generate';
+import Step2Extract from './components/Step2Extract/Step2Extract';
+import Step3Generate from './components/Step3Generate/Step3Generate';
 import HistoryPanel from './components/HistoryPanel';
 import Button from '../../components/ui/Button/Button';
 import Card from '../../components/ui/Card/Card';
