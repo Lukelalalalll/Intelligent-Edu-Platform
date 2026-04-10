@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from '../styles/quickProcess.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import SlidesLoadingState from '../components/SlidesLoadingState';
 
 export default function QuickProcess({
     loading, contentLoading, sections, formState, setFormState,
@@ -144,17 +145,7 @@ export default function QuickProcess({
                     <h2 className={styles.cardTitle}><i className="fas fa-list-check"></i> Generated Results</h2>
 
                     {loading ? (
-                        /* 🌟 移植自 Specify 的大脑动画 */
-                        <div className={styles.elegantLoadingContainer}>
-                            <div className={styles.spinnerCore}>
-                                <div className={`${styles.ring} ${styles.ring1}`}></div>
-                                <div className={`${styles.ring} ${styles.ring2}`}></div>
-                                <div className={`${styles.ring} ${styles.ring3}`}></div>
-                                <i className={`fas fa-brain ${styles.aiIcon}`}></i>
-                            </div>
-                            <h3 className={styles.loadingText}>AI is crafting your slides...</h3>
-                            <p className={styles.loadingSubtext}>Structuring logic, extracting core values, and formatting content.</p>
-                        </div>
+                        <SlidesLoadingState />
                     ) : (
                         <div className="fade-in">
                             <div className={styles.slidesGridLayout}>

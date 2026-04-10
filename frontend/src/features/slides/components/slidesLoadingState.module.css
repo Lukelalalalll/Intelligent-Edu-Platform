@@ -1,0 +1,90 @@
+.shell {
+    min-height: 260px;
+    border-radius: 16px;
+    border: 1px solid #dbe4ef;
+    background: linear-gradient(160deg, #f8fbff, #f4fff8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 22px;
+}
+
+.compact {
+    min-height: 180px;
+}
+
+.spinnerCore {
+    position: relative;
+    width: 74px;
+    height: 74px;
+    margin-bottom: 14px;
+}
+
+.ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+}
+
+.ring1 {
+    border-top-color: #0ea5e9;
+    animation: spin 1.8s linear infinite;
+}
+
+.ring2 {
+    inset: 8px;
+    border-top-color: #22c55e;
+    animation: spinReverse 1.4s linear infinite;
+}
+
+.ring3 {
+    inset: 16px;
+    border-top-color: #1d4ed8;
+    animation: spin 1s linear infinite;
+}
+
+.aiIcon {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #0f172a;
+    font-size: 1.2rem;
+}
+
+.title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.subtitle {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+    max-width: 520px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spinReverse {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}

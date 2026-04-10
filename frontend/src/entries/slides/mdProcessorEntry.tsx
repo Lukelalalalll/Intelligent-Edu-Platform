@@ -120,7 +120,7 @@ export default function MdProcessorEntry() {
             setUploadProgress(100);
             setUploadStatus('success');
             setCurrentFilename(data.filename);
-            localStorage.setItem('currentFilename', JSON.stringify(data.filename));
+            localStorage.setItem('currentFilename', data.filename);
             if (data.tables) localStorage.setItem('currentTables', JSON.stringify(data.tables));
 
             setHeaders(data.headers || []);

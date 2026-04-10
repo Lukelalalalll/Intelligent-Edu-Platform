@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from '../styles/specify.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import SlidesLoadingState from '../components/SlidesLoadingState';
 
 /** 将单元格中的 <br> / <br/> / <br /> 转为真实换行渲染 */
 function renderCellText(text) {
@@ -26,17 +27,7 @@ export default function Specify({
             />
 
             {loading ? (
-                /* Loading Overlay takes full place */
-                <div className={styles.elegantLoadingContainer}>
-                    <div className={styles.spinnerCore}>
-                        <div className={`${styles.ring} ${styles.ring1}`}></div>
-                        <div className={`${styles.ring} ${styles.ring2}`}></div>
-                        <div className={`${styles.ring} ${styles.ring3}`}></div>
-                        <i className={`fas fa-brain ${styles.aiIcon}`}></i>
-                    </div>
-                    <h3 className={styles.loadingText}>AI is crafting your slides...</h3>
-                    <p className={styles.loadingSubtext}>Structuring logic, extracting core values, and formatting content.</p>
-                </div>
+                <SlidesLoadingState />
             ) : results && results.length > 0 ? (
                 <div className={`card ${styles.resultsWrapper}`}>
                     <div className="card-header">

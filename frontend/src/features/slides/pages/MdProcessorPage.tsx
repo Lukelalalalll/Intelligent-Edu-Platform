@@ -1,7 +1,6 @@
 // MdProcessor.jsx
 import React from 'react';
 import '../../../styles/base.css';
-import { useNavigate } from 'react-router-dom';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 import styles from '../styles/md_processor.module.css';
@@ -27,7 +26,6 @@ export default function MdProcessor({
     provider, setProvider,
     handleCozeGenerate, handleProcessText,
 }) {
-    const navigate = useNavigate();
     const showUploadCard = !currentFilename;
     const wordCount = textContent ? textContent.trim().split(/\s+/).filter(Boolean).length : 0;
 
@@ -165,7 +163,7 @@ export default function MdProcessor({
                                     <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
                                 </button>
                                 <button id="quickProceedBtn" className="btn btn-secondary"
-                                    onClick={() => navigate('/slides/quick-process')}>
+                                    onClick={() => combineSections('/slides/quick-process')}>
                                     <i className="fas fa-bolt"></i> Quick Proceed
                                 </button>
                             </div>
@@ -177,7 +175,7 @@ export default function MdProcessor({
                                     <i className="fas fa-highlighter" aria-hidden="true"></i> Proceed with Full Document
                                 </button>
                                 <button className="btn btn-secondary"
-                                    onClick={() => navigate('/slides/quick-process')}>
+                                    onClick={() => proceedWithFullDoc('/slides/quick-process')}>
                                     <i className="fas fa-bolt"></i> Quick Proceed
                                 </button>
                             </div>
