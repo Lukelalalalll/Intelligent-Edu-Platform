@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import ScrollToTop from './shared/ScrollToTop';
 import Layout from './shared/Layout';
 import { CourseProvider } from './hooks/useCourseContext';
@@ -112,6 +113,7 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors closeButton />
       <ErrorBoundary>
       <CourseProvider>
       <ScrollToTop />
