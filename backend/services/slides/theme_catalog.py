@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Dict, List
 
 
@@ -58,6 +59,10 @@ PRESENTON_LAYOUT_COUNTS = {
     "productoverview": 10,
 }
 
+ENABLE_PRESENTON_THEME_ALIASES = (
+    os.getenv("SUB1_ENABLE_PRESENTON_THEME_ALIASES", "false").strip().lower() == "true"
+)
+
 
 def build_theme_catalog(template_names: List[str]) -> List[Dict[str, str]]:
     """Build a richer theme catalog from available base templates.
@@ -82,22 +87,23 @@ def build_theme_catalog(template_names: List[str]) -> List[Dict[str, str]]:
                 }
             )
 
-    # Add Presenton-inspired groups as additional theme options.
-    for group_name, mapped_base in PRESENTON_GROUP_MAP.items():
-        if mapped_base not in available:
-            continue
-        display_name = f"Presenton {group_name.replace('-', ' ').title()}"
-        themes.append(
-            {
-                "name": display_name,
-                "base_theme": mapped_base,
-                "description": f"Presenton template family: {group_name}",
-                "preview_theme": mapped_base,
-                "source": "presenton",
-                "source_group": group_name,
-                "layout_count": PRESENTON_LAYOUT_COUNTS.get(group_name),
-            }
-        )
+    # Presenton aliases are opt-in because they are mapped to local PPTX themes.
+    if ENABLE_PRESENTON_THEME_ALIASES:
+        for group_name, mapped_base in PRESENTON_GROUP_MAP.items():
+            if mapped_base not in available:
+                continue
+            display_name = f"Presenton {group_name.replace('-', ' ').title()}"
+            themes.append(
+                {
+                    "name": display_name,
+                    "base_theme": mapped_base,
+                    "description": f"Presenton-mapped template family: {group_name}",
+                    "preview_theme": mapped_base,
+                    "source": "presenton_alias",
+                    "source_group": group_name,
+                    "layout_count": PRESENTON_LAYOUT_COUNTS.get(group_name),
+                }
+            )
 
     # De-duplicate by display name while preserving order.
     deduped: List[Dict[str, str]] = []
@@ -131,6 +137,23 @@ def resolve_base_theme(requested_theme: str, template_names: List[str]) -> str:
     available = set(template_names)
     if requested_theme in available:
         return requested_theme
+
+    normalized = (requested_theme or "").strip()
+    if not normalized:
+        raise ValueError(f"Theme: {requested_theme} does not exist")
+
+    # Support direct Presenton group keys (e.g., "code", "neo-modern").
+    group_key = normalized.lower().replace(" ", "-")
+    mapped = PRESENTON_GROUP_MAP.get(group_key)
+    if mapped in available:
+        return mapped
+
+    # Support catalog display names (e.g., "Presenton Code").
+    if normalized.lower().startswith("presenton "):
+        suffix = normalized[len("Presenton ") :].strip().lower().replace(" ", "-")
+        mapped = PRESENTON_GROUP_MAP.get(suffix)
+        if mapped in available:
+            return mapped
 
     for base_theme, variants in THEME_VARIANTS.items():
         if base_theme not in available:

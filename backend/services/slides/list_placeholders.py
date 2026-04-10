@@ -30,6 +30,8 @@ class PPTTemplateManager:
 
         prs = Presentation(template_path)
         placeholders = []
+        slide_width = float(prs.slide_width or 1)
+        slide_height = float(prs.slide_height or 1)
         
         for slide_layout in prs.slide_masters[0].slide_layouts:
             layout_info = {
@@ -42,7 +44,12 @@ class PPTTemplateManager:
                     placeholder_info = {
                         'idx': shape.placeholder_format.idx,
                         'name': shape.name,
-                        'type': shape.placeholder_format.type
+                        'type': shape.placeholder_format.type,
+                        # Normalized geometry lets the frontend render real layout previews.
+                        'left': round(float(shape.left) / slide_width, 6),
+                        'top': round(float(shape.top) / slide_height, 6),
+                        'width': round(float(shape.width) / slide_width, 6),
+                        'height': round(float(shape.height) / slide_height, 6),
                     }
                     layout_info['placeholders'].append(placeholder_info)
             

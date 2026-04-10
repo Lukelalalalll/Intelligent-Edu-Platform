@@ -435,6 +435,32 @@ class PPTCreator:
         chart_type = slide_data.get('chart_type', '')
         chart_reasoning = slide_data.get('chart_reasoning', [])
         original_text = slide_data.get('original_text', '')
+        content_written = False
+
+        def fill_content_text(target_shape):
+            nonlocal content_written
+            text_frame = target_shape.text_frame
+            text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            text_frame.word_wrap = True
+            text_frame.clear()
+
+            if content_list:
+                for i, content in enumerate(content_list):
+                    p = text_frame.paragraphs[0] if i == 0 else text_frame.add_paragraph()
+                    p.text = content
+                    p.level = 0
+                    p.alignment = PP_ALIGN.LEFT
+            elif title:
+                text_frame.paragraphs[0].text = title
+            content_written = True
+
+        def is_fallback_text_placeholder(target_shape):
+            if not getattr(target_shape, 'is_placeholder', False):
+                return False
+            if not getattr(target_shape, 'has_text_frame', False):
+                return False
+            ptype = target_shape.placeholder_format.type
+            return ptype not in {1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 18}
         
         for shape in slide.shapes:
             if not shape.is_placeholder:
@@ -469,27 +495,7 @@ class PPTCreator:
                         paragraph.font.size = title_font_size
 
             elif placeholder_type == 2:
-                text_frame = shape.text_frame
-                text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-                text_frame.word_wrap = True
-
-                if content_list:
-                    default_font_name = None
-                    if text_frame.paragraphs and text_frame.paragraphs[0].runs:
-                        default_font_name = text_frame.paragraphs[0].runs[0].font.name
-
-                    text_frame.clear()
-
-                    for i, content in enumerate(content_list):
-                        p = text_frame.paragraphs[0] if i == 0 else text_frame.add_paragraph()
-                        p.text = content
-                        p.level = 0
-                        p.alignment = PP_ALIGN.LEFT
-
-                        # 恢复预设字体，但不锁定字号（让 AutoFit 发挥作用）
-                        if default_font_name and p.runs:
-                            for run in p.runs:
-                                run.font.name = default_font_name
+                fill_content_text(shape)
 
                 # text_frame.clear()
                 #
@@ -546,7 +552,7 @@ class PPTCreator:
                     'placeholder_index': len(image_data_list)
                 }
                 image_data_list.append(image_data)
-            
+
             # 收集对象占位符 (type=7)
             elif placeholder_type == 7:
                 aspect_ratio = shape.width / shape.height
@@ -556,7 +562,7 @@ class PPTCreator:
                     ratio = 0
                 else:
                     continue  # 不支持的比例
-                
+
                 placeholder_info = {
                     'shape': shape,
                     'left': shape.left,
@@ -569,7 +575,7 @@ class PPTCreator:
                     'image_type': 'diagram'
                 }
                 placeholder_infos.append(placeholder_info)
-                
+
                 # 准备图片数据
                 image_data = {
                     'title': title,
@@ -582,6 +588,21 @@ class PPTCreator:
                     'placeholder_index': len(image_data_list)
                 }
                 image_data_list.append(image_data)
+
+            elif not content_written and is_fallback_text_placeholder(shape):
+                fill_content_text(shape)
+
+        # If layout has no body placeholder, still write content to first text-capable shape.
+        if content_list and not content_written:
+            for shape in slide.shapes:
+                if not getattr(shape, 'has_text_frame', False):
+                    continue
+                if getattr(shape, 'is_placeholder', False):
+                    ptype = shape.placeholder_format.type
+                    if ptype in {1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 18}:
+                        continue
+                fill_content_text(shape)
+                break
         
         # 处理图片占位符
         if placeholder_infos:

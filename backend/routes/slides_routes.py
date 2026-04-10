@@ -45,13 +45,14 @@ class SlidesDeliveryJobSchema(BaseModel):
 
 def _get_parsed_data_with_cache(filepath: str, use_llm: bool):
     cache_key = (filepath, bool(use_llm))
-    file_mtime = os.path.getmtime(filepath)
+    stat = os.stat(filepath)
+    file_stamp = (int(stat.st_mtime_ns), int(stat.st_size))
     cached = _SUB1_PARSE_CACHE.get(cache_key)
-    if cached and cached.get("mtime") == file_mtime:
+    if cached and cached.get("stamp") == file_stamp:
         return cached["data"]
 
     parsed = Sub1Service.parse_md(filepath, use_llm)
-    _SUB1_PARSE_CACHE[cache_key] = {"mtime": file_mtime, "data": parsed}
+    _SUB1_PARSE_CACHE[cache_key] = {"stamp": file_stamp, "data": parsed}
     return parsed
 
 
@@ -130,6 +131,65 @@ async def create_slides_delivery_job(
     slides = payload.ppt_schema.get("slides", []) if isinstance(payload.ppt_schema, dict) else []
     if not slides:
         raise HTTPException(status_code=400, detail="ppt_schema.slides is required")
+
+    now = datetime.now(timezone.utc)
+    job_id = uuid.uuid4().hex[:14]
+
+    agenda = []
+    speaker_notes = []
+    in_class_questions = []
+    homework = []
+    for idx, slide in enumerate(slides, start=1):
+        title = str(slide.get("title") or f"Slide {idx}")
+        agenda.append(f"{idx}. {title}")
+        speaker_notes.append({
+            "slide": idx,
+            "title": title,
+            "note": f"Explain the core idea of '{title}' in 60-90 seconds, then connect it to the previous point.",
+        })
+        in_class_questions.append({
+            "slide": idx,
+            "question": f"What is the most important takeaway from '{title}'?",
+            "expected_depth": "short_reasoning",
+        })
+        homework.append({
+            "task_id": f"HW-{idx}",
+            "prompt": f"Write a concise reflection on '{title}' and include one practical example.",
+            "estimated_minutes": 12,
+        })
+
+    artifacts = {
+        "agenda": agenda,
+        "speaker_notes": speaker_notes,
+        "in_class_questions": in_class_questions,
+        "homework_suggestions": homework,
+    }
+
+    doc = {
+        "job_id": job_id,
+        "user_id": str(user.get("id", "")),
+        "title": payload.title,
+        "status": "completed",
+        "locale": payload.locale,
+        "script_style": payload.script_style,
+        "slides_count": len(slides),
+        "artifacts": artifacts,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.slides_delivery_jobs.insert_one(doc)
+    return {
+        "success": True,
+        "job_id": job_id,
+        "status": "completed",
+        "slides_count": len(slides),
+        "artifacts_preview": {
+            "agenda_count": len(agenda),
+            "speaker_notes_count": len(speaker_notes),
+            "in_class_questions_count": len(in_class_questions),
+            "homework_count": len(homework),
+        },
+    }
 
 async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resolved_provider: str):
     try:
@@ -354,68 +414,6 @@ async def slides_provider_health(provider: Optional[str] = None, user: dict = De
         "success": healthy,
         "provider": resolved_provider,
         "message": message,
-    }
-
-
-    now = datetime.now(timezone.utc)
-    job_id = uuid.uuid4().hex[:14]
-
-    agenda = []
-    speaker_notes = []
-    in_class_questions = []
-    homework = []
-    for idx, slide in enumerate(slides, start=1):
-        title = str(slide.get("title") or f"Slide {idx}")
-        agenda.append(f"{idx}. {title}")
-        speaker_notes.append({
-            "slide": idx,
-            "title": title,
-            "note": f"Explain the core idea of '{title}' in 60-90 seconds, then connect it to the previous point.",
-        })
-        in_class_questions.append({
-            "slide": idx,
-            "question": f"What is the most important takeaway from '{title}'?",
-            "expected_depth": "short_reasoning",
-        })
-        homework.append({
-            "task_id": f"HW-{idx}",
-            "prompt": f"Write a concise reflection on '{title}' and include one practical example.",
-            "estimated_minutes": 12,
-        })
-
-    artifacts = {
-        "agenda": agenda,
-        "speaker_notes": speaker_notes,
-        "in_class_questions": in_class_questions,
-        "homework_suggestions": homework,
-    }
-
-    doc = {
-
-        "job_id": job_id,
-        "user_id": str(user.get("id", "")),
-        "title": payload.title,
-        "status": "completed",
-        "locale": payload.locale,
-        "script_style": payload.script_style,
-        "slides_count": len(slides),
-        "artifacts": artifacts,
-        "created_at": now,
-        "updated_at": now,
-    }
-    await db.slides_delivery_jobs.insert_one(doc)
-    return {
-        "success": True,
-        "job_id": job_id,
-        "status": "completed",
-        "slides_count": len(slides),
-        "artifacts_preview": {
-            "agenda_count": len(agenda),
-            "speaker_notes_count": len(speaker_notes),
-            "in_class_questions_count": len(in_class_questions),
-            "homework_count": len(homework),
-
-        },
     }
 
 
