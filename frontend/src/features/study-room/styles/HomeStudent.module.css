@@ -14,8 +14,8 @@
 
 .welcomeBanner {
     text-align: center;
-    margin-bottom: 4rem;
-    padding: 4.2rem 2rem;
+    margin-bottom: 3.5rem;
+    padding: 4rem 2rem;
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite, bannerEnter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -44,15 +44,15 @@
     }
     40% {
         max-height: 300px;
-        margin-bottom: 4rem;
-        padding-top: 4.2rem;
-        padding-bottom: 4.2rem;
+        margin-bottom: 3.5rem;
+        padding-top: 4rem;
+        padding-bottom: 4rem;
     }
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
         max-height: 300px;
-        margin-bottom: 4rem;
+        margin-bottom: 3.5rem;
     }
 }
 
@@ -61,7 +61,7 @@
         opacity: 1;
         transform: translateY(0) scale(1);
         max-height: 300px;
-        margin-bottom: 4rem;
+        margin-bottom: 3.5rem;
     }
     50% {
         opacity: 0;
@@ -92,7 +92,7 @@
 }
 
 .welcomeBanner h1 {
-    font-size: 2.8rem;
+    font-size: 2.5rem;
     font-weight: 800;
     margin-bottom: 1rem;
     letter-spacing: -1px;
@@ -202,6 +202,104 @@
     padding: 0 12px;
     animation: tabPopIn 0.4s ease-out forwards 0.15s;
     opacity: 0;
+}
+
+.diagnosticSection {
+    max-width: 980px;
+    margin: 24px auto 40px;
+    animation: tabPopIn 0.4s ease-out forwards 0.15s;
+    opacity: 0;
+}
+
+.diagnosticHeader h2 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.diagnosticHeader p {
+    margin: 8px 0 18px;
+    color: var(--text-sub);
+}
+
+.diagnosticCard {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 123, 85, 0.1);
+    padding: 20px;
+}
+
+.diagnosticControls {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+}
+
+.diagnosticControls select,
+.diagnosticControls button,
+.questionItem textarea,
+.feedbackBox textarea {
+    border: 1px solid #dce5e2;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.diagnosticControls button,
+.submitBtn,
+.feedbackBox button {
+    border: none;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.questionList {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.questionItem {
+    border: 1px solid #e8eeeb;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.questionItem h4 {
+    margin: 0 0 8px;
+    color: var(--text-main);
+}
+
+.submitBtn {
+    align-self: flex-start;
+    padding: 10px 16px;
+}
+
+.reportCard {
+    margin-top: 20px;
+    border: 1px solid #d7ece4;
+    background: #f7fffb;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.reportCard h3 {
+    margin-top: 0;
+}
+
+.feedbackBox {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed #cae3d9;
+}
+
+@media (max-width: 768px) {
+    .diagnosticControls {
+        grid-template-columns: 1fr;
+    }
 }
 
 @keyframes slideUpFade {

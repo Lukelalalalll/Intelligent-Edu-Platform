@@ -95,6 +95,9 @@ export function useDiagramImageExtract() {
         handleDragLeave: () => setImgIsDragging(false),
         handleDrop: (e: any) => { e.preventDefault(); setImgIsDragging(false); imgProcessUpload(e.dataTransfer.files[0]); },
         handleFileInput: (e: any) => { imgProcessUpload(e.target.files[0]); e.target.value = ''; },
+        handleTransferFile: async (file: File) => {
+            await imgProcessUpload(file);
+        },
         setCurrentChapter: setImgCurrentChapter, setActiveTab: setImgActiveTab,
         setAiPrompt: setImgAiPrompt, setAiNum: setImgAiNum,
         generateAiImages: imgGenerateAi,

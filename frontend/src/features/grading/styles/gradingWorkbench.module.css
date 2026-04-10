@@ -454,7 +454,7 @@ main {
 }
 
 .msgUser .msgBubble {
-    background: linear-gradient(120deg, #007B55, #004D40);
+    background: linear-gradient(120deg, var(--primary-color), #004D40);
     color: #fff;
     border-top-right-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.2);
@@ -465,7 +465,7 @@ main {
 }
 
 .msgAssistant .msgAvatar {
-    background: linear-gradient(135deg, #007B55, #004D40);
+    background: linear-gradient(135deg, var(--primary-color), #004D40);
     color: #fff;
 }
 
@@ -492,7 +492,7 @@ main {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #007B55;
+    background: var(--primary-color);
     animation: cozeTyping 1.2s infinite ease-in-out;
 }
 
@@ -558,7 +558,7 @@ main {
     height: 42px;
     border: none;
     border-radius: 50%;
-    background: #007B55;
+    background: var(--primary-color);
     color: #fff;
     display: inline-flex;
     align-items: center;

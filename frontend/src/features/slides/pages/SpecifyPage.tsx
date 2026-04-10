@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../styles/specify.module.css';
+import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 /** 将单元格中的 <br> / <br/> / <br /> 转为真实换行渲染 */
 function renderCellText(text) {
@@ -19,10 +20,10 @@ export default function Specify({
 }) {
     return (
         <div className="container">
-            <div className="page-header">
-                <h1>Configure Your Scripts</h1>
-                <p className="subtitle">Customize bullet points, and generate talking scripts</p>
-            </div>
+            <WelcomeBanner
+                title="Configure Your Scripts"
+                subtitle="Customize bullet points, and generate talking scripts"
+            />
 
             {loading ? (
                 /* Loading Overlay takes full place */

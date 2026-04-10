@@ -1,0 +1,454 @@
+/* 1. 通用版心容器 */
+.container,
+.image-selector-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    width: 100%;
+    flex: 1;
+}
+
+/* 2. 通用顶部动态渐变横幅 (Banner) */
+.page-header,
+.header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    padding: 3.5rem 2rem;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
+    color: white;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes tabPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.page-header::before,
+.header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: floatOrb 10s ease-in-out infinite;
+}
+
+@keyframes floatOrb {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, 40px); }
+}
+
+.page-header h1,
+.header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUpFade 0.8s forwards 0.2s;
+    justify-content: center;
+    gap: 12px;
+}
+
+.page-header .subtitle,
+.header .subtitle,
+.subtitle {
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.95);
+    max-width: 640px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUpFade 0.8s forwards 0.4s;
+    font-weight: 400;
+}
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 3. 通用玻璃态卡片 (涵盖各页面的 .card, .step-container, 以及各 section) */
+.card,
+.step-container,
+.upload-section,
+.control-section,
+.gallery-section,
+.selected-section,
+.export-section {
+    background-color: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: var(--shadow-sm);
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+    opacity: 0;
+    animation: tabPopIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
+}
+
+.card::before,
+.step-container::before,
+.upload-section::before,
+.control-section::before,
+.gallery-section::before,
+.selected-section::before,
+.export-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
+    opacity: 0.9;
+}
+
+.card:hover,
+.step-container:hover,
+.upload-section:hover,
+.control-section:hover,
+.gallery-section:hover,
+.selected-section:hover,
+.export-section:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* 4. 通用圆圈图标与卡片标题 */
+.card-header,
+.step-title,
+.card-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 16px;
+    font-size: 1.4rem;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.card-icon,
+.step-number,
+.card-title i {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+/* 悬停变绿微动 */
+.card:hover .card-icon,
+.step-container:hover .step-number,
+.card:hover .card-title i,
+.upload-section:hover .card-icon,
+.control-section:hover .card-icon,
+.gallery-section:hover .card-icon {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3);
+}
+
+/* 5. 通用拖拽上传区 */
+.upload-area,
+.file-drop-area {
+    border: 2px dashed rgba(0, 123, 85, 0.2);
+    border-radius: var(--radius-lg);
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+
+.upload-area:hover,
+.upload-area.dragover,
+.file-drop-area:hover,
+.file-drop-area.active {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 85, 0.05);
+    transform: scale(1.01);
+}
+
+.upload-area i,
+.file-drop-area i {
+    color: var(--primary-color);
+    opacity: 0.8;
+    transition: var(--transition);
+}
+
+.upload-area:hover i,
+.file-drop-area:hover i {
+    transform: translateY(-5px);
+    opacity: 1;
+}
+
+/* 6. 通用表单控件 */
+.form-control,
+input[type="text"],
+.dropdown,
+.prompt-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-input);
+    font-size: 1rem;
+    color: var(--text-main);
+    transition: var(--transition);
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+.dropdown:focus,
+.prompt-input:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
+
+/* 7. 通用主按钮样式 */
+.btn,
+.g-btn-primary,
+.generate-btn,
+.download-link {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: var(--shadow-primary);
+    text-decoration: none;
+}
+
+.btn:hover:not(:disabled),
+.g-btn-primary:hover:not(:disabled),
+.generate-btn:hover,
+.download-link:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.3);
+    color: white;
+}
+
+.btn:disabled,
+.g-btn-primary:disabled,
+.generate-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* 9. 通用下拉选择器 (Select) 优雅样式 */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+
+    background-color: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007B55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+select:hover:not(:disabled) {
+    background-color: #fff;
+    border-color: rgba(0, 123, 85, 0.3);
+    box-shadow: var(--shadow-sm);
+}
+
+select:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
+}
+
+select:disabled {
+    background-color: #e9ecef;
+    color: var(--text-sub);
+    cursor: not-allowed;
+    opacity: 0.7;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23637381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+select option {
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: #fff;
+    padding: 12px;
+}
+
+/* 10. HKU 高级定制版下拉选择器 (Custom Select) */
+select.hku-select {
+    display: none;
+}
+
+.custom-select-wrapper {
+    position: relative;
+    user-select: none;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.custom-select-wrapper:hover .custom-select-trigger {
+    background-color: #fff;
+    border-color: rgba(0, 123, 85, 0.3);
+}
+
+.custom-select-wrapper.open .custom-select-trigger {
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
+}
+
+.custom-select-trigger::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23007B55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-select-wrapper.open .custom-select-trigger::after {
+    transform: rotate(-180deg);
+}
+
+.custom-options {
+    position: absolute;
+    display: block;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-hover);
+    padding: 8px 0;
+    z-index: 1000;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-15px) scale(0.96);
+    filter: blur(6px);
+    transition: all 0.4s var(--ease-cinematic);
+}
+
+.custom-select-wrapper.open .custom-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+}
+
+.custom-option {
+    display: block;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.custom-option:hover {
+    background-color: rgba(0, 123, 85, 0.05);
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    padding-left: 20px;
+}
+
+.custom-option.selected {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.custom-option.selected:hover {
+    background-color: var(--primary-dark);
+    padding-left: 16px;
+}

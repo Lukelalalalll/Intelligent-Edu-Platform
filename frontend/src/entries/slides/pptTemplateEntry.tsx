@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import PptTemplatePage from '../../features/slides/pages/PptTemplatePage';
+import {
+    slidesDeliveryApi,
+    type DeliveryArtifactType,
+} from '../../api/slidesDeliveryApi';
 
 export default function PptTemplateEntry() {
     const navigate = useNavigate();
@@ -13,6 +17,11 @@ export default function PptTemplateEntry() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoadingSchema, setIsLoadingSchema] = useState(true);
+    const [deliveryJobId, setDeliveryJobId] = useState('');
+    const [deliveryActiveTab, setDeliveryActiveTab] = useState<DeliveryArtifactType>('agenda');
+    const [deliveryLoading, setDeliveryLoading] = useState(false);
+    const [deliveryError, setDeliveryError] = useState('');
+    const [deliveryArtifacts, setDeliveryArtifacts] = useState<Partial<Record<DeliveryArtifactType, unknown>>>({});
 
     // 1. 初始化加载 Schema
     useEffect(() => {
@@ -42,6 +51,10 @@ export default function PptTemplateEntry() {
                 const res = await client.get('/slides/get_themes');
                 const fetchedThemes = Array.isArray(res.data) ? res.data : [];
                 setThemes(fetchedThemes);
+
+                if (fetchedThemes.length > 0) {
+                    setSelectedTheme((prev) => prev || fetchedThemes[0]?.name || null);
+                }
             } catch (err) {
                 setErrorMsg(err?.response?.data?.detail || err?.message || 'Failed to initialize PPT template page.');
             } finally {
@@ -66,6 +79,22 @@ export default function PptTemplateEntry() {
         }
     }, [selectedTheme]);
 
+    const fetchDeliveryArtifact = async (jobId: string, tab: DeliveryArtifactType) => {
+        setDeliveryLoading(true);
+        setDeliveryError('');
+        try {
+            const res = await slidesDeliveryApi.getArtifact(jobId, tab);
+            setDeliveryArtifacts((prev) => ({
+                ...prev,
+                [tab]: res.data,
+            }));
+        } catch (err) {
+            setDeliveryError(err?.response?.data?.detail || err?.message || 'Failed to load delivery artifact.');
+        } finally {
+            setDeliveryLoading(false);
+        }
+    };
+
     const handlers = {
         selectTheme: (name) => {
             setSelectedTheme(name);
@@ -85,6 +114,67 @@ export default function PptTemplateEntry() {
                         ? { ...s, layout: { name: layout.name, placeholders: layout.placeholders } }
                         : s
                 )
+            };
+            setPptSchema(newSchema);
+            localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
+        },
+        updateCurrentSlide: (patch) => {
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) =>
+                    i === currentSlideIndex
+                        ? { ...s, ...patch }
+                        : s
+                )
+            };
+            setPptSchema(newSchema);
+            localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
+        },
+        updateCurrentSlideBullet: (bulletIndex, value) => {
+            const current = pptSchema.slides[currentSlideIndex] || {};
+            const currentBullets = Array.isArray(current.content) ? [...current.content] : [];
+            currentBullets[bulletIndex] = value;
+            const bullets = currentBullets.map((b) => String(b || '').trim()).filter((b) => b.length > 0);
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) => i === currentSlideIndex ? { ...s, content: bullets } : s),
+            };
+            setPptSchema(newSchema);
+            localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
+        },
+        addCurrentSlideBullet: () => {
+            const current = pptSchema.slides[currentSlideIndex] || {};
+            const currentBullets = Array.isArray(current.content) ? [...current.content] : [];
+            currentBullets.push('New bullet point');
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) => i === currentSlideIndex ? { ...s, content: currentBullets } : s),
+            };
+            setPptSchema(newSchema);
+            localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
+        },
+        removeCurrentSlideBullet: (bulletIndex) => {
+            const current = pptSchema.slides[currentSlideIndex] || {};
+            const currentBullets = Array.isArray(current.content) ? [...current.content] : [];
+            const next = currentBullets.filter((_, idx) => idx !== bulletIndex);
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) => i === currentSlideIndex ? { ...s, content: next } : s),
+            };
+            setPptSchema(newSchema);
+            localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
+        },
+        reorderCurrentSlideBullets: (fromIndex, toIndex) => {
+            const current = pptSchema.slides[currentSlideIndex] || {};
+            const currentBullets = Array.isArray(current.content) ? [...current.content] : [];
+            if (fromIndex < 0 || toIndex < 0 || fromIndex >= currentBullets.length || toIndex >= currentBullets.length) {
+                return;
+            }
+            const [moved] = currentBullets.splice(fromIndex, 1);
+            currentBullets.splice(toIndex, 0, moved);
+            const newSchema = {
+                ...pptSchema,
+                slides: pptSchema.slides.map((s, i) => i === currentSlideIndex ? { ...s, content: currentBullets } : s),
             };
             setPptSchema(newSchema);
             localStorage.setItem('ppt_schema', JSON.stringify(newSchema));
@@ -125,6 +215,41 @@ export default function PptTemplateEntry() {
             } finally {
                 setIsGenerating(false);
             }
+        },
+        generateDeliveryPack: async () => {
+            if (!pptSchema) {
+                setDeliveryError('No PPT schema found. Please generate slides first.');
+                return;
+            }
+
+            setDeliveryLoading(true);
+            setDeliveryError('');
+            setDeliveryArtifacts({});
+            try {
+                const title = (pptSchema.presentation_title || 'Lesson Delivery Pack') as string;
+                const jobRes = await slidesDeliveryApi.createJob({
+                    title,
+                    ppt_schema: pptSchema,
+                    script_style: 'classroom',
+                    locale: 'en',
+                });
+
+                setDeliveryJobId(jobRes.job_id);
+                setDeliveryActiveTab('agenda');
+                const agendaRes = await slidesDeliveryApi.getArtifact(jobRes.job_id, 'agenda');
+                setDeliveryArtifacts({ agenda: agendaRes.data });
+            } catch (err) {
+                setDeliveryError(err?.response?.data?.detail || err?.message || 'Failed to generate delivery pack.');
+            } finally {
+                setDeliveryLoading(false);
+            }
+        },
+        setDeliveryActiveTab: async (tab: DeliveryArtifactType) => {
+            setDeliveryActiveTab(tab);
+            if (!deliveryJobId || deliveryArtifacts[tab]) {
+                return;
+            }
+            await fetchDeliveryArtifact(deliveryJobId, tab);
         }
     };
 
@@ -145,7 +270,20 @@ export default function PptTemplateEntry() {
     }
 
     return <PptTemplatePage
-        states={{ themes, selectedTheme, pptSchema, currentSlideIndex, layouts, isGenerating, errorMsg }}
+        states={{
+            themes,
+            selectedTheme,
+            pptSchema,
+            currentSlideIndex,
+            layouts,
+            isGenerating,
+            errorMsg,
+            deliveryJobId,
+            deliveryActiveTab,
+            deliveryLoading,
+            deliveryError,
+            deliveryArtifacts,
+        }}
         handlers={handlers}
     />;
 }

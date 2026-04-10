@@ -5,6 +5,7 @@ import ReaderSection from './components/ReaderSection';
 import HighlightsPanel from './components/HighlightsPanel';
 import { log } from '../../../../utils/logger';
 import { injectHighlightsIntoHtml } from './utils/highlightUtils';
+import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 
 export default function Highlighter({
     loading, sections, currentSectionIndex, currentSectionTitle,
@@ -221,10 +222,10 @@ export default function Highlighter({
                 .tool-btn:hover { background: #00B8D9; color: #fff; transform: translateY(-2px); }
             `}</style>
 
-            <div className="page-header">
-                <h1>Markdown Highlighter</h1>
-                <p className="subtitle">Read, highlight, and manage key concepts from your documents</p>
-            </div>
+            <WelcomeBanner
+                title="Markdown Highlighter"
+                subtitle="Read, highlight, and manage key concepts from your documents"
+            />
 
             <div className={styles.workspaceGrid}>
                 <ReaderSection

@@ -225,7 +225,7 @@
     box-shadow: none !important;
 }
 .viewerCloseBtn:hover {
-    background: #dc3545 !important;
+    background: var(--error-color) !important;
     color: #fff !important;
 }
 
@@ -464,7 +464,7 @@
     box-shadow: none !important;
 }
 .btnExplain {
-    background: linear-gradient(135deg, #007B55, #009966) !important;
+    background: linear-gradient(135deg, var(--primary-color), #009966) !important;
     color: #fff !important;
 }
 .btnExplain:hover {

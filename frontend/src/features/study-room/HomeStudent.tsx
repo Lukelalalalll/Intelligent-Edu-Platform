@@ -1,11 +1,12 @@
 // frontend/src/pages/HomeStudent.jsx
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { Link } from 'react-router-dom';
 import GeminiChat from '../home/components/GeminiChat';
 import { studentApi } from '../../api/api';
 import styles from './styles/HomeStudent.module.css';
 import AssignmentsTab from './components/AssignmentsTab';
+import DiagnosticTab from './components/DiagnosticTab';
+import WelcomeBanner from '../../shared/components/WelcomeBanner';
 
 const StudyRoom = lazy(() => import('./StudyRoom'));
 
@@ -121,14 +122,13 @@ export default function HomeStudent({
         <div className={`${styles.pageContainer} ${activeTab === 'study' ? styles.pageContainerFull : ''}`}>
             {/* 1. 顶部动态渐变横幅（带退出/入场动画） */}
             {bannerState !== 'hidden' && (
-                <section
-                    ref={bannerRef}
-                    className={`${styles.welcomeBanner} ${bannerState === 'exiting' ? styles.welcomeBannerExiting : ''}`}
-                    onAnimationEnd={handleBannerAnimationEnd}
-                >
-                    <h1>Welcome back, {username}</h1>
-                    <p>Manage your assignments and chat with your intelligent learning assistant</p>
-                </section>
+                <div ref={bannerRef} onAnimationEnd={handleBannerAnimationEnd}>
+                    <WelcomeBanner
+                        className={`${styles.welcomeBanner} ${bannerState === 'exiting' ? styles.welcomeBannerExiting : ''}`}
+                        title={`Welcome back, ${username}`}
+                        subtitle="Manage your assignments and chat with your intelligent learning assistant"
+                    />
+                </div>
             )}
 
             {/* 2. Tab Switcher: AI Space | Study Room | My Assignments */}
@@ -151,6 +151,12 @@ export default function HomeStudent({
                 >
                     <i className="fas fa-tasks"></i> My Assignments
                 </button>
+                <button
+                    className={`${styles.tabBtn} ${activeTab === 'diagnostic' ? styles.tabActive : ''}`}
+                    onClick={() => handleTabSwitch('diagnostic')}
+                >
+                    <i className="fas fa-stethoscope"></i> Learning Diagnostic
+                </button>
             </div>
 
             {/* 3. 内容区域：根据 tab 切换显示 */}
@@ -164,7 +170,7 @@ export default function HomeStudent({
                         <StudyRoom />
                     </Suspense>
                 </section>
-            ) : (
+            ) : activeTab === 'assignments' ? (
                 <AssignmentsTab
                     courses={courses}
                     assignments={assignments}
@@ -180,6 +186,8 @@ export default function HomeStudent({
                     handleFileUploadWrapped={handleFileUploadWrapped}
                     handleSubmitWork={handleSubmitWork}
                 />
+            ) : (
+                <DiagnosticTab />
             )}
 
         </div>

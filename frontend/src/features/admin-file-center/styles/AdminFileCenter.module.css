@@ -1,4 +1,4 @@
-﻿.page {
+.page {
     max-width: 1280px;
     margin: 0 auto;
     padding: 28px 20px;
@@ -42,7 +42,7 @@
     height: 56px;
     border-radius: 16px;
     background: rgba(0, 123, 85, 0.08);
-    color: #007b55;
+    color: var(--primary-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -53,12 +53,12 @@
 
 .entryCard:hover {
     transform: translateY(-8px);
-    border-color: #007b55;
+    border-color: var(--primary-color);
     box-shadow: 0 20px 25px -5px rgba(0, 123, 85, 0.15), 0 10px 10px -5px rgba(0, 123, 85, 0.04);
 }
 
 .entryCard:hover .cardIconWrap {
-    background: linear-gradient(135deg, #007b55, #004d36);
+    background: linear-gradient(135deg, var(--primary-color), #004d36);
     color: #ffffff;
     transform: scale(1.1) rotate(-5deg);
     box-shadow: 0 8px 16px rgba(0, 123, 85, 0.4);
@@ -127,7 +127,7 @@
 
 .btnPrimary {
     border-color: transparent;
-    background: linear-gradient(135deg, #007b55 0%, #005a3f 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #005a3f 100%);
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.25);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -203,7 +203,7 @@
 .table tbody tr:hover {
     background: rgba(0, 123, 85, 0.02);
     transform: scale(1);
-    box-shadow: inset 2px 0 0 #007b55;
+    box-shadow: inset 2px 0 0 var(--primary-color);
 }
 
 .statusActive {
@@ -273,7 +273,7 @@
     top: 0;
     bottom: 0;
     width: 4px;
-    background: #007b55;
+    background: var(--primary-color);
 }
 
 .muted {

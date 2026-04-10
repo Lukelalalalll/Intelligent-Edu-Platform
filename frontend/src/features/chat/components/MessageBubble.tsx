@@ -52,6 +52,30 @@ function isImageFile(mimeType?: string, fileName?: string): boolean {
     return false;
 }
 
+function inferExtFromMeta(mimeType?: string, fileUrl?: string): string {
+    const fromUrl = (fileUrl || '').split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() || '';
+    if (fromUrl && fromUrl.length <= 8 && !fromUrl.includes('/')) return fromUrl;
+    const mime = (mimeType || '').toLowerCase();
+    if (mime.includes('pdf')) return 'pdf';
+    if (mime.includes('markdown')) return 'md';
+    if (mime.includes('png')) return 'png';
+    if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+    if (mime.includes('webp')) return 'webp';
+    if (mime.includes('gif')) return 'gif';
+    if (mime.includes('wordprocessingml')) return 'docx';
+    if (mime.includes('msword')) return 'doc';
+    return '';
+}
+
+function buildDownloadName(name?: string, mimeType?: string, fileUrl?: string): string {
+    const raw = String(name || 'file').trim() || 'file';
+    const hintedExt = inferExtFromMeta(mimeType, fileUrl);
+    if (!hintedExt) return raw;
+    if (raw.toLowerCase().endsWith(`.${hintedExt}`)) return raw;
+    if (!raw.includes('.')) return `${raw}.${hintedExt}`;
+    return `${raw}.${hintedExt}`;
+}
+
 export default function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
     const [hovering, setHovering] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -111,15 +135,34 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
         }
     }, [multiSelect, message.id, message.recalled, message.type, onToggleSelect]);
 
-    const handleDownload = (e: React.MouseEvent) => {
+    const handleDownload = async (e: React.MouseEvent) => {
         e.preventDefault();
         if (!fileUrl) return;
-        const a = document.createElement('a');
-        a.href = fileUrl;
-        a.download = message.fileName || 'file';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const downloadName = buildDownloadName(message.fileName, message.mimeType, message.fileUrl);
+        try {
+            const blob = await chatApi.fetchFileBlob(fileUrl);
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+        } catch {
+            try {
+                const a = document.createElement('a');
+                a.href = fileUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.download = downloadName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch {
+                window.alert('Download failed. Please try again and verify your login session.');
+            }
+        }
     };
 
     if (message.type === 'system') {
@@ -146,17 +189,7 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
     const isFile = message.messageType === 'file';
     const isImage = isFile && isImageFile(message.mimeType, message.fileName);
 
-    // Normalize file URL for display/download (strip absolute origin if present)
-    const normalizeUrl = (url?: string) => {
-        if (!url) return '';
-        try {
-            const parsed = new URL(url);
-            return parsed.pathname + parsed.search;
-        } catch {
-            return url;
-        }
-    };
-    const fileUrl = normalizeUrl(message.fileUrl);
+    const fileUrl = chatApi.toAbsoluteFileUrl(message.fileUrl || '');
 
     return (
         <div

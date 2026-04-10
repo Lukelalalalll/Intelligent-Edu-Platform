@@ -469,7 +469,7 @@ main {
 }
 
 .edit-actions button:nth-child(2) {
-    background: #007B55;
+    background: var(--primary-color);
     color: #fff;
 }
 
@@ -501,7 +501,7 @@ main {
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #007B55;
+    color: var(--primary-color);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -511,7 +511,7 @@ main {
 }
 
 .msg-action-btn:hover {
-    background: linear-gradient(120deg, #007B55, #006042);
+    background: linear-gradient(120deg, var(--primary-color), #006042);
     color: #fff;
     border-color: transparent;
     transform: translateY(-1px);
@@ -694,7 +694,7 @@ main {
 }
 
 .powered-by-link:hover {
-    color: #007B55;
+    color: var(--primary-color);
     text-shadow: 0 0 8px rgba(0, 123, 85, 0.3);
 }
 
@@ -710,7 +710,7 @@ main {
     height: 2px;
     bottom: -2px;
     left: 0;
-    background-color: #007B55;
+    background-color: var(--primary-color);
     transform-origin: bottom right;
     transition: transform 0.3s ease-out;
 }
@@ -968,7 +968,7 @@ main {
     height: 56px;
     border-radius: var(--radius-md);
     background: linear-gradient(135deg, rgba(0, 123, 85, 0.1), rgba(0, 77, 64, 0.05));
-    color: #007B55;
+    color: var(--primary-color);
     font-size: 1.6rem;
     display: flex;
     align-items: center;
@@ -978,7 +978,7 @@ main {
 }
 
 .mailbox-banner-card:hover .mailbox-icon-wrapper {
-    background: #007B55;
+    background: var(--primary-color);
     color: white;
     transform: scale(1.05) rotate(-5deg);
     border-radius: 50%;
@@ -1025,7 +1025,7 @@ main {
 }
 
 .mailbox-banner-card:hover .mailbox-text h3 {
-    color: #007B55;
+    color: var(--primary-color);
 }
 
 .mailbox-right {
@@ -1050,7 +1050,7 @@ main {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #007B55;
+    color: var(--primary-color);
     font-weight: 600;
     font-size: 0.95rem;
     padding: 10px 24px;
@@ -1061,9 +1061,9 @@ main {
 }
 
 .mailbox-banner-card:hover .btn-enter-mailbox {
-    background: #007B55;
+    background: var(--primary-color);
     color: white;
-    border-color: #007B55;
+    border-color: var(--primary-color);
 }
 
 .mailbox-banner-card:hover .btn-enter-mailbox i {

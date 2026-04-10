@@ -265,6 +265,254 @@
     color: #1a1a1a;
 }
 
+.chapterToolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.chapterSelect {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.addChapterBtn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chapterActionError {
+    margin-top: -4px;
+    margin-bottom: 12px;
+    color: #b91c1c;
+}
+
+.chapterActionSuccess {
+    margin-top: -4px;
+    margin-bottom: 12px;
+    color: #065f46;
+}
+
+.chapterHint {
+    margin-top: -4px;
+    margin-bottom: 12px;
+}
+
+.tightSection {
+    margin-bottom: 14px;
+}
+
+.chapterList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chapterCard {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chapterCardTop {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.chapterFieldName {
+    flex: 1 1 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chapterFieldOrder {
+    flex: 0 0 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chapterFieldDescription {
+    flex: 2 1 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chapterFieldLabel {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.chapterInput {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.chapterCardBottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.chapterEnableLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+}
+
+.chapterEnableCheckbox {
+    width: 16px;
+    height: 16px;
+    accent-color: #0f766e;
+}
+
+.chapterActions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chapterSelectBtn {
+    border: none;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #374151;
+    font-weight: 600;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chapterSelectBtnActive {
+    background: #065f46;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(6, 95, 70, 0.2);
+}
+
+.chapterActionBtn {
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.chapterActionBtn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.chapterSaveBtn {
+    background: #0ea5e9;
+}
+
+.chapterDeleteBtn {
+    background: #ef4444;
+}
+
+.configRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.configField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 120px;
+}
+
+.configLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.configInput {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.configSaveBtn {
+    border: none;
+    border-radius: 8px;
+    background: #0ea5e9;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 16px;
+    cursor: pointer;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.documentEntry {
+    margin-bottom: 8px;
+}
+
+.docChapterRow {
+    margin-top: -6px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.docChapterLabel {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.docChapterSelect {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 12px;
+}
+
+.modalErrorText {
+    color: #ef4444;
+    font-size: 13px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
 .course-id-tag {
     font-size: 0.75rem;
     font-weight: 600;
@@ -549,4 +797,251 @@
     .doc-name {
         max-width: 200px;
     }
+}
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modalContent {
+    background: #fff;
+    width: 100%;
+    max-width: 480px;
+    border-radius: 16px;
+    padding: 30px 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+.modalHeader h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    color: #333;
+}
+.closeBtn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+    line-height: 1;
+}
+.closeBtn:hover {
+    color: #333;
+}
+.formGroup {
+    margin-bottom: 20px;
+}
+.formLabel {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.85rem;
+    text-align: left;
+}
+.formInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.formInput:focus {
+    border-color: #0f766e;
+}
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 30px;
+}
+.btnCancel, .btnSave {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+.btnCancel {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: none;
+}
+.btnCancel:hover {
+    background: #e5e7eb;
+}
+.btnSave {
+    background: #0f766e;
+    color: #fff;
+    border: none;
+}
+.btnSave:hover {
+    background: #0d665f;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(15, 118, 110, 0.2);
+}
+.btnSave:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.chapterSelectedIcon {
+    margin-right: 4px;
+}
+
+.retrievalSection {
+    margin-top: 24px;
+}
+
+.retrievalToolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.retrievalInput {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
+    outline: none;
+}
+
+.retrievalTopKSelect {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 13px;
+}
+
+.retrievalSearchBtn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.retrievalSearchBtn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.retrievalMeta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.retrievalEmpty {
+    color: #9ca3af;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.retrievalResultList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.retrievalResultItem {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    font-size: 12px;
+}
+
+.retrievalResultHead {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #111;
+}
+
+.retrievalScore {
+    color: var(--primary-color);
+    font-weight: 400;
+}
+
+.retrievalResultText {
+    color: #4b5563;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-height: 100px;
+    overflow: auto;
+}
+
+.reportsSection {
+    margin-top: 24px;
+}
+
+.reportList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reportItem {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fbfffd;
+}
+
+.reportTitle {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.reportMeta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.reportCommentInput {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+}
+
+.reportSaveBtn {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
 }

@@ -1,13 +1,14 @@
 // frontend/pages/sub4/DiagramTool.jsx
 
 import React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ExtractSection from './components/ExtractSection';
 import SearchEditSection from './components/SearchEditSection';
 import GenSection from './components/GenSection';
 import ImageExtractSection from './components/ImageExtractSection';
 import PreviewModal from './components/PreviewModal';
 import styles from './styles/sub4.module.css';
+import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import '../../styles/base.css';
 
 export default function DiagramTool({
@@ -18,12 +19,18 @@ export default function DiagramTool({
 }) {
     const [activeService, setActiveService] = useState(initialTab || 'extract');
 
+    useEffect(() => {
+        if (initialTab) {
+            setActiveService(initialTab);
+        }
+    }, [initialTab]);
+
     return (
         <div className="container">
-            <div className="page-header">
-                <h1>Visual Tool</h1>
-                <p className="subtitle">Extract diagrams & images, search SVGs, and generate with AI</p>
-            </div>
+            <WelcomeBanner
+                title="Visual Tool"
+                subtitle="Extract diagrams & images, search SVGs, and generate with AI"
+            />
 
             <div className={styles.tabSwitcher}>
                 <button

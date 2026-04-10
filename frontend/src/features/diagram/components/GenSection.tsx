@@ -5,7 +5,6 @@ import styles from '../styles/sub4.module.css';
 const INPUT_TABS = [
     { key: 'file', icon: 'fas fa-file-alt', label: 'Upload File' },
     { key: 'text', icon: 'fas fa-keyboard', label: 'Type Text' },
-    { key: 'coze', icon: 'fas fa-magic', label: 'Coze AI' },
 ];
 
 function downloadSvgBlob(svgString) {
@@ -19,11 +18,10 @@ function downloadSvgBlob(svgString) {
 }
 
 export default function GenSection({ genState, genHandlers }) {
-    const { inputMode, file, isDragging, loading, data, error, text, cozeKeywords, cozeLoading, cozeText, provider } = genState;
+    const { inputMode, file, isDragging, loading, data, error, text, provider } = genState;
     const canGenerate =
         (inputMode === 'file' && !!file) ||
-        (inputMode === 'text' && !!text?.trim()) ||
-        (inputMode === 'coze' && !!cozeText?.trim());
+        (inputMode === 'text' && !!text?.trim());
 
     return (
         <div className="card">
@@ -81,38 +79,6 @@ export default function GenSection({ genState, genHandlers }) {
                     </div>
                 )}
 
-                {/* ─── Coze AI Panel ─── */}
-                {inputMode === 'coze' && (
-                    <div className={styles.genCozePanel}>
-                        <div className={styles.genCozeRow}>
-                            <input
-                                type="text"
-                                className={styles.genCozeInput}
-                                placeholder="Enter keywords... e.g. 'TCP/IP 4-layer model'"
-                                value={cozeKeywords}
-                                onChange={e => genHandlers.setCozeKeywords(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && !cozeLoading && genHandlers.handleCozeGenerate()}
-                            />
-                            <button
-                                className={`btn ${styles.genCozeBtn}`}
-                                onClick={genHandlers.handleCozeGenerate}
-                                disabled={cozeLoading || !cozeKeywords?.trim()}
-                            >
-                                {cozeLoading
-                                    ? <><i className="fas fa-spinner fa-spin"></i> Generating...</>
-                                    : <><i className="fas fa-wand-magic-sparkles"></i> Expand</>}
-                            </button>
-                        </div>
-                        <textarea
-                            className={styles.genTextArea}
-                            rows={6}
-                            placeholder="Coze AI will generate a detailed description here. You can edit it before generating the diagram."
-                            value={cozeText}
-                            onChange={e => genHandlers.setCozeText(e.target.value)}
-                        />
-                    </div>
-                )}
-
                 {/* ─── Generate Button ─── */}
                 <button
                     className="btn"
@@ -138,7 +104,7 @@ export default function GenSection({ genState, genHandlers }) {
                         </div>
                         <div
                             className={styles.genSvgContainer}
-                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.svg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.svg, { USE_PROFILES: { svg: true } }) }}
                         />
                     </div>
                 )}

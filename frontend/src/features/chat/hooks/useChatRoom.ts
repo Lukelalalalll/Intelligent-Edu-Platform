@@ -21,6 +21,8 @@ export function useChatRoom(roomId: string) {
     const [showForwardModal, setShowForwardModal] = useState(false);
     const [batchDeleting, setBatchDeleting] = useState(false);
     const [hasNewMessage, setHasNewMessage] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const initialLoadingRef = useRef(true);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesTopRef = useRef<HTMLDivElement>(null);
@@ -28,6 +30,10 @@ export function useChatRoom(roomId: string) {
 
     const room = rooms.find((r) => r.id === roomId);
     const roomMessages = messages[roomId] || [];
+
+    useEffect(() => {
+        initialLoadingRef.current = initialLoading;
+    }, [initialLoading]);
 
     const currentUser = useCurrentUser();
     const userId = currentUser?.id || '';
@@ -42,18 +48,44 @@ export function useChatRoom(roomId: string) {
     // Load messages on room change
     useEffect(() => {
         let alive = true;
-        const load = async () => {
+
+        const loadMessages = async () => {
             try {
                 const res = await chatApi.getMessages(roomId);
-                if (alive) { setMessages(roomId, res.messages); setHasMore(res.hasMore); }
-            } catch { /* ignore */ }
+                if (!alive) return;
+                setMessages(roomId, res.messages);
+                setHasMore(res.hasMore);
+                setInitialLoading(false);
+            } catch {
+                if (!alive) return;
+                // Keep a blocking loading state while offline so users can't act on incomplete room data.
+                if (networkBus.isOffline) {
+                    setInitialLoading(true);
+                    return;
+                }
+                // For non-network errors, avoid permanently blocking the room.
+                setInitialLoading(false);
+            }
         };
-        load();
+
+        setInitialLoading(true);
+        loadMessages();
+
+        const unsubscribe = networkBus.subscribe((offline) => {
+            if (!alive) return;
+            if (!offline && initialLoadingRef.current) {
+                loadMessages();
+            }
+        });
+
         recordLastSeen(roomId);
         clearUnread(roomId);
         chatApi.markRead(roomId).catch(() => {});
         setHasNewMessage(false);
-        return () => { alive = false; };
+        return () => {
+            alive = false;
+            unsubscribe();
+        };
     }, [roomId, setMessages, clearUnread]);
 
     // 自动滚动到底部已被移除
@@ -242,7 +274,7 @@ export function useChatRoom(roomId: string) {
 
     return {
         room, roomMessages, userId, currentUser,
-        hasMore, loadingMore, typingUser, hasNewMessage,
+        hasMore, loadingMore, typingUser, hasNewMessage, initialLoading,
         multiSelect, selectedIds, quotedMessage, showForwardModal, batchDeleting,
         messagesEndRef, messagesTopRef, messagesAreaRef,
         handleToggleSelect, handleEnterMultiSelect, handleExitMultiSelect,

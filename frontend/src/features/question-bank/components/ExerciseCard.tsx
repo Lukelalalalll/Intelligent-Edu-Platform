@@ -42,15 +42,15 @@ export default function ExerciseCard({
             data-q={ex.question_number || `q${index + 1}`}
         >
             <div className={styles.exerciseHeader}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div className={styles.exerciseHeaderMain}>
                     <input
                         type="checkbox"
-                        style={{ width: '18px', height: '18px', marginTop: '4px', cursor: 'pointer' }}
+                        className={styles.exerciseCheckbox}
                         checked={selectedExercises.includes(index)}
                         onChange={() => toggleExercise(index)}
                     />
-                    <div>
-                        <h5 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                    <div className={styles.exerciseHeaderBody}>
+                        <h5 className={styles.exerciseTitle}>
                             {ex.title || `Exercise ${index + 1}`}
                         </h5>
                         <div className={styles.exerciseMeta}>
@@ -82,11 +82,10 @@ export default function ExerciseCard({
                 {editingIndex === index ? (
                     <div>
                         <textarea
-                            className={styles.formControl}
+                            className={`${styles.formControl} ${styles.exerciseEditor}`}
                             rows={8}
                             value={editBuffer}
                             onChange={e => setEditBuffer(e.target.value)}
-                            style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
                         />
                         <button className={`${styles.btn} ${styles.btnPrimary}`} style={{ marginTop: '8px', fontSize: '0.85rem' }} onClick={saveEdit}>
                             <i className="fas fa-check"></i> Save
@@ -97,9 +96,9 @@ export default function ExerciseCard({
                 )}
             </div>
             {ex.images && ex.images.length > 0 && (
-                <div style={{ marginTop: '15px' }}>
+                <div className={styles.exerciseImages}>
                     {ex.images.map((url, i) => (
-                        <img key={i} src={url} alt="exercise" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)', marginTop: '10px' }} crossOrigin="anonymous" />
+                        <img key={i} src={url} alt="exercise" className={styles.exerciseImage} crossOrigin="anonymous" />
                     ))}
                 </div>
             )}

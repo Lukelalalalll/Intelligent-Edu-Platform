@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import client from '../../../api/client';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
+import { beautifySvg } from '../../../features/diagram/utils/beautifySvg';
 
 function extractErrorMessage(err: any): string {
     const detail = err?.response?.data?.detail;
@@ -19,9 +20,6 @@ export function useDiagramGenerate() {
     const [genError, setGenError] = useState('');
     const [genInputMode, setGenInputMode] = useState('file');
     const [genText, setGenText] = useState('');
-    const [cozeKeywords, setCozeKeywords] = useState('');
-    const [cozeLoading, setCozeLoading] = useState(false);
-    const [cozeText, setCozeText] = useState('');
     const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
 
     const handleGenerate = async () => {
@@ -31,13 +29,15 @@ export function useDiagramGenerate() {
             if (!genFile) { setGenError('Please select a file first'); setGenLoading(false); return; }
             formData.append('promptFile', genFile);
         } else {
-            const textToSend = genInputMode === 'coze' ? cozeText : genText;
-            if (!textToSend.trim()) { setGenError('Please enter or generate text content first'); setGenLoading(false); return; }
-            formData.append('promptText', textToSend);
+            if (!genText.trim()) { setGenError('Please enter text content first'); setGenLoading(false); return; }
+            formData.append('promptText', genText);
         }
+        formData.append('provider', provider);
         try {
             const res = await client.post('/diagram/generate_diagram', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 90000 });
-            setGenData(res.data);
+            const rawSvg = String(res?.data?.svg || '');
+            const polishedSvg = rawSvg ? beautifySvg(rawSvg) : rawSvg;
+            setGenData({ ...res.data, svg: polishedSvg });
         } catch (err) {
             setGenError(extractErrorMessage(err));
         } finally {
@@ -45,25 +45,8 @@ export function useDiagramGenerate() {
         }
     };
 
-    const handleCozeGenerate = async () => {
-        if (!cozeKeywords.trim()) { setGenError('Please enter keywords'); return; }
-        setCozeLoading(true); setGenError(''); setCozeText('');
-        const formData = new FormData();
-        formData.append('keywords', cozeKeywords);
-        formData.append('provider', provider);
-        try {
-            const res = await client.post('/diagram/coze_generate_text', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
-            setCozeText(res.data.text || '');
-        } catch (err) {
-            setGenError(extractErrorMessage(err));
-        } finally {
-            setCozeLoading(false);
-            setStoredAIProvider(provider);
-        }
-    };
-
     return {
-        genState: { file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError, inputMode: genInputMode, text: genText, cozeKeywords, cozeLoading, cozeText, provider },
+        genState: { file: genFile, isDragging: isGenDragging, loading: genLoading, data: genData, error: genError, inputMode: genInputMode, text: genText, provider },
         genHandlers: {
             handleFileChange: (e: any) => setGenFile(e.target.files[0]),
             handleDragOver: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsGenDragging(true); },
@@ -72,13 +55,10 @@ export function useDiagramGenerate() {
             handleGenerate,
             setInputMode: setGenInputMode,
             setText: setGenText,
-            setCozeKeywords,
             setProvider: (next: AIProvider) => {
                 setProvider(next);
                 setStoredAIProvider(next);
             },
-            handleCozeGenerate,
-            setCozeText,
         },
     };
 }

@@ -5,6 +5,13 @@ import { chatApi } from '../../api/chatApi';
 import StudyNotes from '../../features/study-notes/StudyNotes';
 import styles from '../../features/study-notes/styles/sub5.module.css';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../shared/aiProvider';
+import {
+    studyNotesPlanApi,
+    type ReviewQueueItem,
+    type ReviewRating,
+    type StudyPlan,
+    type StudyPlanDurationOption,
+} from '../../api/studyNotesPlanApi';
 
 export default function StudyNotesEntry() {
     const fileInputRef = useRef(null);
@@ -15,11 +22,20 @@ export default function StudyNotesEntry() {
     const [style, setStyle] = useState('detailed');
     const [notes, setNotes] = useState('');
     const [flashcards, setFlashcards] = useState([]);
+    const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('');
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('notes');
     const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+    const [durationOption, setDurationOption] = useState<StudyPlanDurationOption>('7d');
+    const [customDays, setCustomDays] = useState('');
+    const [durationError, setDurationError] = useState('');
+    const [reviewQueueItem, setReviewQueueItem] = useState<ReviewQueueItem | null>(null);
+    const [reviewMessage, setReviewMessage] = useState('Generate a plan, then click Next Review to start.');
+    const [reviewLoading, setReviewLoading] = useState(false);
+    const [reviewSubmitting, setReviewSubmitting] = useState<ReviewRating | null>(null);
+    const [reviewProgressMap, setReviewProgressMap] = useState<Record<string, number>>({});
 
     useEffect(() => {
         setStoredAIProvider(provider);
@@ -96,6 +112,7 @@ export default function StudyNotesEntry() {
             });
             if (notesRes.data.success) {
                 setNotes(notesRes.data.notes);
+                setStudyPlan(null);
                 setActiveTab('notes');
             }
 
@@ -122,6 +139,138 @@ export default function StudyNotesEntry() {
     const handleGenerate = useCallback(async () => {
         await generateFromFile(file, style);
     }, [file, style, generateFromFile]);
+
+    const validateCustomDays = useCallback((rawDays: string): number | null => {
+        const parsed = Number.parseInt(rawDays, 10);
+        if (!Number.isFinite(parsed)) {
+            return null;
+        }
+        if (parsed < 1 || parsed > 90) {
+            return null;
+        }
+        return parsed;
+    }, []);
+
+    const handleLoadNextReview = useCallback(async () => {
+        if (!studyPlan?.plan_id) {
+            setError('Generate a study plan first.');
+            return;
+        }
+
+        if (reviewLoading) {
+            return;
+        }
+
+        setReviewLoading(true);
+        setError('');
+        try {
+            const res = await studyNotesPlanApi.getNextReview(studyPlan.plan_id);
+            if (res.ready && res.item) {
+                setReviewQueueItem(res.item);
+                setReviewMessage('Ready to review. Choose a rating after you recall the topic.');
+                return;
+            }
+
+            setReviewQueueItem(null);
+            if (res.next_upcoming?.due_at) {
+                const nextAt = new Date(res.next_upcoming.due_at).toLocaleString();
+                setReviewMessage(`No item is due now. Next review is scheduled at ${nextAt}.`);
+            } else {
+                setReviewMessage(res.message || 'No review items available yet.');
+            }
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            setError(typeof detail === 'string' ? detail : 'Failed to load the next review item');
+        } finally {
+            setReviewLoading(false);
+        }
+    }, [studyPlan?.plan_id, reviewLoading]);
+
+    const handleSubmitReview = useCallback(async (rating: ReviewRating) => {
+        if (!reviewQueueItem?.queue_id || reviewSubmitting) {
+            return;
+        }
+
+        setReviewSubmitting(rating);
+        setError('');
+        try {
+            const res = await studyNotesPlanApi.submitReview({
+                queue_id: reviewQueueItem.queue_id,
+                rating,
+                correct: rating !== 'again',
+            });
+
+            setReviewProgressMap((prev) => ({
+                ...prev,
+                [res.queue_id]: res.repetitions,
+            }));
+
+            setReviewQueueItem(null);
+            setReviewMessage('Saved. Loading the next item...');
+            await handleLoadNextReview();
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            setError(typeof detail === 'string' ? detail : 'Failed to submit review feedback');
+        } finally {
+            setReviewSubmitting(null);
+        }
+    }, [reviewQueueItem, reviewSubmitting, handleLoadNextReview]);
+
+    const handleGeneratePlan = useCallback(async () => {
+        if (!notes) {
+            setError('Generate study notes first.');
+            return;
+        }
+
+        const parsedCustomDays = validateCustomDays(customDays);
+        if (durationOption === 'custom' && parsedCustomDays === null) {
+            setDurationError('Custom days must be an integer between 1 and 90.');
+            return;
+        }
+
+        setDurationError('');
+        const payload = {
+            title: file?.name ? `${file.name} Plan` : 'Study Plan',
+            notes,
+            flashcards,
+            duration_option: durationOption,
+            custom_days: durationOption === 'custom' ? parsedCustomDays : null,
+        };
+
+        setIsLoading(true);
+        setLoadingText('Building your study plan...');
+        setError('');
+        try {
+            const res = await studyNotesPlanApi.generatePlan(payload);
+            if (res?.success) {
+                let createdAt = new Date().toISOString();
+                try {
+                    const planDetail = await studyNotesPlanApi.getPlan(res.plan_id);
+                    createdAt = planDetail?.plan?.created_at || createdAt;
+                } catch {
+                    // Keep local fallback timestamp when detail fetch fails.
+                }
+
+                setStudyPlan({
+                    title: payload.title,
+                    duration_days: res.duration_days,
+                    sessions: res.sessions || [],
+                    plan_id: res.plan_id,
+                    created_at: createdAt,
+                });
+                setReviewQueueItem(null);
+                setReviewProgressMap({});
+                setReviewMessage('Plan created. Click Next Review to fetch your first due item.');
+                setActiveTab('plan');
+            }
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            setError(typeof detail === 'string' ? detail : 'Failed to generate study plan');
+        } finally {
+            setIsLoading(false);
+            setLoadingText('');
+        }
+    }, [notes, flashcards, durationOption, customDays, file, validateCustomDays]);
 
     return (
         <div className={styles.container}>
@@ -172,6 +321,53 @@ export default function StudyNotesEntry() {
                     </button>
                 </div>
 
+                <div className={styles.planControls}>
+                    <span className={styles.planLabel}>Plan Duration:</span>
+                    {['3d', '7d', '14d', 'custom'].map((opt) => (
+                        <button
+                            key={opt}
+                            className={`${styles.durationBtn} ${durationOption === opt ? styles.durationBtnActive : ''}`}
+                            onClick={() => {
+                                setDurationOption(opt as StudyPlanDurationOption);
+                                if (opt !== 'custom') {
+                                    setDurationError('');
+                                }
+                            }}
+                            disabled={isLoading}
+                        >
+                            {opt === 'custom' ? 'Custom' : opt.toUpperCase()}
+                        </button>
+                    ))}
+                    {durationOption === 'custom' && (
+                        <input
+                            type="number"
+                            min={1}
+                            max={90}
+                            className={styles.customDaysInput}
+                            placeholder="Days"
+                            value={customDays}
+                            onChange={(e) => {
+                                setCustomDays(e.target.value);
+                                if (!e.target.value.trim()) {
+                                    setDurationError('Custom days are required when using Custom duration.');
+                                    return;
+                                }
+                                const parsed = validateCustomDays(e.target.value);
+                                setDurationError(parsed === null ? 'Custom days must be an integer between 1 and 90.' : '');
+                            }}
+                        />
+                    )}
+                    <button
+                        className={styles.planBtn}
+                        onClick={handleGeneratePlan}
+                        disabled={!notes || isLoading || (durationOption === 'custom' && (!!durationError || !customDays.trim()))}
+                    >
+                        <i className="fas fa-calendar-check"></i> Generate Study Plan
+                    </button>
+                </div>
+
+                {durationError && <p className={styles.inlineError}>{durationError}</p>}
+
                 {error && (
                     <p className={styles.errorText}>{error}</p>
                 )}
@@ -181,10 +377,18 @@ export default function StudyNotesEntry() {
             <StudyNotes
                 notes={notes}
                 flashcards={flashcards}
+                studyPlan={studyPlan}
                 isLoading={isLoading}
                 loadingText={loadingText}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
+                reviewQueueItem={reviewQueueItem}
+                reviewMessage={reviewMessage}
+                reviewLoading={reviewLoading}
+                reviewSubmitting={reviewSubmitting}
+                reviewProgressMap={reviewProgressMap}
+                onLoadNextReview={handleLoadNextReview}
+                onSubmitReview={handleSubmitReview}
             />
         </div>
     );

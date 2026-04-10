@@ -80,10 +80,15 @@ export function useDiagramExtractSearch() {
     const svgDocRef = useRef<Document | null>(null);
     const textNodesRef = useRef<Element[]>([]);
 
-    const handleExtractUpload = async () => {
+    const handleExtractUpload = async (incomingFile?: File | null) => {
+        const fileToUpload = incomingFile || extractFile;
+        if (!fileToUpload) {
+            setExtractError('Please select a file first.');
+            return;
+        }
         setExtractLoading(true); setExtractError('');
         const formData = new FormData();
-        formData.append('file', extractFile);
+        formData.append('file', fileToUpload);
         try {
             const res = await client.post('/diagram/upload_document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             setExtractData(res.data);
@@ -170,6 +175,10 @@ export function useDiagramExtractSearch() {
         extractState: { file: extractFile, isDragging: isExtractDragging, loading: extractLoading, data: extractData, error: extractError },
         extractHandlers: {
             handleFileChange: (e: any) => setExtractFile(e.target.files[0]),
+            handleTransferFile: async (file: File) => {
+                setExtractFile(file);
+                await handleExtractUpload(file);
+            },
             handleDragOver: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsExtractDragging(true); },
             handleDragLeave: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsExtractDragging(false); },
             handleDrop: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsExtractDragging(false); if (e.dataTransfer.files[0]) setExtractFile(e.dataTransfer.files[0]); },

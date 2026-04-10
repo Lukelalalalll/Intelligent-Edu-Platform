@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import client from '../../api/client';
 import QuickProcessPage from '../../features/slides/pages/QuickProcessPage';
+import { slidesGenerationApi } from '../../api/slidesGenerationApi';
 
 export default function QuickProcessEntry() {
     const navigate = useNavigate();
@@ -25,6 +25,12 @@ export default function QuickProcessEntry() {
 
     const [results, setResults] = useState(null);
     const [talkingScriptResult, setTalkingScriptResult] = useState(null);
+    const [taskId, setTaskId] = useState('');
+    const [taskProgress, setTaskProgress] = useState(0);
+    const [taskStep, setTaskStep] = useState('');
+    const [taskEvents, setTaskEvents] = useState<Array<{ type: string; step: string; message: string; ts: number }>>([]);
+    const [provider, setProvider] = useState<'coze' | 'local_ollama'>('local_ollama');
+    const [providerHealth, setProviderHealth] = useState('');
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -62,6 +68,20 @@ export default function QuickProcessEntry() {
         fetchContent();
     }, [navigate]);
 
+    const checkProviderHealth = async (targetProvider?: 'coze' | 'local_ollama') => {
+        try {
+            const currentProvider = targetProvider || provider;
+            const health = await slidesGenerationApi.checkProviderHealth(currentProvider);
+            if (health?.success) {
+                setProviderHealth(`${currentProvider}: ${health.message || 'ok'}`);
+            } else {
+                setProviderHealth(`${currentProvider}: ${health?.message || 'unhealthy'}`);
+            }
+        } catch (error: any) {
+            setProviderHealth(`${targetProvider || provider}: ${error?.message || 'health check failed'}`);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formState.totalPages < sections.length || formState.totalPages > sections.length * 3) {
@@ -69,39 +89,59 @@ export default function QuickProcessEntry() {
             return;
         }
 
-        setLoading(true); setErrorMsg('');
+        setLoading(true);
+        setErrorMsg('');
+        setTaskId('');
+        setTaskProgress(0);
+        setTaskStep('queued');
+        setTaskEvents([]);
         try {
-            // 调用后端全自动总结接口
-            const res = await client.post('/slides/summarize_in_chapters', {
+            const res = await slidesGenerationApi.createTask({
+                provider,
                 chapterData: sections.map(s => ({ sectionTitle: s.title, text: s.content })),
                 total_pages: Number(formState.totalPages),
                 num_of_bullets: Number(formState.numOfBullets),
-                words_each_bullet: Number(formState.wordsEachBullet)
+                words_each_bullet: Number(formState.wordsEachBullet),
+                presentation_title: currentFilename.replace(/\.[^/.]+$/, ""),
+                script_style: formState.scriptStyle,
+                generate_talking_script: Boolean(formState.generateTalkingScript),
+                generate_word_document: Boolean(formState.generateWordDocument),
             });
+            setTaskId(res.task_id);
 
-            if (res.data.status === 'success') {
-                const slideResults = res.data.results;
-                setResults(slideResults);
-
-                // 保存 Schema
-                const schema = {
-                    presentation_title: currentFilename.replace(/\.[^/.]+$/, ""),
-                    slides: slideResults.map(s => ({ ...s, content: s.content || [], tables: [] })),
-                    metadata: { date: new Date().toISOString().split('T')[0] }
-                };
-                localStorage.setItem('ppt_schema', JSON.stringify(schema));
-
-                if (formState.generateTalkingScript) {
-                    const scriptRes = await client.post('/slides/generate_talking_script', {
-                        slides_results: slideResults,
-                        script_style: formState.scriptStyle,
-                        presentation_title: formState.presentationTitle,
-                        generate_word: true
-                    });
-                    setTalkingScriptResult(scriptRes.data);
+            let pollCount = 0;
+            while (pollCount < 240) {
+                const status = await slidesGenerationApi.getTask(res.task_id);
+                setTaskProgress(status.progress || 0);
+                setTaskStep(status.current_step || status.status);
+                if (Array.isArray(status.events)) {
+                    setTaskEvents(status.events);
                 }
+
+                if (status.status === 'completed' && status.result) {
+                    const slideResults = status.result.results || [];
+                    setResults(slideResults);
+                    setTalkingScriptResult(status.result);
+                    if (status.result.ppt_schema) {
+                        localStorage.setItem('ppt_schema', JSON.stringify(status.result.ppt_schema));
+                    }
+                    break;
+                }
+
+                if (status.status === 'failed') {
+                    throw new Error(status.error || 'Generation failed');
+                }
+
+                pollCount += 1;
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
-        } catch { setErrorMsg('Generation failed'); }
+
+            if (pollCount >= 240) {
+                throw new Error('Generation timeout, please retry.');
+            }
+        } catch (error: any) {
+            setErrorMsg(error?.message || 'Generation failed');
+        }
         finally { setLoading(false); }
     };
 
@@ -119,6 +159,9 @@ export default function QuickProcessEntry() {
         formState={formState} setFormState={setFormState}
         maxAllowedPages={sections.length * 3} totalChapters={sections.length}
         errorMsg={errorMsg} results={results} talkingScriptResult={talkingScriptResult}
+        taskId={taskId} taskProgress={taskProgress} taskStep={taskStep} taskEvents={taskEvents}
+        provider={provider} setProvider={setProvider}
+        providerHealth={providerHealth} checkProviderHealth={checkProviderHealth}
         handleSubmit={handleSubmit} handleProceed={() => navigate('/slides/ppt-template')}
         handleDownloadScript={handleDownloadScript}
     />;

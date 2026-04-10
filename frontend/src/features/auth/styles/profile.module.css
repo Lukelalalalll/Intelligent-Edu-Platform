@@ -246,7 +246,7 @@
 
 .student {
     background-color: #e6f9f0;
-    color: #007B55;
+    color: var(--primary-color);
 }
 
 .cardHeader {

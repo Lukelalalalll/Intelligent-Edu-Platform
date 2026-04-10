@@ -1,0 +1,140 @@
+.pageWrap {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 42px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.headerCard {
+    border-radius: 14px;
+    border: 1px solid rgba(0, 123, 85, 0.14);
+    background: linear-gradient(135deg, #f7fffb, #ffffff);
+    padding: 18px 20px;
+}
+
+.headerCard h1 {
+    margin: 0;
+    font-size: 1.45rem;
+    color: #0f172a;
+}
+
+.headerCard p {
+    margin: 8px 0 0;
+    color: #64748b;
+}
+
+.filterCard,
+.listCard {
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    padding: 16px;
+}
+
+.filterGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.filterGrid label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+.filterGrid select {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #fff;
+    color: #111827;
+    font-size: 0.9rem;
+}
+
+.errorText {
+    margin: 10px 0 0;
+    color: #b91c1c;
+    font-size: 0.84rem;
+}
+
+.listHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.listHeader h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.listHeader span {
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+.hintText {
+    color: #64748b;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.feedbackList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feedbackItem {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    background: #f9fffc;
+}
+
+.rowTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.rowTop strong {
+    color: #0f172a;
+}
+
+.ratingTag {
+    color: #0f766e;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.metaLine {
+    margin-top: 7px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.commentText {
+    margin: 9px 0 0;
+    color: #334155;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+    .filterGrid {
+        grid-template-columns: 1fr;
+    }
+}

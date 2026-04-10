@@ -9,53 +9,8 @@
     content: none;
 }
 
-.headline {
-    border-radius: var(--radius-lg);
-    padding: 60px 60px;
-    background-image: var(--primary-gradient-animated);
-    background-size: 300% 300%;
-    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
-    color: #ffffff;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.headline::after {
-    content: "";
-    position: absolute;
-    top: -50%;
-    left: -10%;
-    width: 420px;
-    height: 420px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
-    border-radius: 50%;
-}
-
-.headline h1 {
-    margin: 0;
-    font-size: clamp(1.9rem, 2.3vw, 2.3rem);
-    line-height: 1.2;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    animation: slideUpFade 0.8s forwards 0.2s;
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-.headline p {
-    margin: 8px 0 0;
-    font-size: 1.08rem;
-    color: rgba(255, 255, 255, 0.95);
-    animation: slideUpFade 0.8s forwards 0.4s;
-    opacity: 0;
-    transform: translateY(20px);
-}
-
 .consoleGrid {
-    margin-top: 35px;
+    margin-top: 0;
     display: grid;
     grid-template-columns: 300px 1fr;
     gap: 16px;
@@ -524,7 +479,7 @@
 }
 
 .relationArrow {
-    color: #007b55;
+    color: var(--primary-color);
     font-size: 1.1rem;
     display: inline-flex;
     justify-content: center;
@@ -608,11 +563,11 @@
 }
 
 .btnPrimary {
-    background: linear-gradient(135deg, #0d9f6e 0%, #007b55 100%);
+    background: linear-gradient(135deg, #0d9f6e 0%, var(--primary-color) 100%);
 }
 
 .btnAccent {
-    background: linear-gradient(135deg, #007b55 0%, #005f41 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
 }
 
 .btnDanger {

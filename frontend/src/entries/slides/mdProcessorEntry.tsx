@@ -30,6 +30,7 @@ export default function MdProcessorEntry() {
     const [inputMode, setInputMode] = useState('file');       // 'file' | 'text'
     const [textContent, setTextContent] = useState('');
     const [textTitle, setTextTitle] = useState('');
+    const [seedContent, setSeedContent] = useState('');
     const [cozeLoading, setCozeLoading] = useState(false);
     const [cozeError, setCozeError] = useState('');
     const [textProcessing, setTextProcessing] = useState(false);
@@ -219,15 +220,20 @@ export default function MdProcessorEntry() {
 
     // === Coze AI: Generate outline from keywords ===
     const handleCozeGenerate = async () => {
-        if (!textTitle.trim()) {
-            setCozeError('Please enter a topic or keywords');
+        const seed = seedContent.trim();
+        const topic = textTitle.trim();
+        if (!seed) {
+            setCozeError('Please enter some base content first');
             return;
         }
         setCozeLoading(true);
         setCozeError('');
         try {
+            const prompt = topic
+                ? `Topic: ${topic}\n\nBase content:\n${seed}\n\nPlease generate a clear, presentation-ready markdown document based on the content above.`
+                : `Base content:\n${seed}\n\nPlease generate a clear, presentation-ready markdown document based on the content above.`;
             const res = await client.post('/slides/coze-generate-outline', {
-                keywords: textTitle.trim(),
+                keywords: prompt,
                 provider,
             });
             setTextContent(res.data.text || '');
@@ -299,7 +305,7 @@ export default function MdProcessorEntry() {
         fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
         handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
         // Tab 2 props
-        inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
+        inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle, seedContent, setSeedContent,
         cozeLoading, cozeError, textProcessing,
         provider, setProvider,
         handleCozeGenerate, handleProcessText,

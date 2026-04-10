@@ -436,7 +436,7 @@
     height: 32px;
     border-radius: 50%;
     background: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
+    color: var(--error-color);
     border: none;
     cursor: pointer;
     display: flex;
@@ -446,7 +446,7 @@
 }
 
 .removeBtn:hover {
-    background: #dc3545;
+    background: var(--error-color);
     color: white;
     transform: rotate(90deg);
 }

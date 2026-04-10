@@ -66,7 +66,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 20px;
-    background: linear-gradient(135deg, #007B55 0%, #004D40 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #004D40 100%);
     color: #fff;
     font-size: 1.6rem;
     box-shadow: 0 8px 24px rgba(0, 123, 85, 0.25);
@@ -195,7 +195,7 @@
 
 .badgeGreen {
     background: #e6f9ef;
-    color: #007B55;
+    color: var(--primary-color);
 }
 
 .badgeBlue {

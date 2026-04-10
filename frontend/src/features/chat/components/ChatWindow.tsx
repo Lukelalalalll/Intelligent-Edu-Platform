@@ -29,7 +29,7 @@ export default function ChatWindow({ roomId }: Props) {
     const {
         room, roomMessages, userId,
         typingUser, multiSelect, selectedIds, quotedMessage, showForwardModal, batchDeleting,
-        hasNewMessage,
+        hasNewMessage, initialLoading,
         messagesEndRef, messagesTopRef, messagesAreaRef, loadingMore,
         handleToggleSelect, handleEnterMultiSelect, handleExitMultiSelect,
         handleBatchDelete, handleQuote, handleClearQuote,
@@ -80,58 +80,77 @@ export default function ChatWindow({ roomId }: Props) {
                 </div>
             )}
 
-            <div className={styles.messagesArea} ref={messagesAreaRef}>
-                <div ref={messagesTopRef} className={styles.loadMoreTrigger} />
-                {loadingMore && (
-                    <div style={{ textAlign: 'center', padding: 8, color: '#94a3b8', fontSize: '0.8rem' }}>
-                        Loading...
-                    </div>
-                )}
-                {roomMessages.map((msg, idx) => {
-                    const prev = idx > 0 ? roomMessages[idx - 1] : null;
-                    const showSender = room.type === 'group' && msg.senderId !== userId && msg.senderId !== prev?.senderId;
-                    return (
-                        <React.Fragment key={msg.id}>
-                            <MessageBubble
-                                message={msg}
-                                isOwn={msg.senderId === userId}
-                                showSender={showSender}
-                                multiSelect={multiSelect}
-                                selected={selectedIds.has(msg.id)}
-                                onToggleSelect={handleToggleSelect}
-                                onQuote={handleQuote}
-                                onEnterMultiSelect={handleEnterMultiSelect}
-                                onTransfer={msg.messageType === 'file' ? handleTransfer : undefined}
-                            />
-                            {msg.failed && (
-                                <div className={styles.failedMsgRow}>
-                                    <i className="fas fa-exclamation-circle" />
-                                    <span>Failed to send</span>
-                                    <button onClick={() => handleRetry(msg)}>Retry</button>
-                                </div>
-                            )}
-                        </React.Fragment>
-                    );
-                })}
+            {initialLoading ? (
+                <div className={styles.chatLoadingState}>
+                    <i className="fas fa-circle-notch fa-spin" />
+                    <span className={styles.chatLoadingTitle}>
+                        {wsStatus === 'closed' ? 'Waiting for network...' : 'Loading chat history...'}
+                    </span>
+                    <span className={styles.chatLoadingHint}>
+                        {wsStatus === 'closed'
+                            ? 'Messages and file actions will be available after reconnection.'
+                            : 'Preparing complete room data, please wait.'}
+                    </span>
+                </div>
+            ) : (
+                <div className={styles.messagesArea} ref={messagesAreaRef}>
+                    <div ref={messagesTopRef} className={styles.loadMoreTrigger} />
+                    {loadingMore && (
+                        <div style={{ textAlign: 'center', padding: 8, color: '#94a3b8', fontSize: '0.8rem' }}>
+                            Loading...
+                        </div>
+                    )}
+                    {roomMessages.map((msg, idx) => {
+                        const prev = idx > 0 ? roomMessages[idx - 1] : null;
+                        const showSender = room.type === 'group' && msg.senderId !== userId && msg.senderId !== prev?.senderId;
+                        return (
+                            <React.Fragment key={msg.id}>
+                                <MessageBubble
+                                    message={msg}
+                                    isOwn={msg.senderId === userId}
+                                    showSender={showSender}
+                                    multiSelect={multiSelect}
+                                    selected={selectedIds.has(msg.id)}
+                                    onToggleSelect={handleToggleSelect}
+                                    onQuote={handleQuote}
+                                    onEnterMultiSelect={handleEnterMultiSelect}
+                                    onTransfer={msg.messageType === 'file' ? handleTransfer : undefined}
+                                />
+                                {msg.failed && (
+                                    <div className={styles.failedMsgRow}>
+                                        <i className="fas fa-exclamation-circle" />
+                                        <span>Failed to send</span>
+                                        <button onClick={() => handleRetry(msg)}>Retry</button>
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
 
-                {typingUser && (
-                    <div className={styles.typingIndicator}>
-                        <span>{typingUser}</span>
-                        <span className={styles.typingDots}><span /><span /><span /></span>
-                    </div>
-                )}
+                    {typingUser && (
+                        <div className={styles.typingIndicator}>
+                            <span>{typingUser}</span>
+                            <span className={styles.typingDots}><span /><span /><span /></span>
+                        </div>
+                    )}
 
-                <div ref={messagesEndRef} />
-            </div>
+                    <div ref={messagesEndRef} />
+                </div>
+            )}
 
-            {hasNewMessage && (
+            {hasNewMessage && !initialLoading && (
                 <button className={styles.newMessageBanner} onClick={scrollToBottom}>
                     <i className="fas fa-arrow-down" />
                     &nbsp; New messages
                 </button>
             )}
 
-            {multiSelect ? (
+            {initialLoading ? (
+                <div className={styles.chatLoadingInputBlock}>
+                    <i className="fas fa-lock" />
+                    <span>Message actions are disabled until room data is ready.</span>
+                </div>
+            ) : multiSelect ? (
                 <div className={styles.multiSelectToolbar}>
                     <button className={styles.multiSelectToolbarBtn} onClick={handleExitMultiSelect}>
                         <i className="fas fa-times" /><span>Cancel</span>

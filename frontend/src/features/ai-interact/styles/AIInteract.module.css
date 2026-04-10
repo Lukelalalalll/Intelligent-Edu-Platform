@@ -92,7 +92,7 @@
 
 .ai-resizer:hover,
 .ai-resizer-dragging {
-    background-color: #007B55;
+    background-color: var(--primary-color);
     width: 4px;
 }
 
@@ -120,7 +120,7 @@
 .new-chat-btn {
     width: 100%;
     padding: 12px 0;
-    background: linear-gradient(120deg, #007B55, #004D40);
+    background: linear-gradient(120deg, var(--primary-color), #004D40);
     color: white;
     border: none;
     border-radius: var(--radius-pill);
@@ -448,7 +448,7 @@
 
 .fileCardIcon {
     font-size: 1.5rem;
-    color: #007B55;
+    color: var(--primary-color);
     flex-shrink: 0;
 }
 
@@ -500,7 +500,7 @@
 }
 
 .ai-message .avatar {
-    background: linear-gradient(135deg, #007B55, #004D40);
+    background: linear-gradient(135deg, var(--primary-color), #004D40);
     color: white;
 }
 
@@ -580,7 +580,7 @@
     height: 46px;
     border: none;
     border-radius: 50%;
-    background: #007B55;
+    background: var(--primary-color);
     color: white;
     cursor: pointer;
     display: flex;
@@ -848,7 +848,7 @@
     padding: 6px 14px;
     font-size: 0.8rem;
     font-weight: 500;
-    color: #007B55;
+    color: var(--primary-color);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -859,7 +859,7 @@
 }
 
 .msg-action-btn:hover {
-    background: linear-gradient(120deg, #007B55, #006042);
+    background: linear-gradient(120deg, var(--primary-color), #006042);
     /* 悬浮变成带质感的实心绿 */
     color: #ffffff;
     border-color: transparent;
@@ -1121,7 +1121,7 @@
 
 .memory-label span i {
     font-size: 0.78rem;
-    color: var(--primary-color, #007B55);
+    color: var(--primary-color);
     opacity: 0.7;
 }
 
@@ -1142,7 +1142,7 @@
 .memory-input:focus,
 .memory-textarea:focus {
     outline: none;
-    border-color: var(--primary-color, #007B55);
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
     background: #fff;
 }
@@ -1162,7 +1162,7 @@
     border: 1.5px solid rgba(0, 123, 85, 0.2);
     border-radius: 20px;
     background: rgba(0, 123, 85, 0.06);
-    color: var(--primary-color, #007B55);
+    color: var(--primary-color);
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;

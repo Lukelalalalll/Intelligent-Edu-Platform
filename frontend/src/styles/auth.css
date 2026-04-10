@@ -155,7 +155,7 @@
 }
 
 .auth-header .header-icon:hover {
-    transform: scale(1.3) !important;
+    transform: scale(1.3);
     animation-play-state: paused;
 }
 
@@ -191,11 +191,11 @@
 
 .auth-form .input-group input {
     width: 100%;
-    padding: 16px 45px 16px 48px !important;
+    padding: 16px 45px 16px 48px;
     /* 给左右图标留出空间 */
     font-size: 1rem;
     color: var(--text-main);
-    background: var(--auth-bg-input) !important;
+    background: var(--auth-bg-input);
     border: 2px solid transparent;
     border-radius: var(--radius-pill);
     outline: none;
@@ -217,7 +217,7 @@
 /* 聚焦动画 */
 .auth-form .input-group input:focus,
 .auth-form .input-group input:not(:placeholder-shown) {
-    background: #fff !important;
+    background: #fff;
     border-color: var(--primary-color);
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.1);
 }
@@ -451,7 +451,7 @@
 }
 
 .toast-leave {
-    animation: toastLeave 0.4s ease-in forwards !important;
+    animation: toastLeave 0.4s ease-in forwards;
 }
 
 @keyframes toastLeave {
@@ -469,8 +469,8 @@
 
 /* ================= Login 专属 - Cinematic Premium Reveal ================= */
 .split-layout {
-    justify-content: space-between !important;
-    padding: 2rem 10% !important;
+    justify-content: space-between;
+    padding: 2rem 10%;
     gap: 2rem;
 }
 
@@ -575,7 +575,7 @@
 /* ================= 响应式布局适配 ================= */
 @media (max-width: 1200px) {
     .split-layout {
-        padding: 2rem 6% !important;
+        padding: 2rem 6%;
     }
 
     .welcome-title {
@@ -585,8 +585,8 @@
 
 @media (max-width: 900px) {
     .split-layout {
-        flex-direction: column !important;
-        justify-content: center !important;
+        flex-direction: column;
+        justify-content: center;
         align-items: center;
     }
 
@@ -616,7 +616,7 @@
     }
 
     .split-layout {
-        padding: 1rem !important;
+        padding: 1rem;
     }
 
     .welcome-section {
@@ -631,8 +631,8 @@
 
 /* 1. 当页面处于 Auth 状态时，清除 Footer 顶部的 4rem margin */
 body:has(.auth-wrapper) .footer {
-    margin-top: 0 !important;
-    border-top: none !important;
+    margin-top: 0;
+    border-top: none;
     /* 可选：去掉顶部边线，衔接更完美 */
 }
 

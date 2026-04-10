@@ -29,6 +29,7 @@ const EmailAgentEntry = React.lazy(() => import('./entries/emailAgentEntry'));
 const StudyNotesEntry = React.lazy(() => import('./entries/study-notes/studyNotesEntry'));
 const ChatEntry = React.lazy(() => import('./entries/chatEntry'));
 const KnowledgeBaseEntry = React.lazy(() => import('./entries/knowledgeBaseEntry'));
+const DiagnosticFeedbackEntry = React.lazy(() => import('./entries/diagnosticFeedbackEntry'));
 
 import client from './api/client';
 
@@ -140,6 +141,7 @@ function App() {
           <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramToolEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBaseEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="diagnostic-feedback" element={<RouteErrorBoundary><ProtectedRoute><DiagnosticFeedbackEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="email-agent" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentEntry /></ProtectedRoute></RouteErrorBoundary>} />

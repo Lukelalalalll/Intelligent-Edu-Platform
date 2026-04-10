@@ -299,7 +299,7 @@
     font-weight: 800;
     color: var(--primary-dark);
     margin-bottom: 0.8rem;
-    background: linear-gradient(90deg, #007B55, #00B8D9);
+    background: linear-gradient(90deg, var(--primary-color), #00B8D9);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }

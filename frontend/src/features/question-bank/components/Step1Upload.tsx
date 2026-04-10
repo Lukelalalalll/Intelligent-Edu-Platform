@@ -3,8 +3,8 @@ import React, { useRef, useEffect } from 'react';
 import styles from '../styles/sub2.module.css';
 
 export default function Step1Upload({ states, handlers }) {
-    const { file, fileName, fileType, totalPages, selectedPages, uploadLoading, isDragging } = states;
-    const { handleDragOver, handleDragLeave, handleDrop, handleFileChange, selectAllPages, clearPageSelection, togglePage, goToStep2 } = handlers;
+    const { file, fileName, fileType, totalPages, selectedPages, uploadLoading, isDragging, generationMode } = states;
+    const { handleDragOver, handleDragLeave, handleDrop, handleFileChange, selectAllPages, clearPageSelection, togglePage, goToStep2, setGenerationMode } = handlers;
 
     const pageSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -14,13 +14,37 @@ export default function Step1Upload({ states, handlers }) {
         }
     }, [file, uploadLoading]);
 
-    const canGoNext = Boolean(file) && (fileType !== 'pdf' || selectedPages.length > 0);
+    const canGoNext = Boolean(file);
 
     return (
         <div className={styles.stepContainer}>
             <div className={styles.stepTitle}>
                 <div className={styles.stepNumber}>1</div>
                 Upload File
+            </div>
+
+            <div className={styles.formGroup}>
+                <label>Generation Path:</label>
+                <div className={styles.modeCards}>
+                    <button
+                        type="button"
+                        className={`${styles.modeCard} ${generationMode === 'pdf_direct' ? styles.modeCardActive : ''}`}
+                        onClick={() => setGenerationMode('pdf_direct')}
+                    >
+                        <i className="fas fa-bolt"></i>
+                        <span>Generate from PDF</span>
+                        <small>Skip extraction and generate directly from uploaded content.</small>
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.modeCard} ${generationMode === 'extract_first' ? styles.modeCardActive : ''}`}
+                        onClick={() => setGenerationMode('extract_first')}
+                    >
+                        <i className="fas fa-layer-group"></i>
+                        <span>Extract First</span>
+                        <small>Extract exercises and curate a visual reference set before generation.</small>
+                    </button>
+                </div>
             </div>
 
             <div
@@ -90,7 +114,7 @@ export default function Step1Upload({ states, handlers }) {
                     onClick={goToStep2}
                     disabled={!canGoNext}
                 >
-                    Next: Extract Content <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
+                    Next: Prepare Source <i className="fas fa-arrow-right" style={{ marginLeft: '8px' }}></i>
                 </button>
             </div>
         </div>

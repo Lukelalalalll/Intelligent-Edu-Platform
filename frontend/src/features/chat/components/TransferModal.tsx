@@ -1,6 +1,7 @@
 // frontend/src/features/chat/components/TransferModal.tsx
 
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { chatApi } from '../../../api/chatApi';
 import type { ChatMessage } from '../types';
@@ -34,7 +35,28 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fileExt = (message.fileName || '').split('.').pop()?.toLowerCase() || '';
+    const inferFileExt = (): string => {
+        const fromName = (message.fileName || '').split('.').pop()?.toLowerCase() || '';
+        if (fromName) return fromName;
+
+        const fromUrl = (message.fileUrl || '').split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() || '';
+        if (fromUrl && fromUrl.length <= 8 && !fromUrl.includes('/')) return fromUrl;
+
+        const mime = (message.mimeType || '').toLowerCase();
+        if (mime.includes('pdf')) return 'pdf';
+        if (mime.includes('markdown')) return 'md';
+        if (mime.includes('png')) return 'png';
+        if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+        if (mime.includes('webp')) return 'webp';
+        if (mime.includes('gif')) return 'gif';
+        if (mime.includes('msword')) return 'doc';
+        if (mime.includes('wordprocessingml')) return 'docx';
+        if (mime.includes('presentationml')) return 'pptx';
+        if (mime.includes('spreadsheetml')) return 'xlsx';
+        return '';
+    };
+
+    const fileExt = inferFileExt();
 
     const isModuleCompatible = (mod: string): boolean => {
         const extMap: Record<string, string[]> = {
@@ -45,6 +67,8 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
             sub4_images: ['pdf'],
             sub5: ['pdf'],
         };
+        // If extension cannot be inferred, allow selection and let backend validate.
+        if (!fileExt) return true;
         return (extMap[mod] || []).includes(fileExt);
     };
 
@@ -64,9 +88,10 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
             const res = await chatApi.transferStart(roomId, message.id, backendModule, opts);
             onClose();
 
-            // For sub4 sub-entries, add tab param to the redirect
-            if (selectedModule.startsWith('sub4_')) {
+            // Route visual-related transfers to Visual Tool tabs.
+            if (selectedModule === 'sub3' || selectedModule.startsWith('sub4_')) {
                 const tabMap: Record<string, string> = {
+                    sub3: 'images',
                     sub4_extract: 'extract',
                     sub4_images: 'images',
                 };
@@ -76,19 +101,27 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
                 navigate(res.redirect_url);
             }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Transfer failed';
+            const detail = (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data;
+            const msg = detail?.detail || detail?.message || (err instanceof Error ? err.message : 'Transfer failed');
             setError(msg);
         } finally {
             setLoading(false);
         }
     }, [selectedModule, style, roomId, message.id, navigate, onClose]);
 
-    return (
+    const modalContent = (
         <div className={styles.transferModalOverlay} onClick={onClose}>
             <div className={styles.transferModal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.transferModalHeader}>
-                    <i className="fas fa-exchange-alt" style={{ marginRight: 8 }} />
-                    <span>Send to Module</span>
+                    <div className={styles.transferModalTitleWrap}>
+                        <span className={styles.transferModalTitleIcon}>
+                            <i className="fas fa-exchange-alt" />
+                        </span>
+                        <div>
+                            <span className={styles.transferModalTitle}>Send to Module</span>
+                            <p className={styles.transferModalSubtitle}>Choose the best destination for this file.</p>
+                        </div>
+                    </div>
                     <button className={styles.transferModalClose} onClick={onClose}>
                         <i className="fas fa-times" />
                     </button>
@@ -96,9 +129,14 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
 
                 <div className={styles.transferModalBody}>
                     <div className={styles.transferFileInfo}>
-                        <i className="fas fa-file" style={{ marginRight: 8, opacity: 0.6 }} />
-                        <span>{message.fileName || 'Unknown file'}</span>
-                        <span className={styles.transferFileExt}>.{fileExt}</span>
+                        <span className={styles.transferFileIcon}>
+                            <i className="fas fa-file" />
+                        </span>
+                        <div className={styles.transferFileMeta}>
+                            <span className={styles.transferFileName}>{message.fileName || 'Unknown file'}</span>
+                            <span className={styles.transferFileHint}>Routing target depends on module capability.</span>
+                        </div>
+                        <span className={styles.transferFileExt}>.{fileExt || 'unknown'}</span>
                     </div>
 
                     <div className={styles.transferModuleGrid}>
@@ -117,9 +155,11 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
                                         disabled={!compatible}
                                         title={compatible ? mod.label : `File type .${fileExt} not supported`}
                                     >
-                                        <i className={`fas ${mod.icon}`} />
+                                        <span className={styles.transferModuleIconWrap}>
+                                            <i className={`fas ${mod.icon}`} />
+                                        </span>
                                         <span className={styles.transferModuleName}>{mod.label}</span>
-                                        <span className={styles.transferModuleExts}>{mod.exts}</span>
+                                        <span className={styles.transferModuleExts}>Supports {mod.exts}</span>
                                     </button>
                                 </React.Fragment>
                             );
@@ -168,4 +208,6 @@ export default function TransferModal({ message, roomId, onClose }: Props) {
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

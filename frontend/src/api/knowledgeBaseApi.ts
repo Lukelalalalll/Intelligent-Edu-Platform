@@ -4,6 +4,7 @@ export interface IndexedDoc {
     doc_name: string;
     chunk_count: number;
     indexed_at: string;
+    chapter_id?: string;
 }
 
 export interface IndexCourseSummary {
@@ -36,10 +37,12 @@ export const knowledgeBaseApi = {
     uploadDoc: (
         courseId: string,
         file: File,
+        chapterId?: string,
         onProgress?: (pct: number) => void,
     ): Promise<{ job_id: string; status: string; filename: string; content_hash: string }> => {
         const formData = new FormData();
         formData.append('file', file);
+        if (chapterId) formData.append('chapter_id', chapterId);
         return client
             .post(`/ai/index-course/${encodeURIComponent(courseId)}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -69,15 +72,16 @@ export const knowledgeBaseApi = {
     testRetrieval: (
         courseId: string,
         query: string,
+        chapterId: string = '',
         topK: number = 5,
     ): Promise<{
         query: string;
         course_id: string;
         top_k: number;
         latency_ms: number;
-        results: { course_id: string; text: string; score: number; doc_name: string }[];
+        results: { course_id: string; text: string; score: number; doc_name: string; chapter_id?: string }[];
     }> =>
         client
-            .post(`/ai/index-course/${encodeURIComponent(courseId)}/test-retrieval`, { query, top_k: topK })
+            .post(`/ai/index-course/${encodeURIComponent(courseId)}/test-retrieval`, { query, top_k: topK, chapter_id: chapterId })
             .then(r => r.data),
 };

@@ -46,6 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
         links: [
             { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
             { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
+            { to: '/diagnostic-feedback', label: 'Student Feedback', icon: 'fa-comment-dots' },
         ],
     },
 ];

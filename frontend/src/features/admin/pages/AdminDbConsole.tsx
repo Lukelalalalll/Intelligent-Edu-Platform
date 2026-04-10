@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../styles/AdminDbConsole.module.css';
+import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 function RelationGraph({ doc }) {
     if (!doc) {
@@ -129,10 +130,10 @@ export default function AdminDbConsole({
 
     return (
         <div className={styles.pageWrap}>
-            <div className={styles.headline}>
-                <h1>Database Console</h1>
-                <p>Visual browser and editor for MongoDB collections</p>
-            </div>
+            <WelcomeBanner
+                title="Database Console"
+                subtitle="Visual browser and editor for MongoDB collections"
+            />
 
             <div className={styles.consoleGrid}>
                 <aside className={styles.sidebar}>

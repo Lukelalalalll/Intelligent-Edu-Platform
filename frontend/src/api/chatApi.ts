@@ -4,6 +4,72 @@ import client from './client';
 import type { ChatContact, CourseInfo, FriendRequest, ChatRoom, ChatMessage } from '../features/chat/types';
 import type { AIProvider } from '../shared/aiProvider';
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
+
+const resolveApiRoot = (): string => {
+  const raw = String(import.meta.env.VITE_API_ROOT || 'http://localhost:5009').trim();
+  try {
+    const parsed = new URL(raw);
+    const browserHost = window.location.hostname;
+    if (LOOPBACK_HOSTS.has(parsed.hostname) && LOOPBACK_HOSTS.has(browserHost) && parsed.hostname !== browserHost) {
+      parsed.hostname = browserHost;
+    }
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return raw.replace(/\/$/, '');
+  }
+};
+
+const toAbsoluteFileUrl = (fileUrl: string): string => {
+  if (!fileUrl) return '';
+  const raw = String(fileUrl).trim();
+  const isAbsolute = /^https?:\/\//i.test(raw);
+
+  if (!isAbsolute) {
+    // In dev, never rely on Vite /static proxy target; resolve via API root directly.
+    const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+    return `${resolveApiRoot()}${normalized}`;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    const browserHost = window.location.hostname;
+    if (LOOPBACK_HOSTS.has(parsed.hostname) && LOOPBACK_HOSTS.has(browserHost) && parsed.hostname !== browserHost) {
+      parsed.hostname = browserHost;
+    }
+    return parsed.toString();
+  } catch {
+    const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+    return `${resolveApiRoot()}${normalized}`;
+  }
+};
+
+const fetchFileBlob = async (fileUrl: string): Promise<Blob> => {
+  const absoluteUrl = toAbsoluteFileUrl(fileUrl);
+  const resp = await fetch(absoluteUrl, {
+    credentials: 'include',
+    headers: {
+      Accept: 'application/octet-stream,application/pdf,image/*,*/*',
+    },
+  });
+  if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
+
+  const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('text/html')) {
+    throw new Error('Received HTML instead of file content (auth or URL mismatch).');
+  }
+  return await resp.blob();
+};
+
+const ensureFilenameExtension = (name: string, extHint?: string): string => {
+  const baseName = String(name || 'file').trim() || 'file';
+  const ext = String(extHint || '').trim().toLowerCase();
+  if (!ext) return baseName;
+  if (baseName.toLowerCase().endsWith(`.${ext}`)) return baseName;
+  if (!baseName.includes('.')) return `${baseName}.${ext}`;
+  return `${baseName}.${ext}`;
+};
+
 // ── AI Assistant Types ──
 export interface AiSummaryResult {
   ok: boolean;
@@ -62,6 +128,10 @@ export interface TransferConsumeResult {
 }
 
 export const chatApi = {
+  toAbsoluteFileUrl,
+
+  fetchFileBlob,
+
   // ── Contacts ──
   getContacts: (): Promise<{ contacts: ChatContact[] }> =>
     client.get('/chat/contacts').then(r => r.data),
@@ -222,11 +292,9 @@ export const chatApi = {
     meta: TransferConsumeResult;
   }> => {
     const meta = await client.post(`/chat/transfers/${transferId}/consume`).then(r => r.data) as TransferConsumeResult;
-    // Download the file directly (static files are NOT under /api, use root-relative URL)
-    const resp = await fetch(meta.source_file_url);
-    if (!resp.ok) throw new Error(`Failed to fetch file: ${resp.status}`);
-    const blob = await resp.blob();
-    const file = new File([blob], meta.file_meta.name, { type: meta.file_meta.mime });
+    const blob = await fetchFileBlob(meta.source_file_url);
+    const normalizedName = ensureFilenameExtension(meta.file_meta.name || 'file', meta.file_meta.ext);
+    const file = new File([blob], normalizedName, { type: meta.file_meta.mime });
     return { file, meta };
   },
 };

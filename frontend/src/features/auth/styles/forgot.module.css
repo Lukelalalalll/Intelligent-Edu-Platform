@@ -1,7 +1,7 @@
 /* forgot.module.css */
 
 .forgotWrapper {
-    --primary-gradient-animated: linear-gradient(120deg, #007B55, #005A8C, #007B55, #004D40);
+    --primary-gradient-animated: linear-gradient(120deg, var(--primary-color), #005A8C, var(--primary-color), #004D40);
 }
 
 .forgotOrb {

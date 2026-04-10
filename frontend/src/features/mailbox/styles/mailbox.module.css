@@ -6,6 +6,263 @@
     padding: 0 24px 40px;
 }
 
+.mailboxBanner {
+    text-align: center;
+    margin-bottom: 1.25rem;
+    padding: 3.5rem 2rem;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    opacity: 1;
+}
+
+.mailboxBanner h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+}
+
+.mailboxBanner p {
+    max-width: 640px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.copilotCard {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.copilotTopRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.copilotTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.copilotSubtitle {
+    margin: 0.35rem 0 0;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.copilotActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.copilotSelect {
+    min-width: 230px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 0.52rem 0.7rem;
+    background: #fff;
+    color: var(--text-main);
+}
+
+.copilotBtn {
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: #fff;
+    font-weight: 700;
+    padding: 0.56rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.copilotBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.copilotBody {
+    margin-top: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.copilotMetrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.metricCard {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    padding: 0.7rem 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.metricCard span {
+    font-size: 0.76rem;
+    color: var(--text-sub);
+}
+
+.metricCard strong {
+    color: var(--text-main);
+    font-size: 1.05rem;
+}
+
+.copilotGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.copilotPanel {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    padding: 0.75rem;
+}
+
+.copilotPanel h3 {
+    margin: 0 0 0.65rem;
+    font-size: 0.96rem;
+    color: var(--text-main);
+}
+
+.riskList,
+.actionList,
+.checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.riskItem {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 0.55rem 0.65rem;
+}
+
+.riskItem p {
+    margin: 0.2rem 0 0;
+    color: var(--text-sub);
+    font-size: 0.8rem;
+}
+
+.riskBadge {
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.riskHigh {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.riskMedium {
+    background: #ffedd5;
+    color: #b45309;
+}
+
+.riskLow {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.actionList li {
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: #f8fafc;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.84rem;
+    color: var(--text-main);
+}
+
+.checklist li label {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 9px;
+    align-items: start;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: #f8fafc;
+    padding: 0.5rem 0.6rem;
+}
+
+.checklist input {
+    margin-top: 3px;
+}
+
+.checklist span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.checklist strong {
+    font-size: 0.84rem;
+    color: var(--text-main);
+}
+
+.checklist em {
+    font-size: 0.78rem;
+    color: var(--text-sub);
+    font-style: normal;
+}
+
+.copilotError {
+    margin-top: 0.7rem;
+    border-left: 3px solid #dc2626;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #b91c1c;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+}
+
+.loadingLine,
+.emptyLine {
+    color: var(--text-sub);
+    font-size: 0.84rem;
+    margin: 0;
+}
+
 /* =========================================
    2. 现代步骤指示器 (Modern Stepper)
    ========================================= */
@@ -506,5 +763,21 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .copilotMetrics,
+    .copilotGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .copilotSelect,
+    .copilotBtn {
+        width: 100%;
+    }
+
+    .mailboxContainer {
+        padding: 0 12px 28px;
     }
 }

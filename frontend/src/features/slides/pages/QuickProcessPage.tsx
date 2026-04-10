@@ -1,18 +1,22 @@
 import React from 'react';
 import styles from '../styles/quickProcess.module.css';
+import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 export default function QuickProcess({
     loading, contentLoading, sections, formState, setFormState,
     maxAllowedPages, totalChapters, errorMsg,
     results, talkingScriptResult,
+    taskId, taskProgress, taskStep, taskEvents,
+    provider, setProvider, providerHealth, checkProviderHealth,
     handleSubmit, handleProceed, handleDownloadScript
 }) {
     return (
         <div className={styles.container}>
-            <header className="page-header">
-                <h1><i className="fas fa-magic"></i> Quick Content Processor</h1>
-                <p>Auto-generate structured PPT content and scripts from all chapters</p>
-            </header>
+            <WelcomeBanner
+                title={<><i className="fas fa-magic"></i> Quick Content Processor</>}
+                subtitle="Auto-generate structured PPT content and scripts from all chapters"
+                as="header"
+            />
 
             <div className={styles.layoutGrid}>
                 {/* Left: Original Content Preview */}
@@ -56,6 +60,31 @@ export default function QuickProcess({
                             </div>
 
                             <div className={styles.formGroup}>
+                                <label className={styles.formLabel}>AI Provider</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center' }}>
+                                    <select
+                                        className={styles.formControl}
+                                        value={provider}
+                                        onChange={(e) => setProvider(e.target.value)}
+                                    >
+                                        <option value="local_ollama">local_ollama (llama)</option>
+                                        <option value="coze">coze (from env)</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary"
+                                        style={{ whiteSpace: 'nowrap' }}
+                                        onClick={() => checkProviderHealth(provider)}
+                                    >
+                                        Check Health
+                                    </button>
+                                </div>
+                                {!!providerHealth && (
+                                    <small style={{ color: 'var(--text-secondary)' }}>{providerHealth}</small>
+                                )}
+                            </div>
+
+                            <div className={styles.formGroup}>
                                 <label className={styles.customCheckbox}>
                                     <input type="checkbox" checked={formState.generateTalkingScript}
                                         onChange={e => setFormState({ ...formState, generateTalkingScript: e.target.checked })} />
@@ -82,6 +111,24 @@ export default function QuickProcess({
                             )}
 
                             {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
+
+                            {!!taskId && (
+                                <div className="alert alert-info" style={{ marginTop: '14px' }}>
+                                    <div><strong>Task:</strong> {taskId}</div>
+                                    <div><strong>Current Step:</strong> {taskStep || 'queued'}</div>
+                                    <div className="progress" style={{ marginTop: '10px', height: '10px' }}>
+                                        <div
+                                            className="progress-bar"
+                                            role="progressbar"
+                                            style={{ width: `${taskProgress || 0}%` }}
+                                            aria-valuenow={taskProgress || 0}
+                                            aria-valuemin={0}
+                                            aria-valuemax={100}
+                                        />
+                                    </div>
+                                    <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>{taskProgress || 0}%</div>
+                                </div>
+                            )}
 
                             <button type="submit" className="btn btn-primary w-100" style={{ marginTop: '20px' }} disabled={loading || contentLoading}>
                                 {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> Generate PPT Content</>}
@@ -141,6 +188,21 @@ export default function QuickProcess({
                                     >
                                         <i className="fas fa-file-word"></i> Download .docx
                                     </button>
+                                </div>
+                            )}
+
+                            {Array.isArray(taskEvents) && taskEvents.length > 0 && (
+                                <div className="card" style={{ marginTop: '1.5rem' }}>
+                                    <div className="card-body">
+                                        <h5 className={styles.cardTitle}><i className="fas fa-stream"></i> Task Timeline</h5>
+                                        <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                                            {taskEvents.slice(-12).map((event, idx) => (
+                                                <div key={`${event.ts}-${idx}`} style={{ fontSize: '0.9rem', marginBottom: '6px' }}>
+                                                    <strong>[{event.step}]</strong> {event.message}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

@@ -6,6 +6,7 @@ import {
     type ChatRoomAssetSummary,
     type FileAsset,
 } from '../../api/fileCenterApi';
+import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import '../../styles/base.css';
 import styles from './styles/AdminFileCenter.module.css';
 
@@ -171,12 +172,11 @@ export default function AdminFileCenterPage() {
 
     return (
         <div className={styles.page}>
-            <header className="page-header">
-                <h1><i className="fa-solid fa-server" aria-hidden="true"></i> Admin File Center</h1>
-                <p>
-                    Oversee, manage, and audit all digital assets across the platform. Control group files and AI chat attachments within a centralized, secure environment.
-                </p>
-            </header>
+            <WelcomeBanner
+                title={<><i className="fa-solid fa-server" aria-hidden="true"></i> Admin File Center</>}
+                subtitle="Oversee, manage, and audit all digital assets across the platform. Control group files and AI chat attachments within a centralized, secure environment."
+                as="header"
+            />
 
             <div className={styles.toolbar}>
                 <div className={styles.toolbarLeft}>

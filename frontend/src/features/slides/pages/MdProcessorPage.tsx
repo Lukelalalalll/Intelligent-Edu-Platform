@@ -2,6 +2,7 @@
 import React from 'react';
 import '../../../styles/base.css';
 import { useNavigate } from 'react-router-dom';
+import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 import styles from '../styles/md_processor.module.css';
 import FileUploadSection from './components/FileUploadSection';
@@ -21,7 +22,7 @@ export default function MdProcessor({
     fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
     handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
     // Tab 2 props
-    inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle,
+    inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle, seedContent, setSeedContent,
     cozeLoading, cozeError, textProcessing,
     provider, setProvider,
     handleCozeGenerate, handleProcessText,
@@ -33,10 +34,12 @@ export default function MdProcessor({
     return (
         <div className="container">
             {/* Page Header */}
-            <header className={`page-header ${styles.pageHeader}`}>
-                <h1><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</h1>
-                <p>Process and enhance your PDF and Markdown files with intelligent section extraction</p>
-            </header>
+            <WelcomeBanner
+                title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
+                subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
+                className={styles.pageHeader}
+                as="header"
+            />
 
             {/* Tab Switcher — only show when no headers parsed yet */}
             {showUploadCard && (
@@ -82,6 +85,8 @@ export default function MdProcessor({
                     setTextContent={setTextContent}
                     textTitle={textTitle}
                     setTextTitle={setTextTitle}
+                    seedContent={seedContent}
+                    setSeedContent={setSeedContent}
                     cozeLoading={cozeLoading}
                     cozeError={cozeError}
                     textProcessing={textProcessing}

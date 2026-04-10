@@ -18,11 +18,44 @@ import type {
 
 // ── Derived request-body types from generated schema ─────────────────────────
 type ExtractPayload = components['schemas']['ExtractQuestionsSchema'];
-type GeneratePayload = components['schemas']['GenerateQuestionsSchema'];
 type ScreenshotPayload = components['schemas']['UploadScreenshotSchema'];
 type HistoryParams = NonNullable<
     operations['get_generation_history_api_sub2_generation_history_get']['parameters']['query']
 >;
+
+export interface GeneratePayload {
+    provider?: 'coze' | 'local_ollama';
+    task_id: string;
+    question_type: string;
+    num_questions: number;
+    difficulty: number | string;
+    constraints?: string[];
+    output_language?: string;
+    source_type: 'pdf' | 'screenshot_set';
+    page_numbers?: number[];
+    saved_screenshots?: string[];
+    // backward compatibility fields (ignored by backend if provided by stale clients)
+    subject?: string;
+    question_basis?: string | null;
+    knowledge_points?: string;
+}
+
+export interface SuggestConstraintsPayload {
+    provider?: 'coze' | 'local_ollama';
+    task_id: string;
+    source_type: 'pdf' | 'screenshot_set';
+    page_numbers?: number[];
+    question_type: string;
+    num_questions: number;
+    difficulty: number | string;
+    output_language: string;
+}
+
+export interface SuggestConstraintsResponse {
+    success: boolean;
+    suggestions?: string[];
+    error?: string;
+}
 
 export async function uploadFile(file: File): Promise<Sub2UploadResponse> {
     const formData = new FormData();
@@ -47,6 +80,13 @@ export async function generateQuestions(
     return res.data;
 }
 
+export async function suggestConstraints(
+    payload: SuggestConstraintsPayload,
+): Promise<SuggestConstraintsResponse> {
+    const res = await client.post('/questions/suggest_constraints', payload);
+    return res.data;
+}
+
 export async function exportQuestions(taskId: string | null): Promise<Blob> {
     const params: { task_id?: string } = taskId ? { task_id: taskId } : {};
     const res = await client.post('/questions/export_questions', {}, { params, responseType: 'blob' });
@@ -68,5 +108,21 @@ export async function getGenerationHistory(page = 1, pageSize = 10): Promise<{ i
 
 export async function getGenerationDetail(historyId: string): Promise<GenerationHistoryItem> {
     const res = await client.get(`/questions/generation_history/${historyId}`);
+    return res.data;
+}
+
+export interface GenerationReplaySessionResponse {
+    success: boolean;
+    task_id: string;
+    filename: string;
+    file_type: string;
+    total_pages: number;
+    page_numbers?: number[];
+    source_type?: 'pdf' | 'screenshot_set';
+    error?: string;
+}
+
+export async function replayGenerationHistory(historyId: string): Promise<GenerationReplaySessionResponse> {
+    const res = await client.post(`/questions/generation_history/${historyId}/replay`);
     return res.data;
 }

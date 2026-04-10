@@ -33,11 +33,11 @@ export default function DiagramToolEntry() {
                 setInitialTab(targetTab);
 
                 if (targetTab === 'images') {
-                    // Feed file to image extract handler
-                    imageHandlers.handleFileInput({ target: { files: [file], value: '' } });
+                    // Feed file to image extract handler and auto-run extraction
+                    await imageHandlers.handleTransferFile(file);
                 } else {
-                    // Feed file to extract handler
-                    extractHandlers.handleFileChange({ target: { files: [file] } });
+                    // Feed file to extract handler and auto-run extraction
+                    await extractHandlers.handleTransferFile(file);
                 }
 
                 // Clean up URL params

@@ -3,6 +3,7 @@ import KnowledgeBasePage from '../features/knowledge-base/index';
 import { knowledgeBaseApi } from '../api/knowledgeBaseApi';
 import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../api/knowledgeBaseApi';
 import type { UploadTask } from '../features/knowledge-base/components/DocumentManager';
+import { diagnosticTeacherApi, type DiagnosticChapter, type DiagnosticConfig, type DiagnosticReport } from '../api/diagnosticApi';
 
 export default function KnowledgeBaseEntry() {
     const [courses, setCourses] = useState<CourseInfo[]>([]);
@@ -13,6 +14,10 @@ export default function KnowledgeBaseEntry() {
     const [loadingDocs, setLoadingDocs] = useState(false);
     const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
     const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
+    const [chapters, setChapters] = useState<DiagnosticChapter[]>([]);
+    const [selectedChapterId, setSelectedChapterId] = useState<string>('');
+    const [selectedChapterConfig, setSelectedChapterConfig] = useState<DiagnosticConfig | null>(null);
+    const [reports, setReports] = useState<DiagnosticReport[]>([]);
 
     // ── Load courses + summary on mount ──
     useEffect(() => {
@@ -50,11 +55,43 @@ export default function KnowledgeBaseEntry() {
         }
     }, []);
 
+    const loadDiagnosticData = useCallback(async (courseId: string) => {
+        try {
+            const [chapterRes, reportRes] = await Promise.all([
+                diagnosticTeacherApi.listChapters(courseId),
+                diagnosticTeacherApi.listReports(courseId),
+            ]);
+            setChapters(chapterRes.chapters || []);
+            const firstChapter = chapterRes.chapters?.[0]?.chapter_id || '';
+            setSelectedChapterId(prev => prev || firstChapter);
+            setReports(reportRes.reports || []);
+        } catch {
+            setChapters([]);
+            setReports([]);
+            setSelectedChapterId('');
+        }
+    }, []);
+
+    const loadSelectedChapterConfig = useCallback(async (chapterId: string) => {
+        if (!chapterId) {
+            setSelectedChapterConfig(null);
+            return;
+        }
+        try {
+            const res = await diagnosticTeacherApi.getConfig(chapterId);
+            setSelectedChapterConfig(res.config || null);
+        } catch {
+            setSelectedChapterConfig(null);
+        }
+    }, []);
+
     const handleSelectCourse = useCallback((courseId: string) => {
         setSelectedCourseId(courseId);
+        setSelectedChapterId('');
         setUploadTasks([]);
         loadDocs(courseId);
-    }, [loadDocs]);
+        loadDiagnosticData(courseId);
+    }, [loadDocs, loadDiagnosticData]);
 
     // ── Refresh summary map (after upload/delete) ──
     const refreshSummary = useCallback(async () => {
@@ -69,6 +106,7 @@ export default function KnowledgeBaseEntry() {
     // ── Upload a single file (uses taskId to avoid index-based race conditions) ──
     const handleUploadFile = useCallback(async (file: File) => {
         if (!selectedCourseId) return;
+        if (!selectedChapterId) return;
         const taskId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         const newTask: UploadTask = { taskId, file, progress: 0, status: 'uploading' };
 
@@ -78,6 +116,7 @@ export default function KnowledgeBaseEntry() {
             const { job_id } = await knowledgeBaseApi.uploadDoc(
                 selectedCourseId,
                 file,
+                selectedChapterId || undefined,
                 (pct) => {
                     setUploadTasks(prev => prev.map(t => t.taskId === taskId ? { ...t, progress: pct } : t));
                 },
@@ -120,6 +159,7 @@ export default function KnowledgeBaseEntry() {
             // Reload document list + summary
             await loadDocs(selectedCourseId);
             await refreshSummary();
+            await loadDiagnosticData(selectedCourseId);
         } catch (err: any) {
             const msg = err?.response?.data?.detail || err?.message || 'Upload failed';
             setUploadTasks(prev =>
@@ -128,7 +168,7 @@ export default function KnowledgeBaseEntry() {
                 ),
             );
         }
-    }, [selectedCourseId, loadDocs, refreshSummary]);
+    }, [selectedCourseId, selectedChapterId, loadDocs, refreshSummary, loadDiagnosticData]);
 
     // ── Delete a document ──
     const handleDeleteDoc = useCallback(async (docName: string) => {
@@ -145,6 +185,59 @@ export default function KnowledgeBaseEntry() {
         }
     }, [selectedCourseId, loadDocs, refreshSummary]);
 
+    const handleCreateChapter = useCallback(async (chapterName: string, description: string = '') => {
+        if (!selectedCourseId || !chapterName.trim()) return;
+        await diagnosticTeacherApi.createChapter(selectedCourseId, {
+            chapter_name: chapterName.trim(),
+            chapter_order: chapters.length + 1,
+            description: description.trim(),
+            diagnostic_enabled: true,
+        });
+        await loadDiagnosticData(selectedCourseId);
+    }, [selectedCourseId, chapters.length, loadDiagnosticData]);
+
+    const handleUpdateChapter = useCallback(async (chapterId: string, payload: Partial<Pick<DiagnosticChapter, 'chapter_name' | 'chapter_order' | 'description' | 'diagnostic_enabled'>>) => {
+        if (!selectedCourseId) return;
+        await diagnosticTeacherApi.updateChapter(chapterId, payload);
+        await loadDiagnosticData(selectedCourseId);
+    }, [selectedCourseId, loadDiagnosticData]);
+
+    const handleDeleteChapter = useCallback(async (chapterId: string) => {
+        if (!selectedCourseId) return;
+        await diagnosticTeacherApi.deleteChapter(chapterId);
+        await loadDiagnosticData(selectedCourseId);
+    }, [selectedCourseId, loadDiagnosticData]);
+
+    const handleSaveChapterConfig = useCallback(async (chapterId: string, payload: {
+        question_count: number;
+        pass_score: number;
+        time_limit_minutes: number;
+    }) => {
+        if (!selectedCourseId) return;
+        await diagnosticTeacherApi.updateConfig(chapterId, payload);
+        await loadSelectedChapterConfig(chapterId);
+    }, [selectedCourseId, loadSelectedChapterConfig]);
+
+    const handleReassignDocChapter = useCallback(async (docName: string, chapterId: string) => {
+        if (!selectedCourseId || !chapterId) return;
+        await diagnosticTeacherApi.reassignKnowledge({
+            course_id: selectedCourseId,
+            doc_name: docName,
+            chapter_id: chapterId,
+        });
+        await loadDocs(selectedCourseId);
+    }, [selectedCourseId, loadDocs]);
+
+    const handleSaveReportComment = useCallback(async (reportId: string, comment: string) => {
+        if (!selectedCourseId) return;
+        await diagnosticTeacherApi.commentReport(reportId, comment);
+        await loadDiagnosticData(selectedCourseId);
+    }, [selectedCourseId, loadDiagnosticData]);
+
+    useEffect(() => {
+        loadSelectedChapterConfig(selectedChapterId);
+    }, [selectedChapterId, loadSelectedChapterConfig]);
+
     return (
         <KnowledgeBasePage
             courses={courses}
@@ -159,6 +252,17 @@ export default function KnowledgeBaseEntry() {
             onUploadFile={handleUploadFile}
             onDeleteDoc={handleDeleteDoc}
             uploading={uploadTasks.some(t => t.status === 'uploading')}
+            chapters={chapters}
+            selectedChapterId={selectedChapterId}
+            onSelectChapter={setSelectedChapterId}
+            onCreateChapter={handleCreateChapter}
+            onUpdateChapter={handleUpdateChapter}
+            onDeleteChapter={handleDeleteChapter}
+            selectedChapterConfig={selectedChapterConfig}
+            onSaveChapterConfig={handleSaveChapterConfig}
+            onReassignDocChapter={handleReassignDocChapter}
+            reports={reports}
+            onSaveReportComment={handleSaveReportComment}
         />
     );
 }
