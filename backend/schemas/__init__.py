@@ -51,13 +51,19 @@ from backend.schemas.slides import (  # noqa: F401
     EvaluateQualitySchema,
     SummarizeChaptersSchema,
     PptProcessSchema,
+    SlidesGenerateV2Schema,
+    SlidesTaskResponseSchema,
+    SlidesTaskStatusSchema,
 )
 
 from backend.schemas.questions import (  # noqa: F401
     ExtractQuestionsSchema,
     GenerateQuestionsSchema,
+    SuggestConstraintsSchema,
     ExportQuestionsSchema,
     UploadScreenshotSchema,
+    QuestionOpsRunCreateSchema,
+    QuestionOpsDedupeApplySchema,
 )
 
 from backend.schemas.diagram import (  # noqa: F401

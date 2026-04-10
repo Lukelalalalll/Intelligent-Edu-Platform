@@ -60,6 +60,43 @@ def _get_extension(filename: str) -> str:
     return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
 
+def _ext_from_mime(mime_type: str) -> str:
+    mime = str(mime_type or "").lower()
+    if "pdf" in mime:
+        return "pdf"
+    if "markdown" in mime:
+        return "md"
+    if "png" in mime:
+        return "png"
+    if "jpeg" in mime or "jpg" in mime:
+        return "jpg"
+    if "webp" in mime:
+        return "webp"
+    if "gif" in mime:
+        return "gif"
+    if "wordprocessingml" in mime:
+        return "docx"
+    if "msword" in mime:
+        return "doc"
+    if "presentationml" in mime:
+        return "pptx"
+    if "spreadsheetml" in mime:
+        return "xlsx"
+    if "zip" in mime:
+        return "zip"
+    return ""
+
+
+def _resolve_message_extension(file_name: str, file_url: str, mime_type: str) -> str:
+    ext = _get_extension(file_name)
+    if ext:
+        return ext
+    ext = _get_extension(str(file_url or "").split("?")[0].split("#")[0])
+    if ext:
+        return ext
+    return _ext_from_mime(mime_type)
+
+
 async def create_transfer(
     room_id: str,
     message_id: str,
@@ -99,7 +136,7 @@ async def create_transfer(
         raise ValueError("Message does not contain a file attachment")
 
     # Validate extension for target
-    ext = _get_extension(file_name)
+    ext = _resolve_message_extension(file_name, file_url, mime_type)
     allowed = MODULE_ALLOWED_EXTENSIONS.get(target_module, set())
     if ext not in allowed:
         raise ValueError(

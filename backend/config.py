@@ -5,6 +5,23 @@ from dotenv import load_dotenv
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+ENV_NAME = os.getenv('ENV', 'development').lower()
+SENSITIVE_ENVS = ('production', 'prod', 'staging', 'preprod')
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() == 'true'
+
+
+def _env_csv(name: str, default: str) -> list[str]:
+    return [
+        item.strip()
+        for item in os.getenv(name, default).split(',')
+        if item.strip()
+    ]
 
 load_dotenv()
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -13,25 +30,22 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 class Config:
     BASE_DIR = BASE_DIR
 
-    ENV = os.getenv('ENV', 'development').lower()
+    ENV = ENV_NAME
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-this-in-prod')
     JWT_TOKEN_LOCATION = ['cookies']
-    # CSRF protection: defaults to True in production, False in dev
-    JWT_COOKIE_CSRF_PROTECT = os.getenv(
-        'JWT_COOKIE_CSRF_PROTECT',
-        'true' if os.getenv('ENV', 'development').lower() in ('production', 'prod') else 'false'
-    ).lower() == 'true'
+    # CSRF protection defaults to True in sensitive envs and False in development.
+    JWT_COOKIE_CSRF_PROTECT = _env_bool('JWT_COOKIE_CSRF_PROTECT', default=ENV_NAME in SENSITIVE_ENVS)
     JWT_ACCESS_COOKIE_NAME = 'access_token_cookie'
     JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'lax').strip().lower()
     _jwt_cookie_secure_env = os.getenv('JWT_COOKIE_SECURE')
     JWT_COOKIE_SECURE = (
         _jwt_cookie_secure_env.strip().lower() == 'true'
         if isinstance(_jwt_cookie_secure_env, str) and _jwt_cookie_secure_env.strip()
-        else (os.getenv('ENV', 'development').lower() in ('production', 'prod', 'staging', 'preprod'))
+        else (ENV_NAME in SENSITIVE_ENVS)
     )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.getenv('JWT_EXPIRES_HOURS', '24')))
 
@@ -49,18 +63,31 @@ class Config:
     COZE_POLL_MAX_ATTEMPTS = int(os.getenv('COZE_POLL_MAX_ATTEMPTS', '50'))
 
     AI_DEFAULT_PROVIDER = os.getenv('AI_DEFAULT_PROVIDER', 'local_ollama').strip().lower()
-    AI_ALLOW_PROVIDER_SWITCH = os.getenv('AI_ALLOW_PROVIDER_SWITCH', 'true').strip().lower() == 'true'
+    AI_ALLOW_PROVIDER_SWITCH = _env_bool('AI_ALLOW_PROVIDER_SWITCH', default=True)
 
     OLLAMA_BASE_URL = (os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434') or '').strip().rstrip('/')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2-vision:11b').strip()
     OLLAMA_REQUEST_TIMEOUT_SECONDS = float(os.getenv('OLLAMA_REQUEST_TIMEOUT_SECONDS', '180'))
+    OLLAMA_LIGHT_TEMPERATURE = float(os.getenv('OLLAMA_LIGHT_TEMPERATURE', '0.2'))
+    OLLAMA_LIGHT_NUM_PREDICT = int(os.getenv('OLLAMA_LIGHT_NUM_PREDICT', '256'))
+    OLLAMA_LIGHT_NUM_CTX = int(os.getenv('OLLAMA_LIGHT_NUM_CTX', '4096'))
+    OLLAMA_HEAVY_TEMPERATURE = float(os.getenv('OLLAMA_HEAVY_TEMPERATURE', '0.4'))
+    OLLAMA_HEAVY_NUM_PREDICT = int(os.getenv('OLLAMA_HEAVY_NUM_PREDICT', '1024'))
+    OLLAMA_HEAVY_NUM_CTX = int(os.getenv('OLLAMA_HEAVY_NUM_CTX', '8192'))
 
-    # RAG / Vector Store
+    # RAG / vector store
     RAG_VECTORSTORE_DIR = os.getenv(
         'RAG_VECTORSTORE_DIR',
         os.path.join(BASE_DIR, 'generated', 'vectorstore'),
     )
     RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
+    RAG_TWO_STAGE_CHAT_ENABLED = _env_bool('RAG_TWO_STAGE_CHAT_ENABLED', default=True)
+    RAG_EMPTY_RETRY_ENABLED = _env_bool('RAG_EMPTY_RETRY_ENABLED', default=True)
+    RAG_POSTCHECK_ENABLED = _env_bool('RAG_POSTCHECK_ENABLED', default=True)
+    RAG_RETRIEVE_TOP_N = int(os.getenv('RAG_RETRIEVE_TOP_N', '10'))
+    RAG_ANSWER_TOP_K = int(os.getenv('RAG_ANSWER_TOP_K', '4'))
+    RAG_EVIDENCE_MAX_CHARS = int(os.getenv('RAG_EVIDENCE_MAX_CHARS', '1600'))
+    RAG_EVIDENCE_MAX_CHARS_PER_CHUNK = int(os.getenv('RAG_EVIDENCE_MAX_CHARS_PER_CHUNK', '420'))
 
     GMAIL_CLIENT_SECRET_FILE = os.getenv(
         'GMAIL_CLIENT_SECRET_FILE',
@@ -77,9 +104,8 @@ class Config:
     )
     GMAIL_REDIRECT_URI = os.getenv('GMAIL_REDIRECT_URI', 'http://localhost:5173/gmail/callback')
 
-
     # ==========================
-    # 全局及 Sub1 文件夹配置
+    # Global and Sub1 folder config
     # ==========================
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', str(50 * 1024 * 1024)))  # 50MB default
@@ -90,14 +116,14 @@ class Config:
     SUB1_MD_FOLDER = os.path.join(MARKDOWN_FOLDER, 'sub1')
     SUB1_HIGHLIGHTS_FOLDER = os.path.join(HIGHLIGHTS_FOLDER, 'sub1')
 
-    PPT_TEMPLATES_FOLDER = os.path.join(BASE_DIR, 'static/ppt_templates')
-    PPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/ppt_results/sub1')
-    SCRIPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static/script_results/sub1')
+    PPT_TEMPLATES_FOLDER = os.path.join(BASE_DIR, 'static', 'ppt_templates')
+    PPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static', 'ppt_results', 'sub1')
+    SCRIPT_RESULTS_FOLDER = os.path.join(BASE_DIR, 'static', 'script_results', 'sub1')
 
     # ==========================
-    # Sub2 专属配置 (题目提取与生成)
+    # Sub2 specific config (question extraction and generation)
     # ==========================
-    # 路径配置
+    # Path config
     UPLOAD_FOLDER_SUB2 = os.path.join(BASE_DIR, 'uploads', 'sub2')
     GENERATED_FOLDER_SUB2 = os.path.join(BASE_DIR, 'generated', 'sub2')
     SCREENSHOTS_FOLDER_SUB2 = os.path.join(BASE_DIR, 'static', 'sub2', 'screenshots')
@@ -107,8 +133,10 @@ class Config:
 
     # File lifecycle: auto-clean files older than this many hours
     SUB2_FILE_TTL_HOURS = int(os.getenv('SUB2_FILE_TTL_HOURS', '72'))
+    # Upload source files are kept longer to preserve replay capability for history records
+    SUB2_UPLOAD_FILE_TTL_HOURS = int(os.getenv('SUB2_UPLOAD_FILE_TTL_HOURS', '2160'))
 
-    # API 密钥与服务地址 (优先读取环境变量，否则使用默认值)
+    # API keys and service endpoints (read from env first)
     TEXTIN_API_KEY = os.getenv('TEXTIN_API_KEY')
     TEXTIN_SECRET_CODE = os.getenv('TEXTIN_SECRET_CODE')
 
@@ -118,34 +146,34 @@ class Config:
     LOCAL_DEEPSEEK_API_URL = os.getenv('LOCAL_DEEPSEEK_API_URL')
     LOCAL_DEEPSEEK_MODEL = os.getenv('LOCAL_DEEPSEEK_MODEL')
 
-    # OCR 引擎配置
+    # OCR engine config
     TESSERACT_CMD = os.getenv('TESSERACT_CMD')
 
     # ==========================
     # Chat AI & Transfer Station
     # ==========================
-    CHAT_AI_ENABLED = os.getenv('CHAT_AI_ENABLED', 'true').lower() == 'true'
-    CHAT_TRANSFER_ENABLED = os.getenv('CHAT_TRANSFER_ENABLED', 'true').lower() == 'true'
+    CHAT_AI_ENABLED = _env_bool('CHAT_AI_ENABLED', default=True)
+    CHAT_TRANSFER_ENABLED = _env_bool('CHAT_TRANSFER_ENABLED', default=True)
     CHAT_TRANSFER_TICKET_TTL_HOURS = int(os.getenv('CHAT_TRANSFER_TICKET_TTL_HOURS', '24'))
     CHAT_AI_CONTEXT_WINDOW = int(os.getenv('CHAT_AI_CONTEXT_WINDOW', '50'))
     CHAT_FILE_MAX_MB = int(os.getenv('CHAT_FILE_MAX_MB', '20'))
 
-    # 业务常量映射
+    # Business constant mapping
     DIFFICULTY_MAP = {1: "Basic", 2: "Easy", 3: "Medium", 4: "Difficult", 5: "Competition Level"}
 
     # ==========================
-    # 自动创建目录列表 (由 app.py 调用)
+    # Folder creation list (used by app startup)
     # ==========================
-    ALL_FOLDERS = [
+    _ALL_FOLDERS_RAW = [
         UPLOAD_FOLDER, MARKDOWN_FOLDER, HIGHLIGHTS_FOLDER, PPT_TEMPLATES_FOLDER,
         PPT_RESULTS_FOLDER, SCRIPT_RESULTS_FOLDER,
         os.path.join(BASE_DIR, 'uploads/sub1'),
         os.path.join(BASE_DIR, 'md/sub1'),
         os.path.join(BASE_DIR, 'highlights/sub1'),
-        os.path.join(BASE_DIR, 'static/ppt_results/sub1'),
-        os.path.join(BASE_DIR, 'static/script_results/sub1'),
+        os.path.join(BASE_DIR, 'static', 'ppt_results', 'sub1'),
+        os.path.join(BASE_DIR, 'static', 'script_results', 'sub1'),
 
-        # 将原先写成 sub3 的地方全部修正为 sub2 保持项目一致性
+        # Keep naming consistent: use sub2 paths (not legacy sub3 naming).
         UPLOAD_FOLDER_SUB2,
         GENERATED_FOLDER_SUB2,
         SCREENSHOTS_FOLDER_SUB2,
@@ -158,13 +186,10 @@ class Config:
         KNOWLEDGE_BASE_UPLOAD_DIR,
         RAG_VECTORSTORE_DIR,
     ]
+    ALL_FOLDERS = list(dict.fromkeys(_ALL_FOLDERS_RAW))
 
     # Comma-separated allowed origins for CORS (read from env, defaults to dev)
-    ALLOWED_ORIGINS = [
-        o.strip() for o in
-        os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
-        if o.strip()
-    ]
+    ALLOWED_ORIGINS = _env_csv('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 
     @classmethod
     def validate_startup(cls) -> list[str]:
@@ -173,9 +198,6 @@ class Config:
         import logging
         _logger = logging.getLogger("config.validation")
         warnings: list[str] = []
-
-        def _is_sensitive_env(env_name: str) -> bool:
-            return env_name in ('production', 'prod', 'staging', 'preprod')
 
         def _shannon_entropy_per_char(value: str) -> float:
             if not value:
@@ -225,8 +247,7 @@ class Config:
 
             return issues
 
-        env_name = os.getenv('ENV', 'development').lower()
-        sensitive_env = _is_sensitive_env(env_name)
+        sensitive_env = cls.ENV in SENSITIVE_ENVS
 
         secret_issues = _key_strength_issues(cls.SECRET_KEY, 'SECRET_KEY')
         jwt_issues = _key_strength_issues(cls.JWT_SECRET_KEY, 'JWT_SECRET_KEY')

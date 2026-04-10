@@ -28,6 +28,7 @@ async def create_job(
     filename: str,
     content_bytes: bytes,
     user_id: str,
+    chapter_id: str = "",
 ) -> dict:
     """Create a new indexing job and start processing in the background.
 
@@ -42,6 +43,7 @@ async def create_job(
         "course_id": course_id,
         "filename": filename,
         "content_hash": content_hash,
+        "chapter_id": str(chapter_id or ""),
         "status": "done",
     }, sort=[("created_at", -1)])
 
@@ -72,6 +74,7 @@ async def create_job(
         "content_hash": content_hash,
         "file_size": len(content_bytes),
         "user_id": user_id,
+        "chapter_id": str(chapter_id or ""),
         "status": "pending",  # pending -> processing -> done | failed
         "error": None,
         "result": None,
@@ -93,13 +96,17 @@ async def create_job(
             course_id=course_id,
             scope="knowledge",
             user_id=user_id,
-            metadata={"job_id": job_id, "content_hash": content_hash},
+            metadata={
+                "job_id": job_id,
+                "content_hash": content_hash,
+                "chapter_id": str(chapter_id or ""),
+            },
         )
     except Exception:
         logger.exception("Failed to register knowledge source file asset")
 
     # Fire-and-forget background task
-    asyncio.create_task(_process_job(job_id, course_id, filename))
+    asyncio.create_task(_process_job(job_id, course_id, filename, chapter_id=str(chapter_id or "")))
 
     return {
         "job_id": job_id,
@@ -129,6 +136,7 @@ async def _process_job(
     job_id: str,
     course_id: str,
     filename: str,
+    chapter_id: str = "",
 ) -> None:
     """Background coroutine that extracts text and indexes it."""
     try:
@@ -148,7 +156,7 @@ async def _process_job(
         # Index (also blocking — ChromaDB operations)
         from backend.services.course_rag_service import course_rag_service
         result = await asyncio.get_event_loop().run_in_executor(
-            None, course_rag_service.index_document, course_id, filename, text
+            None, course_rag_service.index_document, course_id, filename, text, chapter_id
         )
 
         vectorstore_path = Path(Config.RAG_VECTORSTORE_DIR) / "courses" / course_id

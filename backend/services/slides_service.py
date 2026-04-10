@@ -34,9 +34,9 @@ class Sub1Service:
         return filename
 
     @staticmethod
-    async def generate_script(slides_results, style, title):
+    async def generate_script(slides_results, style, title, provider='local_ollama'):
         summarizer = ChapterSummarizer()
-        scripts = await summarizer.generate_talking_script(slides_results, style)
+        scripts = await summarizer.generate_talking_script(slides_results, style, provider=provider)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"talking_script_{timestamp}.docx"

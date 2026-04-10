@@ -1,4 +1,9 @@
+import uuid
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from backend.core.database import db
 from backend.core.security import get_current_user, can_access_course as _centralized_can_access_course
 from backend.services.grading_service import (
     load_courses, find_submission, find_submission_v2, load_annotations, render_annotations_to_pdf,
@@ -11,6 +16,12 @@ from backend.services.grading_service import (
 
 teacher_router = APIRouter(prefix="/api/teacher", tags=["TeacherMailbox"])
 PERMISSION_DENIED = "Permission denied"
+
+
+class TeacherCopilotBriefSchema(BaseModel):
+    course_section_id: str | None = None
+    include_actions: bool = True
+    horizon_days: int = 7
 
 
 def _is_admin(user: dict) -> bool:
@@ -237,3 +248,121 @@ async def get_submission_v2(submission_id: str, current_user: dict = Depends(get
         await _assert_v2_course_access(course["id"], current_user)
 
     return bundle
+
+
+@teacher_router.post("/copilot/brief")
+async def create_teacher_copilot_brief(
+    payload: TeacherCopilotBriefSchema,
+    current_user: dict = Depends(get_current_user),
+):
+    _assert_teacher_or_admin(current_user)
+    teacher_id = str(current_user.get("_id") or current_user.get("id") or "")
+    now = datetime.now(timezone.utc)
+    brief_id = uuid.uuid4().hex[:14]
+
+    if payload.course_section_id:
+        courses = [await _assert_v2_course_access(payload.course_section_id, current_user)]
+    else:
+        c = await get_courses_v2(current_user)
+        courses = c.get("courses", [])[:8]
+
+    course_summaries = []
+    total_pending = 0
+    total_graded = 0
+
+    for course in courses:
+        assignments = await list_assignments(course["id"])
+        pending = 0
+        graded = 0
+        for assignment in assignments:
+            subs = await list_submissions(assignment["id"])
+            pending += sum(1 for s in subs if s.get("status") == "pending")
+            graded += sum(1 for s in subs if s.get("status") == "graded")
+        total_pending += pending
+        total_graded += graded
+        course_summaries.append(
+            {
+                "course_section_id": course.get("id"),
+                "course_name": course.get("courseName") or course.get("name") or course.get("courseCode") or "Untitled Course",
+                "assignment_count": len(assignments),
+                "pending_submissions": pending,
+                "graded_submissions": graded,
+                "risk_level": "high" if pending >= 12 else ("medium" if pending >= 5 else "low"),
+            }
+        )
+
+    actions = []
+    if payload.include_actions:
+        actions = [
+            "Prioritize grading for courses marked high risk.",
+            "Post a short clarification message for the most common mistakes.",
+            "Prepare one in-class formative question for each upcoming session.",
+        ]
+
+    doc = {
+        "brief_id": brief_id,
+        "teacher_id": teacher_id,
+        "course_section_id": payload.course_section_id,
+        "horizon_days": payload.horizon_days,
+        "summary": {
+            "total_courses": len(course_summaries),
+            "total_pending_submissions": total_pending,
+            "total_graded_submissions": total_graded,
+        },
+        "courses": course_summaries,
+        "actions": actions,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.teacher_copilot_briefs.insert_one(doc)
+
+    return {
+        "success": True,
+        "brief_id": brief_id,
+        "summary": doc["summary"],
+        "courses": course_summaries,
+        "actions": actions,
+    }
+
+
+@teacher_router.get("/copilot/brief/{brief_id}")
+async def get_teacher_copilot_brief(brief_id: str, current_user: dict = Depends(get_current_user)):
+    _assert_teacher_or_admin(current_user)
+    teacher_id = str(current_user.get("_id") or current_user.get("id") or "")
+    query = {"brief_id": brief_id}
+    if not _is_admin(current_user):
+        query["teacher_id"] = teacher_id
+
+    doc = await db.teacher_copilot_briefs.find_one(query, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Copilot brief not found")
+    for key in ("created_at", "updated_at"):
+        if hasattr(doc.get(key), "isoformat"):
+            doc[key] = doc[key].isoformat()
+    return {"success": True, "brief": doc}
+
+
+@teacher_router.get("/copilot/agenda")
+async def get_teacher_copilot_agenda(
+    course_section_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    _assert_teacher_or_admin(current_user)
+    course = await _assert_v2_course_access(course_section_id, current_user)
+    assignments = await list_assignments(course_section_id)
+    agenda = []
+    for idx, assignment in enumerate(assignments[:5], start=1):
+        agenda.append(
+            {
+                "rank": idx,
+                "assignment_id": assignment.get("id"),
+                "title": assignment.get("title") or f"Assignment {idx}",
+                "action": "Review pending submissions and release a rubric reminder.",
+            }
+        )
+    return {
+        "success": True,
+        "course_section_id": course_section_id,
+        "course_name": course.get("courseName") or course.get("name") or course.get("courseCode") or "Course",
+        "agenda": agenda,
+    }

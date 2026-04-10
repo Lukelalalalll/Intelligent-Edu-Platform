@@ -9,6 +9,7 @@ from PIL import Image
 from .img_chart_processor import ImageChartProcessor
 from .business.table_handler import BusinessTableHandler
 from .latex_generator import process_slide_latex
+from .theme_catalog import resolve_base_theme
 
 
 class PPTCreator:
@@ -134,7 +135,13 @@ class PPTCreator:
 
     def _get_template_path(self, theme):
         """获取主题模板路径"""
-        return os.path.join(self.template_base_path, f"{theme}.pptx")
+        available_themes = [
+            os.path.splitext(name)[0]
+            for name in os.listdir(self.template_base_path)
+            if name.endswith('.pptx')
+        ]
+        resolved_theme = resolve_base_theme(theme, available_themes)
+        return os.path.join(self.template_base_path, f"{resolved_theme}.pptx")
     
     def _find_layout_by_name(self, prs, layout_name):
         """根据布局名称查找对应的布局"""
@@ -167,7 +174,16 @@ class PPTCreator:
             bool: 是否使用专门的创建器
         """
         creator_mapping = self._get_template_creator_mapping()
-        return theme.lower() in creator_mapping
+        try:
+            available_themes = [
+                os.path.splitext(name)[0]
+                for name in os.listdir(self.template_base_path)
+                if name.endswith('.pptx')
+            ]
+            resolved_theme = resolve_base_theme(theme, available_themes)
+        except Exception:
+            resolved_theme = theme
+        return resolved_theme.lower() in creator_mapping
     
     def _get_specialized_creator(self, theme):
         """获取专门的模板创建器实例
@@ -179,7 +195,17 @@ class PPTCreator:
             PPTCreator: 专门的模板创建器实例，如果不存在则返回None
         """
         creator_mapping = self._get_template_creator_mapping()
-        creator_class_name = creator_mapping.get(theme.lower())
+        try:
+            available_themes = [
+                os.path.splitext(name)[0]
+                for name in os.listdir(self.template_base_path)
+                if name.endswith('.pptx')
+            ]
+            resolved_theme = resolve_base_theme(theme, available_themes)
+        except Exception:
+            resolved_theme = theme
+
+        creator_class_name = creator_mapping.get(resolved_theme.lower())
         
         if not creator_class_name:
             return None

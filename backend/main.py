@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from backend.routes.auth_routes import auth_router
 from backend.routes.admin_routes import admin_router
 from backend.routes.ai_routes import ai_router
-from backend.routes.slides_routes import slides_router, public_slides_router
+from backend.routes.slides_routes import slides_router, public_slides_router, legacy_sub1_router
 from backend.routes.questions_routes import questions_router
 from backend.routes.image_extractor_routes import image_extractor_router
 from backend.routes.diagram_routes import diagram_router
@@ -29,8 +29,46 @@ from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.email_routes import email_router
 from backend.routes.chat_routes import chat_router
+from backend.routes.diagnostic_routes import diagnostic_router
 
 logger = logging.getLogger(__name__)
+
+ROUTE_GROUP_PREFIXES = (
+    ("/api/auth", "auth"),
+    ("/api/admin", "admin"),
+    ("/api/ai", "ai"),
+    ("/api/slides", "slides"),
+    ("/api/questions", "questions"),
+    ("/api/image-extractor", "image_extractor"),
+    ("/api/diagram", "diagram"),
+    ("/api/study-notes", "study_notes"),
+    ("/api/teacher", "teacher"),
+    ("/api/grading", "grading"),
+    ("/api/email", "email"),
+    ("/data", "data"),
+    ("/static", "static"),
+    ("/test_pdf", "test_pdf"),
+    ("/grading_annotated", "grading_annotated"),
+)
+
+ROUTERS = (
+    auth_router,
+    admin_router,
+    ai_router,
+    slides_router,
+    public_slides_router,
+    legacy_sub1_router,
+    questions_router,
+    image_extractor_router,
+    diagram_router,
+    study_notes_router,
+    teacher_router,
+    grading_router,
+    ai_gateway_router,
+    email_router,
+    chat_router,
+    diagnostic_router,
+)
 
 
 def _setup_logging() -> None:
@@ -53,37 +91,15 @@ def _setup_logging() -> None:
 
 def _resolve_route_group(path: str) -> str:
     normalized = str(path or "").strip().lower()
-    if normalized.startswith("/api/auth"):
-        return "auth"
-    if normalized.startswith("/api/admin"):
-        return "admin"
-    if normalized.startswith("/api/ai"):
-        return "ai"
-    if normalized.startswith("/api/slides"):
-        return "slides"
-    if normalized.startswith("/api/questions"):
-        return "questions"
-    if normalized.startswith("/api/image-extractor"):
-        return "image_extractor"
-    if normalized.startswith("/api/diagram"):
-        return "diagram"
-    if normalized.startswith("/api/study-notes"):
-        return "study_notes"
-    if normalized.startswith("/api/teacher"):
-        return "teacher"
-    if normalized.startswith("/api/grading"):
-        return "grading"
-    if normalized.startswith("/api/email"):
-        return "email"
-    if normalized.startswith("/data"):
-        return "data"
-    if normalized.startswith("/static"):
-        return "static"
-    if normalized.startswith("/test_pdf"):
-        return "test_pdf"
-    if normalized.startswith("/grading_annotated"):
-        return "grading_annotated"
+    for prefix, group in ROUTE_GROUP_PREFIXES:
+        if normalized.startswith(prefix):
+            return group
     return "app"
+
+
+def _ensure_dir_and_mount(app_instance: FastAPI, mount_path: str, directory: str, name: str) -> None:
+    os.makedirs(directory, exist_ok=True)
+    app_instance.mount(mount_path, StaticFiles(directory=directory), name=name)
 
 
 def _get_route_logger(path: str) -> logging.Logger:
@@ -186,7 +202,8 @@ async def health_check():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+    incoming_request_id = request.headers.get("X-Request-ID")
+    request_id = incoming_request_id or uuid.uuid4().hex[:12]
     request.state.request_id = request_id
     started_at = time.perf_counter()
     method = request.method
@@ -226,39 +243,23 @@ for folder in Config.ALL_FOLDERS:
 
 # 提供数据文件静态访问（PDF 等）
 DATA_ROOT = os.path.abspath(os.path.join(Config.BASE_DIR, os.pardir, 'data'))
-os.makedirs(DATA_ROOT, exist_ok=True)
-app.mount("/data", StaticFiles(directory=DATA_ROOT), name="data")
+_ensure_dir_and_mount(app, "/data", DATA_ROOT, "data")
 
 # 提供测试 PDF 静态访问（用于 grading workbench 左侧 PDF）
 TEST_PDF_ROOT = os.path.join(Config.BASE_DIR, 'test_pdf')
-os.makedirs(TEST_PDF_ROOT, exist_ok=True)
-app.mount("/test_pdf", StaticFiles(directory=TEST_PDF_ROOT), name="test_pdf")
+_ensure_dir_and_mount(app, "/test_pdf", TEST_PDF_ROOT, "test_pdf")
 
 # 提供通用 static 资源访问（sub1 的模板预览图等）
 STATIC_ROOT = os.path.join(Config.BASE_DIR, 'static')
-os.makedirs(STATIC_ROOT, exist_ok=True)
-app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
+_ensure_dir_and_mount(app, "/static", STATIC_ROOT, "static")
 
 # 提供写入批注后的 PDF 静态访问
 ANNOTATED_PDF_ROOT = os.path.join(Config.BASE_DIR, 'static', 'grading_annotated')
-os.makedirs(ANNOTATED_PDF_ROOT, exist_ok=True)
-app.mount("/grading_annotated", StaticFiles(directory=ANNOTATED_PDF_ROOT), name="grading_annotated")
+_ensure_dir_and_mount(app, "/grading_annotated", ANNOTATED_PDF_ROOT, "grading_annotated")
 
 # 注册所有路由
-app.include_router(auth_router)
-app.include_router(admin_router)
-app.include_router(ai_router)
-app.include_router(slides_router)
-app.include_router(public_slides_router)
-app.include_router(questions_router)
-app.include_router(image_extractor_router)
-app.include_router(diagram_router)
-app.include_router(study_notes_router)
-app.include_router(teacher_router)
-app.include_router(grading_router)
-app.include_router(ai_gateway_router)
-app.include_router(email_router)
-app.include_router(chat_router)
+for router in ROUTERS:
+    app.include_router(router)
 
 # === 启动命令 ===
 # 在根目录下终端运行：

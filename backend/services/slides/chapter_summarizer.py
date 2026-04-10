@@ -386,7 +386,7 @@ class ChapterSummarizer:
         """同步方法，用于在Flask路由中调用"""
         return asyncio.run(self.summarize_chapters(highlights_data, total_pages, num_of_bullets, words_each_bullet))
 
-    async def generate_talking_script(self, slides_results, script_style="academic"):
+    async def generate_talking_script(self, slides_results, script_style="academic", provider="local_ollama"):
         """
         基于总结内容生成talking script，批量处理以节省API调用
         
@@ -448,74 +448,83 @@ class ChapterSummarizer:
             batch_content += "Please provide the talking scripts in the specified JSON format."
             
             data_list.append({
-                "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": batch_content}
-                ],
-                "stream": False,
-                "max_tokens": 2000,
-                "temperature": 0.3
+                "system_prompt": system_prompt,
+                "batch_content": batch_content,
             })
         
         # 并行处理所有批次
         final_scripts = []
-        async with aiohttp.ClientSession() as session:
-            tasks = [self.fetch_data(session, data) for data in data_list]
-            results = await asyncio.gather(*tasks)
-            
-            for batch_idx, result in enumerate(results):
-                if result:
-                    try:
-                        script_content = result['choices'][0]['message']['content'].strip()
-                        # 清理JSON内容
-                        script_content = script_content.strip('```json\n').strip('```')
-                        
-                        # 解析JSON响应
-                        json_response = json.loads(script_content)
-                        scripts_list = json_response.get('scripts', [])
-                        
-                        # 获取对应的批次数据
-                        batch = batches[batch_idx]
-                        
-                        # 处理每个脚本
-                        for script_item in scripts_list:
-                            # 找到对应的原始幻灯片数据
-                            slide_number = script_item.get('slide_number')
-                            original_slide = None
-                            for slide in batch:
-                                if slide['slide_number'] == slide_number:
-                                    original_slide = slide
-                                    break
-                            
-                            if original_slide:
-                                # 组装完整脚本文本
-                                full_script = f"{script_item.get('introduction', '')}\n\n{script_item.get('main_content', '')}\n\n{script_item.get('conclusion', '')}"
+        from backend.services.ai_gateway_service import AIGatewayService
+        ai_service = AIGatewayService()
+
+        async def _run_batch(data):
+            async with self._semaphore:
+                try:
+                    content = await ai_service.chat_with_provider(
+                        message=data["batch_content"],
+                        context={"system_override": data["system_prompt"]},
+                        provider=provider,
+                    )
+                    return {"choices": [{"message": {"content": content}}]}
+                except Exception as e:
+                    return {"_error": str(e)}
+
+        results = await asyncio.gather(*[_run_batch(data) for data in data_list])
+
+        for batch_idx, result in enumerate(results):
+            if result and "_error" not in result:
+                try:
+                    script_content = result['choices'][0]['message']['content'].strip()
+                    # 清理JSON内容
+                    script_content = script_content.strip('```json\n').strip('```')
+
+                    # 解析JSON响应
+                    json_response = json.loads(script_content)
+                    scripts_list = json_response.get('scripts', [])
+
+                    # 获取对应的批次数据
+                    batch = batches[batch_idx]
+
+                    # 处理每个脚本
+                    for script_item in scripts_list:
+                        # 找到对应的原始幻灯片数据
+                        slide_number = script_item.get('slide_number')
+                        original_slide = None
+                        for slide in batch:
+                            if slide['slide_number'] == slide_number:
+                                original_slide = slide
+                                break
+
+                        if original_slide:
+                            # 组装完整脚本文本
+                            full_script = f"{script_item.get('introduction', '')}\n\n{script_item.get('main_content', '')}\n\n{script_item.get('conclusion', '')}"
+
+                            # 优化数据结构，便于Word文档生成
+                            script_data = {
+                                'slide_number': slide_number,
+                                'slide_title': script_item.get('slide_title', original_slide['title']),
+                                'slide_content_points': original_slide['content'],
+                                'talking_script': {
+                                    'intro': script_item.get('introduction', ''),
+                                    'main_body': [script_item.get('main_content', '')],
+                                    'conclusion': script_item.get('conclusion', ''),
+                                    'full_text': full_script
+                                },
+                                'estimated_duration': script_item.get('estimated_duration', '45-60 seconds'),
+                                'script_style': script_style,
+                                'word_count': len(full_script.split()),
+                                'speaking_cues': self._extract_speaking_cues(full_script)
+                            }
+                            final_scripts.append(script_data)
+                            print(f"✅ Processed script for slide {slide_number}: {script_item.get('slide_title', 'Unknown')}")
+                        else:
+                            print(f"⚠️ Could not find original slide data for slide {slide_number}")
                                 
-                                # 优化数据结构，便于Word文档生成
-                                script_data = {
-                                    'slide_number': slide_number,
-                                    'slide_title': script_item.get('slide_title', original_slide['title']),
-                                    'slide_content_points': original_slide['content'],
-                                    'talking_script': {
-                                        'intro': script_item.get('introduction', ''),
-                                        'main_body': [script_item.get('main_content', '')],
-                                        'conclusion': script_item.get('conclusion', ''),
-                                        'full_text': full_script
-                                    },
-                                    'estimated_duration': script_item.get('estimated_duration', '45-60 seconds'),
-                                    'script_style': script_style,
-                                    'word_count': len(full_script.split()),
-                                    'speaking_cues': self._extract_speaking_cues(full_script)
-                                }
-                                final_scripts.append(script_data)
-                                print(f"✅ Processed script for slide {slide_number}: {script_item.get('slide_title', 'Unknown')}")
-                            else:
-                                print(f"⚠️ Could not find original slide data for slide {slide_number}")
-                                
-                    except (KeyError, json.JSONDecodeError) as e:
-                        print(f"❌ Error processing script result for batch {batch_idx}: {e}")
-                        print(f"Raw content: {script_content[:200]}...")
+                except (KeyError, json.JSONDecodeError) as e:
+                    print(f"❌ Error processing script result for batch {batch_idx}: {e}")
+                    print(f"Raw content: {script_content[:200]}...")
+                else:
+                    print(f"❌ Script generation failed for batch {batch_idx}: {result.get('_error', 'unknown_error') if isinstance(result, dict) else 'unknown_error'}")
         
         # 按slide_number排序，确保顺序正确
         final_scripts.sort(key=lambda x: x['slide_number'])

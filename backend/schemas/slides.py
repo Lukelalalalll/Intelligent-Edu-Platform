@@ -60,3 +60,35 @@ class SummarizeChaptersSchema(BaseModel):
 class PptProcessSchema(BaseModel):
     provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     ppt_schema: dict
+
+
+class SlidesGenerateV2Schema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = None
+    content: str = ""
+    chapterData: List[dict] = []
+    total_pages: int = 8
+    num_of_bullets: int = 3
+    words_each_bullet: int = 15
+    presentation_title: str = ""
+    script_style: str = "academic"
+    generate_talking_script: bool = False
+    generate_word_document: bool = True
+
+
+class SlidesTaskResponseSchema(BaseModel):
+    success: bool = True
+    task_id: str
+    status: Literal['queued', 'running', 'completed', 'failed']
+    request_id: str
+
+
+class SlidesTaskStatusSchema(BaseModel):
+    success: bool = True
+    task_id: str
+    status: Literal['queued', 'running', 'completed', 'failed']
+    current_step: str = ""
+    progress: int = 0
+    request_id: str
+    result: Optional[dict] = None
+    error: str = ""
+    events: List[dict] = []

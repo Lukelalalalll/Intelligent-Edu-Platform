@@ -317,6 +317,145 @@ async def ensure_indexes() -> None:
             background=True,
         )
 
+        # --- QuestionOps runs/items ---
+        await db.question_ops_runs.create_index(
+            [("run_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.question_ops_runs.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.question_ops_runs.create_index(
+            "created_at",
+            expireAfterSeconds=90 * 24 * 3600,
+            background=True,
+        )
+        await db.question_ops_items.create_index(
+            [("run_id", 1), ("item_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.question_ops_items.create_index(
+            [("run_id", 1), ("quality_score", -1)],
+            background=True,
+        )
+
+        # --- Slides delivery jobs ---
+        await db.slides_delivery_jobs.create_index(
+            [("job_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.slides_delivery_jobs.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.slides_delivery_jobs.create_index(
+            "created_at",
+            expireAfterSeconds=30 * 24 * 3600,
+            background=True,
+        )
+
+        # --- Study plan and review queue ---
+        await db.study_plan_profiles.create_index(
+            [("plan_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.study_plan_profiles.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.study_review_queue.create_index(
+            [("plan_id", 1), ("queue_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.study_review_queue.create_index(
+            [("user_id", 1), ("due_at", 1), ("status", 1)],
+            background=True,
+        )
+
+        # --- Teacher Copilot briefs ---
+        await db.teacher_copilot_briefs.create_index(
+            [("brief_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.teacher_copilot_briefs.create_index(
+            [("teacher_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.teacher_copilot_briefs.create_index(
+            [("course_section_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.teacher_copilot_briefs.create_index(
+            "created_at",
+            expireAfterSeconds=14 * 24 * 3600,
+            background=True,
+        )
+
+        # --- Chapter diagnostic domain ---
+        await db.diagnostic_chapters.create_index(
+            [("course_id", 1), ("chapter_order", 1)],
+            background=True,
+        )
+        await db.diagnostic_chapters.create_index(
+            [("chapter_id", 1)],
+            unique=True,
+            background=True,
+        )
+
+        await db.diagnostic_configs.create_index(
+            [("chapter_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.diagnostic_configs.create_index(
+            [("course_id", 1), ("chapter_id", 1)],
+            background=True,
+        )
+
+        await db.diagnostic_sessions.create_index(
+            [("session_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.diagnostic_sessions.create_index(
+            [("student_id", 1), ("started_at", -1)],
+            background=True,
+        )
+        await db.diagnostic_sessions.create_index(
+            [("course_id", 1), ("chapter_id", 1), ("started_at", -1)],
+            background=True,
+        )
+
+        await db.diagnostic_reports.create_index(
+            [("report_id", 1)],
+            unique=True,
+            background=True,
+        )
+        await db.diagnostic_reports.create_index(
+            [("student_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.diagnostic_reports.create_index(
+            [("course_id", 1), ("chapter_id", 1), ("created_at", -1)],
+            background=True,
+        )
+
+        await db.diagnostic_feedback.create_index(
+            [("report_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.diagnostic_feedback.create_index(
+            [("student_id", 1), ("created_at", -1)],
+            background=True,
+        )
+
         logger.info("MongoDB indexes ensured successfully")
     except Exception:
         logger.exception("Failed to create some MongoDB indexes")

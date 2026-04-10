@@ -1,5 +1,6 @@
 from pptx import Presentation
 import os
+from backend.services.slides.theme_catalog import build_theme_catalog, resolve_base_theme
 
 class PPTTemplateManager:
     def __init__(self, templates_dir='static/ppt_templates'):
@@ -16,18 +17,14 @@ class PPTTemplateManager:
 
     def get_available_themes(self):
         """获取所有可用的主题"""
-        themes = []
-        for template_name in self.templates.keys():
-            theme_name = os.path.splitext(template_name)[0]
-            themes.append({
-                'name': theme_name,
-                'description': f'Use layouts with the theme: {theme_name}'
-            })
-        return themes
+        base_themes = [os.path.splitext(template_name)[0] for template_name in self.templates.keys()]
+        return build_theme_catalog(base_themes)
 
     def get_placeholders(self, theme_name):
         """获取指定主题的占位符信息"""
-        template_path = self.templates.get(f"{theme_name}.pptx")
+        base_themes = [os.path.splitext(template_name)[0] for template_name in self.templates.keys()]
+        resolved_theme = resolve_base_theme(theme_name, base_themes)
+        template_path = self.templates.get(f"{resolved_theme}.pptx")
         if not template_path:
             raise ValueError(f"Theme: {theme_name} does not exist")
 
@@ -55,7 +52,9 @@ class PPTTemplateManager:
 
     def create_presentation(self, theme_name, ppt_schema):
         """根据schema创建演示文稿"""
-        template_path = self.templates.get(f"{theme_name}.pptx")
+        base_themes = [os.path.splitext(template_name)[0] for template_name in self.templates.keys()]
+        resolved_theme = resolve_base_theme(theme_name, base_themes)
+        template_path = self.templates.get(f"{resolved_theme}.pptx")
         if not template_path:
             raise ValueError(f"Theme {theme_name} does not exist")
 

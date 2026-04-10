@@ -357,6 +357,9 @@ class BusinessPPTCreator(PPTCreator):
             
             # 处理占位符（使用Business模板专属的处理逻辑）
             self._process_business_placeholders(slide, slide_data, presentation_title, prs)
+
+            # 写入讲者备注（如果有）
+            self._apply_speaker_notes(slide, slide_data)
         
         # 停止收集模式并执行批量处理
         self.image_processor.stop_collecting()

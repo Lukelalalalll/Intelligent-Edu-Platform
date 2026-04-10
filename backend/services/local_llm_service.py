@@ -62,13 +62,22 @@ class LocalLLMService:
         return messages
 
     @staticmethod
-    def _build_options() -> dict[str, float | int]:
+    def _build_options(task_profile: str = "heavy") -> dict[str, float | int]:
+        profile = str(task_profile or "heavy").strip().lower()
+        if profile == "light":
+            return {
+                "num_predict": Config.OLLAMA_LIGHT_NUM_PREDICT,
+                "temperature": Config.OLLAMA_LIGHT_TEMPERATURE,
+                "top_p": 0.9,
+                "repeat_penalty": 1.05,
+                "num_ctx": Config.OLLAMA_LIGHT_NUM_CTX,
+            }
         return {
-            "num_predict": 1024,
-            "temperature": 0.4,
+            "num_predict": Config.OLLAMA_HEAVY_NUM_PREDICT,
+            "temperature": Config.OLLAMA_HEAVY_TEMPERATURE,
             "top_p": 0.9,
             "repeat_penalty": 1.05,
-            "num_ctx": 8192,
+            "num_ctx": Config.OLLAMA_HEAVY_NUM_CTX,
         }
 
     async def health_check(self) -> tuple[bool, str]:
@@ -94,11 +103,12 @@ class LocalLLMService:
             credential_alias="local",
         )
 
+        task_profile = str((context or {}).get("task_profile", "heavy") or "heavy")
         payload = {
             "model": self.model,
             "messages": self._build_messages(message=message, context=context),
             "stream": False,
-            "options": self._build_options(),
+            "options": self._build_options(task_profile=task_profile),
         }
 
         with timer:
@@ -125,11 +135,12 @@ class LocalLLMService:
 
     async def chat_stream(self, message: str, context: Optional[Dict[str, Any]] = None):
         import json
+        task_profile = str((context or {}).get("task_profile", "heavy") or "heavy")
         payload = {
             "model": self.model,
             "messages": self._build_messages(message=message, context=context),
             "stream": True,
-            "options": self._build_options(),
+            "options": self._build_options(task_profile=task_profile),
         }
 
         try:
