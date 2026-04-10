@@ -1,7 +1,7 @@
 // frontend/src/pages/HomeStudent.jsx
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import GeminiChat from '../home/components/GeminiChat';
+import AIChatBox from '../home/components/AIChatBox';
 import { studentApi } from '../../api/api';
 import styles from './styles/HomeStudent.module.css';
 import AssignmentsTab from './components/AssignmentsTab';
@@ -162,7 +162,7 @@ export default function HomeStudent({
             {/* 3. 内容区域：根据 tab 切换显示 */}
             {activeTab === 'ai' ? (
                 <section className={styles.geminiWrapper}>
-                    <GeminiChat aiInteractUrl="/ai-interaction" />
+                    <AIChatBox aiInteractUrl="/ai-interaction" />
                 </section>
             ) : activeTab === 'study' ? (
                 <section className={styles.studySection}>

@@ -2,7 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import EmailAgent from '../features/email-agent/EmailAgent';
 import EmailProviderSelect from '../features/email-agent/EmailProviderSelect';
-import { useEmailClient } from '../hooks/useEmailClient';
+import { useEmailClient } from '../hooks/useEmailClient/useEmailClient';
 
 export default function EmailAgentEntry() {
     const email = useEmailClient();

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import ToolCard from './components/ToolCard';
-import GeminiChat from './components/GeminiChat';
+import AIChatBox from './components/AIChatBox';
 import styles from './styles/home.module.css';
 
 export default function Home({ config }) {
@@ -64,7 +64,7 @@ export default function Home({ config }) {
             </div>
 
             {activeTab === 'ai' ? (
-                <GeminiChat aiInteractUrl={config.urls.aiInteract} />
+                <AIChatBox aiInteractUrl={config.urls.aiInteract} />
             ) : activeTab === 'tools' ? (
                 <>
                     <div className={styles['cards-container']}>

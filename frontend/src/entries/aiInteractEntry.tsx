@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AIInteract from '../features/ai-interact/index';
 import { usePretextMeasure } from '../hooks/usePretextMeasure';
-import { useAISessions, useAIMemory } from '../hooks/useAISessions';
+import { useAISessions, useAIMemory } from '../hooks/userAISessions/useAISessions';
 import { getRoleInfo, type AIRoleInfo } from '../api/aiApi';
 
 export default function AIInteractEntry() {
