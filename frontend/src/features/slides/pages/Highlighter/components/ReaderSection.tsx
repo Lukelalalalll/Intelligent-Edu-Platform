@@ -1,11 +1,11 @@
 import React from 'react';
 import styles from '../../../styles/highlighter.module.css';
 
-export default function ReaderSection({
+const ReaderSection = ({
     loading, sections, currentSectionIndex, currentSectionTitle,
     isRenderedView, htmlContent, textLength, readTime,
     markdownViewRef, showSection, toggleView, handleMouseUp
-}) {
+}) => {
     return (
         <div className={`card ${styles.readerCard}`}>
             <div className={styles.cardHeader}>
@@ -63,4 +63,6 @@ export default function ReaderSection({
             </div>
         </div>
     );
-}
+};
+
+export default React.memo(ReaderSection);

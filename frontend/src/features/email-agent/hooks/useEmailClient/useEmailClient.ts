@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { EmailSummary, EmailDetail, EmailClassification } from '@/types/api';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '@/shared/aiProvider';
-import { gmailApi } from '@/api/emailApi';
+import { gmailApi } from '../../api/emailApi';
 import { extractError } from './components/helpers';
 import { useEmailActions } from './components/useEmailActions';
 import { useOAuthCallbackEffect } from './components/useOAuthCallback';

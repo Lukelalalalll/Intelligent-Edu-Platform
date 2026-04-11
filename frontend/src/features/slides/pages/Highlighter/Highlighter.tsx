@@ -1,4 +1,4 @@
-// Highlighter.jsx
+// Highlighter.tsx
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import styles from '../../styles/highlighter.module.css';
 import ReaderSection from './components/ReaderSection';
@@ -6,6 +6,7 @@ import HighlightsPanel from './components/HighlightsPanel';
 import { log } from '../../../../utils/logger';
 import { injectHighlightsIntoHtml } from './utils/highlightUtils';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
+import useTextHighlighter from './hooks/useTextHighlighter';
 
 export default function Highlighter({
     loading, sections, currentSectionIndex, currentSectionTitle,
@@ -17,9 +18,6 @@ export default function Highlighter({
     categoryFilter, setCategoryFilter,
     removeByCategoryOrConfidence
 }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [speakingId, setSpeakingId] = useState(null);
-    const [copiedId, setCopiedId] = useState(null);
     // 用 ref 追踪最新 highlights，避免 useEffect 依赖 highlights 导致无限重渲染
     const highlightsRef = useRef(highlights);
     useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
@@ -59,10 +57,6 @@ export default function Highlighter({
 
     // ======== 统一高亮删除（只更新 state，DOM 由 useEffect 自动重渲染） ========
     const handleLocalRemoveHighlight = useCallback((id) => {
-        if (speakingId === id && typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            setSpeakingId(null);
-        }
         // 先播放淡出动画
         if (markdownViewRef.current) {
             const els = markdownViewRef.current.querySelectorAll(`span.highlighted[data-id="${id}"]`);
@@ -72,66 +66,18 @@ export default function Highlighter({
         setTimeout(() => {
             removeHighlight(id);
         }, 400);
-    }, [removeHighlight, speakingId, markdownViewRef]);
+    }, [removeHighlight, markdownViewRef]);
 
     // ======== 统一的高亮创建逻辑 ========
-    const handleMouseUp = useCallback(() => {
-        if (!isRenderedView) return;
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) return;
-        const selectedText = selection.toString().trim();
-        if (!selectedText) return;
-
-        const range = selection.getRangeAt(0);
-        const container = markdownViewRef.current;
-        if (!container || !container.contains(range.commonAncestorContainer)) return;
-
-        // 检查是否与已有高亮重叠
-        const existingSpans = container.querySelectorAll('.highlighted');
-        for (let i = 0; i < existingSpans.length; i++) {
-            if (range.intersectsNode(existingSpans[i])) {
-                selection.removeAllRanges();
-                return;
-            }
-        }
-
-        const highlightId = 'hl-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        try {
-            const spanTemplate = document.createElement('span');
-            spanTemplate.className = 'highlighted';
-            spanTemplate.dataset.id = highlightId;
-
-            if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
-                range.surroundContents(spanTemplate);
-            } else {
-                const fragment = range.extractContents();
-                const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT, null);
-                const textNodes = [];
-                let node;
-                while ((node = walker.nextNode())) {
-                    if (node.nodeValue.trim().length > 0) textNodes.push(node);
-                }
-                textNodes.forEach(textNode => {
-                    const span = spanTemplate.cloneNode();
-                    textNode.parentNode.insertBefore(span, textNode);
-                    span.appendChild(textNode);
-                });
-                range.insertNode(fragment);
-            }
-            selection.removeAllRanges();
-
-            // 通知 Entry 更新 state
-            if (typeof onHighlightCreated === 'function') {
-                onHighlightCreated({ id: highlightId, text: selectedText, sectionTitle: currentSectionTitle });
-            }
-        } catch (e) {
-            log.error('highlighter', 'Highlighting error', { message: e?.message });
-            selection.removeAllRanges();
-        }
-    }, [isRenderedView, markdownViewRef, currentSectionTitle, onHighlightCreated]);
+    const handleMouseUp = useTextHighlighter({
+        isRenderedView,
+        markdownViewRef,
+        currentSectionTitle,
+        onHighlightCreated
+    });
 
     // ======== 增强工具函数 ========
-    const scrollToHighlight = (id) => {
+    const scrollToHighlight = useCallback((id) => {
         if (!markdownViewRef.current || !isRenderedView) return;
         const el = markdownViewRef.current.querySelector(`span.highlighted[data-id="${id}"]`);
         if (el) {
@@ -142,30 +88,9 @@ export default function Highlighter({
                 { boxShadow: '0 0 0 0px rgba(0, 184, 217, 0)' }
             ], { duration: 1500 });
         }
-    };
+    }, [isRenderedView, markdownViewRef]);
 
-    const copyToClipboard = (id, text) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setCopiedId(id);
-            setTimeout(() => setCopiedId(null), 2000);
-        });
-    };
-
-    const speakText = (id, text) => {
-        if (typeof window === 'undefined' || !window.speechSynthesis) return;
-        if (speakingId === id) {
-            window.speechSynthesis.cancel();
-            setSpeakingId(null);
-            return;
-        }
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.onend = () => setSpeakingId(null);
-        setSpeakingId(id);
-        window.speechSynthesis.speak(utterance);
-    };
-
-    const exportHighlights = () => {
+    const exportHighlights = useCallback(() => {
         if (!highlights || highlights.length === 0) return;
         const grouped = highlights.reduce((acc, curr) => {
             (acc[curr.sectionTitle] = acc[curr.sectionTitle] || []).push(curr.text);
@@ -181,14 +106,7 @@ export default function Highlighter({
         a.href = url;
         a.download = `Highlights_Notes.md`;
         a.click();
-    };
-
-    const filteredHighlights = (highlights || []).filter(h => {
-        const matchSearch = h.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            h.sectionTitle.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchCategory = !categoryFilter || categoryFilter === 'all' || h.category === categoryFilter;
-        return matchSearch && matchCategory;
-    });
+    }, [highlights]);
 
     return (
         <div className="container">
@@ -244,17 +162,10 @@ export default function Highlighter({
                 />
 
                 <HighlightsPanel
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
                     statusMsg={statusMsg}
-                    filteredHighlights={filteredHighlights}
                     saveHighlights={saveHighlights}
                     exportHighlights={exportHighlights}
                     scrollToHighlight={scrollToHighlight}
-                    speakText={speakText}
-                    speakingId={speakingId}
-                    copyToClipboard={copyToClipboard}
-                    copiedId={copiedId}
                     handleLocalRemoveHighlight={handleLocalRemoveHighlight}
                     classifyHighlights={classifyHighlights}
                     classifying={classifying}

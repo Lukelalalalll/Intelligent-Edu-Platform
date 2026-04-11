@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { Scene } from '../data/themes';
 import { createScene } from '../data/themes';
 import SceneCard from './SceneCard';
+import { Reorder, useDragControls } from 'framer-motion';
 import s from '../styles/sceneEditor.module.css';
 import vs from '../styles/videoGen.module.css';
 
@@ -13,38 +14,58 @@ interface Props {
   onBack: () => void;
 }
 
+const DraggableSceneCard: React.FC<{
+  scene: Scene;
+  idx: number;
+  subtitles: boolean;
+  onChange: (id: string, updated: Scene) => void;
+  onDelete: (id: string) => void;
+}> = ({ scene, idx, subtitles, onChange, onDelete }) => {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item value={scene} dragListener={false} dragControls={controls} style={{ marginBottom: 16 }}>
+      <SceneCard
+        scene={scene}
+        idx={idx}
+        subtitles={subtitles}
+        onChange={onChange}
+        onDelete={onDelete}
+        dragControls={controls}
+      />
+    </Reorder.Item>
+  );
+};
+
 const StepSceneEditor: React.FC<Props> = ({ scenes, setScenes, subtitles, onNext, onBack }) => {
 
-  const updateScene = (idx: number, updated: Scene) => {
-    setScenes(prev => {
-      const next = [...prev];
-      next[idx] = updated;
-      return next;
-    });
-  };
+  const updateScene = useCallback((id: string, updated: Scene) => {
+    setScenes(prev => prev.map(s => s.id === id ? updated : s));
+  }, [setScenes]);
 
-  const deleteScene = (idx: number) => {
-    setScenes(prev => prev.filter((_, i) => i !== idx));
-  };
+  const deleteScene = useCallback((id: string) => {
+    setScenes(prev => prev.filter(s => s.id !== id));
+  }, [setScenes]);
 
-  const addScene = () => {
+  const addScene = useCallback(() => {
     setScenes(prev => [...prev, createScene('', prev.length)]);
-  };
+  }, [setScenes]);
 
   return (
     <div className={vs.stepCard}>
       <h3><i className="fas fa-palette" style={{ marginRight: 8, color: '#7c3aed' }} />Scene Editor</h3>
       <div className={s.sceneEditorWrap}>
-        {scenes.map((sc, i) => (
-          <SceneCard
-            key={sc.id}
-            scene={sc}
-            idx={i}
-            subtitles={subtitles}
-            onChange={updated => updateScene(i, updated)}
-            onDelete={() => deleteScene(i)}
-          />
-        ))}
+        <Reorder.Group axis="y" values={scenes} onReorder={setScenes} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {scenes.map((sc, i) => (
+            <DraggableSceneCard
+              key={sc.id}
+              scene={sc}
+              idx={i}
+              subtitles={subtitles}
+              onChange={updateScene}
+              onDelete={deleteScene}
+            />
+          ))}
+        </Reorder.Group>
       </div>
 
       <div className={s.editorFooter}>

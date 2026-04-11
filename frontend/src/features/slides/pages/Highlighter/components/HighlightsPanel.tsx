@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import styles from '../../../styles/highlighter.module.css';
 
 const CATEGORY_COLORS = {
@@ -12,21 +12,59 @@ const CATEGORY_COLORS = {
 
 const CATEGORIES = ['all', 'definition', 'concept', 'formula', 'example', 'conclusion', 'caution'];
 
-export default function HighlightsPanel({
-    searchQuery, setSearchQuery, statusMsg,
-    filteredHighlights, saveHighlights, exportHighlights,
-    scrollToHighlight, speakText, speakingId,
-    copyToClipboard, copiedId, handleLocalRemoveHighlight,
+const HighlightsPanel = ({
+    statusMsg, saveHighlights, exportHighlights,
+    scrollToHighlight, handleLocalRemoveHighlight,
     classifyHighlights, classifying,
     categoryFilter, setCategoryFilter,
     removeByCategoryOrConfidence,
     highlights
-}) {
-    const hasClassified = (highlights || []).some(h => h.category);
-    const categoryStats = {};
-    (highlights || []).forEach(h => {
-        if (h.category) categoryStats[h.category] = (categoryStats[h.category] || 0) + 1;
-    });
+}) => {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [speakingId, setSpeakingId] = useState(null);
+    const [copiedId, setCopiedId] = useState(null);
+
+    const speakText = (id, text) => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return;
+        if (speakingId === id) {
+            window.speechSynthesis.cancel();
+            setSpeakingId(null);
+            return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => setSpeakingId(null);
+        setSpeakingId(id);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const copyToClipboard = (id, text) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedId(id);
+            setTimeout(() => setCopiedId(null), 2000);
+        });
+    };
+
+    const filteredHighlights = useMemo(() => {
+        return (highlights || []).filter(h => {
+            const matchSearch = h.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                h.sectionTitle?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchCategory = !categoryFilter || categoryFilter === 'all' || h.category === categoryFilter;
+            return matchSearch && matchCategory;
+        });
+    }, [highlights, searchQuery, categoryFilter]);
+
+    const { hasClassified, categoryStats } = useMemo(() => {
+        const stats = {};
+        let classified = false;
+        (highlights || []).forEach(h => {
+            if (h.category) {
+                classified = true;
+                stats[h.category] = (stats[h.category] || 0) + 1;
+            }
+        });
+        return { hasClassified: classified, categoryStats: stats };
+    }, [highlights]);
 
     return (
         <div className={`card ${styles.highlightsCard}`}>
@@ -70,12 +108,9 @@ export default function HighlightsPanel({
                                     <button
                                         key={cat}
                                         onClick={() => setCategoryFilter?.(cat)}
+                                        className={`${styles.categoryFilterBtn} ${active ? styles.categoryFilterBtnActive : ''}`}
                                         style={{
-                                            padding: '3px 8px', borderRadius: '12px', border: 'none',
-                                            fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer',
-                                            background: active ? (catStyle?.bg || '#E0E0E0') : '#f5f5f5',
-                                            color: active ? (catStyle?.color || '#333') : '#999',
-                                            transition: 'all 0.2s',
+                                            ...(active && catStyle ? { background: catStyle.bg, color: catStyle.color } : {})
                                         }}
                                     >
                                         {!isAll && catStyle && <i className={`fas ${catStyle.icon}`} style={{ marginRight: 3, fontSize: '0.65rem' }}></i>}
@@ -168,4 +203,6 @@ export default function HighlightsPanel({
             </div>
         </div>
     );
-}
+};
+
+export default React.memo(HighlightsPanel);

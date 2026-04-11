@@ -194,6 +194,26 @@ main {
     animation: paneSlideIn 0.35s var(--ease-spring) both;
 }
 
+.finalizeBtn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.finalizeBtnDisabled {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: #94a3b8;
+    color: #fff;
+    font-weight: 700;
+    cursor: not-allowed;
+}
+
 /* =========================================
    4. 通用卡片样式 (用于 PDF & 打分面板)
    ========================================= */

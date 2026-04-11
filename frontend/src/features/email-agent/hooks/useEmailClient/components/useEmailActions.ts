@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { gmailApi } from '@/api/emailApi';
+import { gmailApi } from '../../../api/emailApi';
 import type { EmailDetail, EmailSummary, EmailClassification } from '@/types/api';
 import type { AIProvider } from '@/shared/aiProvider';
 import {
