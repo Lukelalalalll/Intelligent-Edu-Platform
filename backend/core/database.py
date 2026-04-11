@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from backend.config import Config
 
@@ -13,6 +14,19 @@ client = AsyncIOMotorClient(
     socketTimeoutMS=30000,
 )
 db = client.get_default_database()
+
+DEFAULT_HISTORY_TTL_DAYS = 90
+
+
+async def compute_history_expires_at(user_id: str) -> datetime | None:
+    """Return the ``expires_at`` datetime for a new history document based on
+    the user's ``history_ttl_days`` setting.  Returns ``None`` when the user
+    chose permanent storage (ttl == 0)."""
+    user_doc = await db.users.find_one({"_id": user_id}, {"history_ttl_days": 1})
+    ttl = (user_doc or {}).get("history_ttl_days", DEFAULT_HISTORY_TTL_DAYS)
+    if ttl == 0:
+        return None
+    return datetime.now(timezone.utc) + timedelta(days=ttl)
 
 
 async def ensure_indexes() -> None:
@@ -143,10 +157,65 @@ async def ensure_indexes() -> None:
             [("user_id", 1), ("created_at", -1)],
             background=True,
         )
-        # TTL: auto-delete generation history older than 90 days
+        # TTL: auto-delete when expires_at is reached (per-user configurable)
         await db.sub2_generation_history.create_index(
-            "created_at",
-            expireAfterSeconds=90 * 24 * 3600,
+            "expires_at",
+            expireAfterSeconds=0,
+            background=True,
+        )
+
+        # Sub1 slides generation history indexes
+        await db.sub1_generation_history.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.sub1_generation_history.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
+            background=True,
+        )
+
+        # Sub3 image extractor generation history indexes
+        await db.sub3_generation_history.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.sub3_generation_history.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
+            background=True,
+        )
+
+        # Sub4 diagram generation history indexes
+        await db.sub4_generation_history.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.sub4_generation_history.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
+            background=True,
+        )
+
+        # Sub5 study notes generation history indexes
+        await db.sub5_generation_history.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.sub5_generation_history.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
+            background=True,
+        )
+
+        # Video generation history indexes
+        await db.video_generation_history.create_index(
+            [("user_id", 1), ("created_at", -1)],
+            background=True,
+        )
+        await db.video_generation_history.create_index(
+            "expires_at",
+            expireAfterSeconds=0,
             background=True,
         )
 
@@ -375,26 +444,6 @@ async def ensure_indexes() -> None:
         )
         await db.study_review_queue.create_index(
             [("user_id", 1), ("due_at", 1), ("status", 1)],
-            background=True,
-        )
-
-        # --- Teacher Copilot briefs ---
-        await db.teacher_copilot_briefs.create_index(
-            [("brief_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.teacher_copilot_briefs.create_index(
-            [("teacher_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.teacher_copilot_briefs.create_index(
-            [("course_section_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.teacher_copilot_briefs.create_index(
-            "created_at",
-            expireAfterSeconds=14 * 24 * 3600,
             background=True,
         )
 

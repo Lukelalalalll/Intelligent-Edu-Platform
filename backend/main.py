@@ -24,12 +24,14 @@ from backend.routes.questions_routes import questions_router
 from backend.routes.image_extractor_routes import image_extractor_router
 from backend.routes.diagram_routes import diagram_router
 from backend.routes.study_notes_routes import study_notes_router
-from backend.routes.teacher_routes import teacher_router
+from backend.routes.mailbox_routes import mailbox_router as teacher_router
 from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.email_routes import email_router
 from backend.routes.chat_routes import chat_router
 from backend.routes.diagnostic_routes import diagnostic_router
+from backend.routes.homework_routes import router as homework_router
+from backend.routes.video_routes import router as video_router
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,8 @@ ROUTERS = (
     email_router,
     chat_router,
     diagnostic_router,
+    homework_router,
+    video_router,
 )
 
 
@@ -153,7 +157,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Intelligent Edu Platform API", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=Config.SECRET_KEY)
 
-# Rate limiting
 from backend.routes.auth_routes import limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -256,6 +259,13 @@ _ensure_dir_and_mount(app, "/static", STATIC_ROOT, "static")
 # 提供写入批注后的 PDF 静态访问
 ANNOTATED_PDF_ROOT = os.path.join(Config.BASE_DIR, 'static', 'grading_annotated')
 _ensure_dir_and_mount(app, "/grading_annotated", ANNOTATED_PDF_ROOT, "grading_annotated")
+
+# 提供上传文件静态访问（student submissions、homework uploads）
+UPLOADS_ROOT = os.path.join(Config.BASE_DIR, 'uploads')
+_ensure_dir_and_mount(app, "/uploads", UPLOADS_ROOT, "uploads")
+
+GENERATED_ROOT = os.path.join(Config.BASE_DIR, 'generated', 'videos')
+_ensure_dir_and_mount(app, "/generated/videos", GENERATED_ROOT, "generated_videos")
 
 # 注册所有路由
 for router in ROUTERS:

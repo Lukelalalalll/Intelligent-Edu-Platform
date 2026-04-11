@@ -65,7 +65,8 @@ class Config:
     AI_DEFAULT_PROVIDER = os.getenv('AI_DEFAULT_PROVIDER', 'local_ollama').strip().lower()
     AI_ALLOW_PROVIDER_SWITCH = _env_bool('AI_ALLOW_PROVIDER_SWITCH', default=True)
 
-    OLLAMA_BASE_URL = (os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434') or '').strip().rstrip('/')
+    # OLLAMA_BASE_URL = (os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434') or '').strip().rstrip('/')
+    OLLAMA_BASE_URL = (os.getenv('OLLAMA_BASE_URL', 'http://hp-z2-hcwu:11434') or '').strip().rstrip('/')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2-vision:11b').strip()
     OLLAMA_REQUEST_TIMEOUT_SECONDS = float(os.getenv('OLLAMA_REQUEST_TIMEOUT_SECONDS', '180'))
     OLLAMA_LIGHT_TEMPERATURE = float(os.getenv('OLLAMA_LIGHT_TEMPERATURE', '0.2'))
@@ -185,6 +186,8 @@ class Config:
         os.path.join(BASE_DIR, 'generated/sub5'),
         KNOWLEDGE_BASE_UPLOAD_DIR,
         RAG_VECTORSTORE_DIR,
+        os.path.join(BASE_DIR, 'uploads/submissions'),
+        os.path.join(BASE_DIR, 'uploads/homeworks'),
     ]
     ALL_FOLDERS = list(dict.fromkeys(_ALL_FOLDERS_RAW))
 

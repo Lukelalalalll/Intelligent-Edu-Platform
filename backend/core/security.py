@@ -51,14 +51,20 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
 
 def teacher_owns_course(user: dict, course: dict) -> bool:
     user_id = str(user.get("id") or user.get("_id") or "")
-    teacher_id = str(course.get("teacherId") or "")
-    if user_id and teacher_id and user_id == teacher_id:
-        return True
+    # Check all teacher id fields — v2 uses ownerTeacherId, legacy uses teacherId
+    for field in ("teacherId", "ownerTeacherId"):
+        tid = str(course.get(field) or "")
+        if user_id and tid and user_id == tid:
+            return True
 
     teacher_course_ids = {str(cid).strip() for cid in (user.get("teacherCourseIds") or []) if str(cid).strip()}
     course_id = str(course.get("courseId") or course.get("id") or "").strip()
-    if course_id and course_id in teacher_course_ids:
-        return True
+    course_code = str(course.get("courseCode") or "").strip()
+    if teacher_course_ids:
+        if course_id and course_id in teacher_course_ids:
+            return True
+        if course_code and course_code in teacher_course_ids:
+            return True
 
     legacy_teacher = str(course.get("teacher") or "").strip().lower()
     username = str(user.get("username") or "").strip().lower()

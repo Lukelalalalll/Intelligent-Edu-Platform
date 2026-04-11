@@ -10,7 +10,7 @@ class AnnotationPayload(BaseModel):
 
 class SubmissionScoreSchema(BaseModel):
     submissionId: str
-    totalScore: int
+    totalScore: float
     rubricScores: dict
     overallFeedback: str = ""
     gradedBy: str | None = None
