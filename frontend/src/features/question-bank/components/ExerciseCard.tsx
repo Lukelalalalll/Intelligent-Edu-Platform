@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import styles from '../styles/sub2.module.css';
+import styles from '../styles/questionBank.module.css';
 
 interface Exercise {
     title?: string;

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import styles from './styles/sub3.module.css';
+import styles from './styles/imageExtractor.module.css';
 import galleryStyles from './styles/imageGallery.module.css';
 import lightboxStyles from './styles/imageLightbox.module.css';
 import notifStyles from './styles/imageNotifications.module.css';

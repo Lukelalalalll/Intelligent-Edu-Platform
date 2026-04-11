@@ -7,7 +7,7 @@ import SearchEditSection from './components/SearchEditSection';
 import GenSection from './components/GenSection';
 import ImageExtractSection from './components/ImageExtractSection';
 import PreviewModal from './components/PreviewModal';
-import styles from './styles/sub4.module.css';
+import styles from './styles/diagram.module.css';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import '../../styles/base.css';
 

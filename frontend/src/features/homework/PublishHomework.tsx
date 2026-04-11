@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import client from '../../api/client';
-import styles from './styles/publish_homework.module.css';
+import styles from './styles/publishHomework.module.css';
 
 export default function PublishHomework() {
     const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import React from 'react';
 import DOMPurify from 'dompurify';
-import styles from '../styles/sub4.module.css';
+import styles from '../styles/diagram.module.css';
 import genStyles from '../styles/genSection.module.css';
 
 const INPUT_TABS = [

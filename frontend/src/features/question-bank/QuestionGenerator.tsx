@@ -7,7 +7,7 @@ import HistoryPanel from './components/HistoryPanel';
 import Button from '../../shared/components/Button/Button';
 import Card from '../../shared/components/Card/Card';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
-import styles from './styles/sub2.module.css';
+import styles from './styles/questionBank.module.css';
 
 export default function QuestionGenerator({ states, handlers }) {
     const [activeView, setActiveView] = useState('workflow');

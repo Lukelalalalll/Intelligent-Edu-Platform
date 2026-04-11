@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import styles from '../../../styles/sub2.module.css';
+import styles from '../../../styles/questionBank.module.css';
 import type { GeneratedQuestionsPanelProps } from '../types';
 
 export default function GeneratedQuestionsPanel({ generatedQuestions, generateLoading, exportQuestions }: GeneratedQuestionsPanelProps) {

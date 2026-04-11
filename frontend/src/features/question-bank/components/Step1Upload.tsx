@@ -1,6 +1,6 @@
 // frontend/src/pages/sub2/components/Step1Upload.jsx
 import React, { useRef, useEffect } from 'react';
-import styles from '../styles/sub2.module.css';
+import styles from '../styles/questionBank.module.css';
 
 export default function Step1Upload({ states, handlers }) {
     const { file, fileName, fileType, totalPages, selectedPages, uploadLoading, isDragging, generationMode } = states;

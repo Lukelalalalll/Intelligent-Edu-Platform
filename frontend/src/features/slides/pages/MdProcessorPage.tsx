@@ -3,7 +3,7 @@ import React from 'react';
 import '../../../styles/base.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
-import styles from '../styles/md_processor.module.css';
+import styles from '../styles/mdProcessor.module.css';
 import FileUploadSection from './components/FileUploadSection';
 import TextInputSection from './components/TextInputSection';
 

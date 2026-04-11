@@ -6,10 +6,10 @@
 .btnSecondary { composes: btnSecondary from './shared/btn.module.css'; }
 
 /* Re-export step heading classes from sub2 */
-.stepTitle { composes: stepTitle from './sub2.module.css'; }
-.stepNumber { composes: stepNumber from './sub2.module.css'; }
-.infoBox { composes: infoBox from './sub2.module.css'; }
-.directSourceSummary { composes: directSourceSummary from './sub2.module.css'; }
+.stepTitle { composes: stepTitle from './questionBank.module.css'; }
+.stepNumber { composes: stepNumber from './questionBank.module.css'; }
+.infoBox { composes: infoBox from './questionBank.module.css'; }
+.directSourceSummary { composes: directSourceSummary from './questionBank.module.css'; }
 
 /* ========== Step2 Layout: fixed bottom buttons ========== */
 .step2Wrapper {
@@ -83,5 +83,5 @@
 }
 
 /* Re-export action buttons used by ExerciseListSection */
-.btnScreenshot { composes: btnScreenshot from './sub2.module.css'; }
-.btnGallery { composes: btnGallery from './sub2.module.css'; }
+.btnScreenshot { composes: btnScreenshot from './questionBank.module.css'; }
+.btnGallery { composes: btnGallery from './questionBank.module.css'; }

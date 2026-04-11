@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/md_processor.module.css';
+import styles from '../../styles/mdProcessor.module.css';
 
 const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';

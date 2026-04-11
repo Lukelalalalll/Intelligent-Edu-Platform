@@ -399,7 +399,7 @@
 
 /* Markdown container (shared with GeneratedQuestionsPanel via sub2) */
 .markdownContainer {
-    composes: markdownContainer from './sub2.module.css';
+    composes: markdownContainer from './questionBank.module.css';
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/md_processor.module.css';
+import styles from '../../styles/mdProcessor.module.css';
 import textStyles from '../../styles/mdTextInput.module.css';
 
 interface TextInputSectionProps {

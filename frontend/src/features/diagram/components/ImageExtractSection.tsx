@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import styles from '../styles/sub4.module.css';
+import styles from '../styles/diagram.module.css';
 
 const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
     <div
