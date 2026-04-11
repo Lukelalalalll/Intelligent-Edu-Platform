@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/sub5.module.css';
+import styles from '../styles/reviewQueue.module.css';
 import type { ReviewQueueItem, ReviewRating } from '../../../api/studyNotesPlanApi';
 
 interface ReviewQueuePanelProps {

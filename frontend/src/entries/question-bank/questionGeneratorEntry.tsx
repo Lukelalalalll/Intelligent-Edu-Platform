@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import QuestionGeneratorPage from '../../features/question-bank/QuestionGenerator';
 import ToastContainer from '../../shared/ToastContainer';
-import { useQuestionGenerator } from './hooks/useQuestionGenerator';
+import { useQuestionGenerator } from '../../features/question-bank/hooks/useQuestionGenerator';
 import { chatApi } from '../../api/chatApi';
 
 export default function QuestionGeneratorEntry() {

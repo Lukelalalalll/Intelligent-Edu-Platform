@@ -16,6 +16,8 @@ export default function DiagramTool({
     extractHandlers, searchHandlers, genHandlers, editorHandlers, modalHandlers,
     imageState, imageHandlers,
     initialTab,
+    viewSwitchSlot,
+    hideBanner,
 }) {
     const [activeService, setActiveService] = useState(initialTab || 'extract');
 
@@ -26,11 +28,15 @@ export default function DiagramTool({
     }, [initialTab]);
 
     return (
-        <div className="container">
-            <WelcomeBanner
-                title="Visual Tool"
-                subtitle="Extract diagrams & images, search SVGs, and generate with AI"
-            />
+        <div className={hideBanner ? undefined : "container"}>
+            {!hideBanner && (
+                <WelcomeBanner
+                    title="Visual Tool"
+                    subtitle="Extract diagrams & images, search SVGs, and generate with AI"
+                />
+            )}
+
+            {!hideBanner && viewSwitchSlot}
 
             <div className={styles.tabSwitcher}>
                 <button

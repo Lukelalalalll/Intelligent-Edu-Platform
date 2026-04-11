@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../styles/sub4.module.css';
+import editorStyles from '../styles/svgEditor.module.css';
 
 export default function SearchEditSection({ searchState, searchHandlers, editorState, editorHandlers }) {
     return (
@@ -41,33 +42,33 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
 
                 {/* SVG Editor */}
                 {editorState.isVisible && (
-                    <div className={styles.editor}>
+                    <div className={editorStyles.editor}>
                         {editorState.loading ? (
                             <p><i className="fas fa-spinner fa-spin"></i> Loading SVG editor...</p>
                         ) : editorState.error ? (
                             <p style={{ color: 'red' }}>{editorState.error}</p>
                         ) : (
                             <>
-                                <div className={styles.editorButtons}>
-                                    <button className={styles.editorBtn} onClick={editorHandlers.applyChanges}><i className="fas fa-check"></i> Apply Changes</button>
-                                    <button className={styles.editorBtn} onClick={editorHandlers.downloadSvg}><i className="fas fa-download"></i> Download SVG</button>
-                                    <button className={styles.editorBtn} onClick={() => editorHandlers.setIsVisible(false)}><i className="fas fa-times"></i> Close Editor</button>
+                                <div className={editorStyles.editorButtons}>
+                                    <button className={editorStyles.editorBtn} onClick={editorHandlers.applyChanges}><i className="fas fa-check"></i> Apply Changes</button>
+                                    <button className={editorStyles.editorBtn} onClick={editorHandlers.downloadSvg}><i className="fas fa-download"></i> Download SVG</button>
+                                    <button className={editorStyles.editorBtn} onClick={() => editorHandlers.setIsVisible(false)}><i className="fas fa-times"></i> Close Editor</button>
                                 </div>
-                                <div className={styles.editorContainer}>
-                                    <div className={styles.preview}>
+                                <div className={editorStyles.editorContainer}>
+                                    <div className={editorStyles.preview}>
                                         <h3 style={{ padding: '10px', margin: 0, borderBottom: '1px solid #eee' }}>Preview</h3>
                                         <iframe srcDoc={editorState.previewHtml} title="SVG Preview"></iframe>
                                     </div>
-                                    <div className={styles.editorFields}>
+                                    <div className={editorStyles.editorFields}>
                                         <h3 style={{ margin: '0 0 10px 0' }}>Editable Text Fields</h3>
                                         {editorState.fields.length === 0 ? (
                                             <p>No editable text fields found in this SVG.</p>
                                         ) : (
                                             editorState.fields.map((field, idx) => (
-                                                <div key={field.id} className={styles.entry}>
+                                                <div key={field.id} className={editorStyles.entry}>
                                                     <label>Text {idx + 1}</label>
                                                     <input value={field.value} onChange={(e) => editorHandlers.handleFieldChange(idx, e.target.value)} />
-                                                    <button className={styles.removeBtn} onClick={() => editorHandlers.handleRemoveField(idx)}>&times;</button>
+                                                    <button className={editorStyles.removeBtn} onClick={() => editorHandlers.handleRemoveField(idx)}>&times;</button>
                                                 </div>
                                             ))
                                         )}

@@ -1,0 +1,87 @@
+/* Step2 Extract layout — extracted from sub2.module.css */
+
+/* Re-export shared buttons */
+.btn { composes: btn from './shared/btn.module.css'; }
+.btnPrimary { composes: btnPrimary from './shared/btn.module.css'; }
+.btnSecondary { composes: btnSecondary from './shared/btn.module.css'; }
+
+/* Re-export step heading classes from sub2 */
+.stepTitle { composes: stepTitle from './sub2.module.css'; }
+.stepNumber { composes: stepNumber from './sub2.module.css'; }
+.infoBox { composes: infoBox from './sub2.module.css'; }
+.directSourceSummary { composes: directSourceSummary from './sub2.module.css'; }
+
+/* ========== Step2 Layout: fixed bottom buttons ========== */
+.step2Wrapper {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 180px);
+    background: #fff;
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.step2ScrollArea {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2rem;
+    scrollbar-gutter: stable;
+}
+
+.step2ScrollArea::-webkit-scrollbar {
+    width: 8px;
+}
+
+.step2ScrollArea::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.35);
+    border-radius: 8px;
+}
+
+.step2ScrollArea::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+}
+
+.step2BottomBar {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fafbfc;
+}
+
+/* ========== Toolbar ========== */
+.extractToolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #f8faf9, #f1f5f3);
+    border: 1px solid rgba(0, 123, 85, 0.12);
+    border-radius: 10px;
+    flex-wrap: wrap;
+}
+
+.extractToolbarCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.extractToolbarCheckbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Re-export action buttons used by ExerciseListSection */
+.btnScreenshot { composes: btnScreenshot from './sub2.module.css'; }
+.btnGallery { composes: btnGallery from './sub2.module.css'; }

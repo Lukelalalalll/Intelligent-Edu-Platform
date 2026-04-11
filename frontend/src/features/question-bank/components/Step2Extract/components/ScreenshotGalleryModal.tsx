@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import styles from '../../../styles/sub2.module.css';
+import styles from '../../../styles/ScreenshotGallery.module.css';
 
 type Screenshot = { filename: string; dataUrl: string };
 

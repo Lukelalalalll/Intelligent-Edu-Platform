@@ -23,6 +23,7 @@ type Props = {
     visibleLayouts: LayoutItem[];
     selectLayout: (layout: LayoutItem) => void;
     getPreviewPlaceholders: (layout: LayoutItem) => Array<{ key: string; left: number; top: number; width: number; height: number; type: string }>;
+    resolveLayoutPreviewImage: (layoutName: string) => string | null;
     updateCurrentSlide: (patch: any) => void;
     addCurrentSlideBullet: () => void;
     updateCurrentSlideBullet: (index: number, value: string) => void;
@@ -58,6 +59,7 @@ export default function LayoutMappingSection({
     visibleLayouts,
     selectLayout,
     getPreviewPlaceholders,
+    resolveLayoutPreviewImage,
     updateCurrentSlide,
     addCurrentSlideBullet,
     updateCurrentSlideBullet,
@@ -172,6 +174,7 @@ export default function LayoutMappingSection({
                     <div className={styles.layoutGrid}>
                         {(visibleLayouts as LayoutItem[]).map((layout, idx) => {
                             const previewPlaceholders = getPreviewPlaceholders(layout);
+                            const previewImageUrl = resolveLayoutPreviewImage(layout.name);
 
                             return (
                                 <button
@@ -182,7 +185,13 @@ export default function LayoutMappingSection({
                                 >
                                     <div className={styles.previewBox}>
                                         <div className={styles.layoutPreviewFrame}>
-                                            {previewPlaceholders.length > 0 ? (
+                                            {previewImageUrl ? (
+                                                <img
+                                                    src={previewImageUrl}
+                                                    alt={layout.name}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }}
+                                                />
+                                            ) : previewPlaceholders.length > 0 ? (
                                                 previewPlaceholders.map((p) => (
                                                     <span
                                                         key={p.key}

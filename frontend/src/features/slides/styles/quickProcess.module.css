@@ -108,6 +108,7 @@
 
 .formControl {
     width: 100%;
+    min-width: 0;
     padding: 14px 20px;
     background-color: var(--bg-input);
     border: 2px solid transparent;
@@ -133,6 +134,59 @@
     line-height: 1.6;
 }
 
+.providerControlRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.providerSelect {
+    min-width: 0;
+    width: 100%;
+    padding-right: 40px;
+}
+
+.providerHealthBtn {
+    white-space: nowrap;
+}
+
+.providerHealthText {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.taskProgressPanel {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(180deg, rgba(0, 123, 85, 0.06), rgba(0, 123, 85, 0.02));
+    border: 1px solid rgba(0, 123, 85, 0.2);
+}
+
+.taskProgressTrack {
+    margin-top: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.taskProgressFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    transition: width 0.35s ease;
+}
+
+.taskProgressText {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+    font-weight: 700;
+}
+
 /* Talking Script 面板微调 */
 .scriptOptionsPanel {
     background: #ffffff;
@@ -152,9 +206,13 @@
     margin-top: 2rem;
 }
 
+.resultsCard {
+    padding: 40px;
+}
+
 .slideCard {
     background: #ffffff;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     padding: 35px;
     border: 1px solid rgba(0, 0, 0, 0.06);
     position: relative;
@@ -175,6 +233,8 @@
     right: 0;
     height: 6px;
     background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
 }
 
 .slideCard h4 {
@@ -231,6 +291,14 @@
 
     .markdownContent {
         max-height: 50vh;
+    }
+
+    .providerControlRow {
+        grid-template-columns: 1fr;
+    }
+
+    .providerHealthBtn {
+        width: 100%;
     }
 }
 
@@ -345,6 +413,30 @@
 .btnProceed { background: var(--text-main); color: white; padding: 14px 34px; border-radius: var(--radius-pill); font-size: 1.15rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.15); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; }
 .btnProceed:hover { background: #000; transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.25); color: white !important; }
 
+.taskTimelineCard {
+    margin-top: 1.5rem;
+}
+
+.taskTimelineList {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.taskTimelineEvent {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+
+.proceedWrap {
+    text-align: center;
+    margin-top: 2.5rem;
+    margin-bottom: 3rem;
+}
+
 @media (max-width: 768px) {
     .talkingScriptElegant { flex-direction: column; text-align: center; gap: 20px; }
+
+    .resultsCard {
+        padding: 20px;
+    }
 }

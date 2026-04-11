@@ -15,26 +15,26 @@ export default function CoursePanel({
 }: CoursePanelProps) {
     if (loading) {
         return (
-            <aside className={styles['course-panel']}>
-                <h3 className={styles['panel-title']}>
+            <aside>
+                <div className={styles['menu-label']}>
                     <i className="fas fa-graduation-cap"></i> My Courses
-                </h3>
-                <div className={styles['skeleton-list']}>
-                    {[1, 2, 3].map(i => <div key={i} className={styles['skeleton-item']} />)}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[1, 2, 3].map(i => <div key={i} style={{ height: '40px', background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }} />)}
                 </div>
             </aside>
         );
     }
 
     return (
-        <aside className={styles['course-panel']}>
-            <h3 className={styles['panel-title']}>
+        <aside>
+            <div className={styles['menu-label']}>
                 <i className="fas fa-graduation-cap"></i> My Courses
-            </h3>
+            </div>
             {courses.length === 0 ? (
-                <p className={styles['empty-hint']}>No courses found.</p>
+                <p style={{ color: 'var(--text-sub)', fontSize: '0.9rem' }}>No courses found.</p>
             ) : (
-                <ul className={styles['course-list']}>
+                <ul className={styles['menu-list']}>
                     {courses.map(c => {
                         const summary = summaryMap[c.courseId];
                         const docCount = summary?.doc_count ?? 0;
@@ -42,15 +42,15 @@ export default function CoursePanel({
                         return (
                             <li
                                 key={c.courseId}
-                                className={`${styles['course-item']} ${isActive ? styles['course-active'] : ''}`}
+                                className={`${styles['menu-item']} ${isActive ? styles['active'] : ''}`}
                                 onClick={() => onSelect(c.courseId)}
                             >
-                                <div className={styles['course-item-info']}>
-                                    <span className={styles['course-code']}>{c.courseId}</span>
-                                    <span className={styles['course-name']}>{c.name}</span>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 700 }}>{c.courseId}</span>
+                                    <span>{c.name}</span>
                                 </div>
                                 {docCount > 0 && (
-                                    <span className={styles['doc-badge']}>{docCount} doc{docCount > 1 ? 's' : ''}</span>
+                                    <span className={styles['badge']}>{docCount} doc{docCount > 1 ? 's' : ''}</span>
                                 )}
                             </li>
                         );

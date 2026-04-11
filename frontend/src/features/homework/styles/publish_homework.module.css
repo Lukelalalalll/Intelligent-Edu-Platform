@@ -1,0 +1,235 @@
+
+.pageHeader {
+    margin-bottom: 2rem;
+}
+
+.mainCard {
+    background: var(--bg-card, #ffffff);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.06));
+    padding: 2.5rem;
+    margin-bottom: 3rem;
+    animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cardTitle {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main, #212B36);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border-color, #E0E0E0);
+    padding-bottom: 1rem;
+}
+
+.cardTitle i {
+    color: var(--primary-color, #007B55);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.fullWidth {
+    grid-column: span 2;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main, #212B36);
+    margin-bottom: 0.5rem;
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border-color, #E0E0E0);
+    border-radius: var(--radius-md, 8px);
+    font-size: 1rem;
+    color: var(--text-main, #212B36);
+    background: var(--bg-input, #F1F5F9);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23637381' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+    outline: none;
+    border-color: var(--primary-color, #007B55);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.1);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+}
+
+/* File Types Group */
+.checkboxContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.checkboxCard {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.2rem;
+    background: var(--bg-input, #F1F5F9);
+    border: 2px solid var(--border-color, #e0e0e0);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    color: var(--text-main, #212B36);
+    font-weight: 500;
+    user-select: none;
+}
+
+.checkboxCard:hover {
+    border-color: var(--primary-color, #007B55);
+    background: rgba(0, 123, 85, 0.02);
+}
+
+.checkboxCard.checked {
+    border-color: var(--primary-color, #007B55);
+    background: rgba(0, 123, 85, 0.05);
+    color: var(--primary-color, #007B55);
+}
+
+.checkboxCard input[type="checkbox"] {
+    appearance: none;
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.checkboxCard input[type="checkbox"]::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em white;
+    background-color: white;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.checkboxCard input[type="checkbox"]:checked {
+    background-color: var(--primary-color, #007B55);
+    border-color: var(--primary-color, #007B55);
+}
+
+.checkboxCard input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+
+.helpText {
+    color: var(--text-sub, #637381);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.actionFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color, #E0E0E0);
+}
+
+.btnSecondary {
+    padding: 0.8rem 1.5rem;
+    border: 1px solid var(--border-color, #E0E0E0);
+    border-radius: var(--radius-md, 8px);
+    background: white;
+    color: var(--text-main, #212B36);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+    background: var(--bg-input, #F1F5F9);
+}
+
+.btnPrimary {
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    background: var(--primary-gradient, linear-gradient(135deg, #007B55 0%, #004D40 100%));
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm, 0 4px 12px rgba(0,0,0,0.05));
+}
+
+.btnPrimary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-primary, 0 4px 10px rgba(0, 123, 85, 0.2));
+}
+
+.btnPrimary:active {
+    transform: translateY(0);
+}
+
+.btnPrimary:disabled {
+    background: #ccc;
+    background-image: none;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+@keyframes tabPopIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

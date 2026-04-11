@@ -25,19 +25,24 @@ export default function MdProcessor({
     cozeLoading, cozeError, textProcessing,
     provider, setProvider,
     handleCozeGenerate, handleProcessText,
+    viewSwitchSlot,
+    hideBanner,
 }) {
     const showUploadCard = !currentFilename;
     const wordCount = textContent ? textContent.trim().split(/\s+/).filter(Boolean).length : 0;
 
     return (
-        <div className="container">
-            {/* Page Header */}
-            <WelcomeBanner
-                title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
-                subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
-                className={styles.pageHeader}
-                as="header"
-            />
+        <div className={hideBanner ? undefined : "container"}>
+            {!hideBanner && (
+                <WelcomeBanner
+                    title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
+                    subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
+                    className={styles.pageHeader}
+                    as="header"
+                />
+            )}
+
+            {!hideBanner && viewSwitchSlot}
 
             {/* Tab Switcher — only show when no headers parsed yet */}
             {showUploadCard && (

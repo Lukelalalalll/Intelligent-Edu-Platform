@@ -4,8 +4,8 @@ import Step1Upload from './components/Step1Upload';
 import Step2Extract from './components/Step2Extract/Step2Extract';
 import Step3Generate from './components/Step3Generate/Step3Generate';
 import HistoryPanel from './components/HistoryPanel';
-import Button from '../../components/ui/Button/Button';
-import Card from '../../components/ui/Card/Card';
+import Button from '../../shared/components/Button/Button';
+import Card from '../../shared/components/Card/Card';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import styles from './styles/sub2.module.css';
 

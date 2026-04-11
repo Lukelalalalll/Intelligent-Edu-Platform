@@ -1,20 +1,23 @@
 import React, { useRef } from 'react';
 import styles from './styles/sub3.module.css';
+import galleryStyles from './styles/imageGallery.module.css';
+import lightboxStyles from './styles/imageLightbox.module.css';
+import notifStyles from './styles/imageNotifications.module.css';
 
 // --- 子组件：画廊图片卡片 ---
 const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
-    <div className={`${styles.imageItem} ${isSelected ? styles.imageItemSelected : ''}`} onClick={() => onToggleSelect(item)}>
+    <div className={`${galleryStyles.imageItem} ${isSelected ? galleryStyles.imageItemSelected : ''}`} onClick={() => onToggleSelect(item)}>
         <img src={item.src} alt={item.caption || "Extracted Image"} loading="lazy" />
-        <div className={styles.imageOverlay}>
+        <div className={galleryStyles.imageOverlay}>
             <button
-                className={`${styles.actionIconBtn} ${styles.previewBtn}`}
+                className={`${galleryStyles.actionIconBtn} ${galleryStyles.previewBtn}`}
                 onClick={(e) => { e.stopPropagation(); onPreview(item.src); }}
                 title="Preview Full Size"
             >
                 <i className="fas fa-eye"></i>
             </button>
             <button
-                className={`${styles.actionIconBtn} ${isSelected ? styles.selectBtnSelected : styles.selectBtn}`}
+                className={`${galleryStyles.actionIconBtn} ${isSelected ? galleryStyles.selectBtnSelected : galleryStyles.selectBtn}`}
                 title={isSelected ? "Deselect" : "Select"}
             >
                 <i className={`fas ${isSelected ? 'fa-check' : 'fa-plus'}`}></i>
@@ -25,9 +28,9 @@ const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
 
 // --- 子组件：已选图片缩略图 ---
 const SelectedImageItem = ({ item, onRemove, onPreview }) => (
-    <div className={styles.selectedImageItem}>
+    <div className={galleryStyles.selectedImageItem}>
         <img src={item.src} alt="Selected" onClick={() => onPreview(item.src)} />
-        <button className={styles.removeBtn} onClick={onRemove} title="Remove"><i className="fas fa-times"></i></button>
+        <button className={galleryStyles.removeBtn} onClick={onRemove} title="Remove"><i className="fas fa-times"></i></button>
     </div>
 );
 
@@ -43,7 +46,9 @@ export default function ImageExtractor({
         setCurrentChapter, setActiveTab, setAiPrompt, setAiNum,
         generateAiImages, toggleImageSelection, removeSelectedImage,
         setLightboxImage, exportZip, exportPDF
-    }
+    },
+    viewSwitchSlot,
+    hideBanner,
 }) {
     const fileInputRef = useRef(null);
 
@@ -51,7 +56,7 @@ export default function ImageExtractor({
         <div className={styles.container}>
             {/* Notifications Toast */}
             {notifications.map(n => (
-                <div key={n.id} className={`${styles.notification} ${n.type === 'error' ? styles.notifError : n.type === 'success' ? styles.notifSuccess : styles.notifInfo}`}>
+                <div key={n.id} className={`${notifStyles.notification} ${n.type === 'error' ? notifStyles.notifError : n.type === 'success' ? notifStyles.notifSuccess : notifStyles.notifInfo}`}>
                     <i className={`fas ${n.type === 'error' ? 'fa-exclamation-circle' : n.type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}`}></i>
                     {n.message}
                 </div>
@@ -59,9 +64,9 @@ export default function ImageExtractor({
 
             {/* Lightbox Modal */}
             {lightboxImage && (
-                <div className={styles.lightbox} onClick={() => setLightboxImage(null)}>
-                    <div className={styles.lightboxContent} onClick={e => e.stopPropagation()}>
-                        <button className={styles.lightboxClose} onClick={() => setLightboxImage(null)}>&times;</button>
+                <div className={lightboxStyles.lightbox} onClick={() => setLightboxImage(null)}>
+                    <div className={lightboxStyles.lightboxContent} onClick={e => e.stopPropagation()}>
+                        <button className={lightboxStyles.lightboxClose} onClick={() => setLightboxImage(null)}>&times;</button>
                         <img src={lightboxImage} alt="Full Screen Preview" />
                     </div>
                 </div>
@@ -69,16 +74,20 @@ export default function ImageExtractor({
 
             {/* Loading Overlay */}
             {loading && (
-                <div className={styles.loadingOverlay} style={{ display: 'flex' }}>
-                    <div className={styles.loadingSpinner}></div>
+                <div className={notifStyles.loadingOverlay} style={{ display: 'flex' }}>
+                    <div className={notifStyles.loadingSpinner}></div>
                     <p>{loadingText}</p>
                 </div>
             )}
 
-            <header className={styles.header}>
-                <h1><i className="fas fa-images"></i> AI Image Selector & Extractor</h1>
-                <p className={styles.subtitle}>Extract images from PDF or generate new ones with AI assistance</p>
-            </header>
+            {!hideBanner && (
+                <header className={styles.header}>
+                    <h1><i className="fas fa-images"></i> AI Image Selector & Extractor</h1>
+                    <p className={styles.subtitle}>Extract images from PDF or generate new ones with AI assistance</p>
+                </header>
+            )}
+
+            {!hideBanner && viewSwitchSlot}
 
             {/* Section 1: Upload */}
             <div className={styles.sectionCard}>
@@ -132,7 +141,7 @@ export default function ImageExtractor({
                 {/* Tab Content: Uploaded Gallery */}
                 {activeTab === 'uploaded' && (
                     <div style={{ marginTop: '2rem', animation: 'fadeIn 0.5s' }}>
-                        <div className={styles.galleryGrid}>
+                        <div className={galleryStyles.galleryGrid}>
                             {currentChapter !== 'None' && imagesByChapter[currentChapter] ? (
                                 imagesByChapter[currentChapter].map((img, idx) => (
                                     <ImageGalleryItem
@@ -151,18 +160,18 @@ export default function ImageExtractor({
                 {/* Tab Content: AI Gallery */}
                 {activeTab === 'ai' && (
                     <div style={{ marginTop: '2rem', animation: 'fadeIn 0.5s' }}>
-                        <div className={styles.aiControls}>
+                        <div className={galleryStyles.aiControls}>
                             <input type="text" className={styles.promptInput} style={{ flex: 1 }} placeholder="Enter prompt for AI image generation..." value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} onKeyDown={e => e.key === 'Enter' && generateAiImages()} />
-                            <div className={styles.sliderGroup}>
+                            <div className={galleryStyles.sliderGroup}>
                                 <label>Images:</label>
                                 <input type="range" min="1" max="8" value={aiNum} onChange={e => setAiNum(e.target.value)} />
                                 <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', width: '20px' }}>{aiNum}</span>
                             </div>
-                            <button className={styles.generateBtn} onClick={generateAiImages} disabled={loading}>
+                            <button className={galleryStyles.generateBtn} onClick={generateAiImages} disabled={loading}>
                                 <i className="fas fa-magic"></i> Generate
                             </button>
                         </div>
-                        <div className={styles.galleryGrid}>
+                        <div className={galleryStyles.galleryGrid}>
                             {aiImages.length > 0 ? (
                                 aiImages.map((img, idx) => (
                                     <ImageGalleryItem
@@ -186,7 +195,7 @@ export default function ImageExtractor({
                     <h2>3. Selected Images ({selectedImages.length})</h2>
                 </div>
 
-                <div className={`${styles.selectedGallery} ${selectedImages.length > 0 ? styles.selectedGalleryHasItems : ''}`}>
+                <div className={`${galleryStyles.selectedGallery} ${selectedImages.length > 0 ? galleryStyles.selectedGalleryHasItems : ''}`}>
                     {selectedImages.length > 0 ? (
                         selectedImages.map((img, idx) => (
                             <SelectedImageItem key={`sel-${idx}`} item={img} onRemove={() => removeSelectedImage(img)} onPreview={setLightboxImage} />
@@ -200,11 +209,11 @@ export default function ImageExtractor({
                     <div className={styles.cardIcon} style={{ background: 'rgba(32, 101, 209, 0.1)', color: 'var(--aurora-blue)' }}><i className="fas fa-download"></i></div>
                     <h2>4. Export Options</h2>
                 </div>
-                <div className={styles.exportButtons}>
-                    <button className={styles.exportBtn} onClick={exportZip} disabled={selectedImages.length === 0 || loading}>
+                <div className={galleryStyles.exportButtons}>
+                    <button className={galleryStyles.exportBtn} onClick={exportZip} disabled={selectedImages.length === 0 || loading}>
                         <i className="fas fa-file-archive" style={{ color: '#ff922b' }}></i> Export as ZIP
                     </button>
-                    <button className={styles.exportBtn} onClick={exportPDF} disabled={selectedImages.length === 0 || loading}>
+                    <button className={galleryStyles.exportBtn} onClick={exportPDF} disabled={selectedImages.length === 0 || loading}>
                         <i className="fas fa-file-pdf" style={{ color: '#fa5252' }}></i> Export as PDF
                     </button>
                 </div>

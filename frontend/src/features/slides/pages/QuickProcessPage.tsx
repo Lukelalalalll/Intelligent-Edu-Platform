@@ -62,9 +62,9 @@ export default function QuickProcess({
 
                             <div className={styles.formGroup}>
                                 <label className={styles.formLabel}>AI Provider</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'center' }}>
+                                <div className={styles.providerControlRow}>
                                     <select
-                                        className={styles.formControl}
+                                        className={`${styles.formControl} ${styles.providerSelect}`}
                                         value={provider}
                                         onChange={(e) => setProvider(e.target.value)}
                                     >
@@ -73,15 +73,14 @@ export default function QuickProcess({
                                     </select>
                                     <button
                                         type="button"
-                                        className="btn btn-outline-secondary"
-                                        style={{ whiteSpace: 'nowrap' }}
+                                        className={`btn btn-outline-secondary ${styles.providerHealthBtn}`}
                                         onClick={() => checkProviderHealth(provider)}
                                     >
                                         Check Health
                                     </button>
                                 </div>
                                 {!!providerHealth && (
-                                    <small style={{ color: 'var(--text-secondary)' }}>{providerHealth}</small>
+                                    <small className={styles.providerHealthText}>{providerHealth}</small>
                                 )}
                             </div>
 
@@ -114,12 +113,12 @@ export default function QuickProcess({
                             {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
 
                             {!!taskId && (
-                                <div className="alert alert-info" style={{ marginTop: '14px' }}>
+                                <div className={styles.taskProgressPanel}>
                                     <div><strong>Task:</strong> {taskId}</div>
                                     <div><strong>Current Step:</strong> {taskStep || 'queued'}</div>
-                                    <div className="progress" style={{ marginTop: '10px', height: '10px' }}>
+                                    <div className={styles.taskProgressTrack}>
                                         <div
-                                            className="progress-bar"
+                                            className={styles.taskProgressFill}
                                             role="progressbar"
                                             style={{ width: `${taskProgress || 0}%` }}
                                             aria-valuenow={taskProgress || 0}
@@ -127,7 +126,7 @@ export default function QuickProcess({
                                             aria-valuemax={100}
                                         />
                                     </div>
-                                    <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>{taskProgress || 0}%</div>
+                                    <div className={styles.taskProgressText}>{taskProgress || 0}%</div>
                                 </div>
                             )}
 
@@ -141,7 +140,7 @@ export default function QuickProcess({
 
             {/* Results Area */}
             {(loading || results) && (
-                <div className="card mt-5" style={{ padding: '40px' }}>
+                <div className={`card mt-5 ${styles.resultsCard}`}>
                     <h2 className={styles.cardTitle}><i className="fas fa-list-check"></i> Generated Results</h2>
 
                     {loading ? (
@@ -183,12 +182,12 @@ export default function QuickProcess({
                             )}
 
                             {Array.isArray(taskEvents) && taskEvents.length > 0 && (
-                                <div className="card" style={{ marginTop: '1.5rem' }}>
+                                <div className={`card ${styles.taskTimelineCard}`}>
                                     <div className="card-body">
                                         <h5 className={styles.cardTitle}><i className="fas fa-stream"></i> Task Timeline</h5>
-                                        <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                                        <div className={styles.taskTimelineList}>
                                             {taskEvents.slice(-12).map((event, idx) => (
-                                                <div key={`${event.ts}-${idx}`} style={{ fontSize: '0.9rem', marginBottom: '6px' }}>
+                                                <div key={`${event.ts}-${idx}`} className={styles.taskTimelineEvent}>
                                                     <strong>[{event.step}]</strong> {event.message}
                                                 </div>
                                             ))}
@@ -197,7 +196,7 @@ export default function QuickProcess({
                                 </div>
                             )}
 
-                            <div className="text-center" style={{ marginTop: '2.5rem', marginBottom: '3rem' }}>
+                            <div className={styles.proceedWrap}>
                                 <button className={styles.btnProceed} onClick={handleProceed}>
                                     Confirm & Proceed to Templates <i className="fas fa-arrow-right"></i>
                                 </button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/sub4.module.css';
+import styles from '../styles/diagramModal.module.css';
 
 export default function PreviewModal({ modalState, modalHandlers }) {
     return (

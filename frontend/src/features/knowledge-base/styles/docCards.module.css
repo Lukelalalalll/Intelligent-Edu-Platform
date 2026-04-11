@@ -1,0 +1,145 @@
+/* ── Card Lists ────────────── */
+.card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.file-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+}
+
+.file-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.file-meta {
+    font-size: 0.85rem;
+    color: var(--text-sub);
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-sub);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--error-color);
+}
+
+/* ── Chapter Toolbar ────────────── */
+.chapterToolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.chapterSelect {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.chapterSelect:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.1);
+}
+
+.addChapterBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 1.2rem;
+    border: 1.5px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 123, 85, 0.06);
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.addChapterBtn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.25);
+}
+
+.chapterHint {
+    color: var(--text-sub);
+    font-style: italic;
+}
+
+.chapterActionError {
+    color: var(--error-color, #e53e3e) !important;
+}
+
+.chapterActionSuccess {
+    color: var(--primary-color) !important;
+}
+
+/* ── Document Manager Header ────────────── */
+.doc-manager-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.doc-manager-header h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.course-id-tag {
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-color);
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styles from '../../styles/sub2.module.css';
+import styles from '../../styles/step2Layout.module.css';
 import DirectSourceMode from './components/DirectSourceMode';
 import ExtractPromptPanel from './components/ExtractPromptPanel';
 import ExerciseListSection from './components/ExerciseListSection';

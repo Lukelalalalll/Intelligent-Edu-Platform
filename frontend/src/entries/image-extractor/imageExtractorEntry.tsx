@@ -3,9 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 import client from '../../api/client';
 import { chatApi } from '../../api/chatApi';
 import ImageExtractorPage from '../../features/image-extractor/ImageExtractor';
+import HistoryPanel from '../../features/image-extractor/components/HistoryPanel';
+import Button from '../../shared/components/Button';
+import Card from '../../shared/components/Card';
+import imgStyles from '../../features/image-extractor/styles/sub3.module.css';
+import s from '../../styles/history.module.css';
 
 export default function ImageExtractorEntry() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const [activeView, setActiveView] = useState<'workflow' | 'history'>('workflow');
 
     // --- 状态管理 ---
     const [isDragging, setIsDragging] = useState(false);
@@ -151,5 +157,34 @@ export default function ImageExtractorEntry() {
     const states = { isDragging, uploadStatus, currentChapter, activeTab, imagesByChapter, selectedImages, aiPrompt, aiNum, aiImages, loading, loadingText, lightboxImage, notifications };
     const handlers = { handleDragOver, handleDragLeave, handleDrop, handleFileInput, setCurrentChapter, setActiveTab, setAiPrompt, setAiNum, generateAiImages, toggleImageSelection, removeSelectedImage, setLightboxImage, exportZip: () => handleDownloadBlob('/image-extractor/export-zip', 'selected_images.zip'), exportPDF: () => handleDownloadBlob('/image-extractor/export-pdf', 'selected_images.pdf') };
 
-    return <ImageExtractorPage states={states} handlers={handlers} />;
+    const viewSwitchJSX = (
+        <div className={s.viewSwitch}>
+            <Button type="button" variant={activeView === 'workflow' ? 'primary' : 'outline'} onClick={() => setActiveView('workflow')}>
+                <i className="fas fa-images" /> Workflow
+            </Button>
+            <Button type="button" variant={activeView === 'history' ? 'primary' : 'outline'} onClick={() => setActiveView('history')}>
+                <i className="fas fa-history" /> History
+            </Button>
+        </div>
+    );
+
+    return (
+        <div className="container">
+            <header className={imgStyles.header}>
+                <h1><i className="fas fa-images"></i> AI Image Selector & Extractor</h1>
+                <p className={imgStyles.subtitle}>Extract images from PDF or generate new ones with AI assistance</p>
+            </header>
+            {viewSwitchJSX}
+            {activeView === 'workflow' && <ImageExtractorPage states={states} handlers={handlers} hideBanner />}
+            {activeView === 'history' && (
+                <Card className={s.historyViewCard} glass>
+                    <HistoryPanel onReplay={() => setActiveView('workflow')} />
+                </Card>
+            )}
+        </div>
+    );
+}
+            )}
+        </>
+    );
 }

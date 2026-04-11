@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import * as sub2Api from '../../../api/questionBankApi';
-import styles from '../styles/sub2.module.css';
+import styles from '../styles/history.module.css';
 
 export default function HistoryPanel({ onReplay }) {
     const [items, setItems] = useState([]);

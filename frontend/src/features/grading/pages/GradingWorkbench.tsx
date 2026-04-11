@@ -5,6 +5,7 @@ import CozeAssistant from '../../../shared/CozeAssistant';
 import RubricPanel from '../../../shared/RubricPanel';
 import { teacherApi } from '../../../api/api';
 import styles from '../styles/gradingWorkbench.module.css';
+import chatStyles from '../styles/gradingChat.module.css';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
@@ -158,6 +159,7 @@ export default function GradingWorkbench() {
     const handleSaveScores = async ({ totalScore, rubricScores, overallFeedback }) => {
         try {
             await teacherApi.saveScore(submissionId, {
+                submissionId,
                 totalScore,
                 rubricScores,
                 overallFeedback,
@@ -234,13 +236,13 @@ export default function GradingWorkbench() {
 
                     <div key={activePane} className={`${styles.pane} ${styles.rightPaneAnimated}`}>
                         {activePane === 'assistant' ? (
-                            <div className={`${styles.cozeWrapper} ${styles.pane} ${styles.chatPane}`}>
+                            <div className={`${chatStyles.cozeWrapper} ${styles.pane} ${chatStyles.chatPane}`}>
                                 <CozeAssistant
                                     submissionId={submissionId}
                                     assignment={detail?.assignment}
                                     rubric={detail?.assignment?.rubric}
                                     onAnalysis={() => { }}
-                                    className={styles}
+                                    className={chatStyles}
                                     provider={provider}
                                     setProvider={setProvider}
                                 />

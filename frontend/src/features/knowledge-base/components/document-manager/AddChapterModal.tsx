@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import styles from '../../styles/KnowledgeBase.module.css';
+import styles from '../../styles/addChapterModal.module.css';
 
 interface AddChapterModalProps {
     isOpen: boolean;

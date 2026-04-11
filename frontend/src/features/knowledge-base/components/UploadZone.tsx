@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import styles from '../styles/KnowledgeBase.module.css';
+import styles from '../styles/docManager.module.css';
 
 interface UploadZoneProps {
     courseId: string;

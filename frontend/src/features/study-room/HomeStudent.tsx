@@ -81,10 +81,10 @@ export default function HomeStudent({
     }, [activeTab, courses.length, loadCourses]);
 
     const handleCourseSelectReal = (course) => {
-        const courseId = course.id || course.courseCode;
-        setSelectedCourseId(course.id);
-        handleCourseSelect(course.courseName || course.courseCode || courseId, courseId);
-        loadAssignments(course.id);
+        const courseId = course.courseSectionId || course.id || course.courseCode;
+        setSelectedCourseId(courseId);
+        handleCourseSelect(course.courseName || course.courseCode || course.name || courseId, courseId);
+        loadAssignments(courseId);
     };
 
     const handleSubmitWork = async (assignmentId, fileName) => {

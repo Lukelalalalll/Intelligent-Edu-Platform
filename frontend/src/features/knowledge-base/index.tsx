@@ -44,7 +44,7 @@ export default function KnowledgeBasePage({
     const selectedCourse = courses.find(c => c.courseId === selectedCourseId);
 
     return (
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px' }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px' }}>
             <WelcomeBanner
                 className={styles['kb-banner']}
                 title={<><i className="fas fa-book-open"></i> Course Knowledge Base</>}

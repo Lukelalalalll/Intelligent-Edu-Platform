@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../../styles/sub2.module.css';
+import styles from '../../../styles/ExtractPanel.module.css';
 
 type Props = {
     extractPrompt: string;

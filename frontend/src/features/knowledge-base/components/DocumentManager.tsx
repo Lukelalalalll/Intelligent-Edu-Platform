@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/KnowledgeBase.module.css';
+import styles from '../styles/docCards.module.css';
 import UploadZone from './UploadZone';
 import AddChapterModal from './document-manager/AddChapterModal';
 import TestRetrievalPanel from './document-manager/TestRetrievalPanel';

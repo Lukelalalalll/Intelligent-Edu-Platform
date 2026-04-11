@@ -1,6 +1,7 @@
 import React from 'react';
 import DOMPurify from 'dompurify';
 import styles from '../styles/sub4.module.css';
+import genStyles from '../styles/genSection.module.css';
 
 const INPUT_TABS = [
     { key: 'file', icon: 'fas fa-file-alt', label: 'Upload File' },
@@ -31,11 +32,11 @@ export default function GenSection({ genState, genHandlers }) {
             </div>
             <div className="card-content">
                 {/* ─── Input Mode Tabs ─── */}
-                <div className={styles.genTabs}>
+                <div className={genStyles.genTabs}>
                     {INPUT_TABS.map(tab => (
                         <button
                             key={tab.key}
-                            className={`${styles.genTab} ${inputMode === tab.key ? styles.genTabActive : ''}`}
+                            className={`${genStyles.genTab} ${inputMode === tab.key ? genStyles.genTabActive : ''}`}
                             onClick={() => genHandlers.setInputMode(tab.key)}
                         >
                             <i className={tab.icon}></i> {tab.label}
@@ -68,9 +69,9 @@ export default function GenSection({ genState, genHandlers }) {
 
                 {/* ─── Direct Text Panel ─── */}
                 {inputMode === 'text' && (
-                    <div className={styles.genTextPanel}>
+                    <div className={genStyles.genTextPanel}>
                         <textarea
-                            className={styles.genTextArea}
+                            className={genStyles.genTextArea}
                             rows={6}
                             placeholder="Describe the diagram you want to generate... e.g. 'A flowchart showing the software development lifecycle with 6 phases'"
                             value={text}
@@ -95,15 +96,15 @@ export default function GenSection({ genState, genHandlers }) {
 
                 {/* ─── SVG Result ─── */}
                 {data?.svg && (
-                    <div className={styles.genResult}>
-                        <div className={styles.genResultHeader}>
+                    <div className={genStyles.genResult}>
+                        <div className={genStyles.genResultHeader}>
                             <h3><i className="fas fa-check-circle" style={{ color: '#00b894' }}></i> Generated Diagram</h3>
-                            <button className={`btn ${styles.genDownloadBtn}`} onClick={() => downloadSvgBlob(data.svg)}>
+                            <button className={`btn ${genStyles.genDownloadBtn}`} onClick={() => downloadSvgBlob(data.svg)}>
                                 <i className="fas fa-download"></i> Download SVG
                             </button>
                         </div>
                         <div
-                            className={styles.genSvgContainer}
+                            className={genStyles.genSvgContainer}
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.svg, { USE_PROFILES: { svg: true } }) }}
                         />
                     </div>

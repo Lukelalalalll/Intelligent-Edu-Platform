@@ -17,6 +17,8 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     const [streaming, setStreaming] = useState(false);
     const [savedMsgIds, setSavedMsgIds] = useState(new Set());
     const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+    const [citationsMap, setCitationsMap] = useState<Record<string, any[]>>({});
+    const [expandedCitations, setExpandedCitations] = useState<Record<string, boolean>>({});
     const messagesRef = useRef(null);
     const rafIdRef = useRef(null);
 
@@ -83,6 +85,10 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
 
             const res = await client.post('/ai/study-coze', payload);
             const text = res.data?.reply || res.data?.text || 'No response from AI.';
+            const citations = res.data?.citations || [];
+            if (citations.length > 0) {
+                setCitationsMap(prev => ({ ...prev, [msgId]: citations }));
+            }
             revealTypewriter(text, msgId);
         } catch (err) {
             updateMessage(msgId, 'Error: ' + (err?.response?.data?.detail || err.message));
@@ -185,13 +191,39 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
                                 )}
                             </div>
                             {msg.role === 'assistant' && msg.content && !streaming && (
-                                savedMsgIds.has(msg.id) ? (
-                                    <div className={styles.savedTag}><i className="fas fa-check"></i> Saved to notes</div>
-                                ) : (
-                                    <button className={styles.saveNoteBtn} onClick={() => handleSaveAsNote(msg)}>
-                                        <i className="fas fa-sticky-note"></i> Save as Note
-                                    </button>
-                                )
+                                <>
+                                    {citationsMap[msg.id] && citationsMap[msg.id].length > 0 && (
+                                        <div className={styles.citationsWrap}>
+                                            <button
+                                                className={styles.citationsToggle}
+                                                onClick={() => setExpandedCitations(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                                            >
+                                                <i className="fas fa-book-open" /> {citationsMap[msg.id].length} source{citationsMap[msg.id].length > 1 ? 's' : ''}
+                                                <i className={`fas fa-chevron-${expandedCitations[msg.id] ? 'up' : 'down'}`} style={{ marginLeft: 4, fontSize: '0.7rem' }} />
+                                            </button>
+                                            {expandedCitations[msg.id] && (
+                                                <div className={styles.citationsList}>
+                                                    {citationsMap[msg.id].map((c: any, i: number) => (
+                                                        <div key={i} className={styles.citationCard}>
+                                                            <div className={styles.citationDoc}>
+                                                                <i className="fas fa-file-alt" /> {c.doc_name || 'Unknown'}
+                                                                <span className={styles.citationScore}>{(c.score * 100).toFixed(0)}%</span>
+                                                            </div>
+                                                            <div className={styles.citationText}>{(c.text || '').slice(0, 150)}{(c.text || '').length > 150 ? '...' : ''}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {savedMsgIds.has(msg.id) ? (
+                                        <div className={styles.savedTag}><i className="fas fa-check"></i> Saved to notes</div>
+                                    ) : (
+                                        <button className={styles.saveNoteBtn} onClick={() => handleSaveAsNote(msg)}>
+                                            <i className="fas fa-sticky-note"></i> Save as Note
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     ))

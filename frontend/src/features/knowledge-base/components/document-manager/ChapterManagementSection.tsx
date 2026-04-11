@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/KnowledgeBase.module.css';
+import styles from '../../styles/docManager.module.css';
 import type { ChapterDraft } from './types';
 
 export default function ChapterManagementSection({
@@ -22,14 +22,14 @@ export default function ChapterManagementSection({
     chapterBusy: boolean;
 }) {
     return (
-        <div className={`${styles['doc-list-section']} ${styles.tightSection}`}>
-            <h4 className={styles['doc-list-title']}>
+        <div className={styles['settings-box']}>
+            <h4 className={styles['section-title']} style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
                 <i className="fas fa-layer-group"></i> Chapter Management
             </h4>
             {chapters.length === 0 ? (
-                <p className={styles['empty-hint']}>No chapters yet. Create one before assigning documents.</p>
+                <p style={{ color: 'var(--text-sub)' }}>No chapters yet. Create one before assigning documents.</p>
             ) : (
-                <div className={styles.chapterList}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {chapters.map(ch => {
                         const draft = chapterDraftMap[ch.chapter_id] || {
                             chapter_name: ch.chapter_name || '',
