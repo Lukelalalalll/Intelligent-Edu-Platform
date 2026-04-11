@@ -13,10 +13,12 @@ import xml.etree.ElementTree as ET
 from io import BytesIO
 from typing import Optional
 from docx import Document
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse, Response
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Response
 from werkzeug.utils import secure_filename
 import opendataloader_pdf
+from backend.core.database import db, compute_history_expires_at
 from backend.core.security import get_current_user
 from backend.core.ai_provider import resolve_provider
 from backend.core.safe_requests import safe_get
@@ -583,6 +585,30 @@ async def generate_diagram(
                         raise ValueError(f"Fallback SVG generation failed XML validation: {fallback_err}")
                     fallback_used = True
 
+        # Save to generation history
+        try:
+            _exp = await compute_history_expires_at(user.get("id", ""))
+            _doc = {
+                "user_id": user.get("id", ""),
+                "params": {
+                    "service_type": "generate",
+                    "input_prompt": text[:200],
+                    "provider": final_provider,
+                    "draft_quality": draft_quality,
+                    "refined": refined,
+                    "fallback_used": fallback_used,
+                },
+                "source": {"prompt": text},
+                "result_preview": f"Generated diagram ({final_provider}, quality={draft_quality}): {text[:100]}",
+                "result_full": json.dumps({"svg": final_svg}),
+                "created_at": datetime.now(timezone.utc),
+            }
+            if _exp is not None:
+                _doc["expires_at"] = _exp
+            await db.sub4_generation_history.insert_one(_doc)
+        except Exception:
+            pass  # history save failure should not block the response
+
         return {
             'svg': final_svg,
             'meta': {
@@ -693,3 +719,85 @@ def fetch_external_svg(url: str, user: dict = Depends(get_current_user)):
             raise
         logger.exception("SVG proxy fetch failed")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Generation History ──
+
+@diagram_router.get("/generation_history")
+async def get_generation_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    user: dict = Depends(get_current_user),
+):
+    """Return paginated diagram generation history for the current user."""
+    try:
+        user_id = user.get("id", "")
+        skip = (page - 1) * page_size
+        cursor = db.sub4_generation_history.find(
+            {"user_id": user_id},
+            {"result_full": 0},
+        ).sort("created_at", -1).skip(skip).limit(page_size)
+
+        items = []
+        async for doc in cursor:
+            items.append({
+                "id": str(doc["_id"]),
+                "params": doc.get("params", {}),
+                "preview": doc.get("result_preview", ""),
+                "created_at": doc.get("created_at", "").isoformat() if hasattr(doc.get("created_at", ""), "isoformat") else str(doc.get("created_at", "")),
+            })
+
+        total = await db.sub4_generation_history.count_documents({"user_id": user_id})
+        return {"success": True, "items": items, "total": total, "page": page, "page_size": page_size}
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
+
+
+@diagram_router.get("/generation_history/{history_id}")
+async def get_generation_detail(history_id: str, user: dict = Depends(get_current_user)):
+    """Return full generation result for review."""
+    try:
+        from bson import ObjectId
+        from bson.errors import InvalidId
+        try:
+            oid = ObjectId(history_id)
+        except (InvalidId, Exception):
+            return JSONResponse(content={"success": False, "error": "Invalid history ID format"}, status_code=400)
+        doc = await db.sub4_generation_history.find_one({"_id": oid, "user_id": user.get("id", "")})
+        if not doc:
+            return JSONResponse(content={"success": False, "error": "Record not found"}, status_code=404)
+        return {
+            "success": True,
+            "id": str(doc.get("_id")),
+            "params": doc.get("params", {}),
+            "result": doc.get("result_full", ""),
+            "created_at": doc.get("created_at", "").isoformat() if hasattr(doc.get("created_at", ""), "isoformat") else str(doc.get("created_at", "")),
+        }
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)
+
+
+@diagram_router.post("/generation_history/{history_id}/replay")
+async def replay_generation_history(history_id: str, user: dict = Depends(get_current_user)):
+    """Return original prompt and provider for replay in the generate tab."""
+    try:
+        from bson import ObjectId
+        from bson.errors import InvalidId
+        try:
+            oid = ObjectId(history_id)
+        except (InvalidId, Exception):
+            return JSONResponse(content={"success": False, "error": "Invalid history ID format"}, status_code=400)
+        doc = await db.sub4_generation_history.find_one({"_id": oid, "user_id": user.get("id", "")})
+        if not doc:
+            return JSONResponse(content={"success": False, "error": "Record not found"}, status_code=404)
+
+        params = doc.get("params", {})
+        source = doc.get("source", {})
+        return {
+            "success": True,
+            "prompt": source.get("prompt", ""),
+            "provider": params.get("provider", "local_ollama"),
+            "service_type": params.get("service_type", "generate"),
+        }
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)

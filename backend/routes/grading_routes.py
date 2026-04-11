@@ -97,6 +97,7 @@ async def save_score(submission_id: str, payload: SubmissionScoreSchema, current
             "overallFeedback": payload.overallFeedback,
             "gradingStatus": "draft",
         })
+        await update_submission(submission_id, {"status": "graded"})
     except Exception:
         pass  # v2 write is best-effort during migration
 

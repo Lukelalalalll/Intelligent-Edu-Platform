@@ -8,7 +8,8 @@ import json
 import glob
 import logging
 from PIL import Image
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Request
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -19,6 +20,7 @@ import unicodedata
 import opendataloader_pdf
 from backend.core.security import get_current_user
 from backend.core.safe_requests import safe_get
+from backend.core.database import db, compute_history_expires_at
 from backend.config import Config
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -205,11 +207,36 @@ async def api_extract_pdf_images(pdf: UploadFile = File(...), user: dict = Depen
                 'caption': img['caption']
             })
 
-        return {
+        result = {
             'success': True,
             'totalImages': len(images),
             'imagesByChapter': images_by_chapter
         }
+
+        # ── save history ─────────────────────────────────────
+        try:
+            user_id = user.get("id", "")
+            _exp = await compute_history_expires_at(user_id)
+            _doc = {
+                "user_id": user_id,
+                "tool": "extract_pdf_images",
+                "params": {
+                    "source_filename": getattr(pdf, "filename", "unknown.pdf"),
+                },
+                "result_preview": f"Extracted {len(images)} images from PDF",
+                "result_full": json.dumps({
+                    "totalImages": len(images),
+                    "chapters": list(images_by_chapter.keys()),
+                }),
+                "created_at": datetime.now(timezone.utc),
+            }
+            if _exp is not None:
+                _doc["expires_at"] = _exp
+            await db.sub3_generation_history.insert_one(_doc)
+        except Exception:
+            _logger.warning("Failed to save PDF extraction history", exc_info=True)
+
+        return result
     except Exception as e:
         print(f"Route Error: {e}")
         return JSONResponse({'success': False, 'error': str(e)})
@@ -246,7 +273,7 @@ def api_search_google_images(req: SearchImagesSchema, user: dict = Depends(get_c
 
 @image_extractor_router.post("/generate-ai-images")
 @_limiter.limit("10/minute")
-def api_generate_ai_images(request: Request, req: GenerateAiImagesSchema, user: dict = Depends(get_current_user)):
+async def api_generate_ai_images(request: Request, req: GenerateAiImagesSchema, user: dict = Depends(get_current_user)):
     prompt = req.prompt
     num_images = req.num_images
     if not prompt:
@@ -258,6 +285,28 @@ def api_generate_ai_images(request: Request, req: GenerateAiImagesSchema, user: 
         images = []
         for i in range(min(num_images, 8)):
             images.append({'src': f'https://picsum.photos/300/300?random={i + 100}&prompt={prompt}'})
+
+        # ── save history ─────────────────────────────────────
+        try:
+            user_id = user.get("id", "")
+            _exp = await compute_history_expires_at(user_id)
+            _doc = {
+                "user_id": user_id,
+                "tool": "ai_image_generate",
+                "params": {
+                    "prompt": prompt,
+                    "num_images": num_images,
+                },
+                "result_preview": f"Generated {len(images)} AI images (mock)",
+                "result_full": json.dumps({"ai_images": images}),
+                "created_at": datetime.now(timezone.utc),
+            }
+            if _exp is not None:
+                _doc["expires_at"] = _exp
+            await db.sub3_generation_history.insert_one(_doc)
+        except Exception:
+            _logger.warning("Failed to save AI-image generation history", exc_info=True)
+
         return {'success': True, 'images': images}
 
     try:
@@ -284,6 +333,28 @@ def api_generate_ai_images(request: Request, req: GenerateAiImagesSchema, user: 
                     images.append({'src': f"data:image/png;base64,{img_base64}"})
             except Exception:
                 continue
+
+        # ── save history ─────────────────────────────────────
+        try:
+            user_id = user.get("id", "")
+            _exp = await compute_history_expires_at(user_id)
+            _doc = {
+                "user_id": user_id,
+                "tool": "ai_image_generate",
+                "params": {
+                    "prompt": prompt,
+                    "num_images": num_images,
+                },
+                "result_preview": f"Generated {len(images)} AI images",
+                "result_full": json.dumps({"ai_images": images}),
+                "created_at": datetime.now(timezone.utc),
+            }
+            if _exp is not None:
+                _doc["expires_at"] = _exp
+            await db.sub3_generation_history.insert_one(_doc)
+        except Exception:
+            _logger.warning("Failed to save AI-image generation history", exc_info=True)
+
         return {'success': True, 'images': images}
     except Exception as e:
         return JSONResponse({'success': False, 'error': str(e)})
@@ -383,3 +454,82 @@ def api_export_pdf(req: ExportImagesSchema, user: dict = Depends(get_current_use
     except Exception as e:
         print(f"Export PDF Error: {e}")
         return JSONResponse({'success': False, 'error': str(e)}, status_code=500)
+
+
+# ───────────────────────── Generation History ──────────────────────────
+
+@image_extractor_router.get("/generation_history")
+async def list_image_extractor_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    user: dict = Depends(get_current_user),
+):
+    user_id = user.get("id", "")
+    skip = (page - 1) * page_size
+    cursor = (
+        db.sub3_generation_history
+        .find({"user_id": user_id}, {"result_full": 0})
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(page_size)
+    )
+    items = []
+    async for doc in cursor:
+        items.append({
+            "id": str(doc["_id"]),
+            "tool": doc.get("tool", ""),
+            "params": doc.get("params", {}),
+            "preview": doc.get("result_preview", ""),
+            "created_at": doc.get("created_at", "").isoformat() if hasattr(doc.get("created_at", ""), "isoformat") else str(doc.get("created_at", "")),
+        })
+    total = await db.sub3_generation_history.count_documents({"user_id": user_id})
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+@image_extractor_router.get("/generation_history/{history_id}")
+async def get_image_extractor_history_detail(
+    history_id: str,
+    user: dict = Depends(get_current_user),
+):
+    from bson import ObjectId
+
+    try:
+        oid = ObjectId(history_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid history ID format")
+    doc = await db.sub3_generation_history.find_one(
+        {"_id": oid, "user_id": user.get("id", "")}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="History record not found")
+    return {
+        "success": True,
+        "id": str(doc.get("_id")),
+        "params": doc.get("params", {}),
+        "result": doc.get("result_full", ""),
+        "created_at": doc.get("created_at", "").isoformat() if hasattr(doc.get("created_at", ""), "isoformat") else str(doc.get("created_at", "")),
+    }
+
+
+@image_extractor_router.post("/generation_history/{history_id}/replay")
+async def replay_image_extractor_history(
+    history_id: str,
+    user: dict = Depends(get_current_user),
+):
+    from bson import ObjectId
+
+    doc = await db.sub3_generation_history.find_one(
+        {"_id": ObjectId(history_id), "user_id": user.get("id", "")}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="History record not found")
+    result_full = doc.get("result_full", "{}")
+    try:
+        data = json.loads(result_full)
+    except json.JSONDecodeError:
+        data = {}
+    return {
+        "tool": doc.get("tool"),
+        "params": doc.get("params", {}),
+        "data": data,
+    }

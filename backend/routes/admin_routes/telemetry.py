@@ -1,0 +1,97 @@
+"""LLM telemetry + RAG telemetry endpoints."""
+from __future__ import annotations
+
+from fastapi import Depends, HTTPException, Query
+
+from backend.core.security import get_admin_user
+from .router import admin_router
+
+
+# ── LLM Telemetry ──
+
+@admin_router.get("/telemetry/stats")
+async def get_telemetry_stats(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    return await llm_telemetry.get_stats(hours=hours)
+
+
+@admin_router.get("/telemetry/errors")
+async def get_telemetry_errors(
+    limit: int = Query(default=20, ge=1, le=100),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    errors = await llm_telemetry.get_recent_errors(limit=limit)
+    return {"errors": errors}
+
+
+@admin_router.get("/telemetry/timeseries")
+async def get_telemetry_timeseries(
+    hours: int = Query(default=24, ge=1, le=720),
+    bucket: int = Query(default=60, ge=5, le=1440),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    data = await llm_telemetry.get_timeseries(hours=hours, bucket_minutes=bucket)
+    return {"timeseries": data}
+
+
+@admin_router.get("/telemetry/breakdown")
+async def get_telemetry_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    group_by: str = Query(default="provider"),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    data = await llm_telemetry.get_breakdown(hours=hours, group_by=group_by)
+    return {"breakdown": data, "group_by": group_by}
+
+
+@admin_router.get("/telemetry/cost")
+async def get_telemetry_cost(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure import llm_telemetry
+    return await llm_telemetry.get_cost_summary(hours=hours)
+
+
+# ── RAG Telemetry ──
+
+@admin_router.get("/rag-telemetry/stats")
+async def rag_telemetry_stats(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return await rag_telemetry.get_stats(hours)
+
+
+@admin_router.get("/rag-telemetry/course-breakdown")
+async def rag_telemetry_course_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"breakdown": await rag_telemetry.get_course_breakdown(hours)}
+
+
+@admin_router.get("/rag-telemetry/role-breakdown")
+async def rag_telemetry_role_breakdown(
+    hours: int = Query(default=24, ge=1, le=720),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"breakdown": await rag_telemetry.get_role_breakdown(hours)}
+
+
+@admin_router.get("/rag-telemetry/alerts")
+async def rag_telemetry_alerts(
+    hours: int = Query(default=1, ge=1, le=24),
+    admin: dict = Depends(get_admin_user),
+):
+    from backend.infrastructure.rag_telemetry import rag_telemetry
+    return {"alerts": await rag_telemetry.check_alerts(hours)}
