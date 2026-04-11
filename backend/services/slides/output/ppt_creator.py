@@ -6,9 +6,9 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 from pptx.util import Inches, Pt
 from PIL import Image
-from .img_chart_processor import ImageChartProcessor
-from .business.table_handler import BusinessTableHandler
-from .latex_generator import process_slide_latex
+from ..generation.img_chart_processor import ImageChartProcessor
+from ..business.table_handler import BusinessTableHandler
+from ..generation.latex_generator import process_slide_latex
 from .theme_catalog import resolve_base_theme
 
 

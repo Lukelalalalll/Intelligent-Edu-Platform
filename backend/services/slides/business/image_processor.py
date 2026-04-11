@@ -10,7 +10,7 @@ Business PPT 图片处理器
 """
 
 import asyncio
-from ..img_chart_processor import ImageChartProcessor
+from ..generation.img_chart_processor import ImageChartProcessor
 
 class BusinessImageProcessor:
     """Business PPT专用图片处理器"""

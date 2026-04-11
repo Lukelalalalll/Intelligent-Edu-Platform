@@ -3,7 +3,7 @@ import asyncio
 from pptx import Presentation
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
-from backend.services.slides.business import (
+from ..business import (
     BusinessContentProcessor,
     BusinessSectionHandler,
     BusinessLayoutManager,
@@ -14,8 +14,8 @@ from backend.services.slides.business import (
     BusinessSlideNumberHandler,
     BusinessLatexProcessor
 )
-from backend.services.slides.img_chart_processor import ImageChartProcessor
-from backend.services.slides.ppt_creator import PPTCreator
+from ..generation.img_chart_processor import ImageChartProcessor
+from .ppt_creator import PPTCreator
 import asyncio
 
 

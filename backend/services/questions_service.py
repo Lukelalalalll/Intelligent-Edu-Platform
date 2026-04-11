@@ -405,6 +405,7 @@ async def call_provider_generate(
     *,
     base_content: str,
     user_requirements: str,
+    question_type: str = "",
     provider: str,
     output_language: str = "Chinese",
     question_basis: str | None = None,
@@ -436,29 +437,81 @@ async def call_provider_generate(
         count_rule_cn = f"\n5) 必须严格生成且仅生成 {requested_count} 道题目（不多不少），并按 1 到 {requested_count} 编号。"
         count_rule_en = f"\n5) You must generate exactly {requested_count} questions (no fewer, no more), numbered from 1 to {requested_count}."
 
+    qtype = str(question_type or "").strip().lower().replace("_", " ").replace("-", " ")
+    fill_blank_examples_en = """
+[Output Template - Fill-in-the-blank]
+1. Question: In asynchronous SQLAlchemy, the utility used to create an async session factory is ____.
+Answer: async_sessionmaker
+Explanation: async_sessionmaker creates a factory for asynchronous session objects.
+
+2. Question: In ACID properties, the "A" stands for ____.
+Answer: Atomicity
+Explanation: Atomicity ensures a transaction is all-or-nothing.
+"""
+    fill_blank_examples_cn = """
+【输出模板 - 填空题】
+1. Question: 在异步 SQLAlchemy 中，用于创建异步会话工厂的工具是 ____。
+Answer: async_sessionmaker
+Explanation: async_sessionmaker 用于创建异步会话对象工厂。
+
+2. Question: 在 ACID 特性中，字母 A 代表 ____。
+Answer: Atomicity
+Explanation: Atomicity 表示事务要么全部成功，要么全部失败。
+"""
+
+    format_rule_en = ""
+    format_rule_cn = ""
+    if "fill" in qtype and "blank" in qtype:
+        format_rule_en = (
+            "\n[Strict Fill-in-the-blank Rules]\n"
+            "- Every question stem MUST contain exactly one blank marker: ____\n"
+            "- Never put the answer directly in the stem\n"
+            "- Each question MUST include 'Answer:' and 'Explanation:' lines\n"
+            "- Follow this format exactly:\n"
+            "  n. Question: ... ____ ...\n"
+            "  Answer: ...\n"
+            "  Explanation: ...\n"
+            f"\n{fill_blank_examples_en}"
+        )
+        format_rule_cn = (
+            "\n【填空题强制规则】\n"
+            "- 每道题题干必须包含且仅包含一个空位标记：____\n"
+            "- 题干中严禁直接写出答案\n"
+            "- 每道题必须包含“Answer:”与“Explanation:”两行\n"
+            "- 必须严格遵循如下格式：\n"
+            "  n. Question: ... ____ ...\n"
+            "  Answer: ...\n"
+            "  Explanation: ...\n"
+            f"\n{fill_blank_examples_cn}"
+        )
+
     is_english = str(output_language).strip().lower().startswith("english")
     if is_english:
         language_rule = "Output the full question set in English only (stems, options, answers, and explanations). Do not use Chinese."
         prompt = f"""You are an expert question designer. Generate a brand-new question set by transforming the source material below.
 [Source Content]: {base_content}
 [Generation Requirements]: {user_requirements}
+[Question Type]: {question_type}
 {basis_hint}
 [Hard Constraints]
 1) Include complete options, answers, and explanations.
 2) Any math expressions must use LaTeX wrapped with $...$.
 3) Do not copy wording from the source. Keep the same knowledge targets but change wording and numeric details.
-4) {language_rule}{count_rule_en}"""
+4) {language_rule}{count_rule_en}
+{format_rule_en}"""
     else:
         language_rule = "请使用中文输出全部题干、选项、答案与解析。"
         prompt = f"""你是出题专家。请基于以下原始题目内容进行裂变，生成全新的题目：
 【原始题目内容】：{base_content}
 【生成要求】：{user_requirements}
+【题型】：{question_type}
 {basis_hint}
 【强制要求】：
 1) 包含详细的选项、答案和解析。
 2) 所有数学公式必须使用 LaTeX (用 $ 包裹)。
 3) 严禁与原题文字重复；应保持同知识点但换叙述与数据。
-4) {language_rule}{count_rule_cn}"""
+4) {language_rule}{count_rule_cn}
+{format_rule_cn}"""
 
     ai_service = AIGatewayService()
     return await ai_service.chat_with_provider(

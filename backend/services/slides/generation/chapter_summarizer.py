@@ -3,6 +3,7 @@ import asyncio
 import json
 import math
 import os
+import re
 
 # Configurable concurrency limit for LLM API calls
 MAX_CONCURRENT_LLM_CALLS = int(os.getenv("SUB1_MAX_CONCURRENT_LLM", "5"))
@@ -472,59 +473,115 @@ class ChapterSummarizer:
         results = await asyncio.gather(*[_run_batch(data) for data in data_list])
 
         for batch_idx, result in enumerate(results):
-            if result and "_error" not in result:
-                try:
-                    script_content = result['choices'][0]['message']['content'].strip()
-                    # 清理JSON内容
-                    script_content = script_content.strip('```json\n').strip('```')
+            batch = batches[batch_idx]
+            if not result or "_error" in result:
+                print(f"❌ Script generation failed for batch {batch_idx}: {result.get('_error', 'unknown_error') if isinstance(result, dict) else 'unknown_error'}")
+                for slide in batch:
+                    final_scripts.append(self._build_fallback_script_data(slide, script_style))
+                continue
 
-                    # 解析JSON响应
-                    json_response = json.loads(script_content)
-                    scripts_list = json_response.get('scripts', [])
+            script_content = ""
+            try:
+                script_content = str(result['choices'][0]['message']['content'] or "").strip()
 
-                    # 获取对应的批次数据
-                    batch = batches[batch_idx]
+                # 兼容 ```json ...``` 或夹杂说明文字的响应
+                fenced_match = re.search(r"```(?:json)?\s*(\{[\s\S]*\})\s*```", script_content, flags=re.IGNORECASE)
+                if fenced_match:
+                    script_content = fenced_match.group(1).strip()
+                else:
+                    brace_start = script_content.find("{")
+                    brace_end = script_content.rfind("}")
+                    if brace_start >= 0 and brace_end > brace_start:
+                        script_content = script_content[brace_start:brace_end + 1]
 
-                    # 处理每个脚本
-                    for script_item in scripts_list:
-                        # 找到对应的原始幻灯片数据
-                        slide_number = script_item.get('slide_number')
-                        original_slide = None
+                json_response = json.loads(script_content)
+                scripts_list = json_response.get('scripts', [])
+                if not isinstance(scripts_list, list):
+                    scripts_list = []
+
+                processed_numbers = set()
+
+                for idx, script_item in enumerate(scripts_list):
+                    if not isinstance(script_item, dict):
+                        continue
+
+                    raw_slide_number = script_item.get('slide_number')
+                    slide_number = self._normalize_slide_number(raw_slide_number)
+
+                    original_slide = None
+                    if slide_number is not None:
                         for slide in batch:
-                            if slide['slide_number'] == slide_number:
+                            if self._normalize_slide_number(slide.get('slide_number')) == slide_number:
                                 original_slide = slide
                                 break
 
-                        if original_slide:
-                            # 组装完整脚本文本
-                            full_script = f"{script_item.get('introduction', '')}\n\n{script_item.get('main_content', '')}\n\n{script_item.get('conclusion', '')}"
+                    # 兜底1: 按标题匹配
+                    if original_slide is None:
+                        model_title = str(script_item.get('slide_title', '') or '').strip().lower()
+                        if model_title:
+                            for slide in batch:
+                                if str(slide.get('title', '') or '').strip().lower() == model_title:
+                                    original_slide = slide
+                                    slide_number = self._normalize_slide_number(slide.get('slide_number'))
+                                    break
 
-                            # 优化数据结构，便于Word文档生成
-                            script_data = {
-                                'slide_number': slide_number,
-                                'slide_title': script_item.get('slide_title', original_slide['title']),
-                                'slide_content_points': original_slide['content'],
-                                'talking_script': {
-                                    'intro': script_item.get('introduction', ''),
-                                    'main_body': [script_item.get('main_content', '')],
-                                    'conclusion': script_item.get('conclusion', ''),
-                                    'full_text': full_script
-                                },
-                                'estimated_duration': script_item.get('estimated_duration', '45-60 seconds'),
-                                'script_style': script_style,
-                                'word_count': len(full_script.split()),
-                                'speaking_cues': self._extract_speaking_cues(full_script)
-                            }
-                            final_scripts.append(script_data)
-                            print(f"✅ Processed script for slide {slide_number}: {script_item.get('slide_title', 'Unknown')}")
-                        else:
-                            print(f"⚠️ Could not find original slide data for slide {slide_number}")
-                                
-                except (KeyError, json.JSONDecodeError) as e:
-                    print(f"❌ Error processing script result for batch {batch_idx}: {e}")
-                    print(f"Raw content: {script_content[:200]}...")
-                else:
-                    print(f"❌ Script generation failed for batch {batch_idx}: {result.get('_error', 'unknown_error') if isinstance(result, dict) else 'unknown_error'}")
+                    # 兜底2: 按返回顺序映射
+                    if original_slide is None and idx < len(batch):
+                        original_slide = batch[idx]
+                        slide_number = self._normalize_slide_number(original_slide.get('slide_number'))
+
+                    if not original_slide or slide_number is None:
+                        continue
+
+                    intro = str(script_item.get('introduction', '') or '').strip()
+                    main_content = script_item.get('main_content', '')
+                    if isinstance(main_content, list):
+                        main_content_text = "\n\n".join(str(x or '').strip() for x in main_content if str(x or '').strip())
+                        main_body = [str(x or '').strip() for x in main_content if str(x or '').strip()]
+                    else:
+                        main_content_text = str(main_content or '').strip()
+                        main_body = [main_content_text] if main_content_text else []
+                    conclusion = str(script_item.get('conclusion', '') or '').strip()
+
+                    full_script = "\n\n".join([part for part in [intro, main_content_text, conclusion] if part]).strip()
+                    if not full_script:
+                        fallback = self._build_fallback_script_data(original_slide, script_style)
+                        final_scripts.append(fallback)
+                        processed_numbers.add(slide_number)
+                        continue
+
+                    script_data = {
+                        'slide_number': slide_number,
+                        'slide_title': script_item.get('slide_title', original_slide['title']),
+                        'slide_content_points': original_slide['content'],
+                        'talking_script': {
+                            'intro': intro,
+                            'main_body': main_body,
+                            'conclusion': conclusion,
+                            'full_text': full_script
+                        },
+                        'estimated_duration': script_item.get('estimated_duration', '45-60 seconds'),
+                        'script_style': script_style,
+                        'word_count': len(full_script.split()),
+                        'speaking_cues': self._extract_speaking_cues(full_script)
+                    }
+                    final_scripts.append(script_data)
+                    processed_numbers.add(slide_number)
+                    print(f"✅ Processed script for slide {slide_number}: {script_item.get('slide_title', 'Unknown')}")
+
+                # 补齐当前批次中模型漏掉的幻灯片
+                for slide in batch:
+                    s_no = self._normalize_slide_number(slide.get('slide_number'))
+                    if s_no is None or s_no in processed_numbers:
+                        continue
+                    print(f"⚠️ Missing script for slide {s_no}, using fallback script")
+                    final_scripts.append(self._build_fallback_script_data(slide, script_style))
+
+            except (KeyError, json.JSONDecodeError, TypeError, ValueError) as e:
+                print(f"❌ Error processing script result for batch {batch_idx}: {e}")
+                print(f"Raw content: {script_content[:200]}...")
+                for slide in batch:
+                    final_scripts.append(self._build_fallback_script_data(slide, script_style))
         
         # 按slide_number排序，确保顺序正确
         final_scripts.sort(key=lambda x: x['slide_number'])
@@ -569,6 +626,36 @@ class ChapterSummarizer:
         }
         cues['total_cues'] = cues['pauses'] + cues['emphasis'] + cues['slow_delivery']
         return cues
+
+    def _normalize_slide_number(self, value):
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+    def _build_fallback_script_data(self, slide, script_style):
+        slide_number = self._normalize_slide_number(slide.get('slide_number')) or 0
+        title = str(slide.get('title', f'Slide {slide_number}') or f'Slide {slide_number}')
+        points = [str(p or '').strip() for p in (slide.get('content') or []) if str(p or '').strip()]
+        intro = f"This slide introduces {title}."
+        main_body = [f"Key point: {p}" for p in points] if points else ["Please explain the core idea shown on this slide."]
+        conclusion = "In summary, this slide highlights the essential points to remember."
+        full_script = "\n\n".join([intro] + main_body + [conclusion])
+        return {
+            'slide_number': slide_number,
+            'slide_title': title,
+            'slide_content_points': points,
+            'talking_script': {
+                'intro': intro,
+                'main_body': main_body,
+                'conclusion': conclusion,
+                'full_text': full_script,
+            },
+            'estimated_duration': '45-60 seconds',
+            'script_style': script_style,
+            'word_count': len(full_script.split()),
+            'speaking_cues': self._extract_speaking_cues(full_script),
+        }
 
     def generate_script_sync(self, slides_results, script_style="academic"):
         """同步方法，用于在Flask路由中调用"""

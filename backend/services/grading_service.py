@@ -241,10 +241,6 @@ def _get_test_pdf_override() -> Optional[Path]:
 
 def get_source_pdf_path(submission: Dict[str, Any]) -> Optional[Path]:
     """Resolve the source PDF path on disk for a submission."""
-    test_pdf = _get_test_pdf_override()
-    if test_pdf:
-        return test_pdf
-
     raw_path = (submission or {}).get("pdfPath") or ""
     if not raw_path:
         return None
@@ -252,15 +248,12 @@ def get_source_pdf_path(submission: Dict[str, Any]) -> Optional[Path]:
     normalized = str(raw_path).lstrip("/")
     if normalized.startswith("data/"):
         return Path(__file__).resolve().parents[2] / normalized
-    if normalized.startswith("test_pdf/"):
+    if normalized.startswith("test_pdf/") or normalized.startswith("uploads/"):
         return BACKEND_ROOT / normalized
     return Path(__file__).resolve().parents[2] / normalized
 
 
 def get_source_pdf_web_path(submission: Dict[str, Any]) -> str:
-    test_pdf = _get_test_pdf_override()
-    if test_pdf:
-        return f"test_pdf/{quote(test_pdf.name)}"
     return str((submission or {}).get("pdfPath") or "").lstrip("/")
 
 
@@ -291,8 +284,13 @@ def render_annotations_to_pdf(submission_id: str, submission: Dict[str, Any], an
         return None
 
     pristine_pdf = get_pristine_pdf_path(submission_id, source_pdf)
-    if not pristine_pdf.exists():
+    # Track which source file the pristine was created from via a sidecar .meta file.
+    # If the source path changed (e.g. test_pdf override removed), recreate pristine.
+    pristine_meta = pristine_pdf.with_suffix(".meta")
+    stored_source = pristine_meta.read_text().strip() if pristine_meta.exists() else ""
+    if not pristine_pdf.exists() or str(source_pdf) != stored_source:
         shutil.copy2(source_pdf, pristine_pdf)
+        pristine_meta.write_text(str(source_pdf))
 
     if not annotations:
         # Restore pristine source when all labels are removed.

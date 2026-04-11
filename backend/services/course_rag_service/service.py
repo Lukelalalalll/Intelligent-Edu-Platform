@@ -1,42 +1,27 @@
-"""
-Course-scoped RAG service for student Socratic mode.
+"""CourseRagService — per-course vector store management for student RAG retrieval.
 
 Uses ChromaDB + sentence-transformers to index course materials uploaded by
 teachers and retrieve relevant chunks when students ask questions in AIInteract.
-
-Each course gets its own Chroma collection: "course_{course_id}".
-Students enrolled in a course get RAG context from that course's materials.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import re
-from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 try:
     from langchain_chroma import Chroma
 except ImportError:
     from langchain_community.vectorstores import Chroma  # type: ignore[no-redef]
 
 from backend.config import Config
+from .chunking import build_chunks, build_structured_chunks
+from .retrieval_helpers import doc_hash, rerank_results, rrf_merge
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CourseChunk:
-    course_id: str
-    text: str
-    score: float
-    doc_name: str = ""
-    page_num: int = -1
 
 
 class CourseRagService:
@@ -74,10 +59,6 @@ class CourseRagService:
     def _meta_path(self, course_id: str) -> Path:
         return self._course_dir(course_id) / "meta.json"
 
-    @staticmethod
-    def _doc_hash(text: str) -> str:
-        return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
-
     def _load_meta(self, course_id: str) -> Dict[str, Any]:
         path = self._meta_path(course_id)
         if not path.exists():
@@ -97,165 +78,6 @@ class CourseRagService:
             embedding_function=self.embeddings,
             persist_directory=str(self._course_dir(course_id)),
         )
-
-    def _build_chunks(self, text: str) -> List[str]:
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-        return [c for c in splitter.split_text(text or "") if c.strip()]
-
-    def _estimate_page_num(self, text: str, char_start: int) -> int:
-        prefix = (text or "")[: max(0, char_start)]
-        page_breaks = prefix.count("\f")
-        if page_breaks > 0:
-            return page_breaks + 1
-        return (max(0, char_start) // 3000) + 1
-
-    def _split_document_sections(self, text: str) -> List[Dict[str, Any]]:
-        lines = (text or "").splitlines()
-        sections: List[Dict[str, Any]] = []
-        stack: List[tuple[int, str]] = []
-
-        current_title = "Document"
-        current_path = "Document"
-        current_level = 0
-        current_lines: List[str] = []
-
-        md_heading = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-        numbered_heading = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+?)\s*$")
-
-        def flush_current() -> None:
-            content = "\n".join(current_lines).strip()
-            if not content:
-                return
-            sections.append(
-                {
-                    "section_title": current_title,
-                    "section_path": current_path,
-                    "heading_level": current_level,
-                    "content": content,
-                }
-            )
-
-        for raw in lines:
-            line = str(raw or "").rstrip()
-            m = md_heading.match(line)
-            n = numbered_heading.match(line) if not m else None
-
-            if m or n:
-                flush_current()
-                current_lines = []
-
-                if m:
-                    level = len(m.group(1))
-                    title = m.group(2).strip()
-                else:
-                    numbering = n.group(1)
-                    level = min(6, numbering.count(".") + 1)
-                    title = f"{numbering} {n.group(2).strip()}"
-
-                while stack and stack[-1][0] >= level:
-                    stack.pop()
-                stack.append((level, title))
-
-                current_title = title
-                current_level = level
-                current_path = " > ".join(item[1] for item in stack)
-                continue
-
-            current_lines.append(line)
-
-        flush_current()
-        if sections:
-            return sections
-
-        fallback = (text or "").strip()
-        if not fallback:
-            return []
-        return [
-            {
-                "section_title": "Document",
-                "section_path": "Document",
-                "heading_level": 0,
-                "content": fallback,
-            }
-        ]
-
-    def _build_structured_chunks(self, text: str) -> List[Dict[str, Any]]:
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-
-        sections = self._split_document_sections(text)
-        chunks: List[Dict[str, Any]] = []
-        search_start = 0
-
-        for section in sections:
-            section_text = str(section.get("content", "") or "").strip()
-            if not section_text:
-                continue
-            split_chunks = [c for c in splitter.split_text(section_text) if c.strip()]
-            for chunk_text in split_chunks:
-                needle = chunk_text[:120]
-                pos = (text or "").find(needle, search_start) if needle else -1
-                if pos < 0:
-                    pos = max(0, search_start)
-                char_start = pos
-                char_end = char_start + len(chunk_text)
-                search_start = max(search_start, char_start + 1)
-                chunks.append(
-                    {
-                        "text": chunk_text,
-                        "section_title": section.get("section_title", "Document"),
-                        "section_path": section.get("section_path", "Document"),
-                        "heading_level": int(section.get("heading_level", 0) or 0),
-                        "char_start": char_start,
-                        "char_end": char_end,
-                        "page_num": self._estimate_page_num(text, char_start),
-                    }
-                )
-        return chunks
-
-    @staticmethod
-    def _tokenize_for_rerank(text: str) -> set[str]:
-        tokens = re.findall(r"[a-zA-Z0-9_\u4e00-\u9fff]+", str(text or "").lower())
-        return {t for t in tokens if len(t) >= 2}
-
-    def _rerank_results(self, query: str, items: List[Dict[str, Any]], top_k: int) -> List[Dict[str, Any]]:
-        if not items:
-            return []
-
-        query_tokens = self._tokenize_for_rerank(query)
-        if not query_tokens:
-            return items[:top_k]
-
-        dedup: Dict[str, Dict[str, Any]] = {}
-        for item in items:
-            key = hashlib.sha1(str(item.get("text", "")).encode("utf-8", errors="ignore")).hexdigest()
-            if key not in dedup or float(item.get("score", 0.0)) > float(dedup[key].get("score", 0.0)):
-                dedup[key] = item
-
-        rescored: List[Dict[str, Any]] = []
-        for item in dedup.values():
-            base = float(item.get("score", 0.0))
-            text_tokens = self._tokenize_for_rerank(item.get("text", ""))
-            overlap = len(query_tokens & text_tokens) / max(1, len(query_tokens))
-            title_tokens = self._tokenize_for_rerank(item.get("section_title", "") or item.get("doc_name", ""))
-            title_overlap = len(query_tokens & title_tokens) / max(1, len(query_tokens))
-
-            final_score = 0.65 * base + 0.25 * overlap + 0.10 * title_overlap
-            enriched = dict(item)
-            enriched["score"] = round(final_score, 4)
-            enriched["retrieval_score"] = round(base, 4)
-            enriched["overlap_score"] = round(overlap, 4)
-            rescored.append(enriched)
-
-        rescored.sort(key=lambda x: float(x.get("score", 0.0)), reverse=True)
-        return rescored[:top_k]
 
     # ------------------------------------------------------------------
     # Public API — Indexing (called by teachers)
@@ -277,7 +99,7 @@ class CourseRagService:
 
         meta = self._load_meta(course_id)
         docs_meta = meta.get("documents", {})
-        current_hash = self._doc_hash(document_text)
+        current_hash = doc_hash(document_text)
 
         if docs_meta.get(doc_name, {}).get("hash") == current_hash:
             return {"indexed": False, "reason": "unchanged", "chunk_count": docs_meta[doc_name].get("chunk_count", 0)}
@@ -293,7 +115,7 @@ class CourseRagService:
                 logger.debug("Could not delete old chunks for %s/%s", course_id, doc_name)
 
         # Chunk and index
-        chunks = self._build_structured_chunks(document_text)
+        chunks = build_structured_chunks(document_text, self.chunk_size, self.chunk_overlap)
         if not chunks:
             return {"indexed": False, "reason": "no chunks produced"}
 
@@ -471,37 +293,6 @@ class CourseRagService:
         return results
 
     # ------------------------------------------------------------------
-    # Reciprocal Rank Fusion (RRF) for merging ranked lists
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _rrf_merge(
-        results_lists: List[List[Dict[str, Any]]],
-        k: int = 60,
-        top_k: int = 4,
-    ) -> List[Dict[str, Any]]:
-        """Merge multiple ranked result lists using Reciprocal Rank Fusion."""
-        scores: Dict[str, float] = {}
-        items: Dict[str, Dict[str, Any]] = {}
-
-        for results in results_lists:
-            for rank, item in enumerate(results):
-                text_sig = hashlib.sha1(str(item.get("text", "")).encode("utf-8", errors="ignore")).hexdigest()[:16]
-                key = f"{item['course_id']}_{item['doc_name']}_{text_sig}"
-                scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
-                if key not in items:
-                    items[key] = item
-
-        # Sort by RRF score
-        sorted_keys = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
-        merged = []
-        for key in sorted_keys[:top_k]:
-            item = items[key].copy()
-            item["score"] = round(scores[key], 4)
-            merged.append(item)
-        return merged
-
-    # ------------------------------------------------------------------
     # Public API — Retrieval (called during student chat)
     # ------------------------------------------------------------------
 
@@ -574,7 +365,7 @@ class CourseRagService:
         vector_results.sort(key=lambda x: x["score"], reverse=True)
 
         if not use_hybrid:
-            return self._rerank_results(query=query, items=vector_results, top_k=top_k)
+            return rerank_results(query=query, items=vector_results, top_k=top_k)
 
         # TF-IDF sparse retrieval for hybrid fusion
         sparse_results: List[Dict[str, Any]] = []
@@ -585,12 +376,11 @@ class CourseRagService:
                 logger.debug("TF-IDF retrieval failed for course %s", cid, exc_info=True)
 
         if not sparse_results:
-            # Fallback to vector-only if TF-IDF fails
-            return self._rerank_results(query=query, items=vector_results, top_k=top_k)
+            return rerank_results(query=query, items=vector_results, top_k=top_k)
 
         # Reciprocal Rank Fusion
-        merged = self._rrf_merge([vector_results, sparse_results], top_k=max(top_k * 2, top_k))
-        return self._rerank_results(query=query, items=merged, top_k=top_k)
+        merged = rrf_merge([vector_results, sparse_results], top_k=max(top_k * 2, top_k))
+        return rerank_results(query=query, items=merged, top_k=top_k)
 
     def get_indexed_courses_for_student(self, student_id: str) -> List[str]:
         """Return list of course IDs that have indexed materials.

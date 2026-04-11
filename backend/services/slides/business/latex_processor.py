@@ -7,7 +7,7 @@
 """
 
 from PIL import Image
-from ..latex_generator import process_slide_latex
+from ..generation.latex_generator import process_slide_latex
 
 
 class BusinessLatexProcessor:

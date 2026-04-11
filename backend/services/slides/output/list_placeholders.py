@@ -1,6 +1,6 @@
 from pptx import Presentation
 import os
-from backend.services.slides.theme_catalog import build_theme_catalog, resolve_base_theme
+from .theme_catalog import build_theme_catalog, resolve_base_theme
 
 class PPTTemplateManager:
     def __init__(self, templates_dir='static/ppt_templates'):

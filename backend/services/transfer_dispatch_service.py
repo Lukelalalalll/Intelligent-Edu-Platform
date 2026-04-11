@@ -299,26 +299,35 @@ async def retry_transfer(transfer_id: str, user_id: str) -> dict:
 
 async def _dispatch_sub1(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub1 (slides): parse-md logic."""
-    from backend.services.slides_service import slides_service
+    from backend.services.slides import MarkdownViewer as MDParser
+    from backend.services.slides.parsing.pdf2md import convert_pdf_to_md
+    import tempfile
+
     ext = _get_extension(file_name)
 
-    with open(abs_path, "rb") as f:
-        content = f.read()
-
     if ext == "pdf":
-        # Convert PDF to markdown first
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as tmp_md:
+            md_path = tmp_md.name
         try:
-            md_text = await slides_service.pdf_to_markdown(tmp_path)
-        finally:
-            os.unlink(tmp_path)
+            convert_pdf_to_md(abs_path, md_path)
+            parsing_path = md_path
+        except Exception:
+            os.unlink(md_path)
+            raise
     else:
-        md_text = content.decode("utf-8", errors="replace")
+        parsing_path = abs_path
 
-    headers = slides_service.extract_headers(md_text)
+    try:
+        parser = MDParser()
+        parser.load_file(parsing_path, options.get("use_llm", False))
+        headers = [
+            {"index": i + 1, "level": s["header"]["level"], "text": s["header"]["text"]}
+            for i, s in enumerate(parser.header_sections)
+        ]
+    finally:
+        if ext == "pdf":
+            os.unlink(parsing_path)
+
     return {
         "filename": file_name,
         "headers": headers,
@@ -367,8 +376,6 @@ async def _dispatch_sub4(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub5(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub5 (study-notes): generate-notes logic."""
-    from backend.services.slides_service import slides_service
-
     ext = _get_extension(file_name)
     if ext != "pdf":
         raise ValueError("Study notes only supports PDF files")

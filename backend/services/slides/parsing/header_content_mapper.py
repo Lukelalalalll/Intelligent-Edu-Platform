@@ -1,5 +1,5 @@
 from mrkdwn_analysis import MarkdownAnalyzer
-from .finder import file_finder
+from ..infra.finder import file_finder
 
 class MarkdownViewer:
     def __init__(self, input_file):
