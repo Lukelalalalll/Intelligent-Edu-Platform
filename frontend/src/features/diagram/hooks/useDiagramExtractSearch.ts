@@ -1,14 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import client from '../../../api/client';
-
-function extractErrorMessage(err: any): string {
-    const detail = err?.response?.data?.detail;
-    if (Array.isArray(detail)) {
-        return detail.map((d) => `${(d.loc || []).join('.')}: ${d.msg}`).join('; ');
-    }
-    if (typeof detail === 'string' && detail.trim()) return detail;
-    return err?.response?.data?.error || err?.message || 'Unknown error';
-}
+import { extractErrorMessage } from '../../../utils/extractError';
 
 const normalizeText = (value: any) => String(value || '').replace(/\s+/g, ' ').trim();
 

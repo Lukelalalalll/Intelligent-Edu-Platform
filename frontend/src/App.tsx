@@ -7,32 +7,17 @@ import { CourseProvider } from './hooks/useCourseContext';
 import ErrorBoundary from './shared/ErrorBoundary';
 import RouteErrorBoundary from './shared/RouteErrorBoundary';
 
-const PublishHomeworkEntry = React.lazy(() => import('./entries/publishHomeworkEntry'));
-const HomeEntry = React.lazy(() => import('./entries/homeEntry'));
-const MdProcessorEntry = React.lazy(() => import('./entries/slides/mdProcessorEntry'));
-const LoginEntry = React.lazy(() => import('./entries/loginEntry'));
-const RegisterEntry = React.lazy(() => import('./entries/registerEntry'));
-const ForgotEntry = React.lazy(() => import('./entries/forgotEntry'));
-const ProfileEntry = React.lazy(() => import('./entries/profileEntry'));
-const AIInteractEntry = React.lazy(() => import('./entries/aiInteractEntry'));
-const HighlighterEntry = React.lazy(() => import('./entries/slides/highlighterEntry'));
-const AdminDashboardEntry = React.lazy(() => import('./entries/adminDashboardEntry'));
-const AdminDbConsoleEntry = React.lazy(() => import('./entries/adminDbConsoleEntry'));
-const AdminFileCenterEntry = React.lazy(() => import('./entries/adminFileCenterEntry'));
-const DiagramToolEntry = React.lazy(() => import('./entries/diagram/diagramToolEntry'));
-const QuestionGeneratorEntry = React.lazy(() => import('./entries/question-bank/questionGeneratorEntry'));
-const QuickProcessEntry = React.lazy(() => import('./entries/slides/quickProcessEntry'));
-const SpecifyEntry = React.lazy(() => import('./entries/slides/specifyEntry'));
-const PptTemplateEntry = React.lazy(() => import('./entries/slides/pptTemplateEntry'));
-const HomeStudentEntry = React.lazy(() => import('./entries/homeStudentEntry'));
-const MailboxEntry = React.lazy(() => import('./entries/mailboxEntry'));
-const GradingWorkbenchEntry = React.lazy(() => import('./entries/gradingWorkbenchEntry'));
-const EmailAgentEntry = React.lazy(() => import('./entries/emailAgentEntry'));
-const StudyNotesEntry = React.lazy(() => import('./entries/study-notes/studyNotesEntry'));
-const ChatEntry = React.lazy(() => import('./entries/chatEntry'));
-const KnowledgeBaseEntry = React.lazy(() => import('./entries/knowledgeBaseEntry'));
-const DiagnosticFeedbackEntry = React.lazy(() => import('./entries/diagnosticFeedbackEntry'));
-const VideoGenEntry = React.lazy(() => import('./entries/videoGenEntry'));
+import {
+  LoginPage, RegisterPage, ForgotPage, ProfilePage,
+  HomePage, HomeStudentPage,
+  AdminDashboardPage, AdminDbConsolePage, AdminFileCenterPage,
+  AIInteractPage, EmailAgentPage,
+  MailboxPage, GradingWorkbenchPage,
+  KnowledgeBasePage, DiagramPage, QuestionGeneratorPage,
+  MdProcessorPage, HighlighterPage, SpecifyPage, QuickProcessPage, PptTemplatePage,
+  StudyNotesPage, VideoGenPage,
+  ChatPage, DiagnosticFeedbackPage, PublishHomework,
+} from './router';
 
 import client from './api/client';
 
@@ -122,39 +107,39 @@ function App() {
       <Suspense fallback={null}>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<RouteErrorBoundary><ProtectedRoute><HomeEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="home_student" element={<RouteErrorBoundary><ProtectedRoute><HomeStudentEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="slides/md-processor" element={<RouteErrorBoundary><ProtectedRoute><MdProcessorEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="profile" element={<RouteErrorBoundary><ProtectedRoute><ProfileEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="ai-interaction" element={<RouteErrorBoundary><ProtectedRoute><AIInteractEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route index element={<RouteErrorBoundary><ProtectedRoute><HomePage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="home_student" element={<RouteErrorBoundary><ProtectedRoute><HomeStudentPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="slides/md-processor" element={<RouteErrorBoundary><ProtectedRoute><MdProcessorPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="profile" element={<RouteErrorBoundary><ProtectedRoute><ProfilePage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="ai-interaction" element={<RouteErrorBoundary><ProtectedRoute><AIInteractPage /></ProtectedRoute></RouteErrorBoundary>} />
 
-          <Route path="login" element={<RouteErrorBoundary><PublicRoute><LoginEntry /></PublicRoute></RouteErrorBoundary>} />
-          <Route path="register" element={<RouteErrorBoundary><PublicRoute><RegisterEntry /></PublicRoute></RouteErrorBoundary>} />
-          <Route path="forgot-password" element={<RouteErrorBoundary><PublicRoute><ForgotEntry /></PublicRoute></RouteErrorBoundary>} />
+          <Route path="login" element={<RouteErrorBoundary><PublicRoute><LoginPage /></PublicRoute></RouteErrorBoundary>} />
+          <Route path="register" element={<RouteErrorBoundary><PublicRoute><RegisterPage /></PublicRoute></RouteErrorBoundary>} />
+          <Route path="forgot-password" element={<RouteErrorBoundary><PublicRoute><ForgotPage /></PublicRoute></RouteErrorBoundary>} />
 
-          <Route path="slides/highlighter" element={<RouteErrorBoundary><ProtectedRoute><HighlighterEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="slides/specify" element={<RouteErrorBoundary><ProtectedRoute><SpecifyEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="slides/quick-process" element={<RouteErrorBoundary><ProtectedRoute><QuickProcessEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="slides/ppt-template" element={<RouteErrorBoundary><ProtectedRoute><PptTemplateEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="slides/highlighter" element={<RouteErrorBoundary><ProtectedRoute><HighlighterPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="slides/specify" element={<RouteErrorBoundary><ProtectedRoute><SpecifyPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="slides/quick-process" element={<RouteErrorBoundary><ProtectedRoute><QuickProcessPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="slides/ppt-template" element={<RouteErrorBoundary><ProtectedRoute><PptTemplatePage /></ProtectedRoute></RouteErrorBoundary>} />
 
-          <Route path="questions" element={<RouteErrorBoundary><ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="publish-homework" element={<RouteErrorBoundary><ProtectedRoute><PublishHomeworkEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="admin/dashboard" element={<RouteErrorBoundary><ProtectedRoute><AdminDashboardEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="admin/db-console" element={<RouteErrorBoundary><ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="admin/file-center" element={<RouteErrorBoundary><ProtectedRoute><AdminFileCenterEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="questions" element={<RouteErrorBoundary><ProtectedRoute><QuestionGeneratorPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="publish-homework" element={<RouteErrorBoundary><ProtectedRoute><PublishHomework /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="admin/dashboard" element={<RouteErrorBoundary><ProtectedRoute><AdminDashboardPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="admin/db-console" element={<RouteErrorBoundary><ProtectedRoute><AdminDbConsolePage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="admin/file-center" element={<RouteErrorBoundary><ProtectedRoute><AdminFileCenterPage /></ProtectedRoute></RouteErrorBoundary>} />
 
-          <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramToolEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBaseEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="diagnostic-feedback" element={<RouteErrorBoundary><ProtectedRoute><DiagnosticFeedbackEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="video-gen" element={<RouteErrorBoundary><ProtectedRoute><VideoGenEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="email-agent" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="gmail/callback" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBasePage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="diagnostic-feedback" element={<RouteErrorBoundary><ProtectedRoute><DiagnosticFeedbackPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="video-gen" element={<RouteErrorBoundary><ProtectedRoute><VideoGenPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="email-agent" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="gmail/callback" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="ai-email" element={<Navigate to="/email-agent" replace />} />
-          <Route path="chat" element={<RouteErrorBoundary><ProtectedRoute><ChatEntry /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="chat/room/:roomId" element={<RouteErrorBoundary><ProtectedRoute><ChatEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="chat" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="chat/room/:roomId" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
         </Route>
       </Routes>
       </Suspense>

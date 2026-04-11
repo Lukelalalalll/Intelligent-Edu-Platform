@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
 import { knowledgeBaseApi } from '../../../../api/knowledgeBaseApi';
 import type { ChapterDraft, RetrievalResult } from './types';
-
-function toErrorMessage(err: unknown, fallback: string): string {
-    const maybeErr = err as { response?: { data?: { detail?: unknown } }; message?: string };
-    const detail = maybeErr?.response?.data?.detail;
-    if (typeof detail === 'string') return detail;
-    if (typeof maybeErr?.message === 'string' && maybeErr.message.trim()) return maybeErr.message;
-    return fallback;
-}
+import { extractErrorMessage } from '../../../../utils/extractError';
 
 export function useDocumentManagerState({
     courseId,
@@ -96,7 +89,7 @@ export function useDocumentManagerState({
             await action();
             setChapterActionSuccess(successMessage);
         } catch (err) {
-            setChapterActionError(toErrorMessage(err, failureMessage));
+            setChapterActionError(extractErrorMessage(err, failureMessage));
         } finally {
             setChapterBusy(false);
         }

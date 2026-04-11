@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import PDFViewer from '../../../shared/PDFViewer';
-import CozeAssistant from '../../../shared/CozeAssistant';
-import RubricPanel from '../../../shared/RubricPanel';
+import PDFViewer from '../components/PDFViewer';
+import CozeAssistant from '../components/CozeAssistant';
+import RubricPanel from '../components/RubricPanel';
 import { teacherApi } from '../../../api/api';
 import styles from '../styles/gradingWorkbench.module.css';
 import chatStyles from '../styles/gradingChat.module.css';

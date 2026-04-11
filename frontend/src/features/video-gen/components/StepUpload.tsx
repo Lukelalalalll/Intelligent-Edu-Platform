@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styles from '../styles/videoGen.module.css';
-import type { AIProvider, Audience } from '../VideoGenPage';
+import type { AIProvider, Audience } from '../VideoGenView';
 
 interface Props {
     lang: 'zh' | 'en';

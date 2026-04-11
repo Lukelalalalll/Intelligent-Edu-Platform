@@ -1,0 +1,14 @@
+// Barrel re-exports for shared components & utilities
+export { default as BaseModal } from './BaseModal';
+export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as Layout } from './Layout';
+export { default as NetworkBanner } from './NetworkBanner';
+export { default as RouteErrorBoundary } from './RouteErrorBoundary';
+export { default as ScrollToTop } from './ScrollToTop';
+export { default as ToastContainer } from './ToastContainer';
+export { default as Button } from './components/Button/Button';
+export { default as Card } from './components/Card/Card';
+export { default as ConfirmModal } from './components/ConfirmModal';
+export { default as WelcomeBanner } from './components/WelcomeBanner';
+export { default as HistoryPanel } from './components/HistoryPanel/HistoryPanel';
+export type { HistoryApi, HistoryPanelProps } from './components/HistoryPanel/HistoryPanel';
