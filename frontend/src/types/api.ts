@@ -59,6 +59,7 @@ export interface RubricItem {
 }
 
 export interface ScorePayload {
+  submissionId?: string;
   rubric_scores?: RubricItem[];
   rubricScores?: Record<string, number>;
   total_score?: number;

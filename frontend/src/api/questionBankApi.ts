@@ -8,7 +8,7 @@
  * Regenerate schema with: npm run openapi:sync
  */
 import client from './client';
-import type { components, operations } from '../types/schema';
+import type { components, operations } from '../types/generated/schema';
 import type {
     Sub2UploadResponse,
     Sub2ExtractResponse,
