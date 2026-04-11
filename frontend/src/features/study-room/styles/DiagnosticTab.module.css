@@ -1,0 +1,103 @@
+/* DiagnosticTab.module.css */
+.diagnosticSection {
+    max-width: 980px;
+    margin: 24px auto 40px;
+    opacity: 0;
+    animation: tabPopIn 0.4s ease-out forwards 0.15s;
+}
+
+.diagnosticHeader h2 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.diagnosticHeader p {
+    margin: 8px 0 18px;
+    color: var(--text-sub);
+}
+
+.diagnosticCard {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid rgba(0, 123, 85, 0.1);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.diagnosticControls {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+}
+
+.diagnosticControls select,
+.diagnosticControls button,
+.questionItem textarea,
+.feedbackBox textarea {
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #dce5e2;
+    border-radius: 10px;
+}
+
+.diagnosticControls button,
+.submitBtn,
+.feedbackBox button {
+    font-weight: 700;
+    color: #fff;
+    background: var(--primary-color);
+    border: none;
+    cursor: pointer;
+}
+
+.questionList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.questionItem {
+    padding: 12px;
+    border: 1px solid #e8eeeb;
+    border-radius: 10px;
+}
+
+.questionItem h4 {
+    margin: 0 0 8px;
+    color: var(--text-main);
+}
+
+.submitBtn {
+    align-self: flex-start;
+    padding: 10px 16px;
+}
+
+.reportCard {
+    margin-top: 20px;
+    padding: 14px;
+    background: #f7fffb;
+    border: 1px solid #d7ece4;
+    border-radius: 12px;
+}
+
+.reportCard h3 {
+    margin-top: 0;
+}
+
+.feedbackBox {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed #cae3d9;
+}
+
+@keyframes tabPopIn {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .diagnosticControls {
+        grid-template-columns: 1fr;
+    }
+}

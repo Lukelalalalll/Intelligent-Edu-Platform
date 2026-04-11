@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from '../styles/HomeStudent.module.css';
+import styles from '../styles/AssignmentsTab.module.css';
 
 interface Course {
     id: string;

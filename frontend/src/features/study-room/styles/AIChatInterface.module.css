@@ -1,0 +1,315 @@
+/* AIChatInterface.module.css */
+.aiInteractionSection {
+    position: relative;
+    z-index: 20;
+    max-width: 800px;
+    margin: 5rem auto 0;
+}
+
+.chatInterfaceContainer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(24px);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    transition: var(--transition);
+}
+
+.chatInterfaceContainer:focus-within:not(.locked) {
+    box-shadow: 0 12px 48px rgba(0, 123, 85, 0.15), inset 0 0 0 1px rgba(0, 123, 85, 0.2);
+    transform: translateY(-2px);
+}
+
+.locked {
+    min-height: 400px;
+}
+
+.aiLockedOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 251, 252, 0.2);
+    backdrop-filter: blur(16px);
+}
+
+.overlayContent {
+    width: 90%;
+    max-width: 400px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    background: #fff;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.lockIconWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.2rem;
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.1), rgba(0, 77, 64, 0.05));
+    border-radius: 50%;
+}
+
+.btnUnlock {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 12px 28px;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    background: var(--primary-gradient-animated);
+    border-radius: 50px;
+    transition: var(--transition);
+}
+
+.btnUnlock:hover {
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.3);
+    transform: translateY(-2px);
+}
+
+.chatHeader {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.aiBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    border-radius: 20px;
+}
+
+.fullscreenBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 1.1rem;
+    color: var(--text-sub);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.fullscreenBtn:hover {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.chatMessages {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 200px;
+    max-height: 400px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.chatMessages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chatMessages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.message {
+    display: flex;
+    gap: 14px;
+    animation: scaleIn 0.3s forwards;
+}
+
+.userMessage {
+    flex-direction: row-reverse;
+}
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+}
+
+.aiMessage .avatar {
+    color: white;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+}
+
+.userMessage .avatar {
+    color: var(--text-sub);
+    background: #f1f5f9;
+}
+
+.bubble {
+    max-width: 80%;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border-radius: 20px;
+}
+
+.aiMessage .bubble {
+    color: var(--text-main);
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 4px;
+}
+
+.userMessage .bubble {
+    color: white;
+    background: var(--primary-color);
+    border-top-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.2);
+}
+
+.inputArea {
+    padding: 15px 20px 24px;
+}
+
+.inputWrapper {
+    display: flex;
+    align-items: flex-end;
+    padding: 8px 8px 8px 20px;
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    transition: var(--transition);
+}
+
+.inputWrapper:focus-within {
+    background: #fff;
+    border-color: rgba(0, 123, 85, 0.4);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
+
+.geminiInput {
+    flex: 1;
+    max-height: 120px;
+    padding: 10px 0;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-main);
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+}
+
+.sendBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: 12px;
+    color: white;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sendBtn:not(:disabled):hover {
+    background: var(--primary-dark);
+    transform: scale(1.05) rotate(-5deg);
+}
+
+.sendBtn:disabled {
+    cursor: not-allowed;
+    background: #cbd5e1;
+}
+
+.typingIndicator {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+}
+
+.typingIndicator span {
+    width: 6px;
+    height: 6px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typingIndicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typingIndicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+/* Fullscreen Layout State */
+.isFullscreenLayout {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    background: #fff;
+    border-radius: 0;
+}
+
+.isFullscreenLayout .chatMessages {
+    flex: 1;
+    max-height: none;
+    padding: 40px 15%;
+}
+
+.isFullscreenLayout .inputArea {
+    padding: 20px 15% 40px;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+@keyframes bounce {
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { diagnosticStudentApi, type DiagnosticQuestion, type DiagnosticReport } from '../../diagnostic-feedback/api/diagnosticApi';
 import { studentApi } from '../../../api/mailboxApi';
-import styles from '../styles/HomeStudent.module.css';
+import styles from '../styles/DiagnosticTab.module.css';
 
 type CourseLite = {
     id?: string;
