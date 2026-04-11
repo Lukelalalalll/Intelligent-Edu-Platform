@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../../../api/ragEvalApi';
-import type { Dataset, DatasetSummary } from '../../../../api/ragEvalApi';
+import * as api from '../../api/ragEvalApi';
+import type { Dataset, DatasetSummary } from '../../api/ragEvalApi';
 
 export default function DatasetsTab() {
     const [datasets, setDatasets] = useState<DatasetSummary[]>([]);

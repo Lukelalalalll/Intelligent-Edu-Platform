@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { diagnosticTeacherApi, type DiagnosticChapter, type DiagnosticFeedback } from '../../api/diagnosticApi';
+import { diagnosticTeacherApi, type DiagnosticChapter, type DiagnosticFeedback } from './api/diagnosticApi';
 import { knowledgeBaseApi, type CourseInfo } from '../../api/knowledgeBaseApi';
 import styles from './styles/DiagnosticFeedbackPage.module.css';
 

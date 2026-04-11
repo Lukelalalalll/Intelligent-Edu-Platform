@@ -8,7 +8,7 @@ import headerStyles from '../styles/components/ChatHeader.module.css';
 import messageListStyles from '../styles/components/MessageList.module.css';
 import messageInputStyles from '../styles/components/MessageInput.module.css';
 import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import type { ChatMessage } from '../types';
 import type { AIProvider } from '../../../shared/aiProvider';
 

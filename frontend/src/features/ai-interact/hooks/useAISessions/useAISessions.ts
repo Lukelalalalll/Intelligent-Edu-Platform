@@ -5,7 +5,7 @@ import {
     createChatStream,
     type AIProvider,
     type AITutorMode,
-} from '@/api/aiApi';
+} from '../../api/aiApi';
 import { networkBus } from '@/hooks/useNetworkStatus';
 import type { AISession, ChatMessage, RagCitation } from '@/types/api';
 import { prepareAttachmentPayload, type AttachmentInput } from './components/attachmentHelpers';

@@ -1,4 +1,4 @@
-import type { AIProvider, AITutorMode } from '@/api/aiApi';
+import type { AIProvider, AITutorMode } from '../../../api/aiApi';
 import type { AISession, ChatMessage } from '@/types/api';
 import { getErrorMessage, toPayloadMessages } from './sessionHelpers';
 

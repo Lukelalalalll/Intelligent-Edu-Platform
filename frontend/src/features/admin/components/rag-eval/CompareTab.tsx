@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../../../api/ragEvalApi';
-import type { CompareResult, EvalRun } from '../../../../api/ragEvalApi';
+import * as api from '../../api/ragEvalApi';
+import type { CompareResult, EvalRun } from '../../api/ragEvalApi';
 
 export default function CompareTab() {
     const [runs, setRuns] = useState<EvalRun[]>([]);

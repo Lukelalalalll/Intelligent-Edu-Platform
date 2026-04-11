@@ -1,6 +1,6 @@
-import client from './client';
-import type { EmailListResponse, EmailDetail, EmailClassification } from '../types/api';
-import type { AIProvider } from '../shared/aiProvider';
+import client from '../../../api/client';
+import type { EmailListResponse, EmailDetail, EmailClassification } from '../../../types/api';
+import type { AIProvider } from '../../../shared/aiProvider';
 
 export const gmailApi = {
     list: (pageToken?: string): Promise<EmailListResponse> => {

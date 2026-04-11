@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { cozeApi } from '../../../api/api';
+import { cozeApi } from '../api/cozeApi';
 import { useLLMStream } from '../../../hooks/useLLMStream';
 import type { ChatMessage, ChatRole } from '../../../types/llm';
 import { usePretextMeasure } from '../../../hooks/usePretextMeasure';

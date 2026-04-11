@@ -1,7 +1,7 @@
 // frontend/src/features/chat/components/GroupInfoPanel.tsx
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import { useChatStore } from '../store/chatStore';
 import type { ChatContact, ChatRoom } from '../types';
 import globalStyles from '../styles/globals.module.css';

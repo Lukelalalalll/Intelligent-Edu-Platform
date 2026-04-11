@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import styles from './styles/AIInteract.module.css';
-import type { AIRoleInfo } from '../../api/aiApi';
-import type { AIProvider } from '../../api/aiApi';
-import type { AITutorMode } from '../../api/aiApi';
+import type { AIRoleInfo } from './api/aiApi';
+import type { AIProvider } from './api/aiApi';
+import type { AITutorMode } from './api/aiApi';
 
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';

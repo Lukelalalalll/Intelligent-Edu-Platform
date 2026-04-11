@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import type { ChatMessage } from '../types';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';

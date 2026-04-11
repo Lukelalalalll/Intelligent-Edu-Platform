@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AISidebar.module.css';
-import type { AIProvider } from '../../../api/aiApi';
+import type { AIProvider } from '../api/aiApi';
 
 function SidebarSkeleton() {
     return (

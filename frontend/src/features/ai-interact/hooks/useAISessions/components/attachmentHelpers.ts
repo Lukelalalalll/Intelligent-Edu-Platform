@@ -1,4 +1,4 @@
-import { extractPdfText as extractPdfTextFromServer } from '@/api/aiApi';
+import { extractPdfText as extractPdfTextFromServer } from '../../../api/aiApi';
 
 interface PdfTextItem {
     str?: string;

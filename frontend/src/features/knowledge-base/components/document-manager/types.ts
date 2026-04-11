@@ -1,5 +1,5 @@
 import type { IndexedDoc } from '../../../../api/knowledgeBaseApi';
-import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../../../../api/diagnosticApi';
+import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../../../diagnostic-feedback/api/diagnosticApi';
 
 export interface ChapterDraft {
     chapter_name: string;

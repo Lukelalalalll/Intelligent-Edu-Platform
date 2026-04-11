@@ -12,7 +12,7 @@ import messageInputStyles from '../styles/components/MessageInput.module.css';
 import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
 import modalStyles from '../styles/components/Modals.module.css';
 import courseGroupStyles from '../styles/components/CourseGroupModal.module.css';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import type { CourseInfo } from '../types';
 import { useChatStore } from '../store/chatStore';
 

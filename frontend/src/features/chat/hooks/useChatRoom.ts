@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import { useCurrentUser } from './useCurrentUser';
 import { networkBus } from '../../../hooks/useNetworkStatus';
 import type { ChatMessage } from '../types';

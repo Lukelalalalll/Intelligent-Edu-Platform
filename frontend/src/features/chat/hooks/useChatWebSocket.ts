@@ -62,7 +62,7 @@ export function useChatWebSocket() {
 
                 // On reconnect, re-fetch rooms + active room messages to catch up
                 if (reconnectCount.current > 0) {
-                    import('../../../api/chatApi').then(({ chatApi }) => {
+                    import('../api').then(({ chatApi }) => {
                         chatApi.getRooms().then((r) => setRooms(r.rooms));
                         const activeId = useChatStore.getState().activeRoomId;
                         if (activeId) {
@@ -105,12 +105,12 @@ export function useChatWebSocket() {
                         recallMessage(roomId, messageId);
                     } else if (type === 'room_created') {
                         // Refresh room list
-                        import('../../../api/chatApi').then(({ chatApi }) => {
+                        import('../api').then(({ chatApi }) => {
                             chatApi.getRooms().then((r) => setRooms(r.rooms));
                         });
                     } else if (type === 'room_updated') {
                         // Refresh room list + notify GroupInfoPanel
-                        import('../../../api/chatApi').then(({ chatApi }) => {
+                        import('../api').then(({ chatApi }) => {
                             chatApi.getRooms().then((r) => setRooms(r.rooms));
                         });
                         window.dispatchEvent(
@@ -118,7 +118,7 @@ export function useChatWebSocket() {
                         );
                     } else if (type === 'room_deleted' || type === 'kicked_from_room') {
                         // Refresh room list + if current room, navigate away
-                        import('../../../api/chatApi').then(({ chatApi }) => {
+                        import('../api').then(({ chatApi }) => {
                             chatApi.getRooms().then((r) => setRooms(r.rooms));
                         });
                         const store = useChatStore.getState();
@@ -132,7 +132,7 @@ export function useChatWebSocket() {
                         );
                     } else if (type === 'friend_request' || type === 'friend_accepted') {
                         // Refresh friend requests
-                        import('../../../api/chatApi').then(({ chatApi }) => {
+                        import('../api').then(({ chatApi }) => {
                             chatApi.getFriendRequests().then((r) =>
                                 setPendingRequests(r.requests),
                             );

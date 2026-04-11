@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AIUserSummary } from '../../../api/fileCenterApi';
+import type { AIUserSummary } from '../api/fileCenterApi';
 import styles from '../styles/AdminFileCenter.module.css';
 
 type Props = {

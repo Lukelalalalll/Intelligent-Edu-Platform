@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { aiSessionApi, getProviderHealth, type AIProvider } from '@/api/aiApi';
+import { aiSessionApi, getProviderHealth, type AIProvider } from '../../../api/aiApi';
 import type { AISession } from '@/types/api';
 import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY } from './sessionHelpers';
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import AIChatBox from '../home/components/AIChatBox';
-import { studentApi } from '../../api/api';
+import { studentApi } from '../../api/mailboxApi';
 import styles from './styles/HomeStudent.module.css';
 import AssignmentsTab from './components/AssignmentsTab';
 import DiagnosticTab from './components/DiagnosticTab';

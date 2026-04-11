@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { teacherApi } from '../../../api/api';
+import { teacherApi } from '../../../api/mailboxApi';
 
 const degreeLevels = ['bachelor', 'master', 'phd'];
 const degreeLabels: Record<string, string> = { bachelor: 'Bachelor', master: 'Master', phd: 'PhD' };

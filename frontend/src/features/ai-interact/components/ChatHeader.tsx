@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/AIInteract.module.css';
-import type { AIRoleInfo } from '../../../api/aiApi';
-import type { AITutorMode } from '../../../api/aiApi';
+import type { AIRoleInfo } from '../api/aiApi';
+import type { AITutorMode } from '../api/aiApi';
 
 interface ChatHeaderProps {
     onOpenMemory?: () => void;

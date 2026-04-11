@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import FileCenterPanel from './FileCenterPanel';
 
-vi.mock('../../../api/fileCenterApi', () => ({
+vi.mock('../../admin-file-center/api/fileCenterApi', () => ({
   fileCenterApi: {
     listAssets: vi.fn().mockResolvedValue({
       assets: [

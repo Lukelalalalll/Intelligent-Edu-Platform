@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../../../api/ragEvalApi';
-import type { DatasetSummary, EvalResult, EvalRun } from '../../../../api/ragEvalApi';
+import * as api from '../../api/ragEvalApi';
+import type { DatasetSummary, EvalResult, EvalRun } from '../../api/ragEvalApi';
 import { TOP_K_OPTIONS } from './constants';
 import MetricsCards from './MetricsCards';
 

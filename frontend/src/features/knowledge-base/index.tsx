@@ -5,7 +5,7 @@ import DocumentManager from './components/DocumentManager';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../../api/knowledgeBaseApi';
 import type { UploadTask } from './components/DocumentManager';
-import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../../api/diagnosticApi';
+import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../diagnostic-feedback/api/diagnosticApi';
 
 interface KnowledgeBasePageProps {
     courses: CourseInfo[];

@@ -1,7 +1,7 @@
 // frontend/src/features/chat/components/AssistantPanel.tsx
 
 import React, { useState, useCallback } from 'react';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import type { AIProvider } from '../../../shared/aiProvider';
 import { useChatStore } from '../store/chatStore';
 import globalStyles from '../styles/globals.module.css';

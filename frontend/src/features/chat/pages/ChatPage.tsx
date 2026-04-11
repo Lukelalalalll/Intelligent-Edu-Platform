@@ -12,7 +12,7 @@ import FriendRequestsPanel from '../components/FriendRequestsPanel';
 import { useChatStore } from '../store/chatStore';
 import { useChatWebSocket } from '../hooks/useChatWebSocket';
 import { useChatRooms } from '../hooks/useChatRooms';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';
 import messageListStyles from '../styles/components/MessageList.module.css';

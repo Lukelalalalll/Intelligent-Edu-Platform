@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../../styles/KnowledgeBase.module.css';
-import type { DiagnosticReport } from '../../../../api/diagnosticApi';
+import type { DiagnosticReport } from '../../../diagnostic-feedback/api/diagnosticApi';
 
 interface DiagnosticReportsPanelProps {
     reports: DiagnosticReport[];

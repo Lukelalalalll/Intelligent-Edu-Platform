@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { diagnosticStudentApi, type DiagnosticQuestion, type DiagnosticReport } from '../../../api/diagnosticApi';
-import { studentApi } from '../../../api/api';
+import { diagnosticStudentApi, type DiagnosticQuestion, type DiagnosticReport } from '../../diagnostic-feedback/api/diagnosticApi';
+import { studentApi } from '../../../api/mailboxApi';
 import styles from '../styles/HomeStudent.module.css';
 
 type CourseLite = {

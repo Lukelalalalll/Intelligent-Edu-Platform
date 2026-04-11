@@ -1,5 +1,5 @@
-import client from './client';
-import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '../types/api';
+import client from '../../../api/client';
+import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '../../../types/api';
 
 const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
 

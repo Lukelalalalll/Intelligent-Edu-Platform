@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import { useChatStore } from '../store/chatStore';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';

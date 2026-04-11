@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 
 export function useChatRooms() {
     const { setRooms, setUnreadCounts, wsStatus } = useChatStore();

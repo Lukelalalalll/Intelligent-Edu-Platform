@@ -9,7 +9,7 @@ import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
 import modalStyles from '../styles/components/Modals.module.css';
 import forwardRoomStyles from '../styles/components/ForwardRoomList.module.css';
 import { useChatStore } from '../store/chatStore';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import type { ChatRoom } from '../types';
 
 const styles = {

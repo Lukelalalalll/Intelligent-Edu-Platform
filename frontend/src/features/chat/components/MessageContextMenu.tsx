@@ -7,7 +7,7 @@ import messageListStyles from '../styles/components/MessageList.module.css';
 import messageInputStyles from '../styles/components/MessageInput.module.css';
 import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
 import modalStyles from '../styles/components/ContextMenu.module.css';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 
 const styles = {
     ...globalStyles,

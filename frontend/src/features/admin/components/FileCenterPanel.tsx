@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { fileCenterApi, type FileAsset } from '../../../api/fileCenterApi';
+import { fileCenterApi, type FileAsset } from '../../admin-file-center/api/fileCenterApi';
 import styles from '../styles/AdminDashboard.module.css';
 
 type Filters = {

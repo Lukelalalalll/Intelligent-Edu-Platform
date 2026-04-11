@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { knowledgeBaseApi } from '../../../api/knowledgeBaseApi';
 import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../../../api/knowledgeBaseApi';
 import type { UploadTask } from '../components/DocumentManager';
-import { diagnosticTeacherApi, type DiagnosticChapter, type DiagnosticConfig, type DiagnosticReport } from '../../../api/diagnosticApi';
+import { diagnosticTeacherApi, type DiagnosticChapter, type DiagnosticConfig, type DiagnosticReport } from '../../diagnostic-feedback/api/diagnosticApi';
 
 export function useKnowledgeBase() {
     const [courses, setCourses] = useState<CourseInfo[]>([]);

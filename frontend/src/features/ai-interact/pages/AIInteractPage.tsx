@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AIInteract from '../index';
 import { usePretextMeasure } from '../../../hooks/usePretextMeasure';
 import { useAISessions, useAIMemory } from '../hooks/useAISessions/useAISessions';
-import { getRoleInfo, type AIRoleInfo } from '../../../api/aiApi';
+import { getRoleInfo, type AIRoleInfo } from '../api/aiApi';
 
 export default function AIInteractPage() {
     // Business logic from hooks

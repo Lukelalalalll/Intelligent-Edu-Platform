@@ -1,7 +1,7 @@
 // frontend/src/features/chat/components/FriendRequestsPanel.tsx
 
 import React, { useCallback } from 'react';
-import { chatApi } from '../../../api/chatApi';
+import { chatApi } from '../api';
 import { useChatStore } from '../store/chatStore';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';

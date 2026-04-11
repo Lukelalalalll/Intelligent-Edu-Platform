@@ -2,9 +2,9 @@
  * cozeApi — AI Gateway REST API client.
  * Replaces {cozeApi} previously in api.ts.
  */
-import client from './client';
+import client from '../../../api/client';
 import type { ChatMessage } from '../types/api';
-import type { AIProvider } from '../shared/aiProvider';
+import type { AIProvider } from '../../../shared/aiProvider';
 
 export const cozeApi = {
     analyzeSubmission: (submissionId: string, provider: AIProvider = 'local_ollama') =>
