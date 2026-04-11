@@ -14,7 +14,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "openapi:fetch": "node scripts/fetch-openapi.mjs",
-    "openapi:gen": "openapi-typescript src/types/openapi.json -o src/types/schema.d.ts",
+    "openapi:gen": "openapi-typescript src/types/openapi.json -o src/types/generated/schema.d.ts",
     "openapi:sync": "npm run openapi:fetch && npm run openapi:gen"
   },
   "dependencies": {

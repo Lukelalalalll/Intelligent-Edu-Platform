@@ -8,7 +8,11 @@
       "teacher": "",
       "degreeLevel": "bachelor",
       "semester": "2026-spring",
-      "studentList": [],
+      "studentList": [
+        {
+          "studentId": "69cbe9820c8e1c164fefa885"
+        }
+      ],
       "assignments": []
     },
     {
