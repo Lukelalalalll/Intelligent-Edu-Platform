@@ -3,8 +3,9 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
-import styles from '../styles/AIInteract.module.css';
+import styles from '../styles/AIMessage.module.css';
 import type { RagCitation } from '../../../types/api';
+import { useTypewriter } from '../hooks/useTypewriter';
 
 // --- 全局只初始化一次 Markdown 渲染器 ---
 const renderer = new marked.Renderer();
@@ -72,6 +73,49 @@ function CitationPanel({ citations }: { citations: RagCitation[] }) {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── AI message bubble with typewriter animation ── */
+function AIMessageBubble({ content, citations, isTyping, isLastAssistant, renderContent, onCopy, onRegenerate }: {
+    content: string;
+    citations?: RagCitation[];
+    isTyping: boolean;
+    isLastAssistant: boolean;
+    renderContent: (c: string) => { __html: string };
+    onCopy: (text: string, el: HTMLElement | null) => void;
+    onRegenerate: () => void;
+}) {
+    const isStreaming = isTyping && isLastAssistant;
+    const displayed = useTypewriter(content, isStreaming);
+
+    return (
+        <div className={`${styles.bubble} markdown-body`} style={{ minHeight: '20px' }}>
+            {displayed === '' ? (
+                <div style={{ color: '#999', fontStyle: 'italic' }}></div>
+            ) : (
+                <>
+                    <div dangerouslySetInnerHTML={renderContent(displayed)} />
+                    {isStreaming && <span className={styles['typing-cursor']} />}
+                </>
+            )}
+            {/* RAG Citations */}
+            {citations && citations.length > 0 && (
+                <CitationPanel citations={citations} />
+            )}
+            {content && (
+                <div className={styles['message-actions']}>
+                    <button className={styles['msg-action-btn']} onClick={(e) => onCopy(content, e.currentTarget)}>
+                        <i className="far fa-copy"></i> Copy text
+                    </button>
+                    {isLastAssistant && !isTyping && (
+                        <button className={styles['msg-action-btn']} onClick={onRegenerate}>
+                            <i className="fas fa-sync-alt"></i> Regenerate
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -197,29 +241,15 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
                     )}
                 </div>
             ) : (
-                <div className={`${styles.bubble} markdown-body`} style={{ minHeight: '20px' }}>
-                    {msg.content === "" ? (
-                        <div style={{ color: '#999', fontStyle: 'italic' }}></div>
-                    ) : (
-                        <div dangerouslySetInnerHTML={renderContent(msg.content)} />
-                    )}
-                    {/* RAG Citations */}
-                    {msg.citations && msg.citations.length > 0 && (
-                        <CitationPanel citations={msg.citations} />
-                    )}
-                    {msg.content && (
-                        <div className={styles['message-actions']}>
-                            <button className={styles['msg-action-btn']} onClick={(e) => onCopy(msg.content, e.currentTarget)}>
-                                <i className="far fa-copy"></i> Copy text
-                            </button>
-                            {isLastAssistant && !isTyping && (
-                                <button className={styles['msg-action-btn']} onClick={onRegenerate}>
-                                    <i className="fas fa-sync-alt"></i> Regenerate
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
+                <AIMessageBubble
+                    content={msg.content}
+                    citations={msg.citations}
+                    isTyping={isTyping}
+                    isLastAssistant={isLastAssistant}
+                    renderContent={renderContent}
+                    onCopy={onCopy}
+                    onRegenerate={onRegenerate}
+                />
             )}
         </div>
     );

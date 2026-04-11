@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/Modals.module.css';
+import forwardRoomStyles from '../styles/components/ForwardRoomList.module.css';
 import { useChatStore } from '../store/chatStore';
 import { chatApi } from '../../../api/chatApi';
 import type { ChatRoom } from '../types';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+    ...forwardRoomStyles,
+};
 
 interface Props {
     messageIds: string[];

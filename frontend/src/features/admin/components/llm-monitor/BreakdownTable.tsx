@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/LlmMonitorPanel.module.css';
 import { formatNumber, formatMs, formatCost } from './formatters';
 
 interface BreakdownRow {

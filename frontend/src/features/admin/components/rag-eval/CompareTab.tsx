@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/RagEvalPanel.module.css';
 import * as api from '../../../../api/ragEvalApi';
 import type { CompareResult, EvalRun } from '../../../../api/ragEvalApi';
 

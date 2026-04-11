@@ -1,0 +1,81 @@
+/* --- From ChatHeader.module.css --- */
+/* ── Chat Header ── */
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+}
+
+.chatHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatHeaderName {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.chatHeaderSub {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+
+/* --- From ChatHeaderActions.module.css --- */
+/* ── Chat Header Actions ── */
+.chatHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.chatHeaderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,123,85,0.08);
+  color: var(--primary-color);
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.chatHeaderBtn:hover {
+  background: rgba(0,123,85,0.16);
+}
+
+
+/* --- From WSStatusBanner.module.css --- */
+/* ── WS Status Banner ── */
+
+.wsBanner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  background: #fff3cd;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+}
+
+.wsBannerConnecting {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+

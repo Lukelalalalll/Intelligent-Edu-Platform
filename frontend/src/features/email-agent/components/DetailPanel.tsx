@@ -5,7 +5,7 @@ import EntitiesDisplay from './EntitiesDisplay';
 import EmailBodyContent from './EmailBodyContent';
 import ReplySection from './ReplySection';
 import type { EmailListItem } from './EmailListPanel';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailDetail.module.css';
 
 interface DetailPanelProps {
     selectedListItem?: EmailListItem | null;

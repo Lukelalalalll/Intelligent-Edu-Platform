@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailReply.module.css';
 
 interface ReplySectionProps {
     isReplying: boolean;

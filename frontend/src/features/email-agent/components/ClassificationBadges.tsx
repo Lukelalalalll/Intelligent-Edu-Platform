@@ -1,6 +1,6 @@
 import React from 'react';
 import { URGENCY_COLORS, CATEGORY_LABELS } from '../utils/emailUtils';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailDetail.module.css';
 
 interface ClassificationBadgesProps {
     isClassifying?: boolean;

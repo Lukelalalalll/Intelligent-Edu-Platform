@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import ContactList from '../components/ContactList';
 import ChatWindow from '../components/ChatWindow';
 import AddFriendModal from '../components/AddFriendModal';
@@ -12,7 +13,15 @@ import { useChatStore } from '../store/chatStore';
 import { useChatWebSocket } from '../hooks/useChatWebSocket';
 import { useChatRooms } from '../hooks/useChatRooms';
 import { chatApi } from '../../../api/chatApi';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...messageListStyles,
+};
 
 export type LeftPaneTab = 'chats' | 'contacts';
 
@@ -91,6 +100,17 @@ export default function ChatPage() {
         }
     }, [handleSelectRoom]);
 
+    const handleAcceptedFriend = useCallback(async (friendUserId: string) => {
+        try {
+            const res = await chatApi.createOrGetDirectRoom(friendUserId);
+            setShowRequests(false);
+            setLeftTab('chats');
+            handleSelectRoom(res.roomId);
+        } catch {
+            // ignore
+        }
+    }, [handleSelectRoom]);
+
     return (
         <div 
             className={`global-chat-wrapper ${styles.chatWorkspace} ${styles.enterAnimation}`}
@@ -137,24 +157,34 @@ export default function ChatPage() {
                 </div>
             </div>
 
-            {showAddFriend && <AddFriendModal onClose={() => setShowAddFriend(false)} />}
-            {showCreateGroup && (
-                <CreateGroupModal
-                    onClose={() => setShowCreateGroup(false)}
-                    onCreated={(newRoomId) => {
-                        setShowCreateGroup(false);
-                        handleSelectRoom(newRoomId);
-                    }}
-                />
-            )}
-            {showRequests && <FriendRequestsPanel onClose={() => setShowRequests(false)} />}
-            {showCourseGroup && (
-                <CreateCourseGroupModal
-                    onClose={() => setShowCourseGroup(false)}
-                    onEnterRoom={(id) => {
-                        setShowCourseGroup(false);
-                        handleSelectRoom(id);
-                    }}
+            <AnimatePresence>
+                {showAddFriend && <AddFriendModal key="add-friend" onClose={() => setShowAddFriend(false)} />}
+                {showCreateGroup && (
+                    <CreateGroupModal
+                        key="create-group"
+                        onClose={() => setShowCreateGroup(false)}
+                        onCreated={(newRoomId) => {
+                            setShowCreateGroup(false);
+                            handleSelectRoom(newRoomId);
+                        }}
+                    />
+                )}
+                {showCourseGroup && (
+                    <CreateCourseGroupModal
+                        key="course-group"
+                        onClose={() => setShowCourseGroup(false)}
+                        onEnterRoom={(id) => {
+                            setShowCourseGroup(false);
+                            handleSelectRoom(id);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {showRequests && (
+                <FriendRequestsPanel
+                    onClose={() => setShowRequests(false)}
+                    onAccepted={handleAcceptedFriend}
                 />
             )}
         </div>

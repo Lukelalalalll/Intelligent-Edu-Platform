@@ -6,7 +6,9 @@ export default function Profile({
     user, formData, handleInputChange, showPassword, setShowPassword,
     alert, showModal, setShowModal, isLoading, handleFormSubmit,
     handleSaveProfile, handleModalBackgroundClick, roleInfo,
-    profileCourses, courseSemester, isCoursesLoading
+    profileCourses, courseSemester, isCoursesLoading,
+    historyTtlDays, ttlInput, setTtlInput, ttlPermanent, setTtlPermanent,
+    ttlSaving, ttlAlert, handleSaveHistoryTtl,
 }) {
     const isTeacher = user?.role === 'teacher';
     const courseTitle = isTeacher ? 'Teaching Courses' : 'Enrolled Courses';
@@ -113,6 +115,55 @@ export default function Profile({
                                         {isLoading ? <><i className="fas fa-spinner fa-spin"></i> Saving...</> : <><i className="fas fa-save"></i> Save Changes</>}
                                     </button>
                                 </form>
+                            </div>
+
+                            <div className={styles.profileEditCard}>
+                                <div className={styles.cardHeader}>
+                                    <h3><i className="fas fa-clock"></i> History Auto-Cleanup</h3>
+                                    <p className={styles.editSubtitle}>Choose how long to keep your generation history records.</p>
+                                </div>
+
+                                {ttlAlert && (
+                                    <div className={`${styles.alert} ${styles[ttlAlert.type] || ''}`} style={{ display: 'flex' }}>
+                                        <i className={`fas ${ttlAlert.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+                                        {ttlAlert.message}
+                                    </div>
+                                )}
+
+                                <div className={styles.formGroup}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={ttlPermanent}
+                                            onChange={(e) => {
+                                                setTtlPermanent(e.target.checked);
+                                                if (e.target.checked) setTtlInput('');
+                                            }}
+                                        />
+                                        Keep history permanently (never auto-delete)
+                                    </label>
+                                </div>
+
+                                {!ttlPermanent && (
+                                    <div className={styles.formGroup}>
+                                        <label>Auto-delete history after (days)</label>
+                                        <div className={styles.inputWithIcon}>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={3650}
+                                                value={ttlInput}
+                                                onChange={(e) => setTtlInput(e.target.value)}
+                                                placeholder="90"
+                                            />
+                                            <i className={`fas fa-calendar-alt ${styles.inputIcon}`}></i>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button className={styles.btnSave} disabled={ttlSaving} onClick={handleSaveHistoryTtl}>
+                                    {ttlSaving ? <><i className="fas fa-spinner fa-spin"></i> Saving...</> : <><i className="fas fa-save"></i> Save Setting</>}
+                                </button>
                             </div>
                         </div>
                     </div>

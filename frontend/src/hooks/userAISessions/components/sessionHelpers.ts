@@ -17,11 +17,15 @@ export function buildSession(raw: Partial<AISession>): AISession {
     };
 }
 
+export function mergeMessageContent(message: ChatMessage): string {
+    return [message.content, message.attachedText].filter(Boolean).join('\n\n').trim();
+}
+
 export function toPayloadMessages(messages: ChatMessage[]): ChatMessage[] {
     return messages
         .map((m) => ({
             role: m.role,
-            content: [m.content, m.attachedText].filter(Boolean).join('\n\n'),
+            content: mergeMessageContent(m),
             images: m.images,
         }))
         .filter((m) => m.role !== 'system' || messages.length < 5);

@@ -1,9 +1,31 @@
 // frontend/src/features/chat/components/CreateGroupModal.tsx
 
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { chatApi } from '../../../api/chatApi';
 import { useChatStore } from '../store/chatStore';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/Modals.module.css';
+import groupCreateStyles from '../styles/components/GroupCreateModal.module.css';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+    ...groupCreateStyles,
+};
 
 interface Props {
     onClose: () => void;
@@ -50,9 +72,23 @@ export default function CreateGroupModal({ onClose, onCreated }: Props) {
         }
     }, [groupName, selectedIds, onCreated]);
 
-    return (
-        <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    return createPortal(
+        <motion.div 
+            className={styles.modalOverlay} 
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+        >
+            <motion.div 
+                className={styles.modal} 
+                onClick={(e) => e.stopPropagation()}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
                 <div className={styles.modalHeader}>
                     <h3 className={styles.modalTitle}>Create Group Chat</h3>
                     <button className={styles.modalClose} onClick={onClose}>
@@ -74,8 +110,8 @@ export default function CreateGroupModal({ onClose, onCreated }: Props) {
 
                     <div className={styles.memberCheckList}>
                         {contacts.length === 0 ? (
-                            <div className={styles.emptyState}>
-                                <span className={styles.emptyStateText}>Add friends first to create a group</span>
+                            <div className={styles.modalEmpty}>
+                                <span>Add friends first to create a group</span>
                             </div>
                         ) : (
                             contacts.map((c) => (
@@ -116,7 +152,8 @@ export default function CreateGroupModal({ onClose, onCreated }: Props) {
                         {loading ? 'Creating...' : `Create (${selectedIds.size} selected)`}
                     </button>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>,
+        document.body
     );
 }

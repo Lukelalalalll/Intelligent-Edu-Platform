@@ -24,7 +24,7 @@ interface PendingAttachment {
 
 export type AttachmentInput = PendingAttachment | File;
 
-const MAX_PDF_EXTRACT_CHARS = 12000;
+const MAX_PDF_EXTRACT_CHARS = 10000;
 
 async function fileToBase64Payload(file: File): Promise<string> {
     return await new Promise<string>((resolve, reject) => {
@@ -99,18 +99,34 @@ export async function prepareAttachmentPayload(attachedFiles: AttachmentInput[])
 
         if ((file.type || '') === 'application/pdf' || (file.name || '').toLowerCase().endsWith('.pdf')) {
             try {
-                let extracted = await extractPdfTextFromBrowser(file);
-                if (!extracted) {
+                // Prefer server extraction for consistency across browsers and PDFs.
+                let extracted = '';
+                try {
                     const serverResult = await extractPdfTextFromServer(file);
                     extracted = String(serverResult?.text || '');
+                } catch {
+                    extracted = '';
                 }
+
+                // Browser extraction as fallback when backend extraction is unavailable.
+                if (!extracted) {
+                    extracted = await extractPdfTextFromBrowser(file);
+                }
+
                 if (extracted) {
-                    attachmentNotes.push(`Attached PDF: ${file.name}\n${extracted}`);
+                    const normalized = extracted.replace(/\s+/g, ' ').trim().slice(0, MAX_PDF_EXTRACT_CHARS);
+                    attachmentNotes.push(
+                        [
+                            `Attached PDF (converted to text): ${file.name}`,
+                            'Use the converted text below as the attachment content:',
+                            normalized,
+                        ].join('\n')
+                    );
                 } else {
-                    attachmentNotes.push(`Attached PDF: ${file.name} (No extractable text found)`);
+                    attachmentNotes.push(`Attached PDF: ${file.name} (No extractable text found; this file may be image-only or scanned)`);
                 }
             } catch {
-                attachmentNotes.push(`Attached PDF: ${file.name} (Text extraction failed; please summarize manually)`);
+                attachmentNotes.push(`Attached PDF: ${file.name} (Text extraction failed)`);
             }
             continue;
         }

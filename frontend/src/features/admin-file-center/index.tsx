@@ -7,6 +7,7 @@ import {
     type FileAsset,
 } from '../../api/fileCenterApi';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
+import BaseModal from '../../shared/BaseModal';
 import '../../styles/base.css';
 import styles from './styles/AdminFileCenter.module.css';
 import EntryCards from './components/EntryCards';
@@ -34,6 +35,12 @@ export default function AdminFileCenterPage() {
 
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+
+    const [confirmModal, setConfirmModal] = useState<{
+        show: boolean;
+        asset: FileAsset | null;
+        action: 'soft' | 'restore' | 'hard' | null;
+    }>({ show: false, asset: null, action: null });
 
     const loadChatRooms = useCallback(async () => {
         setBusy(true);
@@ -93,10 +100,14 @@ export default function AdminFileCenterPage() {
     }, [groupBy]);
 
     const runAction = useCallback(async (asset: FileAsset, action: 'soft' | 'restore' | 'hard') => {
-        const label = action === 'hard' ? 'Hard Delete' : action === 'soft' ? 'Soft Delete' : 'Restore';
-        const ok = window.confirm(`${label} file ${asset.filename || asset.file_id}?`);
-        if (!ok) return;
+        setConfirmModal({ show: true, asset, action });
+    }, []);
 
+    const executeAction = useCallback(async () => {
+        const { asset, action } = confirmModal;
+        if (!asset || !action) return;
+
+        setConfirmModal({ show: false, asset: null, action: null });
         setBusy(true);
         setError('');
         try {
@@ -119,7 +130,7 @@ export default function AdminFileCenterPage() {
         } finally {
             setBusy(false);
         }
-    }, [groupBy, loadRoomAssets, loadUserAssets, rootMode, selectedRoom, selectedUser]);
+    }, [confirmModal, rootMode, selectedRoom, selectedUser, groupBy, loadRoomAssets, loadUserAssets]);
 
     useEffect(() => {
         if (rootMode === 'group') {
@@ -128,13 +139,23 @@ export default function AdminFileCenterPage() {
     }, [rootMode, loadChatRooms]);
 
     const breadcrumb = useMemo(() => {
-        if (rootMode === 'entry') return 'File Center';
+        const parts = ['File Center'];
+        if (rootMode === 'entry') return parts;
         if (rootMode === 'group') {
-            return selectedRoom ? `File Center / Group Files / ${selectedRoom.name || selectedRoom.room_id}` : 'File Center / Group Files';
+            parts.push('Group Files');
+            if (selectedRoom) {
+                parts.push(selectedRoom.name || selectedRoom.room_id);
+            }
+            return parts;
         }
-        if (!selectedRole) return 'File Center / Personal Files';
-        if (!selectedUser) return `File Center / Personal Files / ${selectedRole}`;
-        return `File Center / Personal Files / ${selectedRole} / ${selectedUser.username}`;
+        parts.push('Personal Files');
+        if (selectedRole) {
+            parts.push(selectedRole);
+            if (selectedUser) {
+                parts.push(selectedUser.username || selectedUser.user_id);
+            }
+        }
+        return parts;
     }, [rootMode, selectedRole, selectedRoom, selectedUser]);
 
     const backAction = () => {
@@ -195,7 +216,16 @@ export default function AdminFileCenterPage() {
                             <i className="fa-solid fa-arrow-left"></i> Back
                         </button>
                     )}
-                    <span className={styles.pathText}>{breadcrumb}</span>
+                    <div className={styles.pathText}>
+                        {breadcrumb.map((part, i) => (
+                            <React.Fragment key={i}>
+                                {i > 0 && <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', color: '#cbd5e1' }}></i>}
+                                <span className={i === breadcrumb.length - 1 ? styles.pathCurrent : styles.pathLink}>
+                                    {part.charAt(0).toUpperCase() + part.slice(1)}
+                                </span>
+                            </React.Fragment>
+                        ))}
+                    </div>
                 </div>
                 <button className={`${styles.btn} ${styles.btnPrimary}`} type="button" onClick={refreshCurrent}>
                     <i className="fa-solid fa-rotate-right"></i> Refresh
@@ -236,6 +266,43 @@ export default function AdminFileCenterPage() {
                     runAction={runAction}
                 />
             )}
+
+            <BaseModal open={confirmModal.show} onClose={() => setConfirmModal({ ...confirmModal, show: false })}>
+                {confirmModal.action === 'restore' ? (
+                    <>
+                        <div className={styles.modalIcon} style={{ background: 'rgba(0, 123, 85, 0.1)', color: '#007b55' }}>
+                            <i className="fas fa-undo"></i>
+                        </div>
+                        <h3 className={styles.modalTitle}>Restore File?</h3>
+                        <p className={styles.modalDesc}>
+                            Are you sure you want to restore file <br />
+                            <strong>{confirmModal.asset?.filename || confirmModal.asset?.file_id}</strong>?
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button className={`${styles.modalBtn} ${styles.cancelBtn}`} onClick={() => setConfirmModal({ ...confirmModal, show: false })}>Cancel</button>
+                            <button className={`${styles.modalBtn} ${styles.confirmBtn}`} style={{ background: '#007b55', boxShadow: 'none' }} onClick={executeAction}>Restore</button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className={styles.modalIcon}>
+                            <i className="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 className={styles.modalTitle}>
+                            {confirmModal.action === 'hard' ? 'Hard Delete File?' : 'Delete File?'}
+                        </h3>
+                        <p className={styles.modalDesc}>
+                            You are about to {confirmModal.action === 'hard' ? <strong>permanently delete</strong> : 'delete'} <br />
+                            <strong>{confirmModal.asset?.filename || confirmModal.asset?.file_id}</strong>.
+                            {confirmModal.action === 'hard' && <><br />This action cannot be undone.</>}
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button className={`${styles.modalBtn} ${styles.cancelBtn}`} onClick={() => setConfirmModal({ ...confirmModal, show: false })}>Cancel</button>
+                            <button className={`${styles.modalBtn} ${styles.confirmBtn}`} onClick={executeAction}>Delete</button>
+                        </div>
+                    </>
+                )}
+            </BaseModal>
         </div>
     );
 }

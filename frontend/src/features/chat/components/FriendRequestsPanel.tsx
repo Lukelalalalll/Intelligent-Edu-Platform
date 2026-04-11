@@ -3,16 +3,39 @@
 import React, { useCallback } from 'react';
 import { chatApi } from '../../../api/chatApi';
 import { useChatStore } from '../store/chatStore';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/Modals.module.css';
+import friendRequestsStyles from '../styles/components/FriendRequestsPanel.module.css';
+import searchResultsStyles from '../styles/components/SearchResultsModal.module.css';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+    ...friendRequestsStyles,
+    ...searchResultsStyles,
+};
 
 interface Props {
     onClose: () => void;
+    onAccepted?: (friendUserId: string) => void;
 }
 
-export default function FriendRequestsPanel({ onClose }: Props) {
+export default function FriendRequestsPanel({ onClose, onAccepted }: Props) {
     const { pendingRequests, setPendingRequests, setContacts } = useChatStore();
 
-    const handleAccept = useCallback(async (requestId: string) => {
+    const handleAccept = useCallback(async (requestId: string, fromId: string) => {
         try {
             await chatApi.acceptFriendRequest(requestId);
             // Refresh both
@@ -22,10 +45,11 @@ export default function FriendRequestsPanel({ onClose }: Props) {
             ]);
             setPendingRequests(reqRes.requests);
             setContacts(cRes.contacts);
+            onAccepted?.(fromId);
         } catch {
             // ignore
         }
-    }, [setPendingRequests, setContacts]);
+    }, [setPendingRequests, setContacts, onAccepted]);
 
     const handleReject = useCallback(async (requestId: string) => {
         try {
@@ -76,7 +100,7 @@ export default function FriendRequestsPanel({ onClose }: Props) {
                                 <div className={styles.requestActions}>
                                     <button
                                         className={`${styles.btnSmall} ${styles.btnAccept}`}
-                                        onClick={() => handleAccept(req.id)}
+                                        onClick={() => handleAccept(req.id, req.fromId)}
                                     >
                                         Accept
                                     </button>

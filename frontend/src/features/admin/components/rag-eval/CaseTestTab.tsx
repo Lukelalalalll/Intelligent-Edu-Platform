@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/RagEvalPanel.module.css';
 import * as api from '../../../../api/ragEvalApi';
 import type { CaseTestResult } from '../../../../api/ragEvalApi';
 import { TOP_K_OPTIONS } from './constants';

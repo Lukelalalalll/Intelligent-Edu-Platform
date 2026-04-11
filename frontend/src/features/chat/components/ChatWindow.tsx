@@ -12,7 +12,19 @@ import { useChatRoom } from '../hooks/useChatRoom';
 import { useChatStore } from '../store/chatStore';
 import type { ChatMessage } from '../types';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
-import styles from '../styles/Chat.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/MultiSelect.module.css';
+
+const styles = {
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+};
 
 interface Props {
     roomId: string;
@@ -98,6 +110,12 @@ export default function ChatWindow({ roomId }: Props) {
                     {loadingMore && (
                         <div style={{ textAlign: 'center', padding: 8, color: '#94a3b8', fontSize: '0.8rem' }}>
                             Loading...
+                        </div>
+                    )}
+                    {roomMessages.length === 0 && (
+                        <div className={styles.emptyState} style={{ marginTop: 24 }}>
+                            <i className={`fas fa-user-check ${styles.emptyStateIcon}`} />
+                            <span className={styles.emptyStateText}>Added friend successfully. Start your conversation here.</span>
                         </div>
                     )}
                     {roomMessages.map((msg, idx) => {

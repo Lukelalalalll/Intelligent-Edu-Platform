@@ -1,0 +1,477 @@
+/* --- From MessageBubble.module.css --- */
+/* ── Message Bubble ── */
+
+.messageRow {
+  display: flex;
+  margin-bottom: 2px;
+  align-items: flex-end;
+}
+
+.messageRowOwn {
+  justify-content: flex-end;
+}
+
+.messageRowOther {
+  justify-content: flex-start;
+}
+
+.messageBubble {
+  max-width: 65%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  position: relative;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.messageBubble:hover {
+  filter: brightness(0.97);
+}
+
+.messageBubbleOwn {
+  background: var(--primary-color);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 123, 85, 0.18);
+}
+
+.messageBubbleOther {
+  background: #fff;
+  color: #1e293b;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.messageSender {
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #0f766e;
+  margin-bottom: 3px;
+}
+
+.messageTime {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  margin-top: 3px;
+  text-align: right;
+  user-select: none;
+}
+
+.systemMessage {
+  text-align: center;
+  padding: 6px 0;
+}
+
+.systemMessageText {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+
+/* --- From Imagemessagethumbnail.module.css --- */
+/* ── Image message thumbnail ── */
+.imageMsgWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 280px;
+}
+
+.imageMsgThumb {
+  max-width: 260px;
+  max-height: 220px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.imageMsgThumb:hover {
+  opacity: 0.92;
+}
+
+.imageMsgMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.imageMsgName {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+/* For other-side bubbles the text is dark */
+.messageBubbleOther .imageMsgName {
+  color: #64748b;
+}
+
+.imageMsgDownload {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.75);
+  font-size: 0.78rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.imageMsgDownload:hover {
+  color: #fff;
+}
+.messageBubbleOther .imageMsgDownload {
+  color: #94a3b8;
+}
+.messageBubbleOther .imageMsgDownload:hover {
+  color: #1e293b;
+}
+
+
+/* --- From FileMessageCard.module.css --- */
+/* ── File Message Card ── */
+
+.fileCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 123, 85, 0.12);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+  min-width: 260px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.fileCard:hover {
+  background: #ffffff;
+  border-color: rgba(0, 123, 85, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 85, 0.08);
+}
+
+.fileCardIcon {
+  font-size: 1.8rem;
+  color: var(--primary-color);
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 123, 85, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.fileCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fileCardName {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileCardSize {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Own-message overrides for file card */
+.messageBubbleOwn .fileCard {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.messageBubbleOwn .fileCard:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.messageBubbleOwn .fileCardIcon {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+.messageBubbleOwn .fileCardName {
+  color: #fff;
+}
+.messageBubbleOwn .fileCardSize {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+
+/* --- From FileCardTransferButton.module.css --- */
+/* ── File Card Transfer Button ── */
+.fileCardMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.transferBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 123, 85, 0.15);
+  border-radius: var(--radius-md);
+  background: rgba(0, 123, 85, 0.04);
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.transferBtn:hover {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 10px rgba(0, 123, 85, 0.15);
+  transform: translateY(-1px);
+}
+.transferBtn i {
+  font-size: 0.9rem;
+}
+/* Own-message override: lighter look on green bg */
+.messageBubbleOwn .transferBtn {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.95);
+}
+.messageBubbleOwn .transferBtn:hover {
+  background: #fff;
+  color: var(--primary-color);
+  border-color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+
+/* --- From FileAttachPreview.module.css --- */
+/* ── File Attach + Preview ── */
+
+.messageInputWrapper {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+}
+
+.filePreviewBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: rgba(0,123,85,0.05);
+  border-bottom: 1px solid rgba(0,123,85,0.12);
+  font-size: 0.88rem;
+  color: #1e293b;
+}
+
+.filePreviewName {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filePreviewSize {
+  color: #94a3b8;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.filePreviewRemove {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.attachBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.05);
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.attachBtn:hover {
+  background: rgba(0,123,85,0.1);
+  color: var(--primary-color);
+}
+
+
+/* --- From MessageRecall.module.css --- */
+/* ── Message Recall ── */
+
+.recalledBubble {
+  background: rgba(0,0,0,0.04) !important;
+  border: 1px dashed rgba(0,0,0,0.15) !important;
+  color: #94a3b8 !important;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: none !important;
+}
+
+.recalledText {
+  font-size: 0.92rem;
+  opacity: 0.7;
+}
+
+.recallBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.08);
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin: auto 6px;
+}
+
+.recallBtn:hover {
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+}
+
+
+/* --- From ReplySnippetinsideBubble.module.css --- */
+/* ── Reply Snippet inside Bubble ── */
+
+.replySnippet {
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: rgba(0,0,0,0.06);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.messageBubbleOwn .replySnippet {
+  background: rgba(255,255,255,0.15);
+  border-left-color: rgba(255,255,255,0.6);
+}
+
+.replySnippetName {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 1px;
+}
+
+.messageBubbleOwn .replySnippetName {
+  color: rgba(255,255,255,0.85);
+}
+
+.replySnippetText {
+  font-size: 0.81rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.messageBubbleOwn .replySnippetText {
+  color: rgba(255,255,255,0.7);
+}
+
+
+/* --- From ForwardedLabel.module.css --- */
+/* ── Forwarded Label ── */
+
+.forwardedLabel {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.messageBubbleOwn .forwardedLabel {
+  color: rgba(255,255,255,0.6);
+}
+
+
+/* --- From Failedmessagerow.module.css --- */
+/* ── Failed message row ── */
+.failedMsgRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 2px 16px 6px;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+.failedMsgRow i {
+  font-size: 0.8rem;
+}
+.failedMsgRow button {
+  background: none;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.failedMsgRow button:hover {
+  background: rgba(220,38,38,0.08);
+}
+
+

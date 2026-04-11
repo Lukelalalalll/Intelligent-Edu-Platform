@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/RagEvalPanel.module.css';
 import * as api from '../../../../api/ragEvalApi';
 import type { Dataset, DatasetSummary } from '../../../../api/ragEvalApi';
 

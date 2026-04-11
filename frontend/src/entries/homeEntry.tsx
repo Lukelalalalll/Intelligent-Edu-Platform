@@ -10,9 +10,10 @@ export default function HomeEntry() {
             sub4: '/diagram',
             sub5: '/study-notes',
             mailbox: '/mailbox',
-            publishHomework: '/admin/dashboard',
+            publishHomework: '/publish-homework',
             aiInteract: '/ai-interaction',
             knowledgeBase: '/knowledge-base',
+            videoGen: '/video-gen',
         }
     };
 

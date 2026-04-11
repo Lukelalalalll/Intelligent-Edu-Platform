@@ -13,6 +13,7 @@ export default function Home({ config }) {
         { title: "AI Question Generator", desc: "Smart question extraction and automated generation", icon: "fa-question-circle", url: config.urls.sub2 },
         { title: "AI Visual Tool", desc: "Diagram extraction, image extraction, SVG editing, AI generation", icon: "fa-images", url: config.urls.sub4 },
         { title: "AI Study Notes", desc: "Generate structured study notes and flashcards from lecture PDFs", icon: "fa-book-reader", url: config.urls.sub5 },
+        { title: "AI Video Generator", desc: "Turn PDFs, notes or text into narrated teaching videos", icon: "fa-film", url: config.urls.videoGen },
     ], [config.urls]);
 
     const homeworkCardsData = useMemo(() => [

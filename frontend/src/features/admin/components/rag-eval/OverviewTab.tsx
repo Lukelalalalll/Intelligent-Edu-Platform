@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/RagEvalPanel.module.css';
 import client from '../../../../api/client';
 import { PERIOD_OPTIONS } from './constants';
 import type { CourseBreakdownItem, RAGAlert, RAGStats } from './types';

@@ -4,7 +4,25 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { chatApi } from '../../../api/chatApi';
 import { useChatStore } from '../store/chatStore';
 import type { ChatContact, ChatRoom } from '../types';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/GroupInfoPanel.module.css';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+};
 
 interface Props {
     roomId: string;

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './styles/mailbox.module.css';
 import { useMailboxData } from './hooks/useMailboxData';
-import { teacherCopilotApi } from '../../api/teacherCopilotApi';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 
 export default function Mailbox({ currentStep, selections, setStep, setSelection, user }) {
@@ -16,72 +15,6 @@ export default function Mailbox({ currentStep, selections, setStep, setSelection
         assignments,
         handleSelectDegree, handleSelectCourse, handleSelectAssignment, getInitials,
     } = useMailboxData({ currentStep, selections, setStep, setSelection });
-
-    const [copilotCourseId, setCopilotCourseId] = useState('all');
-    const [copilotBrief, setCopilotBrief] = useState<any>(null);
-    const [copilotLoading, setCopilotLoading] = useState(false);
-    const [copilotError, setCopilotError] = useState('');
-    const [agendaItems, setAgendaItems] = useState<any[]>([]);
-    const [agendaCourseName, setAgendaCourseName] = useState('');
-    const [agendaLoading, setAgendaLoading] = useState(false);
-    const [agendaError, setAgendaError] = useState('');
-
-    const handleLoadAgenda = async (courseSectionId: string) => {
-        if (!courseSectionId) {
-            setAgendaItems([]);
-            setAgendaCourseName('');
-            setAgendaError('Select a course to load agenda.');
-            return;
-        }
-
-        setAgendaLoading(true);
-        setAgendaError('');
-        try {
-            const res = await teacherCopilotApi.getAgenda(courseSectionId);
-            setAgendaItems(res.agenda || []);
-            setAgendaCourseName(res.course_name || 'Course');
-        } catch (err) {
-            setAgendaItems([]);
-            setAgendaError(err?.response?.data?.detail || err?.message || 'Failed to load agenda.');
-        } finally {
-            setAgendaLoading(false);
-        }
-    };
-
-    const handleGenerateBrief = async () => {
-        if (copilotLoading) {
-            return;
-        }
-
-        setCopilotLoading(true);
-        setCopilotError('');
-        setAgendaError('');
-        try {
-            const payload = {
-                course_section_id: copilotCourseId === 'all' ? null : copilotCourseId,
-                include_actions: true,
-                horizon_days: 7,
-            };
-            const res = await teacherCopilotApi.createBrief(payload);
-            setCopilotBrief({
-                brief_id: res.brief_id,
-                summary: res.summary,
-                courses: res.courses || [],
-                actions: res.actions || [],
-            });
-
-            const agendaCourse = copilotCourseId !== 'all'
-                ? copilotCourseId
-                : (res.courses?.[0]?.course_section_id || '');
-            await handleLoadAgenda(agendaCourse);
-        } catch (err) {
-            setCopilotBrief(null);
-            setAgendaItems([]);
-            setCopilotError(err?.response?.data?.detail || err?.message || 'Failed to generate copilot brief.');
-        } finally {
-            setCopilotLoading(false);
-        }
-    };
 
     // 辅助函数：渲染顶部的 Stepper
     const renderStepper = () => {
@@ -123,109 +56,6 @@ export default function Mailbox({ currentStep, selections, setStep, setSelection
                 title={<><i className="fas fa-inbox"></i> Grading Mailbox</>}
                 subtitle={<>Welcome to the intelligent grading workspace, <strong>{user.username || 'Professor'}</strong>.</>}
             />
-
-            <div className={styles.copilotCard}>
-                <div className={styles.copilotTopRow}>
-                    <div>
-                        <h2 className={styles.copilotTitle}><i className="fas fa-chalkboard-teacher"></i> Teacher Copilot</h2>
-                        <p className={styles.copilotSubtitle}>Generate a brief with risk signals and a practical agenda.</p>
-                    </div>
-
-                    <div className={styles.copilotActions}>
-                        <select
-                            className={styles.copilotSelect}
-                            value={copilotCourseId}
-                            onChange={(e) => setCopilotCourseId(e.target.value)}
-                        >
-                            <option value="all">Global View (All Courses)</option>
-                            {(courses || []).map((course: any) => (
-                                <option key={course.id} value={course.id}>
-                                    {course.courseName || course.courseCode || course.id}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            className={styles.copilotBtn}
-                            onClick={handleGenerateBrief}
-                            disabled={copilotLoading}
-                        >
-                            {copilotLoading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-wand-magic-sparkles"></i> Generate Brief</>}
-                        </button>
-                    </div>
-                </div>
-
-                {copilotError && <div className={styles.copilotError}>{copilotError}</div>}
-
-                {copilotBrief && (
-                    <div className={styles.copilotBody}>
-                        <div className={styles.copilotMetrics}>
-                            <div className={styles.metricCard}>
-                                <span>Courses</span>
-                                <strong>{copilotBrief.summary?.total_courses || 0}</strong>
-                            </div>
-                            <div className={styles.metricCard}>
-                                <span>Pending</span>
-                                <strong>{copilotBrief.summary?.total_pending_submissions || 0}</strong>
-                            </div>
-                            <div className={styles.metricCard}>
-                                <span>Graded</span>
-                                <strong>{copilotBrief.summary?.total_graded_submissions || 0}</strong>
-                            </div>
-                        </div>
-
-                        <div className={styles.copilotGrid}>
-                            <section className={styles.copilotPanel}>
-                                <h3>Course Risks</h3>
-                                <ul className={styles.riskList}>
-                                    {(copilotBrief.courses || []).map((course: any) => (
-                                        <li key={course.course_section_id} className={styles.riskItem}>
-                                            <div>
-                                                <strong>{course.course_name}</strong>
-                                                <p>Pending: {course.pending_submissions} | Graded: {course.graded_submissions}</p>
-                                            </div>
-                                            <span className={`${styles.riskBadge} ${styles[`risk${(course.risk_level || 'low').charAt(0).toUpperCase() + (course.risk_level || 'low').slice(1)}`]}`}>
-                                                {course.risk_level}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </section>
-
-                            <section className={styles.copilotPanel}>
-                                <h3>Recommended Actions</h3>
-                                <ul className={styles.actionList}>
-                                    {(copilotBrief.actions || []).map((action: string, idx: number) => (
-                                        <li key={`${idx}-${action}`}>{action}</li>
-                                    ))}
-                                </ul>
-                            </section>
-                        </div>
-
-                        <section className={styles.copilotPanel}>
-                            <h3>Agenda Checklist {agendaCourseName ? `- ${agendaCourseName}` : ''}</h3>
-                            {agendaError && <div className={styles.copilotError}>{agendaError}</div>}
-                            {agendaLoading ? (
-                                <p className={styles.loadingLine}>Loading agenda...</p>
-                            ) : (
-                                <ul className={styles.checklist}>
-                                    {agendaItems.map((item: any) => (
-                                        <li key={`${item.assignment_id}-${item.rank}`}>
-                                            <label>
-                                                <input type="checkbox" />
-                                                <span>
-                                                    <strong>{item.title}</strong>
-                                                    <em>{item.action}</em>
-                                                </span>
-                                            </label>
-                                        </li>
-                                    ))}
-                                    {agendaItems.length === 0 && <li className={styles.emptyLine}>No agenda items available.</li>}
-                                </ul>
-                            )}
-                        </section>
-                    </div>
-                )}
-            </div>
 
             <div className={styles.mailboxContainer}>
                 {renderStepper()}

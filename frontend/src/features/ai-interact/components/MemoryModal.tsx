@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from '../styles/AIInteract.module.css';
+import styles from '../styles/AIModal.module.css';
 
 interface AIMemoryData {
     name?: string;

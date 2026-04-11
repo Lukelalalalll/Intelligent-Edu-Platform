@@ -1,0 +1,145 @@
+--- frontend/src/features/chat/styles/components/Modals.module.css
++++ frontend/src/features/chat/styles/components/Modals.module.css
+@@ -5,17 +5,20 @@
+   inset: 0;
+   background: rgba(0, 0, 0, 0.4);
++  backdrop-filter: blur(4px);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   z-index: 1000;
+ }
+ 
+ .modal {
+   background: #fff;
+   border-radius: var(--radius-lg);
+-  width: 440px;
++  width: 100%;
++  max-width: 440px;
+   max-height: 80vh;
+   overflow-y: auto;
+-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
++  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
++  padding: 24px;
+ }
+ 
+@@ -23,8 +26,8 @@
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+-  padding: 20px 24px;
+-  border-bottom: 1px solid rgba(0,0,0,0.06);
++  padding-bottom: 16px;
++  margin-bottom: 20px;
+ }
+ 
+@@ -35,5 +38,5 @@
+ }
+ 
+ .modalClose {
+-  width: 30px;
+-  height: 30px;
+   border: none;
+-  background: #f1f5f9;
+-  border-radius: 8px;
++  background: none;
+   cursor: pointer;
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  color: #64748b;
+-  font-size: 0.95rem;
++  font-size: 1.5rem;
++  color: #ccc;
++  transition: color 0.2s;
+ }
+ 
+ .modalClose:hover {
+-  background: #e2e8f0;
++  color: #333;
+ }
+ 
+ .modalBody {
+-  padding: 20px 24px;
++  padding: 0;
+ }
+ 
+ .modalFooter {
+-  padding: 16px 24px;
+-  border-top: 1px solid rgba(0,0,0,0.06);
++  margin-top: 24px;
+   display: flex;
+   justify-content: flex-end;
+   gap: 8px;
+ }
+ 
+ .inputField {
+   width: 100%;
+-  padding: 10px 14px;
+-  border: 1px solid rgba(0,0,0,0.06);
+-  border-radius: 8px;
+-  font-size: 0.99rem;
++  padding: 12px 16px;
++  border: 2px solid #f0f0f0;
++  border-radius: var(--radius-md);
++  font-size: 0.95rem;
+   outline: none;
+-  color: #1e293b;
+   box-sizing: border-box;
+ }
+ 
+ .inputField:focus {
+-  border-color: #0f766e;
++  border-color: var(--primary-color);
+ }
+ 
+ .btnPrimary {
+-  padding: 8px 20px;
++  padding: 10px 24px;
+   background: #0f766e;
+   color: #fff;
+   border: none;
+-  border-radius: 8px;
+-  font-size: 0.95rem;
++  border-radius: var(--radius-md);
++  font-size: 0.9rem;
+   font-weight: 600;
+   cursor: pointer;
+-  transition: opacity 0.15s;
++  transition: all 0.3s;
+ }
+ 
+ .btnPrimary:hover {
+-  opacity: 0.85;
++  background: var(--primary-dark);
++  transform: translateY(-1px);
+ }
+ 
+ .btnPrimary:disabled {
+   opacity: 0.4;
+   cursor: not-allowed;
++  transform: none;
+ }
+ 
+ .btnSecondary {
+-  padding: 8px 20px;
+-  background: #f1f5f9;
+-  color: #475569;
++  padding: 10px 24px;
++  background: #f5f5f5;
++  color: #555;
+   border: none;
+-  border-radius: 8px;
+-  font-size: 0.95rem;
++  border-radius: var(--radius-md);
++  font-size: 0.9rem;
+   font-weight: 600;
+   cursor: pointer;
++  transition: all 0.3s;
+ }
+ 
+ .btnSecondary:hover {
+-  background: #e2e8f0;
++  background: #e0e0e0;
++  color: #333;
+ }

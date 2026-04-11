@@ -1,0 +1,482 @@
+/* =============================================
+   AI Message — extracted from AIInteract.module.css
+   Messages, bubbles, markdown rendering, code blocks,
+   message actions, syntax highlighting, typewriter cursor
+   ============================================= */
+
+/* 消息区 */
+.chat-messages.full-workspace {
+    flex: 1;
+    padding: 20px 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-pill);
+}
+
+/* 气泡样式 */
+.message {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 24px;
+    font-size: 1rem;
+    line-height: 1.6;
+    opacity: 0;
+    animation: slideIn 0.4s ease forwards;
+    width: 100%;
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fileCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    width: fit-content;
+    max-width: 250px;
+    cursor: default;
+}
+
+.fileCard:hover {
+    background: rgba(0, 123, 85, 0.05);
+    border-color: rgba(0, 123, 85, 0.2);
+}
+
+.fileCardIcon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.fileCardInfo {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fileCardName {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f1f1f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fileCardSize {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.user-message .fileCard {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+.message.ai-message {
+    flex-direction: row;
+}
+
+.message.user-message {
+    flex-direction: row-reverse;
+}
+
+.message .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: none;
+}
+
+.ai-message .avatar {
+    background: linear-gradient(135deg, var(--primary-color), #004D40);
+    color: white;
+}
+
+.user-message .avatar {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.message .bubble {
+    color: #1a1a1a;
+    max-width: 85%;
+    box-shadow: none;
+    line-height: 1.6;
+}
+
+.ai-message .bubble {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    border-top-left-radius: 6px;
+    padding: 14px 20px;
+}
+
+.user-message .bubble {
+    background: #f0f4f9;
+    color: #1f1f1f;
+    padding: 14px 20px;
+    border-radius: 24px;
+    border-bottom-right-radius: 6px;
+    box-shadow: none;
+}
+
+/* =========================================
+   Markdown rendering
+   ========================================= */
+.markdown-body {
+    padding-left: 6px !important;
+}
+
+.markdown-body pre {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.markdown-body pre code {
+    background: transparent !important;
+    padding: 0 !important;
+    white-space: pre;
+}
+
+.markdown-body :not(pre)>code {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+    color: #d63384 !important;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: ui-monospace, SFMono-Regular, Consolas, 'Courier New', monospace;
+}
+
+.markdown-body p {
+    margin: 0 0 12px 0;
+}
+
+.markdown-body p:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+    margin: 18px 0 10px 0;
+    color: #1a1a1a;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+    padding-left: 24px;
+    margin: 10px 0 10px 10px;
+}
+
+.markdown-body li {
+    margin-bottom: 6px;
+}
+
+/* =========================================
+   Code copy button
+   ========================================= */
+.code-copy-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #e2e8f0; /* NOSONAR */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 6px 10px;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(4px);
+    opacity: 1;
+}
+
+.code-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff; /* NOSONAR */
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.code-copy-btn:active {
+    transform: translateY(0);
+}
+
+/* =========================================
+   Message actions (copy full text)
+   ========================================= */
+.message-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.msg-action-btn {
+    background: #ffffff;
+    border: 1px solid rgba(0, 123, 85, 0.25);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--primary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.05);
+}
+
+.msg-action-btn:hover {
+    background: linear-gradient(120deg, var(--primary-color), #006042);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(0, 123, 85, 0.25);
+    transform: translateY(-2px);
+}
+
+.msg-action-btn:active {
+    transform: translateY(0);
+}
+
+.msg-action-btn i {
+    transition: color 0.3s;
+}
+
+.msg-action-btn:hover i {
+    color: #ffffff !important;
+}
+
+/* =========================================
+   Dark Mac-style code block
+   ========================================= */
+:global(.code-block-wrapper) {
+    background-color: #1e1e1e !important;
+    border-radius: var(--radius-md) !important;
+    margin: 16px 0 !important;
+    overflow: hidden !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+:global(.code-block-header) {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background-color: #2d2d2d !important;
+    padding: 10px 16px !important;
+    border-bottom: 1px solid #444 !important;
+}
+
+:global(.code-header-left) {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+:global(.code-block-mac-dots) {
+    display: flex !important;
+    gap: 6px !important;
+}
+
+:global(.code-block-mac-dots span) {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(1)) {
+    background-color: #ff5f56 !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(2)) {
+    background-color: #ffbd2e !important;
+}
+
+:global(.code-block-mac-dots span:nth-child(3)) {
+    background-color: #27c93f !important;
+}
+
+:global(.code-lang-text) {
+    text-transform: lowercase !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #a0a0a0 !important;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+    margin: 0 !important;
+}
+
+:global(.code-copy-btn) {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    color: #f8fafc !important; /* NOSONAR */
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding: 7px 12px !important;
+    transition: all 0.25s ease !important;
+    opacity: 1 !important;
+    backdrop-filter: blur(4px);
+}
+
+:global(.code-copy-btn:hover) {
+    background: rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important; /* NOSONAR */
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28) !important;
+}
+
+:global(.code-copy-btn:active) {
+    transform: translateY(0) !important;
+}
+
+:global(.markdown-body pre) {
+    background-color: transparent !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    overflow-x: auto !important;
+}
+
+:global(.markdown-body pre code) {
+    background-color: transparent !important;
+    color: #abb2bf !important;
+    font-family: 'Fira Code', ui-monospace, Consolas, monospace !important;
+    font-size: 14.5px !important;
+    line-height: 1.6 !important;
+    text-shadow: none !important;
+}
+
+:global(.markdown-body pre code.hljs) {
+    color: #abb2bf !important;
+}
+
+/* =========================================
+   Syntax Highlighting (One Dark theme)
+   ========================================= */
+.markdown-body pre code.hljs,
+.markdown-body pre code {
+    color: #abb2bf !important;
+    background: transparent !important;
+}
+
+.markdown-body pre code .hljs-keyword,
+.markdown-body pre code .hljs-doctag,
+.markdown-body pre code .hljs-formula {
+    color: #c678dd !important;
+}
+
+.markdown-body pre code .hljs-string,
+.markdown-body pre code .hljs-regexp,
+.markdown-body pre code .hljs-addition,
+.markdown-body pre code .hljs-attribute,
+.markdown-body pre code .hljs-meta .hljs-string {
+    color: #98c379 !important;
+}
+
+.markdown-body pre code .hljs-title,
+.markdown-body pre code .hljs-section,
+.markdown-body pre code .hljs-name,
+.markdown-body pre code .hljs-selector-id,
+.markdown-body pre code .hljs-selector-class {
+    color: #61aeee !important;
+}
+
+.markdown-body pre code .hljs-built_in,
+.markdown-body pre code .hljs-title.class_,
+.markdown-body pre code .hljs-class .hljs-title {
+    color: #e6c07b !important;
+}
+
+.markdown-body pre code .hljs-number,
+.markdown-body pre code .hljs-literal,
+.markdown-body pre code .hljs-attr,
+.markdown-body pre code .hljs-variable,
+.markdown-body pre code .hljs-template-variable,
+.markdown-body pre code .hljs-type,
+.markdown-body pre code .hljs-selector-attr,
+.markdown-body pre code .hljs-selector-pseudo {
+    color: #d19a66 !important;
+}
+
+.markdown-body pre code .hljs-comment,
+.markdown-body pre code .hljs-quote {
+    color: #7f848e !important;
+    font-style: italic !important;
+}
+
+.markdown-body pre code .hljs-symbol,
+.markdown-body pre code .hljs-bullet,
+.markdown-body pre code .hljs-link,
+.markdown-body pre code .hljs-meta {
+    color: #56b6c2 !important;
+}
+
+.markdown-body pre code .hljs-deletion,
+.markdown-body pre code .hljs-subst {
+    color: #e06c75 !important;
+}
+
+.markdown-body pre code .hljs-emphasis {
+    font-style: italic !important;
+}
+
+.markdown-body pre code .hljs-strong {
+    font-weight: bold !important;
+}
+
+/* ── Typewriter cursor shown while AI is streaming ── */
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background-color: #007B55;
+    border-radius: 1px;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: cursorBlink 0.7s step-end infinite;
+}
+
+@keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}

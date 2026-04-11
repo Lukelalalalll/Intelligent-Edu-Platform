@@ -1,0 +1,41 @@
+/* --- From Resizer.module.css --- */
+/* ── Resizer ── */
+.leftPaneWrapper {
+    display: flex;
+    height: 100%;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.resizer {
+    width: 1px;
+    background-color: rgba(0, 0, 0, 0.06);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.2s, width 0.2s;
+    position: relative;
+    z-index: 10;
+}
+
+.resizer:hover, .resizerDragging {
+    background-color: var(--primary-color);
+    width: 4px;
+}
+
+/* Marker class applied to chatContainer during resize drag */
+.dragging {
+    cursor: col-resize;
+}
+
+/* Disable pointer events on all direct children while dragging */
+.dragging > * {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Re-enable on resizer itself so drag continues working */
+.dragging > .resizer {
+    pointer-events: auto;
+}
+
+

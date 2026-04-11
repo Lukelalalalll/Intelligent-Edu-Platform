@@ -1,7 +1,6 @@
-// Register.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/auth.css'; // 复用登录页的 CSS 样式
+import styles from './styles/auth.module.css';
 
 export default function Register({
     formData, handleChange, showPassword, setShowPassword,
@@ -10,56 +9,55 @@ export default function Register({
 }) {
     return (
         <>
-            <div id="toast-container">
+            <div className={styles.toastContainer}>
                 {toast.visible && (
-                    <div className={`custom-toast ${toast.type} ${toast.leaving ? 'toast-leave' : ''}`}>
-                        <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} toast-icon`}></i>
+                    <div className={[styles.customToast, styles[toast.type], toast.leaving ? styles.toastLeave : ''].filter(Boolean).join(' ')}>
+                        <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} ${styles.toastIcon}`}></i>
                         <span>{toast.message}</span>
                     </div>
                 )}
             </div>
 
-            <div className="auth-wrapper">
-                <div className="bg-orb"></div>
-                <div className="auth-container">
-                    <div className="auth-card" id="registerCard">
-                        <div className="auth-header">
+            <div className={`auth-page-root ${styles.authWrapper}`}>
+                <div className={styles.bgOrb}></div>
+                <div className={styles.authContainer}>
+                    <div className={styles.authCard} id="registerCard">
+                        <div className={styles.authHeader}>
                             <h2>Join HKU Platform</h2>
                             <p>Start your intelligent learning journey</p>
                         </div>
 
-                        <form className="auth-form" onSubmit={handleSubmit}>
+                        <form className={styles.authForm} onSubmit={handleSubmit}>
                             {['username', 'email'].map((field) => (
-                                <div className="input-group" key={field}>
-                                    <div className="input-icon"><i className={`fas ${field === 'username' ? 'fa-user' : 'fa-envelope'}`}></i></div>
+                                <div className={styles.inputGroup} key={field}>
+                                    <div className={styles.inputIcon}><i className={`fas ${field === 'username' ? 'fa-user' : 'fa-envelope'}`}></i></div>
                                     <input
                                         type={field === 'email' ? 'email' : 'text'}
                                         id={field} name={field} autoComplete="off" placeholder=" " required
                                         value={formData[field]} onChange={handleChange}
                                     />
                                     <label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</label>
-                                    <div className="input-border"></div>
+                                    <div className={styles.inputBorder}></div>
                                 </div>
                             ))}
 
                             {[ {key: 'password', show: showPassword, toggle: setShowPassword},
                                {key: 'confirm_password', show: showConfirmPassword, toggle: setShowConfirmPassword}
                             ].map((item) => (
-                                <div className="input-group" key={item.key}>
-                                    <div className="input-icon"><i className="fas fa-lock"></i></div>
+                                <div className={styles.inputGroup} key={item.key}>
+                                    <div className={styles.inputIcon}><i className="fas fa-lock"></i></div>
                                     <input
                                         type={item.show ? "text" : "password"}
                                         id={item.key} name={item.key} autoComplete="new-password" placeholder=" " required
                                         value={formData[item.key]} onChange={handleChange}
                                     />
-                                    <i className={`fas ${item.show ? 'fa-eye-slash' : 'fa-eye'} toggle-password`}
+                                    <i className={`fas ${item.show ? 'fa-eye-slash' : 'fa-eye'} ${styles.togglePassword}`}
                                        onClick={() => item.toggle(!item.show)}></i>
                                     <label htmlFor={item.key}>{item.key === 'password' ? 'Password' : 'Confirm Password'}</label>
-                                    <div className="input-border"></div>
+                                    <div className={styles.inputBorder}></div>
                                 </div>
                             ))}
 
-                            {/* Role toggle */}
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
                                 <button
                                     type="button"
@@ -91,10 +89,9 @@ export default function Register({
                                 </button>
                             </div>
 
-                            {/* Staff code input */}
                             {isStaff && (
-                                <div className="input-group" style={{ marginTop: '8px' }}>
-                                    <div className="input-icon"><i className="fas fa-key"></i></div>
+                                <div className={styles.inputGroup} style={{ marginTop: '8px' }}>
+                                    <div className={styles.inputIcon}><i className="fas fa-key"></i></div>
                                     <input
                                         type="text"
                                         id="staffCode" name="staffCode" autoComplete="off" placeholder=" "
@@ -103,17 +100,17 @@ export default function Register({
                                         style={{ letterSpacing: '2px', fontFamily: 'monospace', textTransform: 'uppercase' }}
                                     />
                                     <label htmlFor="staffCode">Staff Code (8 characters)</label>
-                                    <div className="input-border"></div>
+                                    <div className={styles.inputBorder}></div>
                                 </div>
                             )}
 
-                            <button type="submit" className="btn-submit" disabled={loading} style={{ marginTop: '12px' }}>
+                            <button type="submit" className={styles.btnSubmit} disabled={loading} style={{ marginTop: '12px' }}>
                                 {loading ? <><i className="fas fa-circle-notch fa-spin"></i> Creating...</> : <><span>Create Account</span><i className="fas fa-arrow-right"></i></>}
                             </button>
                         </form>
 
-                        <div className="auth-footer">
-                            <p>Already have an account? <Link to="/login" className="highlight-link">Sign In</Link></p>
+                        <div className={styles.authFooter}>
+                            <p>Already have an account? <Link to="/login" className={styles.highlightLink}>Sign In</Link></p>
                         </div>
                     </div>
                 </div>

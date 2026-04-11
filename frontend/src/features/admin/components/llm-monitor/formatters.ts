@@ -1,4 +1,4 @@
-import styles from '../../features/admin/styles/AdminDashboard.module.css';
+import styles from '../../styles/LlmMonitorPanel.module.css';
 
 export function formatNumber(n: number): string {
     if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';

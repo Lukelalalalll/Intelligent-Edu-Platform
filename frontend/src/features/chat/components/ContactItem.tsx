@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { ChatRoom } from '../types';
-import styles from '../styles/Chat.module.css';
+import styles from '../styles/components/Sidebar.module.css';
 
 interface Props {
     room: ChatRoom;

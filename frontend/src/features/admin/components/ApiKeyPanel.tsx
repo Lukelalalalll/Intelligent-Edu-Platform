@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from '../styles/AdminDashboard.module.css';
+import styles from '../styles/ApiKeyPanel.module.css';
 import client from '../../../api/client';
 
 /* ── Password verification modal (reused for unlock & edit) ── */

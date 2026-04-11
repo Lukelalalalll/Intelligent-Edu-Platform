@@ -1,6 +1,6 @@
 import React from 'react';
 import MessageItem from './MessageItem';
-import styles from '../styles/AIInteract.module.css';
+import styles from '../styles/AIMessage.module.css';
 
 export default function MessageList({
     currentSession, isTyping, chatMessagesRef, handleChatAreaClick,

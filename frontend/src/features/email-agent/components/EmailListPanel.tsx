@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatShortDate, extractSenderName } from '../utils/emailUtils';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailList.module.css';
 
 export interface EmailListItem {
     id: string;

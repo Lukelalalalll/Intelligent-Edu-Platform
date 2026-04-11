@@ -1,6 +1,6 @@
 import React from 'react';
 import DOMPurify from 'dompurify';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailDetail.module.css';
 
 interface EmailBodyContentProps {
     selectedEmailDetail?: Record<string, any> | null;

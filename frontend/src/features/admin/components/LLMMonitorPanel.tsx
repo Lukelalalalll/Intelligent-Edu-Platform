@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styles from '../styles/AdminDashboard.module.css';
+import styles from '../styles/LlmMonitorPanel.module.css';
 import client from '../../../api/client';
 import { formatNumber, formatMs, formatCost } from './llm-monitor/formatters';
 import MiniBarChart from './llm-monitor/MiniBarChart';

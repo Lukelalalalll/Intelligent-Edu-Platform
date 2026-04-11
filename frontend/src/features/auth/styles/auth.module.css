@@ -1,0 +1,649 @@
+/* auth.module.css - scoped styles for auth pages */
+.authWrapper {
+    --auth-bg-input: #E2E8F0;
+    --auth-radius-lg: var(--radius-lg);
+    --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* 容器基础样式 */
+    min-height: calc(100vh - var(--nav-height, 72px));
+    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    animation: authGradientFlow 15s ease infinite;
+    position: relative;
+    overflow: hidden;
+    padding: 2rem;
+}
+
+@keyframes authGradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+
+.authWrapper .bgOrb {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: floatOrbRegister 12s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes floatOrbRegister {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(50px, 50px);
+    }
+}
+
+/* 登录页特有光球覆盖 (居右且动画反向) */
+.splitLayout .bgOrb {
+    left: auto;
+    right: -10%;
+    animation: floatOrbLogin 12s ease-in-out infinite;
+}
+
+@keyframes floatOrbLogin {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-50px, 50px);
+    }
+}
+
+
+/* ================= 基础卡片 & 头部通用 ================= */
+.authContainer {
+    width: 100%;
+    max-width: 480px;
+    /* Register 默认宽度 */
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+}
+
+.authCard {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    width: 100%;
+    padding: 3rem 2.5rem;
+    border-radius: var(--auth-radius-lg);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    position: relative;
+    transform-style: preserve-3d;
+    opacity: 0;
+    animation: cardEntrance 0.8s var(--ease-out-back) forwards 0.2s;
+}
+
+@keyframes cardEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.authHeader {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.authHeader h2 {
+    color: var(--primary-color);
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.authHeader p {
+    color: var(--text-sub);
+    font-size: 1rem;
+}
+
+/* 登录页特有头部样式覆盖 */
+.splitLayout .authHeader {
+    margin-bottom: 2rem;
+}
+
+.splitLayout .authHeader h2 {
+    color: var(--text-main);
+    font-size: 1.8rem;
+}
+
+.splitLayout .authHeader p {
+    font-size: 0.95rem;
+}
+
+.authHeader .headerIcon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    opacity: 0.9;
+    animation: authFloatIcon 3s ease-in-out infinite;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.authHeader .headerIcon:hover {
+    transform: scale(1.3);
+    animation-play-state: paused;
+}
+
+@keyframes authFloatIcon {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.15);
+    }
+}
+
+
+/* ================= 表单输入组通用 ================= */
+.authForm .inputGroup {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.authForm .inputIcon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    font-size: 1.1rem;
+    transition: color 0.3s;
+    z-index: 2;
+}
+
+.authForm .inputGroup input {
+    width: 100%;
+    padding: 16px 45px 16px 48px;
+    /* 给左右图标留出空间 */
+    font-size: 1rem;
+    color: var(--text-main);
+    background: var(--auth-bg-input);
+    border: 2px solid transparent;
+    border-radius: var(--radius-pill);
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.authForm .inputGroup label {
+    position: absolute;
+    left: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    pointer-events: none;
+    transition: all 0.3s ease;
+    background: transparent;
+    padding: 0 4px;
+}
+
+/* 聚焦动画 */
+.authForm .inputGroup input:focus,
+.authForm .inputGroup input:not(:placeholder-shown) {
+    background: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.1);
+}
+
+.authForm .inputGroup input:focus~label,
+.authForm .inputGroup input:not(:placeholder-shown)~label {
+    top: 0;
+    left: 12px;
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    background: #fff;
+    font-weight: 600;
+    z-index: 5;
+}
+
+.authForm .inputGroup input:focus~.inputIcon {
+    color: var(--primary-color);
+}
+
+/* 密码显隐图标 */
+.authForm .togglePassword {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    cursor: pointer;
+    z-index: 10;
+    transition: color 0.3s;
+    font-size: 1rem;
+}
+
+.authForm .togglePassword:hover {
+    color: var(--primary-color);
+}
+
+.authForm .formOptions {
+    text-align: right;
+    margin-top: -0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.authForm .forgotLink {
+    color: var(--text-sub);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.authForm .forgotLink:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.authForm .btnSubmit {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.splitLayout .authForm .btnSubmit {
+    padding: 14px;
+    margin-top: 0;
+}
+
+/* Login按钮特定微调 */
+
+.authForm .btnSubmit:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 123, 85, 0.3);
+}
+
+.authForm .btnSubmit:active {
+    transform: translateY(0);
+}
+
+.authForm .btnSubmit.loading {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.authFooter {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.95rem;
+    color: var(--text-sub);
+}
+
+.authFooter a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 700;
+    transition: opacity 0.3s;
+}
+
+.authFooter a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+/* Login 特定 Footer 样式覆盖 */
+.splitLayout .authFooter {
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    font-size: 0.9rem;
+}
+
+.authFooter .highlightLink {
+    margin-left: 4px;
+}
+
+.authFooter .backHomeLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1rem;
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.authFooter .backHomeLink:hover {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+
+/* ================= 提示信息组件 (Login Message & Register Toast) ================= */
+/* 1. Login 内联 Message */
+.authCard .message {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    animation: authFadeIn 0.3s ease;
+}
+
+.authCard .errorMessage {
+    background-color: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #FFCDD2;
+}
+
+.authCard .successMessage {
+    background-color: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(0, 123, 85, 0.2);
+}
+
+@keyframes authFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 2. Register 全局 Toast */
+.toastContainer {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.customToast {
+    min-width: 320px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-pill);
+    padding: 16px 24px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: toastEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.customToast.success {
+    color: var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+}
+
+.customToast.error {
+    color: #FF4842;
+    border-left: 4px solid #FF4842;
+}
+
+.toastIcon {
+    font-size: 1.25rem;
+}
+
+@keyframes toastEnter {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.toastLeave {
+    animation: toastLeave 0.4s ease-in forwards;
+}
+
+@keyframes toastLeave {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+
+/* ================= Login 专属 - Cinematic Premium Reveal ================= */
+.splitLayout {
+    justify-content: space-between;
+    padding: 2rem 10%;
+    gap: 6rem;
+}
+
+.welcomeSection {
+    flex: 1;
+    max-width: 600px;
+    color: #ffffff;
+    z-index: 10;
+}
+
+.welcomeTitle {
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.8rem;
+    letter-spacing: -1px;
+}
+
+.welcomeSection .textLine {
+    display: block;
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(10px);
+    animation: cinematicReveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.welcomeSection .textLine:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.welcomeSection .textLine:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.welcomeSection .textLine:nth-child(3) {
+    animation-delay: 0.5s;
+}
+
+.welcomeSection .textGlow {
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3), 0 0 60px rgba(0, 255, 170, 0.2);
+}
+
+.welcomeSubtitle {
+    font-size: 1.25rem;
+    font-weight: 300;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 90%;
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(8px);
+    animation: cinematicReveal 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.8s;
+}
+
+@keyframes cinematicReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(40px);
+        filter: blur(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+/* Login 卡片定位与专有出场动画 */
+.splitLayout .authContainer {
+    flex: 0 1 auto;
+    display: flex;
+    justify-content: flex-end;
+    /* 靠右排布 */
+    width: 100%;
+    max-width: 440px;
+}
+
+.splitLayout .authCard {
+    opacity: 0;
+    animation: splitCardEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.7s;
+}
+
+@keyframes splitCardEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(50px) scale(0.96);
+        filter: blur(8px);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    }
+}
+
+
+/* ================= 响应式布局适配 ================= */
+@media (max-width: 1200px) {
+    .splitLayout {
+        padding: 2rem 6%;
+    }
+
+    .welcomeTitle {
+        font-size: 3.2rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .splitLayout {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .welcomeSection {
+        text-align: center;
+        margin-bottom: 2rem;
+        max-width: 100%;
+    }
+
+    .welcomeTitle {
+        font-size: 2.8rem;
+    }
+
+    .welcomeSubtitle {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .splitLayout .authContainer {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .authCard {
+        padding: 2rem 1.5rem;
+    }
+
+    .splitLayout {
+        padding: 1rem;
+    }
+
+    .welcomeSection {
+        display: none;
+    }
+
+    .authHeader .headerIcon {
+        font-size: 2.5rem;
+    }
+}
+
+
+/* 1. 当页面处于 Auth 状态时，清除 Footer 顶部的 4rem margin */
+:global(body):has(.authWrapper) :global(.footer) {
+    margin-top: 0;
+    border-top: none;
+    /* 可选：去掉顶部边线，衔接更完美 */
+}
+
+/* 2. 让 main 变成 flex 容器，确保内部的 .authWrapper 能够绝对撑满所有剩余高度 */
+:global(main):has(.authWrapper) {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 3. 让绿色背景区吸收掉所有剩余空间，死死贴住 Footer */
+.authWrapper {
+    flex: 1;
+}

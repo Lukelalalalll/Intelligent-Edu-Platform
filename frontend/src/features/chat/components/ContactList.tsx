@@ -5,7 +5,7 @@ import ContactItem from './ContactItem';
 import { useChatStore } from '../store/chatStore';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import type { LeftPaneTab } from '../pages/ChatPage';
-import styles from '../styles/Chat.module.css';
+import styles from '../styles/components/Sidebar.module.css';
 
 interface Props {
     searchQuery: string;

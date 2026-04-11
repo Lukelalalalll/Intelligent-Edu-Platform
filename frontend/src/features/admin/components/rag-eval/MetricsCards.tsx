@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/AdminDashboard.module.css';
+import styles from '../../styles/RagEvalPanel.module.css';
 import type { EvalMetrics } from '../../../../api/ragEvalApi';
 
 interface MetricsCardsProps {

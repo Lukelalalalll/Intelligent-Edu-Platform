@@ -1,0 +1,142 @@
+/* Relation Visualization — AdminDbConsole */
+
+.relationCanvas {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid rgba(0, 123, 85, 0.2);
+    border-radius: 13px;
+    padding: 14px;
+    background: #f7fcf9;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.relationNodePrimary,
+.relationNode {
+    border: 1px solid rgba(0, 123, 85, 0.2);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.relationNodePrimary {
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.12) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.nodeLabel {
+    font-size: 0.76rem;
+    color: #5f7183;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.nodeSub {
+    color: #334155;
+    margin-top: 4px;
+}
+
+.nodeMetaRow {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nodeMetaRow span {
+    font-size: 0.78rem;
+    color: #0f6a4b;
+    background: rgba(0, 123, 85, 0.1);
+    border-radius: 999px;
+    padding: 3px 8px;
+}
+
+.nodeValue {
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.relationLinksRow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.relationArrow {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    display: inline-flex;
+    justify-content: center;
+}
+
+.relationDetailsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    min-height: 0;
+}
+
+.relationDetailCol {
+    border: 1px solid rgba(0, 123, 85, 0.16);
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px;
+}
+
+.relationDetailCol h4 {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    color: #102130;
+}
+
+.relationChipWrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.relationChip {
+    border: 1px solid rgba(0, 123, 85, 0.26);
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 0.78rem;
+    color: #0f6a4b;
+    background: rgba(0, 123, 85, 0.08);
+}
+
+.relationAssignmentList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.relationAssignmentItem {
+    border: 1px solid rgba(0, 123, 85, 0.16);
+    border-radius: 10px;
+    padding: 8px;
+    display: grid;
+    gap: 2px;
+}
+
+.relationAssignmentItem span {
+    font-size: 0.8rem;
+    color: #475569;
+}
+
+@media (max-width: 1120px) {
+    .relationLinksRow {
+        grid-template-columns: 1fr;
+    }
+
+    .relationArrow {
+        transform: rotate(90deg);
+    }
+
+    .relationDetailsGrid {
+        grid-template-columns: 1fr;
+    }
+}

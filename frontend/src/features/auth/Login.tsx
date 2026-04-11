@@ -1,33 +1,26 @@
-// Login.jsx
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import '../../styles/auth.css';
+import styles from './styles/auth.module.css';
 
 export default function Login({
     username, setUsername, password, setPassword, showPassword, setShowPassword,
     errorMsg, setErrorMsg, successMsg, setSuccessMsg, isLoading, handleLogin
 }) {
-    // 3D 动效需要的 Refs
     const cardRef = useRef(null);
     const sheenRef = useRef(null);
 
-    // 1. 处理 3D 卡片悬浮特效
     const handleMouseMove = (e) => {
         if (!cardRef.current || !sheenRef.current) return;
         const card = cardRef.current;
         const sheen = sheenRef.current;
-
         const rect = card.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
         const mouseX = e.clientX - centerX;
         const mouseY = e.clientY - centerY;
-
         const rotateX = (mouseY / rect.height) * -8;
         const rotateY = (mouseX / rect.width) * 8;
-
         card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-
         const sheenX = e.clientX - rect.left;
         const sheenY = e.clientY - rect.top;
         sheen.style.background = `radial-gradient(circle at ${sheenX}px ${sheenY}px, rgba(255,255,255,0.3), transparent 60%)`;
@@ -42,13 +35,11 @@ export default function Login({
         if (!cardRef.current || !sheenRef.current) return;
         const card = cardRef.current;
         const sheen = sheenRef.current;
-
         card.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
         card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
         sheen.style.opacity = '0';
     };
 
-    // 表单输入处理
     const handleInputChange = (setter) => (e) => {
         setter(e.target.value);
         setErrorMsg('');
@@ -56,24 +47,24 @@ export default function Login({
     };
 
     return (
-        <div className="auth-wrapper split-layout" onMouseMove={handleMouseMove}>
-            <div className="bg-orb"></div>
+        <div className={`auth-page-root ${styles.authWrapper} ${styles.splitLayout}`} onMouseMove={handleMouseMove}>
+            <div className={styles.bgOrb}></div>
 
-            <div className="welcome-section">
-                <h1 className="welcome-title">
-                    <span className="text-line">Welcome to</span>
-                    <span className="text-line text-glow">HKU Intelligent</span>
-                    <span className="text-line">Education Platform</span>
+            <div className={styles.welcomeSection}>
+                <h1 className={styles.welcomeTitle}>
+                    <span className={styles.textLine}>Welcome to</span>
+                    <span className={`${styles.textLine} ${styles.textGlow}`}>HKU Intelligent</span>
+                    <span className={styles.textLine}>Education Platform</span>
                 </h1>
-                <p className="welcome-subtitle">
+                <p className={styles.welcomeSubtitle}>
                     Empowering your future with AI-driven learning experiences.
                     <br />Sign in to continue your E-learning journey.
                 </p>
             </div>
 
-            <div className="auth-container">
+            <div className={styles.authContainer}>
                 <div
-                    className="auth-card"
+                    className={styles.authCard}
                     id="loginCard"
                     ref={cardRef}
                     onMouseEnter={handleMouseEnter}
@@ -89,23 +80,22 @@ export default function Login({
                         }}
                     ></div>
 
-                    <div className="auth-header">
-                        <div className="header-icon"><i className="fas fa-user-circle"></i></div>
+                    <div className={styles.authHeader}>
+                        <div className={styles.headerIcon}><i className="fas fa-user-circle"></i></div>
                         <h2>Welcome Back</h2>
                         <p>Sign in to continue your learning journey</p>
                     </div>
 
-                    {/* 消息提示框 */}
-                    <div className="message error-message" style={{ display: errorMsg ? 'flex' : 'none' }}>
+                    <div className={`${styles.message} ${styles.errorMessage}`} style={{ display: errorMsg ? 'flex' : 'none' }}>
                         <i className="fas fa-exclamation-circle"></i> <span>{errorMsg}</span>
                     </div>
-                    <div className="message success-message" style={{ display: successMsg ? 'flex' : 'none' }}>
+                    <div className={`${styles.message} ${styles.successMessage}`} style={{ display: successMsg ? 'flex' : 'none' }}>
                         <i className="fas fa-check-circle"></i> <span>{successMsg}</span>
                     </div>
 
-                    <form className="auth-form" onSubmit={handleLogin}>
-                        <div className="input-group">
-                            <div className="input-icon"><i className="fas fa-user"></i></div>
+                    <form className={styles.authForm} onSubmit={handleLogin}>
+                        <div className={styles.inputGroup}>
+                            <div className={styles.inputIcon}><i className="fas fa-user"></i></div>
                             <input
                                 type="text"
                                 id="username"
@@ -118,11 +108,11 @@ export default function Login({
                                 onChange={handleInputChange(setUsername)}
                             />
                             <label htmlFor="username">Username</label>
-                            <div className="input-border"></div>
+                            <div className={styles.inputBorder}></div>
                         </div>
 
-                        <div className="input-group">
-                            <div className="input-icon"><i className="fas fa-lock"></i></div>
+                        <div className={styles.inputGroup}>
+                            <div className={styles.inputIcon}><i className="fas fa-lock"></i></div>
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 id="password"
@@ -135,20 +125,23 @@ export default function Login({
                                 onChange={handleInputChange(setPassword)}
                             />
                             <i
-                                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} toggle-password`}
+                                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} ${styles.togglePassword}`}
                                 onClick={() => setShowPassword(!showPassword)}
                                 style={{ cursor: 'pointer' }}
                             ></i>
-
                             <label htmlFor="password">Password</label>
-                            <div className="input-border"></div>
+                            <div className={styles.inputBorder}></div>
                         </div>
 
-                        <div className="form-options">
-                            <Link to="/forgot-password" className="forgot-link">Forgot Password?</Link>
+                        <div className={styles.formOptions}>
+                            <Link to="/forgot-password" className={styles.forgotLink}>Forgot Password?</Link>
                         </div>
 
-                        <button type="submit" className={`btn-submit ${isLoading ? 'loading' : ''}`} disabled={isLoading}>
+                        <button
+                            type="submit"
+                            className={`${styles.btnSubmit}${isLoading ? ' ' + styles.loading : ''}`}
+                            disabled={isLoading}
+                        >
                             {isLoading ? (
                                 <><i className="fas fa-circle-notch fa-spin"></i> Signing In...</>
                             ) : (
@@ -157,8 +150,8 @@ export default function Login({
                         </button>
                     </form>
 
-                    <div className="auth-footer">
-                        <p>Don't have an account? <Link to="/register" className="highlight-link">Create Account</Link></p>
+                    <div className={styles.authFooter}>
+                        <p>Don't have an account? <Link to="/register" className={styles.highlightLink}>Create Account</Link></p>
                     </div>
                 </div>
             </div>

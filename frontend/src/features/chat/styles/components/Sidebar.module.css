@@ -1,0 +1,341 @@
+/* --- From LeftPaneContactRoomList.module.css --- */
+/* ── Left Pane: Contact / Room List ── */
+
+.leftPane {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.leftHeader {
+  padding: 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leftHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leftTitle {
+  font-size: 1.29rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 6px;
+}
+
+.iconBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  transition: all 0.15s;
+}
+
+.iconBtn:hover {
+  background: #0f766e;
+  color: #fff;
+}
+
+.searchBox {
+  position: relative;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #0f766e;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 0.90rem;
+}
+
+.requestsBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #92400e;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.requestsBadge:hover {
+  background: #fde68a;
+}
+
+.requestsBadgeCount {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.78rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.roomList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+
+/* --- From ContactRoomItem.module.css --- */
+/* ── Contact / Room Item ── */
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-left: 3px solid transparent;
+}
+
+.contactItem:hover {
+  background: #e2e8f0;
+}
+
+.contactItemActive {
+  background: #e0f2fe;
+  border-left-color: #0f766e;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.12rem;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.contactInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.contactName {
+  font-size: 1.01rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contactLastMsg {
+  font-size: 0.87rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.contactMeta {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.contactTime {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.unreadBadge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.73rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* Unread state overrides */
+.contactItemUnread {
+  background: rgba(0, 123, 85, 0.03);
+}
+
+.contactNameUnread {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.contactLastMsgUnread {
+  color: #334155;
+  font-weight: 500;
+}
+
+.contactTimeUnread {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* Read receipt ticks */
+.readTick {
+  margin-right: 3px;
+  font-size: 0.72rem;
+}
+
+.readTickSent {
+  color: #94a3b8;
+}
+
+.readTickRead {
+  color: var(--primary-color);
+}
+
+
+/* ── Bottom Tab Bar (Chats / Contacts) ── */
+
+.leftTabBar {
+  display: flex;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+
+.leftTabBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.leftTabBtn i {
+  font-size: 1.18rem;
+}
+
+.leftTabBtn:hover {
+  color: var(--primary-color);
+  background: rgba(0,123,85,0.04);
+}
+
+.leftTabBtnActive {
+  color: var(--primary-color);
+  border-top: 2px solid var(--primary-color);
+  margin-top: -1px;
+  background: rgba(0,123,85,0.06);
+}
+
+
+/* ── Empty states ── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  gap: 8px;
+}
+
+.emptyStateIcon {
+  font-size: 2.24rem;
+  opacity: 0.4;
+}
+
+.emptyStateText {
+  font-size: 0.95rem;
+}
+
+/* ── Buttons used in contact list ── */
+
+.btnPrimary {
+  background: var(--primary-color, #0f766e);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnPrimary:hover {
+  background: #0d6b64;
+}
+
+.btnSmall {
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 600;
+}
+
+.btnAdd {
+  background: rgba(0, 123, 85, 0.08);
+  color: var(--primary-color, #0f766e);
+}
+
+.btnAdd:hover {
+  background: rgba(0, 123, 85, 0.18);
+}
+
+

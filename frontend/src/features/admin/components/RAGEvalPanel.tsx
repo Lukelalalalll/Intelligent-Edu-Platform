@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from '../styles/AdminDashboard.module.css';
+import styles from '../styles/RagEvalPanel.module.css';
 import CompareTab from './rag-eval/CompareTab';
 import CaseTestTab from './rag-eval/CaseTestTab';
 import DatasetsTab from './rag-eval/DatasetsTab';

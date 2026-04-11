@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import '../../styles/auth.css';
 import styles from './styles/forgot.module.css';
 
 export default function Forgot({
@@ -7,7 +8,7 @@ export default function Forgot({
     showConfirmPassword, setShowConfirmPassword, loading, handleSubmit, message
 }) {
     return (
-        <div className={`auth-wrapper ${styles.forgotWrapper}`}>
+        <div className={`auth-page-root auth-wrapper ${styles.forgotWrapper}`}>
             <div className={`bg-orb ${styles.forgotOrb}`}></div>
             <div className="auth-container">
                 <div className="auth-card" id="forgotCard">

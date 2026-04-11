@@ -1,10 +1,26 @@
 // frontend/src/features/chat/components/MessageInput.tsx
 
 import React, { useState, useRef, useCallback } from 'react';
-import styles from '../styles/Chat.module.css';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
 import { chatApi } from '../../../api/chatApi';
 import type { ChatMessage } from '../types';
 import type { AIProvider } from '../../../shared/aiProvider';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+};
 
 interface Props {
     roomId: string;

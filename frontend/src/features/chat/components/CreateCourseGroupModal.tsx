@@ -1,10 +1,32 @@
 // frontend/src/features/chat/components/CreateCourseGroupModal.tsx
 
 import React, { useEffect, useState } from 'react';
-import styles from '../styles/Chat.module.css';
+import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
+import globalStyles from '../styles/globals.module.css';
+import layoutStyles from '../styles/components/ChatLayout.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import messageListStyles from '../styles/components/MessageList.module.css';
+import messageInputStyles from '../styles/components/MessageInput.module.css';
+import messageBubbleStyles from '../styles/components/MessageBubble.module.css';
+import modalStyles from '../styles/components/Modals.module.css';
+import courseGroupStyles from '../styles/components/CourseGroupModal.module.css';
 import { chatApi } from '../../../api/chatApi';
 import type { CourseInfo } from '../types';
 import { useChatStore } from '../store/chatStore';
+
+const styles = {
+    ...globalStyles,
+    ...layoutStyles,
+    ...sidebarStyles,
+    ...headerStyles,
+    ...messageListStyles,
+    ...messageInputStyles,
+    ...messageBubbleStyles,
+    ...modalStyles,
+    ...courseGroupStyles,
+};
 
 interface Props {
     onClose: () => void;
@@ -44,15 +66,29 @@ export default function CreateCourseGroupModal({ onClose, onEnterRoom }: Props) 
         onClose();
     };
 
-    return (
-        <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    return createPortal(
+        <motion.div 
+            className={styles.modalOverlay} 
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+        >
+            <motion.div 
+                className={styles.modal} 
+                onClick={(e) => e.stopPropagation()}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
                 <div className={styles.modalHeader}>
                     <h3 className={styles.modalTitle}>
                         <i className="fas fa-graduation-cap" style={{ marginRight: 8 }} />
                         Course Groups
                     </h3>
-                    <button className={styles.modalCloseBtn} onClick={onClose}>
+                    <button className={styles.modalClose} onClick={onClose}>
                         <i className="fas fa-times" />
                     </button>
                 </div>
@@ -93,7 +129,8 @@ export default function CreateCourseGroupModal({ onClose, onEnterRoom }: Props) 
                         </div>
                     ))}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>,
+        document.body
     );
 }

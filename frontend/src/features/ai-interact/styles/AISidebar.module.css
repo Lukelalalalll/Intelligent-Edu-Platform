@@ -1,0 +1,209 @@
+/* =============================================
+   AI Sidebar — extracted from AIInteract.module.css
+   ============================================= */
+
+.chat-sidebar {
+    width: 100%;
+    /* width is now controlled by the wrapper div in index.tsx */
+    background: #F9FAFB;
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px;
+    flex-shrink: 0;
+}
+
+.new-chat-btn {
+    width: 100%;
+    padding: 12px 0;
+    background: linear-gradient(120deg, var(--primary-color), #004D40);
+    color: white;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(0, 123, 85, 0.2);
+    transition: all 0.3s ease;
+    margin-bottom: 30px;
+}
+
+.new-chat-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.3);
+}
+
+.sidebar-title {
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    padding-left: 8px;
+}
+
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    color: #4B5563;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+
+.history-item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.history-item-content i {
+    flex-shrink: 0;
+}
+
+.history-item-content .history-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-item.active {
+    background: rgba(0, 123, 85, 0.1);
+    color: #065f46; /* NOSONAR */
+    font-weight: 600;
+}
+
+.history-item:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.08);
+    color: #111827; /* NOSONAR */
+}
+
+.history-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.provider-switch-wrap {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.provider-chip {
+    flex: 1;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.85);
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.provider-chip:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.provider-chip-active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.25);
+}
+
+.user-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #00e676;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00e676;
+}
+
+.status-dot-offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+.provider-detail {
+    margin-top: 6px;
+    font-size: 0.74rem;
+    color: #9f1239;
+    line-height: 1.35;
+    max-height: 3.8em;
+    overflow: hidden;
+}
+
+/* =========================================
+   Delete button (sidebar history item)
+   ========================================= */
+.delete-chat-btn {
+    background: rgba(0, 0, 0, 0.04);
+    border: none;
+    color: #a0a0a0;
+    cursor: pointer;
+    opacity: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(1);
+    flex-shrink: 0;
+}
+
+.delete-chat-btn:hover {
+    color: #ffffff;
+    background: #dc2626;
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+    transform: scale(1.08);
+}
+
+.delete-chat-btn:active {
+    transform: scale(0.95);
+}

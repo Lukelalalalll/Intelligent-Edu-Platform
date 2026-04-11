@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../styles/EmailAgent.module.css';
+import styles from '../styles/EmailList.module.css';
 
 interface EntitiesDisplayProps {
     emailClassification?: Record<string, any> | null;

@@ -18,6 +18,13 @@ export default function ProfileEntry() {
     const [courseSemester, setCourseSemester] = useState('');
     const [isCoursesLoading, setIsCoursesLoading] = useState(true);
 
+    // History TTL settings
+    const [historyTtlDays, setHistoryTtlDays] = useState(90);
+    const [ttlInput, setTtlInput] = useState('90');
+    const [ttlPermanent, setTtlPermanent] = useState(false);
+    const [ttlSaving, setTtlSaving] = useState(false);
+    const [ttlAlert, setTtlAlert] = useState(null);
+
     const getRoleInfo = (role) => {
         switch (role) {
             case 'admin': return { icon: 'fa-shield-alt', text: 'Administrator' };
@@ -76,11 +83,44 @@ export default function ProfileEntry() {
             }
         };
 
+        const loadHistorySettings = async () => {
+            try {
+                const res = await client.get('/profile/history-settings');
+                if (!isMounted) return;
+                const days = res.data?.history_ttl_days ?? 90;
+                setHistoryTtlDays(days);
+                setTtlInput(days === 0 ? '' : String(days));
+                setTtlPermanent(days === 0);
+            } catch {
+                // ignore — use defaults
+            }
+        };
+
         loadProfileCourses();
+        loadHistorySettings();
         return () => {
             isMounted = false;
         };
     }, []);
+
+    const handleSaveHistoryTtl = async () => {
+        const days = ttlPermanent ? 0 : parseInt(ttlInput, 10);
+        if (!ttlPermanent && (isNaN(days) || days < 1)) {
+            setTtlAlert({ type: 'error', message: 'Please enter a number of days (1 or more).' });
+            return;
+        }
+        setTtlSaving(true);
+        setTtlAlert(null);
+        try {
+            await client.post('/profile/history-settings', { history_ttl_days: days });
+            setHistoryTtlDays(days);
+            setTtlAlert({ type: 'success', message: 'History cleanup setting saved!' });
+        } catch {
+            setTtlAlert({ type: 'error', message: 'Failed to save setting.' });
+        } finally {
+            setTtlSaving(false);
+        }
+    };
 
     return (
         <Profile
@@ -100,6 +140,14 @@ export default function ProfileEntry() {
             courseSemester={courseSemester}
             isCoursesLoading={isCoursesLoading}
             handleModalBackgroundClick={(e) => e.target.classList.contains('modal-overlay') && setShowModal(false)}
+            historyTtlDays={historyTtlDays}
+            ttlInput={ttlInput}
+            setTtlInput={setTtlInput}
+            ttlPermanent={ttlPermanent}
+            setTtlPermanent={setTtlPermanent}
+            ttlSaving={ttlSaving}
+            ttlAlert={ttlAlert}
+            handleSaveHistoryTtl={handleSaveHistoryTtl}
         />
     );
 }

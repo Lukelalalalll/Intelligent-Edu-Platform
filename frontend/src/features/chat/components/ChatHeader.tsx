@@ -3,7 +3,13 @@
 import React from 'react';
 import type { ChatRoom } from '../types';
 import type { AIProvider } from '../../../shared/aiProvider';
-import styles from '../styles/Chat.module.css';
+import headerStyles from '../styles/components/ChatHeader.module.css';
+import sidebarStyles from '../styles/components/Sidebar.module.css';
+
+const styles = {
+    ...headerStyles,
+    ...sidebarStyles,
+};
 
 interface Props {
     room: ChatRoom;

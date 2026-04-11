@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../styles/AdminDbConsole.module.css';
+import relStyles from '../styles/adminRelation.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 
 function RelationGraph({ doc }) {
@@ -16,51 +17,51 @@ function RelationGraph({ doc }) {
     const assignments = Array.isArray(doc.assignments) ? doc.assignments : [];
 
     return (
-        <div className={styles.relationCanvas}>
-            <div className={styles.relationNodePrimary}>
-                <div className={styles.nodeLabel}>Course</div>
+        <div className={relStyles.relationCanvas}>
+            <div className={relStyles.relationNodePrimary}>
+                <div className={relStyles.nodeLabel}>Course</div>
                 <strong>{courseId}</strong>
-                <div className={styles.nodeSub}>{courseName}</div>
-                <div className={styles.nodeMetaRow}>
+                <div className={relStyles.nodeSub}>{courseName}</div>
+                <div className={relStyles.nodeMetaRow}>
                     <span>{degree}</span>
                     <span>{semester}</span>
                 </div>
             </div>
 
-            <div className={styles.relationLinksRow}>
-                <div className={styles.relationNode}>
-                    <div className={styles.nodeLabel}>Teacher</div>
-                    <div className={styles.nodeValue}>{teacherId}</div>
+            <div className={relStyles.relationLinksRow}>
+                <div className={relStyles.relationNode}>
+                    <div className={relStyles.nodeLabel}>Teacher</div>
+                    <div className={relStyles.nodeValue}>{teacherId}</div>
                 </div>
 
-                <div className={styles.relationArrow}>
+                <div className={relStyles.relationArrow}>
                     <i className="fas fa-long-arrow-alt-right"></i>
                 </div>
 
-                <div className={styles.relationNode}>
-                    <div className={styles.nodeLabel}>Students</div>
-                    <div className={styles.nodeValue}>{students.length} linked</div>
+                <div className={relStyles.relationNode}>
+                    <div className={relStyles.nodeLabel}>Students</div>
+                    <div className={relStyles.nodeValue}>{students.length} linked</div>
                 </div>
 
-                <div className={styles.relationArrow}>
+                <div className={relStyles.relationArrow}>
                     <i className="fas fa-long-arrow-alt-right"></i>
                 </div>
 
-                <div className={styles.relationNode}>
-                    <div className={styles.nodeLabel}>Assignments</div>
-                    <div className={styles.nodeValue}>{assignments.length} linked</div>
+                <div className={relStyles.relationNode}>
+                    <div className={relStyles.nodeLabel}>Assignments</div>
+                    <div className={relStyles.nodeValue}>{assignments.length} linked</div>
                 </div>
             </div>
 
-            <div className={styles.relationDetailsGrid}>
-                <div className={styles.relationDetailCol}>
+            <div className={relStyles.relationDetailsGrid}>
+                <div className={relStyles.relationDetailCol}>
                     <h4>Student List</h4>
                     {students.length === 0 ? (
                         <div className={styles.hint}>No students linked</div>
                     ) : (
-                        <div className={styles.relationChipWrap}>
+                        <div className={relStyles.relationChipWrap}>
                             {students.map((s, idx) => (
-                                <span key={`${s.studentId || idx}`} className={styles.relationChip}>
+                                <span key={`${s.studentId || idx}`} className={relStyles.relationChip}>
                                     {s.studentId || 'Unknown'}
                                 </span>
                             ))}
@@ -68,14 +69,14 @@ function RelationGraph({ doc }) {
                     )}
                 </div>
 
-                <div className={styles.relationDetailCol}>
+                <div className={relStyles.relationDetailCol}>
                     <h4>Assignments</h4>
                     {assignments.length === 0 ? (
                         <div className={styles.hint}>No assignments linked</div>
                     ) : (
-                        <div className={styles.relationAssignmentList}>
+                        <div className={relStyles.relationAssignmentList}>
                             {assignments.map((a, idx) => (
-                                <div key={`${a.id || idx}`} className={styles.relationAssignmentItem}>
+                                <div key={`${a.id || idx}`} className={relStyles.relationAssignmentItem}>
                                     <strong>{a.id || 'Untitled'}</strong>
                                     <span>{a.title || 'No title'}</span>
                                 </div>

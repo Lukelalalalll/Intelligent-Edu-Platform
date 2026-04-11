@@ -1,0 +1,309 @@
+/* =============================================
+   LLM Monitor Panel — extracted from AdminDashboard.module.css
+   ============================================= */
+.llmMonitorPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.monitorToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.periodPicker {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.periodPicker button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.periodPicker button:hover {
+    color: #334155;
+}
+
+.periodBtnActive {
+    background: #fff !important;
+    color: #1e293b !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.autoRefreshToggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #64748b;
+    cursor: pointer;
+    user-select: none;
+}
+
+.autoRefreshToggle input {
+    accent-color: #6366f1;
+}
+
+.refreshBtn {
+    padding: 6px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.refreshBtn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.monitorTabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.monitorTabs button {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+}
+
+.monitorTabs button:hover {
+    color: #334155;
+}
+
+.monitorTabActive {
+    color: #6366f1 !important;
+    border-bottom-color: #6366f1 !important;
+    font-weight: 600 !important;
+}
+
+.monitorContent {
+    min-height: 200px;
+}
+
+/* KPI Cards */
+.kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kpiGrid > div {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.kpiLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.kpiValue {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.kpiCalls .kpiValue { color: #6366f1; }
+.kpiErrors .kpiValue { color: #ef4444; }
+.kpiLatency .kpiValue { color: #f59e0b; }
+.kpiCost .kpiValue { color: #10b981; }
+
+/* Charts Row */
+.chartsRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.miniChart {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.miniChartLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.miniChartBars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 80px;
+}
+
+.miniBar {
+    flex: 1;
+    min-width: 3px;
+    border-radius: 2px 2px 0 0;
+    transition: height 0.3s ease;
+}
+
+.miniChartEmpty {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 0.82rem;
+}
+
+/* Overview provider cards */
+.overviewGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.providerCard {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.providerName {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1e293b;
+    margin-bottom: 10px;
+}
+
+.providerStats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.providerStats span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.providerStats strong {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Group-by select */
+.groupBySelect {
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #475569;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* Shared table */
+.adminTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.adminTable th {
+    text-align: left;
+    padding: 10px 14px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.adminTable td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.adminTable tbody tr:hover {
+    background: #f8fafc;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.noData {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px;
+    font-size: 0.9rem;
+}
+
+.errorText {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.errorCell {
+    max-width: 300px;
+    word-break: break-all;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+/* Badges */
+.badgeDefault {
+    background: #e2e8f0;
+    color: #475569;
+}

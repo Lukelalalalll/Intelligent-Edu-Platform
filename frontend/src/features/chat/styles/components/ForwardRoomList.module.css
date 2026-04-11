@@ -1,0 +1,41 @@
+/* --- From ForwardModalRoomList.module.css --- */
+/* ── Forward Modal Room List ── */
+
+.forwardRoomList {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.forwardRoomItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.forwardRoomItem:hover {
+  background: #f1f5f9;
+}
+
+.forwardRoomItemSelected {
+  background: rgba(0,123,85,0.08) !important;
+}
+
+.forwardRoomName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
