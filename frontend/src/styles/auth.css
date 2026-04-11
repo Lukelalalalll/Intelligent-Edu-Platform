@@ -637,12 +637,13 @@ body:has(.auth-wrapper) .footer {
 }
 
 /* 2. 让 main 变成 flex 容器，确保内部的 .auth-wrapper 能够绝对撑满所有剩余高度 */
-main:has(.auth-wrapper) {
+main:has(.auth-page-root) {
     display: flex;
     flex-direction: column;
 }
 
 /* 3. 让绿色背景区吸收掉所有剩余空间，死死贴住 Footer */
-.auth-wrapper {
+.auth-wrapper,
+.auth-page-root {
     flex: 1;
 }

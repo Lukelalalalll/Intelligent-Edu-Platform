@@ -51,6 +51,49 @@ const NAV_SECTIONS: NavSection[] = [
     },
 ];
 
+const STUDENT_NAV_SECTIONS: NavSection[] = [
+    {
+        title: 'Main',
+        links: [
+            { to: '/home_student', label: 'Home', icon: 'fa-home' },
+            { to: '/chat', label: 'Chat', icon: 'fa-comments' },
+        ],
+    },
+    {
+        title: 'AI Tools',
+        links: [
+            { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
+            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
+        ],
+    },
+];
+
+const TEACHER_NAV_SECTIONS: NavSection[] = [
+    {
+        title: 'Main',
+        links: [
+            { to: '/', label: 'Home', icon: 'fa-home' },
+            { to: '/chat', label: 'Chat', icon: 'fa-comments' },
+        ],
+    },
+    {
+        title: 'AI Tools',
+        links: [
+            { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
+            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
+            { to: '/knowledge-base', label: 'Knowledge Base', icon: 'fa-database' },
+        ],
+    },
+    {
+        title: 'Workflow',
+        links: [
+            { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
+            { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
+            { to: '/diagnostic-feedback', label: 'Student Feedback', icon: 'fa-comment-dots' },
+        ],
+    },
+];
+
 const ADMIN_SECTION: NavSection = {
     title: 'Admin',
     links: [
@@ -120,7 +163,11 @@ export default function Layout() {
                 ],
             },
         ]
-        : NAV_SECTIONS;
+        : user?.role === 'student'
+            ? STUDENT_NAV_SECTIONS
+            : user?.role === 'teacher'
+                ? TEACHER_NAV_SECTIONS
+                : NAV_SECTIONS;
 
     const totalUnread = useChatStore((s) =>
         Object.values(s.unreadCounts).reduce((sum, n) => sum + n, 0)
@@ -156,7 +203,7 @@ export default function Layout() {
                         )}
 
                         <div className={styles.navLogo}>
-                            <Link to="/">
+                            <Link to={user?.role === 'student' ? '/home_student' : '/'}>
                                 <img src={logoImg} alt="HKU Logo" className={styles.logoImg} />
                             </Link>
                         </div>

@@ -7,6 +7,7 @@ import { CourseProvider } from './hooks/useCourseContext';
 import ErrorBoundary from './shared/ErrorBoundary';
 import RouteErrorBoundary from './shared/RouteErrorBoundary';
 
+const PublishHomeworkEntry = React.lazy(() => import('./entries/publishHomeworkEntry'));
 const HomeEntry = React.lazy(() => import('./entries/homeEntry'));
 const MdProcessorEntry = React.lazy(() => import('./entries/slides/mdProcessorEntry'));
 const LoginEntry = React.lazy(() => import('./entries/loginEntry'));
@@ -31,6 +32,7 @@ const StudyNotesEntry = React.lazy(() => import('./entries/study-notes/studyNote
 const ChatEntry = React.lazy(() => import('./entries/chatEntry'));
 const KnowledgeBaseEntry = React.lazy(() => import('./entries/knowledgeBaseEntry'));
 const DiagnosticFeedbackEntry = React.lazy(() => import('./entries/diagnosticFeedbackEntry'));
+const VideoGenEntry = React.lazy(() => import('./entries/videoGenEntry'));
 
 import client from './api/client';
 
@@ -136,6 +138,7 @@ function App() {
           <Route path="slides/ppt-template" element={<RouteErrorBoundary><ProtectedRoute><PptTemplateEntry /></ProtectedRoute></RouteErrorBoundary>} />
 
           <Route path="questions" element={<RouteErrorBoundary><ProtectedRoute><QuestionGeneratorEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="publish-homework" element={<RouteErrorBoundary><ProtectedRoute><PublishHomeworkEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/dashboard" element={<RouteErrorBoundary><ProtectedRoute><AdminDashboardEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/db-console" element={<RouteErrorBoundary><ProtectedRoute><AdminDbConsoleEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/file-center" element={<RouteErrorBoundary><ProtectedRoute><AdminFileCenterEntry /></ProtectedRoute></RouteErrorBoundary>} />
@@ -144,6 +147,7 @@ function App() {
           <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBaseEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="diagnostic-feedback" element={<RouteErrorBoundary><ProtectedRoute><DiagnosticFeedbackEntry /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="video-gen" element={<RouteErrorBoundary><ProtectedRoute><VideoGenEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchEntry /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="email-agent" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentEntry /></ProtectedRoute></RouteErrorBoundary>} />

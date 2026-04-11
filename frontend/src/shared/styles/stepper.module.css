@@ -1,0 +1,99 @@
+/* ── Shared Stepper Bar ── */
+/* Used by video-gen + question-bank.
+   Theme via CSS custom properties on .stepperWrap:
+   --stepper-accent          (default: var(--primary-color))
+   --stepper-accent-light    (default: var(--primary-light, rgba(0,123,85,0.15)))
+   --stepper-accent-shadow   (default: rgba(0,123,85,0.2))
+*/
+
+@keyframes tabPopIn {
+    0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.stepperWrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px auto 24px;
+    padding: 16px 40px;
+    background: var(--bg-card, #fff);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,0.08));
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 10;
+    opacity: 0;
+    animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
+}
+
+.stepperItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    color: var(--text-sub, #94a3b8);
+    font-weight: 600;
+    transition: var(--transition, all 0.3s ease);
+}
+
+.stepperCircle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: var(--transition, all 0.3s ease);
+    border: 2px solid transparent;
+}
+
+.stepperLabel {
+    font-size: 0.95rem;
+}
+
+.stepperItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -100px;
+    width: 80px;
+    height: 2px;
+    background: #e2e8f0;
+    transform: translateY(-50%);
+    z-index: -1;
+    transition: var(--transition, all 0.3s ease);
+}
+
+.stepperItemDone .stepperCircle {
+    background: var(--stepper-accent-light, var(--primary-light, rgba(0, 123, 85, 0.15)));
+    color: var(--stepper-accent, var(--primary-color));
+}
+
+.stepperItemDone:not(:last-child)::after {
+    background: var(--stepper-accent, var(--primary-color));
+}
+
+.stepperItemDone {
+    cursor: pointer;
+    color: var(--text-main, #1e293b);
+}
+
+.stepperItemDone:hover {
+    transform: translateY(-2px);
+}
+
+.stepperItemActive .stepperCircle {
+    background: var(--stepper-accent, var(--primary-color));
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--stepper-accent-shadow, rgba(0, 123, 85, 0.2));
+}
+
+.stepperItemActive {
+    color: var(--stepper-accent, var(--primary-color));
+}

@@ -1,10 +1,12 @@
 import React, { type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BaseModalProps {
     open?: boolean;
     onClose?: () => void;
     children?: ReactNode;
+    width?: number | string;
 }
 
 const overlayStyle: React.CSSProperties = {
@@ -19,8 +21,8 @@ const boxStyle: React.CSSProperties = {
     boxShadow: '0 24px 48px rgba(0,0,0,0.15)',
 };
 
-export default function BaseModal({ open, onClose, children }: BaseModalProps) {
-    return (
+export default function BaseModal({ open, onClose, children, width }: BaseModalProps) {
+    return createPortal(
         <AnimatePresence>
             {open && (
                 <motion.div
@@ -32,7 +34,7 @@ export default function BaseModal({ open, onClose, children }: BaseModalProps) {
                     transition={{ duration: 0.2 }}
                 >
                     <motion.div
-                        style={boxStyle}
+                        style={{ ...boxStyle, width: width || boxStyle.width }}
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
@@ -42,7 +44,8 @@ export default function BaseModal({ open, onClose, children }: BaseModalProps) {
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
 

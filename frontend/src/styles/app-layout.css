@@ -1,10 +1,10 @@
 /* Global app layout */
 main {
     flex: 1;
-    max-width: 1200px;
+    max-width: 1440px;
     width: 100%;
     margin: 0 auto;
-    padding: 48px 24px;
+    padding: 48px 32px;
     position: relative;
 }
 
@@ -21,7 +21,7 @@ main {
     font-size: 0.9rem;
 }
 
-main:has(.auth-wrapper),
+main:has(.auth-page-root),
 main:has(.global-ai-wrapper),
 main:has(.global-chat-wrapper),
 main:has([class*="ai-workspace-wrapper"]) {
