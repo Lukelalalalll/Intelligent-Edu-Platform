@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import styles from '../styles/videoGen.module.css';
-import { videoApi } from '../../../api/api';
+import { videoApi } from '../api/videoApi';
 import type { Scene } from '../data/themes';
 import { createScene } from '../data/themes';
 

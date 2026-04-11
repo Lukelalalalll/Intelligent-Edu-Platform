@@ -2,8 +2,8 @@
  * studyNotesApi — unified Study Notes (Sub5) API client.
  * Merges studyNotesPlanApi and studyNotesHistoryApi.
  */
-import client from './client';
-import type { GenerationHistoryItem } from '../types/api';
+import client from '../../../api/client';
+import type { GenerationHistoryItem } from '../../../types/api';
 
 // ── Types ──
 
@@ -105,28 +105,9 @@ export const studyNotesPlanApi = {
     },
 };
 
-// ── History API ──
+// ── History API (factory-based) ──
 
-export async function getGenerationHistory(
-    page = 1,
-    pageSize = 10,
-): Promise<{ items: GenerationHistoryItem[]; total: number }> {
-    const res = await client.get('/study-notes/generation_history', {
-        params: { page, page_size: pageSize },
-    });
-    return res.data;
-}
+import { createHistoryApi } from '../../../api/historyApiFactory';
 
-export async function getGenerationDetail(
-    historyId: string,
-): Promise<GenerationHistoryItem> {
-    const res = await client.get(`/study-notes/generation_history/${historyId}`);
-    return res.data;
-}
-
-export async function replayGeneration(
-    historyId: string,
-): Promise<{ tool: string; params: Record<string, unknown>; data: Record<string, unknown> }> {
-    const res = await client.post(`/study-notes/generation_history/${historyId}/replay`);
-    return res.data;
-}
+const _historyApi = createHistoryApi<GenerationHistoryItem>('/study-notes');
+export const { getGenerationHistory, getGenerationDetail, replayGeneration } = _historyApi;

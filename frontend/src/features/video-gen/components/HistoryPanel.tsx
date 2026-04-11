@@ -1,6 +1,6 @@
 import React from 'react';
 import HistoryPanel from '../../../shared/components/HistoryPanel/HistoryPanel';
-import * as api from '../../../api/videoHistoryApi';
+import * as api from '../api/videoApi';
 import s from '../../../styles/history.module.css';
 
 const fmt = (v: any, fb = '-') => (v == null ? fb : String(v).trim() || fb);

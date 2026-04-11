@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import client from '../../../api/client';
 import QuickProcessPage from './QuickProcessPage';
-import { slidesGenerationApi } from '../../../api/slidesGenerationApi';
+import { slidesGenerationApi } from '../api/slidesApi';
 
 export default function QuickProcess() {
     const navigate = useNavigate();

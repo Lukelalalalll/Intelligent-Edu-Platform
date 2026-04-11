@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import HistoryPanel from '../../../shared/components/HistoryPanel/HistoryPanel';
-import * as api from '../../../api/slidesHistoryApi';
+import * as api from '../api/slidesApi';
 import s from '../../../styles/history.module.css';
 
 const fmt = (v: any, fb = '-') => {

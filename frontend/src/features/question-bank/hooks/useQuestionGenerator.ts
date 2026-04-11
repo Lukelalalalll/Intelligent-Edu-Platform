@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import * as sub2Api from '../../../api/questionBankApi';
-import { questionOpsApi } from '../../../api/questionOpsApi';
+import * as sub2Api from '../api/questionBankApi';
+import { questionOpsApi } from '../api/questionOpsApi';
 import { useToast } from '../../../hooks/useToast';
 import { log } from '../../../utils/logger';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';

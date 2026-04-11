@@ -2,8 +2,8 @@
  * videoApi — Video generation REST API client + history.
  * Combines videoApi (from api.ts) and videoHistoryApi.ts.
  */
-import client from './client';
-import type { GenerationHistoryItem } from '../types/api';
+import client from '../../../api/client';
+import type { GenerationHistoryItem } from '../../../types/api';
 
 export const videoApi = {
     optimizeScript: (inputData: { text?: string; file?: File; fileType?: string }, lang = 'zh', provider = 'local_ollama', maxSegments = 8, audience = 'student') => {
@@ -58,21 +58,9 @@ export const videoApi = {
     status: (taskId: string) => client.get(`/video/status/${taskId}`).then(r => r.data),
 };
 
-// ── History ──
+// ── History (factory-based) ──
 
-export async function getGenerationHistory(
-    page = 1,
-    pageSize = 10,
-): Promise<{ items: GenerationHistoryItem[]; total: number }> {
-    const res = await client.get('/video/generation_history', {
-        params: { page, page_size: pageSize },
-    });
-    return res.data;
-}
+import { createHistoryApi } from '../../../api/historyApiFactory';
 
-export async function getGenerationDetail(
-    historyId: string,
-): Promise<GenerationHistoryItem> {
-    const res = await client.get(`/video/generation_history/${historyId}`);
-    return res.data;
-}
+const _historyApi = createHistoryApi<GenerationHistoryItem>('/video');
+export const { getGenerationHistory, getGenerationDetail } = _historyApi;

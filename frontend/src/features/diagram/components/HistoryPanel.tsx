@@ -1,6 +1,6 @@
 import React from 'react';
 import HistoryPanel from '../../../shared/components/HistoryPanel/HistoryPanel';
-import * as api from '../../../api/diagramHistoryApi';
+import * as api from '../api/historyApi';
 import s from '../../../styles/history.module.css';
 
 const fmt = (v: any, fb = '-') => {

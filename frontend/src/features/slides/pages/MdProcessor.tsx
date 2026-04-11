@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { chatApi } from '../../../api/chatApi';
+import { transferApi } from '../../chat/api/transferApi';
 import MdProcessorPage from './MdProcessorPage';
 import HistoryPanel from '../components/HistoryPanel';
 import Button from '../../../shared/components/Button/Button';
@@ -8,7 +8,7 @@ import Card from '../../../shared/components/Card/Card';
 import { useMdProcessorUpload } from '../hooks/useMdProcessorUpload';
 import { useMdProcessorTextInput } from '../hooks/useMdProcessorTextInput';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
-import mdStyles from '../styles/md_processor.module.css';
+import mdStyles from '../styles/mdProcessor.module.css';
 import s from '../../../styles/history.module.css';
 
 export default function MdProcessor() {
@@ -28,7 +28,7 @@ export default function MdProcessor() {
 
         (async () => {
             try {
-                const { file: transferFile } = await chatApi.transferConsumeAndDownload(transferId);
+                const { file: transferFile } = await transferApi.transferConsumeAndDownload(transferId);
                 upload.setFile(transferFile);
                 upload.setErrorMsg('');
                 await upload.processFile(transferFile);

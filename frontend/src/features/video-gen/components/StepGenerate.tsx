@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from '../styles/videoGen.module.css';
-import { videoApi } from '../../../api/api';
+import { videoApi } from '../api/videoApi';
 import type { Scene } from '../data/themes';
 
 const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');

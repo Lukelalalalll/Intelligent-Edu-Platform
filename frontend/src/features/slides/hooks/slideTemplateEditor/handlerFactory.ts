@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 import client from '../../../../api/client';
-import { slidesDeliveryApi, type DeliveryArtifactType } from '../../../../api/slidesDeliveryApi';
+import { slidesDeliveryApi, type DeliveryArtifactType } from '../../api/slidesApi';
 import { persistSchema, sanitizeBullets, updateSchemaSlide } from './schemaUtils';
 
 type FactoryParams = {

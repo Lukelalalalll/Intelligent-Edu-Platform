@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import client from '../../../api/client';
-import { type DeliveryArtifactType } from '../../../api/slidesDeliveryApi';
+import { type DeliveryArtifactType } from '../api/slidesApi';
 import { createSlideTemplateHandlers } from './slideTemplateEditor/handlerFactory';
 import { initializeTemplateEditorData } from './slideTemplateEditor/initUtils';
 

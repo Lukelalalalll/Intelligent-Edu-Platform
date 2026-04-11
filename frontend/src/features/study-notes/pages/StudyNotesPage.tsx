@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { chatApi } from '../../../api/chatApi';
+import { transferApi } from '../../chat/api/transferApi';
 import StudyNotes from '../StudyNotes';
 import HistoryPanel from '../components/HistoryPanel';
 import Button from '../../../shared/components/Button/Button';
 import Card from '../../../shared/components/Card/Card';
-import styles from '../styles/sub5.module.css';
+import styles from '../styles/studyNotes.module.css';
 import s from '../../../styles/history.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 import { useStudyNotesUpload } from '../hooks/useStudyNotesUpload';
 import { useStudyNotesGenerate } from '../hooks/useStudyNotesGenerate';
 import { useSpacedReview } from '../hooks/useSpacedReview';
-import type { StudyPlanDurationOption } from '../../../api/studyNotesPlanApi';
+import type { StudyPlanDurationOption } from '../api/studyNotesApi';
 
 export default function StudyNotesPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -59,7 +59,7 @@ export default function StudyNotesPage() {
             setLoadingText('Receiving file from chat...');
             setError('');
             try {
-                const { file: transferFile, meta } = await chatApi.transferConsumeAndDownload(transferId);
+                const { file: transferFile, meta } = await transferApi.transferConsumeAndDownload(transferId);
                 if (cancelled) return;
                 setFile(transferFile);
                 const transferStyle = (meta.target_options?.style && typeof meta.target_options.style === 'string')

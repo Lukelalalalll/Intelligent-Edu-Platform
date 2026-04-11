@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import client from '../../../api/client';
-import { chatApi } from '../../../api/chatApi';
+import { transferApi } from '../../chat/api/transferApi';
 import ImageExtractorView from '../ImageExtractor';
 import HistoryPanel from '../components/HistoryPanel';
 import Button from '../../../shared/components/Button/Button';
 import Card from '../../../shared/components/Card/Card';
-import imgStyles from '../styles/sub3.module.css';
+import imgStyles from '../styles/imageExtractor.module.css';
 import s from '../../../styles/history.module.css';
 
 export default function ImageExtractorPage() {
@@ -79,7 +79,7 @@ export default function ImageExtractorPage() {
 
         (async () => {
             try {
-                const { file: transferFile } = await chatApi.transferConsumeAndDownload(transferId);
+                const { file: transferFile } = await transferApi.transferConsumeAndDownload(transferId);
                 processUpload(transferFile);
                 setSearchParams((prev) => {
                     const next = new URLSearchParams(prev);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import styles from './styles/studyNotesContent.module.css';
 import ReviewQueuePanel from './components/ReviewQueuePanel';
-import type { ReviewQueueItem, ReviewRating } from '../../api/studyNotesPlanApi';
+import type { ReviewQueueItem, ReviewRating } from './api/studyNotesApi';
 
 function FlashcardItem({ card }) {
     const [flipped, setFlipped] = useState(false);

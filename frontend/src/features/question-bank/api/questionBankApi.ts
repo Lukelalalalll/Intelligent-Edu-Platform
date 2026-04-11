@@ -7,14 +7,14 @@
  * FastAPI routes return untyped `unknown` in the OpenAPI spec.
  * Regenerate schema with: npm run openapi:sync
  */
-import client from './client';
-import type { components, operations } from '../types/generated/schema';
+import client from '../../../api/client';
+import type { components, operations } from '../../../types/generated/schema';
 import type {
     Sub2UploadResponse,
     Sub2ExtractResponse,
     Sub2GenerateResponse,
     GenerationHistoryItem,
-} from '../types/api';
+} from '../../../types/api';
 
 // ── Derived request-body types from generated schema ─────────────────────────
 type ExtractPayload = components['schemas']['ExtractQuestionsSchema'];
@@ -102,7 +102,7 @@ export async function uploadScreenshot(
 
 // ── History API (factory-based) ──
 
-import { createHistoryApi } from './historyApiFactory';
+import { createHistoryApi } from '../../../api/historyApiFactory';
 
 const _historyApi = createHistoryApi<GenerationHistoryItem>('/questions');
 export const { getGenerationHistory, getGenerationDetail } = _historyApi;

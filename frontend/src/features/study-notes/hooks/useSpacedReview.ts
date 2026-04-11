@@ -5,7 +5,7 @@ import {
     type ReviewRating,
     type StudyPlan,
     type StudyPlanDurationOption,
-} from '../../../api/studyNotesPlanApi';
+} from '../api/studyNotesApi';
 
 interface UseSpacedReviewParams {
     notes: string;

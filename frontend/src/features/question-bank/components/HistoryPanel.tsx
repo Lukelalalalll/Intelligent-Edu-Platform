@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import HistoryPanel from '../../../shared/components/HistoryPanel/HistoryPanel';
-import * as sub2Api from '../../../api/questionBankApi';
+import * as sub2Api from '../api/questionBankApi';
 import styles from '../styles/history.module.css';
 
 const formatValue = (value: any, fallback = '-') => {

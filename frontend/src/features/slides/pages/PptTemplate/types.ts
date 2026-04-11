@@ -1,4 +1,4 @@
-import type { DeliveryArtifactType } from '../../../../api/slidesDeliveryApi';
+import type { DeliveryArtifactType } from '../../api/slidesApi';
 
 export type ThemeItem = {
     name: string;

@@ -7,7 +7,7 @@ import Card from '../../../shared/components/Card/Card';
 import { useDiagramExtractSearch } from '../hooks/useDiagramExtractSearch';
 import { useDiagramGenerate } from '../hooks/useDiagramGenerate';
 import { useDiagramImageExtract } from '../hooks/useDiagramImageExtract';
-import { chatApi } from '../../../api/chatApi';
+import { transferApi } from '../../chat/api/transferApi';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 import s from '../../../styles/history.module.css';
 
@@ -30,7 +30,7 @@ export default function DiagramPage() {
         let cancelled = false;
         (async () => {
             try {
-                const { file } = await chatApi.transferConsumeAndDownload(transferId);
+                const { file } = await transferApi.transferConsumeAndDownload(transferId);
                 if (cancelled) return;
 
                 const targetTab = tab === 'images' ? 'images' : 'extract';

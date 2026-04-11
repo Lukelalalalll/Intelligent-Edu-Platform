@@ -1,6 +1,6 @@
 import React from 'react';
 import SlidesLoadingState from '../../../components/SlidesLoadingState';
-import type { DeliveryArtifactType } from '../../../../../api/slidesDeliveryApi';
+import type { DeliveryArtifactType } from '../../../api/slidesApi';
 import { deliveryTabs } from '../constants';
 
 type Props = {

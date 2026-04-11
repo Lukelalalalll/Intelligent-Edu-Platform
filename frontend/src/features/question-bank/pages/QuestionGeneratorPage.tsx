@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import QuestionGeneratorView from '../QuestionGenerator';
 import ToastContainer from '../../../shared/ToastContainer';
 import { useQuestionGenerator } from '../hooks/useQuestionGenerator';
-import { chatApi } from '../../../api/chatApi';
+import { transferApi } from '../../chat/api/transferApi';
 
 export default function QuestionGeneratorPage() {
     const { states, handlers, toasts, removeToast } = useQuestionGenerator();
@@ -16,7 +16,7 @@ export default function QuestionGeneratorPage() {
         let cancelled = false;
         (async () => {
             try {
-                const { file } = await chatApi.transferConsumeAndDownload(transferId);
+                const { file } = await transferApi.transferConsumeAndDownload(transferId);
                 if (cancelled) return;
                 handlers.handleFileChange({ target: { files: [file] } });
                 searchParams.delete('transfer_id');

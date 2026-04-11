@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../styles/reviewQueue.module.css';
-import type { ReviewQueueItem, ReviewRating } from '../../../api/studyNotesPlanApi';
+import type { ReviewQueueItem, ReviewRating } from '../api/studyNotesApi';
 
 interface ReviewQueuePanelProps {
     item: ReviewQueueItem | null;
