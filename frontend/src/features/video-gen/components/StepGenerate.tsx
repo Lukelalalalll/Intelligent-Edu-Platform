@@ -29,8 +29,8 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
         setStatus('running');
         setMessage('Starting...');
         try {
-            // Strip frontend-only fields before sending
-            const cleanScenes = scenes.map(({ _imagePreviewUrl, ...rest }) => rest);
+            // Strip frontend-only preview fields before sending
+            const cleanScenes = scenes.map(({ _imagePreviewUrl, _layoutImagePreviewUrl, ...rest }) => rest);
             const res = await videoApi.generate(inputData!, cleanScenes, lang, provider, enableSubtitles, maxSegments, audience);
             onTaskId(res.taskId);
         } catch {

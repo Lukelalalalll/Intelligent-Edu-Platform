@@ -16,7 +16,12 @@ interface Props {
 
 export default function StepScript({ inputData, lang, provider, audience, maxSegments, onNext, onBack }: Props) {
     const [scripts, setScripts] = useState<string[]>([]);
-    const [slideContents, setSlideContents] = useState<Array<{ title: string; bullets: string[] }>>([]);
+    const [slideContents, setSlideContents] = useState<Array<{
+        title: string; bullets: string[];
+        layoutType?: string; quoteText?: string;
+        col1Title?: string; col1Bullets?: string[];
+        col2Title?: string; col2Bullets?: string[];
+    }>>([]);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [progressMsg, setProgressMsg] = useState('');
@@ -127,6 +132,16 @@ export default function StepScript({ inputData, lang, provider, audience, maxSeg
             if (content) {
                 sc.slideTitle = content.title || sc.slideTitle;
                 sc.slideBody = (content.bullets || []).map(b => `• ${b}`).join('\n');
+                // V2 layout type from AI recommendation
+                const validLayouts = ['title-bullets', 'image-left', 'image-right', 'image-top', 'big-quote', 'two-column'];
+                if (content.layoutType && validLayouts.includes(content.layoutType)) {
+                    sc.layoutType = content.layoutType as Scene['layoutType'];
+                }
+                if (content.quoteText) sc.quoteText = content.quoteText;
+                if (content.col1Title) sc.col1Title = content.col1Title;
+                if (content.col1Bullets) sc.col1Bullets = content.col1Bullets;
+                if (content.col2Title) sc.col2Title = content.col2Title;
+                if (content.col2Bullets) sc.col2Bullets = content.col2Bullets;
             }
             return sc;
         });

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import type { Scene, ThemeId } from '../data/themes';
+import type { Scene, ThemeId, LayoutType, ToneMode } from '../data/themes';
+import { LAYOUT_OPTIONS, TONE_OPTIONS } from '../data/themes';
 import { videoApi } from '../api/videoApi';
 import ThemePicker from './ThemePicker';
 import SlidePreview from './SlidePreview';
@@ -16,7 +17,8 @@ interface Props {
 }
 
 const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange, onDelete, dragControls }) => {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const layoutFileRef = useRef<HTMLInputElement>(null);
 
   const [localScene, setLocalScene] = useState<Scene>(scene);
   const [isTyping, setIsTyping] = useState(false);
@@ -41,24 +43,45 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
     setLocalScene(prev => ({ ...prev, ...partial }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const patchImmediate = (partial: Partial<Scene>) => {
+    const updated = { ...localScene, ...partial };
+    setLocalScene(updated);
+    onChange(updated.id, updated);
+  };
+
+  const handleBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const res = await videoApi.uploadSceneImage(file);
-      patchLocal({
+      patchImmediate({
         slideMode: 'image',
         customImagePath: res.path,
         _imagePreviewUrl: URL.createObjectURL(file),
       });
-    } catch {
-      /* ignore upload error */
-    }
+    } catch { /* ignore */ }
   };
+
+  const handleLayoutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const res = await videoApi.uploadSceneImage(file);
+      patchImmediate({
+        layoutImagePath: res.path,
+        _layoutImagePreviewUrl: URL.createObjectURL(file),
+      });
+    } catch { /* ignore */ }
+  };
+
+  const needsLayoutImage = ['image-left', 'image-right', 'image-top'].includes(localScene.layoutType);
+  const isTwoColumn = localScene.layoutType === 'two-column';
+  const isBigQuote = localScene.layoutType === 'big-quote';
 
   return (
     <div className={s.sceneCard}>
       <div className={s.sceneLeft}>
+        {/* Header with drag + delete */}
         <div className={s.sceneHeader}>
           <div
             onPointerDown={(e) => dragControls?.start(e)}
@@ -80,7 +103,22 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
           placeholder="输入本场景的旁白文字..."
         />
 
-        {/* Title + Body */}
+        {/* Tone selector */}
+        <span className={s.label}>语气模式</span>
+        <div className={s.toneRow}>
+          {TONE_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              className={`${s.tonePill} ${localScene.toneMode === opt.id ? s.active : ''}`}
+              onClick={() => patchImmediate({ toneMode: opt.id })}
+              title={opt.desc}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Title */}
         <span className={s.label}>幻灯片标题</span>
         <input
           className={s.inputSmall}
@@ -88,66 +126,115 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
           onChange={e => patchLocal({ slideTitle: e.target.value })}
           placeholder="标题"
         />
-        <span className={s.label}>幻灯片正文</span>
-        <textarea
-          className={`${s.inputSmall} ${s.scriptArea}`}
-          value={localScene.slideBody}
-          onChange={e => patchLocal({ slideBody: e.target.value })}
-          placeholder="正文内容..."
-          style={{ minHeight: 44 }}
-        />
 
-        {/* Theme picker (only for theme mode) */}
-        {localScene.slideMode === 'theme' && (
+        {/* Conditional fields based on layout */}
+        {isBigQuote ? (
           <>
-            <span className={s.label}>主题色</span>
-            <ThemePicker value={localScene.themeId} onChange={(id: ThemeId) => patchLocal({ themeId: id })} />
+            <span className={s.label}>引用语句</span>
+            <textarea
+              className={`${s.inputSmall} ${s.scriptArea}`}
+              value={localScene.quoteText ?? ''}
+              onChange={e => patchLocal({ quoteText: e.target.value })}
+              placeholder="核心概念或金句..."
+              style={{ minHeight: 60 }}
+            />
+          </>
+        ) : isTwoColumn ? (
+          <div className={s.twoColFields}>
+            <div className={s.colField}>
+              <span className={s.label}>左栏标题</span>
+              <input className={s.inputSmall} value={localScene.col1Title ?? ''} onChange={e => patchLocal({ col1Title: e.target.value })} placeholder="左栏" />
+              <span className={s.label}>左栏要点 (每行一条)</span>
+              <textarea
+                className={`${s.inputSmall} ${s.scriptArea}`}
+                value={(localScene.col1Bullets ?? []).join('\n')}
+                onChange={e => patchLocal({ col1Bullets: e.target.value.split('\n') })}
+                placeholder={'要点1\n要点2'}
+                style={{ minHeight: 60 }}
+              />
+            </div>
+            <div className={s.colField}>
+              <span className={s.label}>右栏标题</span>
+              <input className={s.inputSmall} value={localScene.col2Title ?? ''} onChange={e => patchLocal({ col2Title: e.target.value })} placeholder="右栏" />
+              <span className={s.label}>右栏要点 (每行一条)</span>
+              <textarea
+                className={`${s.inputSmall} ${s.scriptArea}`}
+                value={(localScene.col2Bullets ?? []).join('\n')}
+                onChange={e => patchLocal({ col2Bullets: e.target.value.split('\n') })}
+                placeholder={'要点1\n要点2'}
+                style={{ minHeight: 60 }}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+            <span className={s.label}>幻灯片正文</span>
+            <textarea
+              className={`${s.inputSmall} ${s.scriptArea}`}
+              value={localScene.slideBody}
+              onChange={e => patchLocal({ slideBody: e.target.value })}
+              placeholder="正文内容..."
+              style={{ minHeight: 44 }}
+            />
           </>
         )}
+
+        {/* Layout image upload for image-left/right/top */}
+        {needsLayoutImage && (
+          <>
+            <span className={s.label}>布局内嵌图片</span>
+            <div className={s.layoutImgUpload} onClick={() => layoutFileRef.current?.click()}>
+              {localScene._layoutImagePreviewUrl ? (
+                <img src={localScene._layoutImagePreviewUrl} alt="layout img" />
+              ) : (
+                <span><i className="fas fa-image" /> 上传图片</span>
+              )}
+              <input ref={layoutFileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={handleLayoutImageUpload} />
+            </div>
+          </>
+        )}
+
+        {/* Theme picker */}
+        <span className={s.label}>主题色</span>
+        <ThemePicker value={localScene.themeId} onChange={(id: ThemeId) => patchImmediate({ themeId: id })} />
       </div>
 
       <div className={s.sceneRight}>
-        {/* Mode toggle */}
-        <div className={s.modeRow}>
+        {/* Layout type selector (6-grid) */}
+        <span className={s.label}>布局类型</span>
+        <div className={s.layoutGrid}>
+          {LAYOUT_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              className={`${s.layoutBtn} ${localScene.layoutType === opt.id ? s.active : ''}`}
+              onClick={() => patchImmediate({ layoutType: opt.id })}
+              title={opt.label}
+            >
+              <i className={`fas ${opt.icon}`} />
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Background toggle */}
+        <div className={s.bgToggle}>
           <button
             className={`${s.modePill} ${localScene.slideMode === 'theme' ? s.active : ''}`}
-            onClick={() => patchLocal({ slideMode: 'theme' })}
+            onClick={() => patchImmediate({ slideMode: 'theme' })}
           >
-            主题色
+            主题背景
           </button>
           <button
             className={`${s.modePill} ${localScene.slideMode === 'image' ? s.active : ''}`}
-            onClick={() => patchLocal({ slideMode: 'image' })}
+            onClick={() => bgFileRef.current?.click()}
           >
-            自定义图片
+            自定义背景
           </button>
+          <input ref={bgFileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={handleBgImageUpload} />
         </div>
 
-        {/* Preview / Image upload */}
-        {localScene.slideMode === 'theme' ? (
-          <SlidePreview
-            themeId={localScene.themeId}
-            title={localScene.slideTitle}
-            body={localScene.slideBody}
-            idx={idx}
-            subtitle={subtitles ? localScene.script?.slice(0, 80) : undefined}
-          />
-        ) : (
-          <div className={s.imgUploadZone} onClick={() => fileRef.current?.click()}>
-            {localScene._imagePreviewUrl ? (
-              <img src={localScene._imagePreviewUrl} alt="scene bg" />
-            ) : (
-              <span>点击上传背景图</span>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              hidden
-              onChange={handleImageUpload}
-            />
-          </div>
-        )}
+        {/* Slide Preview */}
+        <SlidePreview scene={localScene} idx={idx} subtitles={subtitles} />
       </div>
     </div>
   );

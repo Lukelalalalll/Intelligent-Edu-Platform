@@ -10,6 +10,37 @@ export type ThemeId =
   | 'rose-gold'
   | 'lunar';
 
+export type LayoutType =
+  | 'title-bullets'
+  | 'image-left'
+  | 'image-right'
+  | 'image-top'
+  | 'big-quote'
+  | 'two-column';
+
+export type ToneMode = 'lecture' | 'inspire' | 'poetry';
+
+export interface LayoutOption {
+  id: LayoutType;
+  label: string;
+  icon: string;
+}
+
+export const LAYOUT_OPTIONS: LayoutOption[] = [
+  { id: 'title-bullets', label: '标准',   icon: 'fa-list' },
+  { id: 'image-left',    label: '左图',   icon: 'fa-columns' },
+  { id: 'image-right',   label: '右图',   icon: 'fa-columns fa-flip-horizontal' },
+  { id: 'image-top',     label: '顶图',   icon: 'fa-window-maximize' },
+  { id: 'big-quote',     label: '引用',   icon: 'fa-quote-left' },
+  { id: 'two-column',    label: '双栏',   icon: 'fa-th-large' },
+];
+
+export const TONE_OPTIONS: { id: ToneMode; label: string; desc: string }[] = [
+  { id: 'lecture', label: '讲课', desc: '稍慢、带停顿，适合知识讲授' },
+  { id: 'inspire', label: '激励', desc: '稍快、带强调，适合总结结论' },
+  { id: 'poetry',  label: '朗读', desc: '低沉、平缓，适合文学诗歌' },
+];
+
 export interface ThemeDef {
   bg: string;
   title: string;
@@ -43,6 +74,20 @@ export interface Scene {
   customImagePath?: string;
   /** local preview only — not sent to backend */
   _imagePreviewUrl?: string;
+
+  /* ── V2 fields ── */
+  layoutType: LayoutType;
+  /** Image embedded inside the layout (not just background) */
+  layoutImagePath?: string;
+  _layoutImagePreviewUrl?: string;
+  toneMode: ToneMode;
+  /** big-quote layout: the quote text */
+  quoteText?: string;
+  /** two-column layout fields */
+  col1Title?: string;
+  col1Bullets?: string[];
+  col2Title?: string;
+  col2Bullets?: string[];
 }
 
 export function createScene(script: string = '', idx: number = 0): Scene {
@@ -53,5 +98,7 @@ export function createScene(script: string = '', idx: number = 0): Scene {
     themeId: 'dark-ocean',
     slideTitle: `第 ${idx + 1} 节`,
     slideBody: '',
+    layoutType: 'title-bullets',
+    toneMode: 'lecture',
   };
 }

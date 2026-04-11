@@ -57,7 +57,7 @@ AUDIENCE_HINTS: dict[str, dict[str, str]] = {
                    "en": "Target audience: general public. Keep it accessible, avoid jargon, be engaging."},
 }
 
-# ── Slide content prompt (generates structured title+bullets) ──
+# ── Slide content prompt (generates structured title+bullets+layoutType) ──
 SLIDE_PROMPT_ZH = """你是教学视频编导。{audience_hint}
 以下是本课程的背景参考资料（来自RAG检索）：
 {rag_context}
@@ -68,7 +68,14 @@ SLIDE_PROMPT_ZH = """你是教学视频编导。{audience_hint}
 请为本段视频幻灯片生成结构化内容（JSON），要求：
 - title: 一行标题（≤20字），高度概括本段主题
 - bullets: 3~5 条要点，每条 ≤25 字
-只输出 JSON 对象，形如 {{"title":"...","bullets":["...","..."]}}"""
+- layoutType: 推荐最适合本段的幻灯片布局，从以下6种中选一个：
+  "title-bullets"(标准列表), "image-left"(左图右文), "image-right"(右文左图),
+  "image-top"(顶部大图), "big-quote"(大引用/金句), "two-column"(双栏对比)
+  选择依据：概念讲解用title-bullets，对比分析用two-column，核心金句用big-quote，需要图示的用image-*
+- quoteText: 如果layoutType是"big-quote"，提供一句精炼的核心金句（≤40字）
+- col1Title/col1Bullets/col2Title/col2Bullets: 如果layoutType是"two-column"，提供左右两栏标题和要点
+
+只输出 JSON 对象，形如 {{"title":"...","bullets":["..."],"layoutType":"title-bullets"}}"""
 
 SLIDE_PROMPT_EN = """You are a teaching video director. {audience_hint}
 Background reference material (from RAG retrieval):
@@ -80,7 +87,13 @@ Narration script for this segment:
 Generate structured slide content (JSON):
 - title: one-line heading (≤60 chars) summarising this segment
 - bullets: 3-5 key points, each ≤60 chars
-Output ONLY a JSON object like {{"title":"...","bullets":["...","..."]}}"""
+- layoutType: recommend the best slide layout from these 6:
+  "title-bullets"(standard list), "image-left"(left image), "image-right"(right image),
+  "image-top"(top image), "big-quote"(key quote), "two-column"(two-column compare)
+- quoteText: if layoutType is "big-quote", provide a concise key quote (≤80 chars)
+- col1Title/col1Bullets/col2Title/col2Bullets: if layoutType is "two-column", provide both columns
+
+Output ONLY a JSON object like {{"title":"...","bullets":["..."],"layoutType":"title-bullets"}}"""
 
 
 async def _call_ai(prompt: str, provider: str = "local_ollama") -> str:
@@ -222,10 +235,22 @@ async def generate_slide_contents(
             if json_match:
                 parsed = json.loads(json_match.group())
                 if "title" in parsed and "bullets" in parsed:
-                    return {
+                    result: dict = {
                         "title": str(parsed["title"])[:60],
                         "bullets": [str(b)[:80] for b in parsed["bullets"][:7]],
                     }
+                    # V2 fields
+                    valid_layouts = {"title-bullets", "image-left", "image-right", "image-top", "big-quote", "two-column"}
+                    lt = parsed.get("layoutType", "title-bullets")
+                    result["layoutType"] = lt if lt in valid_layouts else "title-bullets"
+                    if lt == "big-quote" and parsed.get("quoteText"):
+                        result["quoteText"] = str(parsed["quoteText"])[:80]
+                    if lt == "two-column":
+                        result["col1Title"] = str(parsed.get("col1Title", ""))[:40]
+                        result["col1Bullets"] = [str(b)[:60] for b in (parsed.get("col1Bullets") or [])[:5]]
+                        result["col2Title"] = str(parsed.get("col2Title", ""))[:40]
+                        result["col2Bullets"] = [str(b)[:60] for b in (parsed.get("col2Bullets") or [])[:5]]
+                    return result
         except Exception as exc:
             logger.warning("Slide content generation failed: %s", exc)
         # Fallback: extract first line as title, rest as single bullet
@@ -233,6 +258,7 @@ async def generate_slide_contents(
         return {
             "title": (lines[0][:40] if lines else ""),
             "bullets": [l[:60] for l in lines[1:4]] or [script[:60]],
+            "layoutType": "title-bullets",
         }
 
     return list(await asyncio.gather(*[_one(s) for s in scripts]))

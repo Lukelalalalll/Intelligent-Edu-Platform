@@ -19,7 +19,13 @@ export const videoApi = {
 
     generate: (
         inputData: { text?: string; file?: File },
-        scenes: Array<{ id: string; script: string; slideMode: string; themeId: string; slideTitle: string; slideBody: string; customImagePath?: string }>,
+        scenes: Array<{
+            id: string; script: string; slideMode: string; themeId: string;
+            slideTitle: string; slideBody: string; customImagePath?: string;
+            layoutType?: string; layoutImagePath?: string; toneMode?: string;
+            quoteText?: string; col1Title?: string; col1Bullets?: string[];
+            col2Title?: string; col2Bullets?: string[];
+        }>,
         lang = 'zh',
         provider = 'local_ollama',
         subtitles = true,

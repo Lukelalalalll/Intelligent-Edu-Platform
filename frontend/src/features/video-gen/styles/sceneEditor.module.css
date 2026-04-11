@@ -163,10 +163,9 @@
   overflow: hidden;
   position: relative;
   font-size: 11px;
-  padding: 16px 18px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   transition: box-shadow .25s;
 }
@@ -219,6 +218,116 @@
   padding: 4px 8px;
   font-size: 9px;
   line-height: 1.4;
+}
+
+/* ── Tone Selector ─────────────── */
+.toneRow {
+  display: flex;
+  gap: 6px;
+}
+.tonePill {
+  flex: 1;
+  padding: 7px 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all .2s;
+}
+.tonePill:hover {
+  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+.tonePill.active {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+}
+
+/* ── Layout Grid ──────────────── */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.layoutBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.layoutBtn i {
+  font-size: 14px;
+}
+.layoutBtn:hover {
+  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+.layoutBtn.active {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+}
+
+/* ── Background Toggle ─────────── */
+.bgToggle {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Two-Column Fields ─────────── */
+.twoColFields {
+  display: flex;
+  gap: 12px;
+}
+.colField {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* ── Layout Embedded Image Upload ─ */
+.layoutImgUpload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  height: 80px;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 12px;
+  transition: border-color .2s, background .2s;
+  overflow: hidden;
+  position: relative;
+  background: #f8fafc;
+}
+.layoutImgUpload:hover {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.03);
+}
+.layoutImgUpload img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* image upload zone */

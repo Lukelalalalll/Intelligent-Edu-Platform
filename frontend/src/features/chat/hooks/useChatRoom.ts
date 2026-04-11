@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
 import { chatApi } from '../api';
 import { useCurrentUser } from './useCurrentUser';
@@ -9,8 +10,9 @@ export function useChatRoom(roomId: string) {
     const {
         rooms, messages, setMessages, prependMessages, appendMessage,
         updateRoomLastMessage, clearUnread, markMessageFailed, replaceOptimisticMessage, wsSend,
-        recordLastSeen,
+        recordLastSeen, setActiveRoom,
     } = useChatStore();
+    const navigate = useNavigate();
 
     const [hasMore, setHasMore] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -56,8 +58,16 @@ export function useChatRoom(roomId: string) {
                 setMessages(roomId, res.messages);
                 setHasMore(res.hasMore);
                 setInitialLoading(false);
-            } catch {
+            } catch (err: any) {
                 if (!alive) return;
+                const status = err?.response?.status;
+                if (status === 404 || status === 403) {
+                    setMessages(roomId, []);
+                    setActiveRoom(null);
+                    navigate('/chat', { replace: true });
+                    setInitialLoading(false);
+                    return;
+                }
                 // Keep a blocking loading state while offline so users can't act on incomplete room data.
                 if (networkBus.isOffline) {
                     setInitialLoading(true);
@@ -86,7 +96,7 @@ export function useChatRoom(roomId: string) {
             alive = false;
             unsubscribe();
         };
-    }, [roomId, setMessages, clearUnread]);
+    }, [roomId, setMessages, clearUnread, setActiveRoom, navigate]);
 
     // 自动滚动到底部已被移除
     useEffect(() => {

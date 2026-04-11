@@ -1,9 +1,17 @@
-"""Main /chat streaming endpoint."""
+"""Main /chat streaming endpoint.
 
-import asyncio
-import json
+Responsibilities in this file are kept thin — the route handler:
+  1. Validates & parses the incoming request  (``_parse_and_validate``)
+  2. Loads user AI-memory from DB              (``_load_ai_memory``)
+  3. Runs student RAG if applicable            (``run_student_rag``)
+  4. Builds the system-override & LLM context  (``_build_system_override``, ``_build_llm_context``)
+  5. Delegates streaming generation to          ``chat_providers.generate_chat_response``
+"""
+
+from __future__ import annotations
+
 import logging
-import time
+from typing import Any
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -12,36 +20,39 @@ from backend.config import Config
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.schemas import AiChatSchema
-from backend.services.local_llm_service import LocalLLMUnavailableError
-from backend.services.rag_chat_pipeline import (
-    postcheck_and_downgrade,
-    task_profile_for_phase,
-)
+from backend.services.rag_chat_pipeline import task_profile_for_phase
 
-from .router import ai_router, _limiter, _SUPPORTED_PROVIDERS, ai_gateway_service
-from .prompting import (
-    _TEACHER_SYSTEM_MSG,
-    _STUDENT_SYSTEM_MSG,
-    _STUDENT_TUTOR_MODE_MSG,
-    _STUDENT_DOC_SUMMARY_MODE_MSG,
-    _STUDENT_HINT_MODE_MSG,
-)
+from .chat_models import ParsedRequest, RAGResult, StreamMeta
+from .chat_providers import generate_chat_response
+from .chat_streaming import sse_error
 from .helpers import (
-    _chunk_text,
     _compact_chat_history,
     _is_document_summary_request,
-    _looks_truncated_response,
-    _sanitize_answer_text,
     _split_user_prompt_and_attachment_text,
 )
+from .prompting import (
+    _STUDENT_DOC_SUMMARY_MODE_MSG,
+    _STUDENT_HINT_MODE_MSG,
+    _STUDENT_SYSTEM_MSG,
+    _STUDENT_TUTOR_MODE_MSG,
+)
 from .rag_orchestrator import run_student_rag
+from .router import _SUPPORTED_PROVIDERS, _limiter, ai_router
 
 logger = logging.getLogger(__name__)
 
+# ── Memory profile fields we surface to the LLM ───────────────────
+_MEMORY_FIELDS = ("name", "major", "year", "preferences")
+_VALID_TUTOR_MODES = frozenset({"tutor", "hint_only"})
 
-@ai_router.post("/chat")
-@_limiter.limit("30/minute")
-async def ai_chat(request: Request, req: AiChatSchema, user: dict = Depends(get_current_user)):  # noqa: C901  # NOSONAR
+
+# ── Request parsing & validation ──────────────────────────────────
+
+def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
+    """Extract, normalise and validate all request parameters.
+
+    Raises ``HTTPException`` on invalid input.
+    """
     if not req.messages:
         raise HTTPException(status_code=400, detail="No messages")
 
@@ -53,305 +64,156 @@ async def ai_chat(request: Request, req: AiChatSchema, user: dict = Depends(get_
     if not user_messages:
         raise HTTPException(status_code=400, detail="No user message")
 
-    latest_user_message = str(user_messages[-1].get("content", "")).strip()
-    prompt_only_message, uploaded_attachment_text = _split_user_prompt_and_attachment_text(latest_user_message)
-    effective_question = prompt_only_message or latest_user_message
-    latest_user_images = user_messages[-1].get("images", [])
+    latest = user_messages[-1]
+    latest_user_message = str(latest.get("content", "")).strip()
+    prompt_only, attachment_text = _split_user_prompt_and_attachment_text(latest_user_message)
+    effective_question = prompt_only or latest_user_message
+    latest_user_images: list[Any] = latest.get("images", [])
+
     tutor_mode = str(getattr(req, "tutor_mode", "tutor") or "tutor").strip().lower()
-    if tutor_mode not in {"tutor", "hint_only"}:
+    if tutor_mode not in _VALID_TUTOR_MODES:
         tutor_mode = "tutor"
 
     if not latest_user_message and not latest_user_images:
         raise HTTPException(status_code=400, detail="Latest user message is empty")
 
+    # Provider resolution
     requested_provider = str(req.provider or Config.AI_DEFAULT_PROVIDER or "local_ollama").strip().lower()
     if requested_provider not in _SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {requested_provider}")
     if not Config.AI_ALLOW_PROVIDER_SWITCH and req.provider and req.provider != Config.AI_DEFAULT_PROVIDER:
         raise HTTPException(status_code=403, detail="Provider switching is disabled")
 
-    resolved_provider = requested_provider
-
-    # Load user's AI memory to inject as context
-    user_doc = await db.users.find_one({"_id": user["_id"]})
-    ai_memory = (user_doc or {}).get("ai_memory", {})
-    memory_text = ""
-    if ai_memory:
-        parts = []
-        if ai_memory.get("name"):
-            parts.append(f"Name: {ai_memory['name']}")
-        if ai_memory.get("major"):
-            parts.append(f"Major: {ai_memory['major']}")
-        if ai_memory.get("year"):
-            parts.append(f"Year: {ai_memory['year']}")
-        if ai_memory.get("preferences"):
-            parts.append(f"Preferences: {ai_memory['preferences']}")
-        if parts:
-            memory_text = "Student profile — " + "; ".join(parts) + ". Adapt your responses to this student's background."
-
-    # ── Role-based behaviour ──
     role = user.get("role", "student")
-    is_student = role not in ("teacher", "admin")
+    user_id = str(user.get("_id", user.get("id", "")))
 
-    # Build RAG context for students (retrieve relevant course material)
-    rag_context_text = ""
-    rag_citations: list[dict] = []
-    rag_top_k = max(1, int(Config.RAG_ANSWER_TOP_K))
-    rag_retrieve_top_n = max(rag_top_k, int(Config.RAG_RETRIEVE_TOP_N))
-    rag_retry_used = False
-    rag_retry_success = False
-    rag_empty_after_retry = False
-    rag_retrieval_query = effective_question
-    rag_rewritten_query = effective_question
-    rag_retrieval_latency_ms = 0.0
-    student_course_ids: list[str] = []
-    forced_response_message = ""
-    compact_history = _compact_chat_history(cleaned[:-1])
+    return ParsedRequest(
+        latest_user_message=latest_user_message,
+        prompt_only_message=prompt_only,
+        uploaded_attachment_text=attachment_text,
+        effective_question=effective_question,
+        latest_user_images=latest_user_images,
+        tutor_mode=tutor_mode,
+        requested_provider=requested_provider,
+        resolved_provider=requested_provider,
+        role=role,
+        is_student=role not in ("teacher", "admin"),
+        user=user,
+        user_id=user_id,
+        cleaned_messages=cleaned,
+        compact_history=_compact_chat_history(cleaned[:-1]),
+        memory_text="",
+    )
 
-    if is_student:
-        rag = await run_student_rag(
-            user=user,
-            effective_question=effective_question,
-            uploaded_attachment_text=uploaded_attachment_text,
-            tutor_mode=tutor_mode,
-            resolved_provider=resolved_provider,
-            cleaned_messages=cleaned,
-        )
-        rag_context_text = rag["rag_context_text"]
-        rag_citations = rag["rag_citations"]
-        rag_top_k = rag["rag_top_k"]
-        rag_retrieve_top_n = rag["rag_retrieve_top_n"]
-        rag_retry_used = rag["rag_retry_used"]
-        rag_retry_success = rag["rag_retry_success"]
-        rag_empty_after_retry = rag["rag_empty_after_retry"]
-        rag_retrieval_query = rag["rag_retrieval_query"]
-        rag_rewritten_query = rag["rag_rewritten_query"]
-        rag_retrieval_latency_ms = rag["rag_retrieval_latency_ms"]
-        student_course_ids = rag["student_course_ids"]
-        forced_response_message = rag["forced_response_message"]
-        compact_history = rag["compact_history"]
 
-    # System override: Socratic prompt for students, default for teachers
-    system_override = None
-    if is_student:
-        if tutor_mode == "hint_only":
-            mode_prompt = _STUDENT_HINT_MODE_MSG
-        elif _is_document_summary_request(effective_question, uploaded_attachment_text):
-            mode_prompt = _STUDENT_DOC_SUMMARY_MODE_MSG
-        else:
-            mode_prompt = _STUDENT_TUTOR_MODE_MSG
-        system_override = _STUDENT_SYSTEM_MSG + "\n\n" + mode_prompt + rag_context_text
+# ── AI memory ─────────────────────────────────────────────────────
 
-    context = {
+async def _load_ai_memory(user: dict) -> str:
+    """Load the user's stored AI-memory profile from MongoDB."""
+    user_doc = await db.users.find_one({"_id": user["_id"]})
+    ai_memory: dict = (user_doc or {}).get("ai_memory", {})
+    if not ai_memory:
+        return ""
+
+    parts = [
+        f"{field.capitalize()}: {ai_memory[field]}"
+        for field in _MEMORY_FIELDS
+        if ai_memory.get(field)
+    ]
+    if not parts:
+        return ""
+    return "Student profile — " + "; ".join(parts) + ". Adapt your responses to this student's background."
+
+
+# ── System override ───────────────────────────────────────────────
+
+def _build_system_override(
+    parsed: ParsedRequest,
+    rag_context_text: str,
+) -> str | None:
+    """Build the system-level prompt override for students; ``None`` for teachers."""
+    if not parsed.is_student:
+        return None
+
+    if parsed.tutor_mode == "hint_only":
+        mode_prompt = _STUDENT_HINT_MODE_MSG
+    elif _is_document_summary_request(parsed.effective_question, parsed.uploaded_attachment_text):
+        mode_prompt = _STUDENT_DOC_SUMMARY_MODE_MSG
+    else:
+        mode_prompt = _STUDENT_TUTOR_MODE_MSG
+
+    return _STUDENT_SYSTEM_MSG + "\n\n" + mode_prompt + rag_context_text
+
+
+# ── LLM context dict ─────────────────────────────────────────────
+
+def _build_llm_context(
+    parsed: ParsedRequest,
+    compact_history: list[dict],
+    system_override: str | None,
+) -> dict:
+    return {
         "chat_history": compact_history,
-        "system_memory": memory_text,
-        "coze_user_id": f"chat_{str(user.get('_id', user.get('id', 'anon')))}",
+        "system_memory": parsed.memory_text,
+        "coze_user_id": f"chat_{parsed.user_id or 'anon'}",
         "system_override": system_override,
-        "images": latest_user_images,
+        "images": parsed.latest_user_images,
         "task_profile": task_profile_for_phase("answer"),
     }
 
-    async def generate_async():
+
+# ── Route handler ─────────────────────────────────────────────────
+
+@ai_router.post("/chat")
+@_limiter.limit("30/minute")
+async def ai_chat(
+    request: Request,
+    req: AiChatSchema,
+    user: dict = Depends(get_current_user),
+) -> StreamingResponse:
+    # 1. Parse & validate
+    parsed = _parse_and_validate(req, user)
+
+    # 2. Load AI memory
+    parsed.memory_text = await _load_ai_memory(user)
+
+    # 3. RAG retrieval (students only)
+    if parsed.is_student:
+        rag_dict = await run_student_rag(
+            user=user,
+            effective_question=parsed.effective_question,
+            uploaded_attachment_text=parsed.uploaded_attachment_text,
+            tutor_mode=parsed.tutor_mode,
+            resolved_provider=parsed.resolved_provider,
+            cleaned_messages=parsed.cleaned_messages,
+        )
+        rag = RAGResult.from_dict(rag_dict)
+    else:
+        rag = RAGResult(
+            rag_retrieval_query=parsed.effective_question,
+            rag_rewritten_query=parsed.effective_question,
+            compact_history=parsed.compact_history,
+        )
+
+    # 4. Build system override & LLM context
+    system_override = _build_system_override(parsed, rag.rag_context_text)
+    context = _build_llm_context(parsed, rag.compact_history, system_override)
+
+    # 5. Build SSE metadata envelope
+    meta = StreamMeta.from_rag(
+        rag,
+        provider=parsed.resolved_provider,
+        requested_provider=parsed.requested_provider,
+        tutor_mode=parsed.tutor_mode,
+    )
+
+    # 6. Stream response
+    async def _stream():
         try:
-            meta: dict = {
-                "provider": resolved_provider,
-                "requested_provider": requested_provider,
-                "tutor_mode": tutor_mode,
-                "rag_top_k": rag_top_k,
-                "rag_retrieve_top_n": rag_retrieve_top_n,
-                "rag_retrieval_query": rag_retrieval_query,
-                "rag_rewritten_query": rag_rewritten_query,
-                "rag_retry_used": rag_retry_used,
-                "rag_retry_success": rag_retry_success,
-                "rag_empty_after_retry": rag_empty_after_retry,
-                "rag_retrieval_latency_ms": rag_retrieval_latency_ms,
-            }
-
-            # Emit RAG citations as metadata before content begins
-            if rag_citations:
-                meta["citations"] = rag_citations
-
-            if is_student and forced_response_message:
-                meta["warning"] = "insufficient_evidence"
-                yield f"data: {json.dumps({'meta': meta}, ensure_ascii=False)}\n\n"
-                for part in _chunk_text(forced_response_message, size=2):
-                    data = {"choices": [{"delta": {"content": part}}]}
-                    yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                    await asyncio.sleep(0.01)
-                yield "data: [DONE]\n\n"
-                try:
-                    from backend.infrastructure.rag_telemetry import rag_telemetry
-                    await rag_telemetry.record(
-                        user_id=str(user.get("_id", user.get("id", ""))),
-                        role="student",
-                        course_ids=student_course_ids,
-                        query=latest_user_message,
-                        result_count=0,
-                        latency_ms=rag_retrieval_latency_ms,
-                        use_hybrid=True,
-                        top_k=rag_retrieve_top_n,
-                        metadata={
-                            "retry_used": rag_retry_used,
-                            "retry_success": rag_retry_success,
-                            "empty_after_retry": True,
-                            "answer_latency_ms": 0,
-                            "postcheck_downgraded": 0,
-                            "phase": "insufficient_evidence",
-                        },
-                    )
-                except Exception:
-                    logger.exception("Failed to record insufficient-evidence telemetry")
-                return
-
-            if resolved_provider == "local_ollama":
-                try:
-                    from backend.services.local_llm_service import LocalLLMService
-                    local_svc = LocalLLMService()
-                    # Check health before generation so we can fallback gracefully
-                    is_healthy, msg = await local_svc.health_check()
-                    if not is_healthy:
-                        raise LocalLLMUnavailableError(f"Health check failed: {msg}")
-                    
-                    answer_t0 = time.perf_counter()
-                    yield f"data: {json.dumps({'meta': meta}, ensure_ascii=False)}\n\n"
-                    if is_student and Config.RAG_POSTCHECK_ENABLED:
-                        full_local_answer = await local_svc.chat(latest_user_message, context)
-                    else:
-                        streamed_parts: list[str] = []
-                        async for chunk in local_svc.chat_stream(latest_user_message, context):
-                            streamed_parts.append(chunk)
-                        full_local_answer = "".join(streamed_parts)
-
-                    answer_latency_ms = round((time.perf_counter() - answer_t0) * 1000, 2)
-                    postcheck_downgraded = 0
-                    if is_student and Config.RAG_POSTCHECK_ENABLED:
-                        full_local_answer, postcheck_downgraded = postcheck_and_downgrade(
-                            answer=full_local_answer,
-                            evidence_cards=rag_citations,
-                        )
-
-                    full_local_answer = _sanitize_answer_text(full_local_answer)
-                    for part in _chunk_text(full_local_answer, size=2):
-                        data = {"choices": [{"delta": {"content": part}}]}
-                        yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-                    if _looks_truncated_response(full_local_answer):
-                        continuation_meta = {
-                            "provider": "local_ollama",
-                            "warning": "Detected possible truncation; auto-continuing once.",
-                        }
-                        yield f"data: {json.dumps({'meta': continuation_meta}, ensure_ascii=False)}\n\n"
-
-                        continuation_history = _compact_chat_history(cleaned[:-1]) + [
-                            {"role": "user", "content": latest_user_message},
-                            {"role": "assistant", "content": full_local_answer[-3000:]},
-                        ]
-                        continuation_context = dict(context)
-                        continuation_context["chat_history"] = continuation_history
-                        continuation_context["task_profile"] = task_profile_for_phase("answer")
-                        continuation_prompt = (
-                            "Continue your previous answer from the exact unfinished point. "
-                            "Do not restart or repeat prior content. "
-                            "Finish with a complete ending sentence."
-                        )
-
-                        async for chunk in local_svc.chat_stream(continuation_prompt, continuation_context):
-                            data = {"choices": [{"delta": {"content": chunk}}]}
-                            yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-                    try:
-                        from backend.infrastructure.rag_telemetry import rag_telemetry
-                        await rag_telemetry.record(
-                            user_id=str(user.get("_id", user.get("id", ""))),
-                            role="student" if is_student else role,
-                            course_ids=student_course_ids,
-                            query=latest_user_message,
-                            result_count=len(rag_citations),
-                            latency_ms=rag_retrieval_latency_ms,
-                            use_hybrid=True,
-                            top_k=rag_retrieve_top_n,
-                            metadata={
-                                "retry_used": rag_retry_used,
-                                "retry_success": rag_retry_success,
-                                "empty_after_retry": rag_empty_after_retry,
-                                "answer_latency_ms": answer_latency_ms,
-                                "postcheck_downgraded": postcheck_downgraded,
-                                "phase": "answer",
-                            },
-                        )
-                    except Exception:
-                        logger.exception("Failed to record answer telemetry")
-                    
-                    yield "data: [DONE]\n\n"
-                    return
-                except LocalLLMUnavailableError as exc:
-                    logger.warning("Local Ollama unavailable, fallback to Coze: %s", exc)
-                    meta["provider"] = "coze"
-                    meta["fallback_from"] = "local_ollama"
-                    meta["fallback_to"] = "coze"
-                    meta["warning"] = f"Local model unavailable: {exc}"
-                    # Falls through to Coze below
-
-            # Coze fallback or default provider
-            answer_t0 = time.perf_counter()
-            reply = await ai_gateway_service.chat_with_provider(
-                message=latest_user_message,
-                context=context,
-                provider="coze",
-            )
-            answer_latency_ms = round((time.perf_counter() - answer_t0) * 1000, 2)
-
-            if is_student and Config.RAG_POSTCHECK_ENABLED:
-                reply, downgraded = postcheck_and_downgrade(answer=reply, evidence_cards=rag_citations)
-                meta["postcheck_downgraded"] = downgraded
-
-            reply = _sanitize_answer_text(reply)
-
-            try:
-                from backend.infrastructure.rag_telemetry import rag_telemetry
-                await rag_telemetry.record(
-                    user_id=str(user.get("_id", user.get("id", ""))),
-                    role="student" if is_student else role,
-                    course_ids=student_course_ids,
-                    query=latest_user_message,
-                    result_count=len(rag_citations),
-                    latency_ms=rag_retrieval_latency_ms,
-                    use_hybrid=True,
-                    top_k=rag_retrieve_top_n,
-                    metadata={
-                        "retry_used": rag_retry_used,
-                        "retry_success": rag_retry_success,
-                        "empty_after_retry": rag_empty_after_retry,
-                        "answer_latency_ms": answer_latency_ms,
-                        "postcheck_downgraded": int(meta.get("postcheck_downgraded", 0) or 0),
-                        "phase": "answer_fallback_coze",
-                    },
-                )
-            except Exception:
-                logger.exception("Failed to record coze fallback telemetry")
-
-            yield f"data: {json.dumps({'meta': meta}, ensure_ascii=False)}\n\n"
-
-            chunks = _chunk_text(reply, size=1)
-            if not chunks:
-                chunks = ["No response content."]
-
-            for part in chunks:
-                data = {
-                    "choices": [
-                        {
-                            "delta": {
-                                "content": part,
-                            }
-                        }
-                    ]
-                }
-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(0.01)
-
-            yield "data: [DONE]\n\n"
-        except Exception:  # noqa: BLE001
+            async for frame in generate_chat_response(parsed, rag, meta, context):
+                yield frame
+        except Exception:
             logger.exception("AI chat streaming error")
-            yield f"data: {json.dumps({'error': 'An internal error occurred. Please try again.'}, ensure_ascii=False)}\n\n"
+            yield sse_error()
 
-    return StreamingResponse(generate_async(), media_type="text/event-stream")
+    return StreamingResponse(_stream(), media_type="text/event-stream")

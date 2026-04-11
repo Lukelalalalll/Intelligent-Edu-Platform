@@ -1,10 +1,50 @@
 """Step C — TTS synthesis (edge-tts, free, no API key)."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional
 
-from .types import TTS_VOICES
+from .types import TTS_VOICES, logger
+
+# ── SSML prosody presets by tone mode ──
+TONE_PROSODY: dict[str, dict[str, str]] = {
+    "lecture":  {"rate": "-5%",  "pitch": "+0Hz",  "volume": "+0%"},
+    "inspire":  {"rate": "+8%",  "pitch": "+2Hz",  "volume": "+5%"},
+    "poetry":   {"rate": "-15%", "pitch": "-3Hz",  "volume": "-5%"},
+}
+
+
+def build_ssml(text: str, voice: str, tone_mode: str = "lecture") -> str:
+    """Build an SSML document with prosody tags based on tone_mode.
+
+    Adds sentence-level <break> tags after punctuation for more natural pauses,
+    and wraps the whole text in a <prosody> envelope matching the tone.
+    """
+    prosody = TONE_PROSODY.get(tone_mode, TONE_PROSODY["lecture"])
+
+    # Insert explicit SSML breaks after sentence-ending punctuation
+    processed = text.strip()
+    # Chinese sentence endings
+    processed = re.sub(r'([。！？])\s*', r'\1<break time="350ms"/>', processed)
+    # English sentence endings
+    processed = re.sub(r'([.!?])\s+', r'\1<break time="300ms"/> ', processed)
+    # Comma pauses
+    processed = re.sub(r'([，,])\s*', r'\1<break time="150ms"/>', processed)
+
+    # For "inspire" tone, wrap keywords (text in 【】 or *text*) with <emphasis>
+    if tone_mode == "inspire":
+        processed = re.sub(r'【(.+?)】', r'<emphasis level="strong">\1</emphasis>', processed)
+        processed = re.sub(r'\*(.+?)\*', r'<emphasis level="moderate">\1</emphasis>', processed)
+
+    ssml = (
+        f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">'
+        f'<voice name="{voice}">'
+        f'<prosody rate="{prosody["rate"]}" pitch="{prosody["pitch"]}" volume="{prosody["volume"]}">'
+        f'{processed}'
+        f'</prosody></voice></speak>'
+    )
+    return ssml
 
 
 def _fmt_srt(sec: float) -> str:
@@ -72,11 +112,13 @@ async def scripts_to_audio(
     work_dir: Path,
     lang: str = "zh",
     subtitles: bool = False,
+    tone_modes: Optional[list[str]] = None,
 ) -> tuple[list[Path], list[Optional[Path]]]:
     """Concurrently synthesise TTS for all segments.
 
     Returns ``(audio_paths, srt_paths)``.
     ``srt_paths`` entries are ``None`` when ``subtitles=False``.
+    When ``tone_modes`` is provided, uses SSML with prosody for each segment.
     """
     import asyncio
     import edge_tts
@@ -84,11 +126,28 @@ async def scripts_to_audio(
 
     async def _one(i: int, text: str) -> tuple[Path, Optional[Path]]:
         audio_out = work_dir / f"audio_{i:03d}.mp3"
+        tone = (tone_modes[i] if tone_modes and i < len(tone_modes) else "lecture")
+
         if subtitles:
             srt_out = work_dir / f"sub_{i:03d}.srt"
-            await synth_with_subtitles(text, voice, audio_out, srt_out)
+            # Use SSML for subtitle-mode TTS too
+            ssml = build_ssml(text, voice, tone)
+            try:
+                communicate = edge_tts.Communicate(ssml, voice)
+                await synth_with_subtitles(text, voice, audio_out, srt_out)
+            except Exception:
+                logger.warning("SSML TTS failed for segment %d, falling back to plain text", i)
+                await synth_with_subtitles(text, voice, audio_out, srt_out)
             return audio_out, srt_out
-        await edge_tts.Communicate(text, voice).save(str(audio_out))
+
+        # Non-subtitle mode: try SSML, fall back to plain text
+        try:
+            ssml = build_ssml(text, voice, tone)
+            communicate = edge_tts.Communicate(ssml, voice)
+            await communicate.save(str(audio_out))
+        except Exception:
+            logger.warning("SSML TTS failed for segment %d, falling back to plain text", i)
+            await edge_tts.Communicate(text, voice).save(str(audio_out))
         return audio_out, None
 
     results = list(await asyncio.gather(*[_one(i, s) for i, s in enumerate(scripts)]))

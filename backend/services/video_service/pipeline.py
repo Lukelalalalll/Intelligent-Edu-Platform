@@ -9,7 +9,7 @@ from .types import _tasks, VIDEO_DIR
 from .extract import extract_text_from_pdf_by_page, extract_text_from_md_txt
 from .script import generate_scripts, optimize_full_script
 from .tts import scripts_to_audio
-from .render import render_scene_slides, get_slide_images
+from .render import render_scene_slides, render_scene_slides_v2, get_slide_images
 from .compose import _make_clip, _concat_video
 
 logger = logging.getLogger(__name__)
@@ -37,20 +37,23 @@ async def run_video_pipeline(
         if scenes and len(scenes) > 0:
             task.update({"status": "running", "progress": 10, "message": "Processing scenes..."})
             scene_scripts = [s.get("script", "") for s in scenes]
+            tone_modes = [s.get("toneMode", "lecture") for s in scenes]
 
-            # TTS (concurrent)
+            # TTS (concurrent) — with SSML prosody and subtitles
             task.update({"progress": 25, "message": "Synthesizing voice (parallel)..."})
-            audio_paths, _ = await scripts_to_audio(scene_scripts, work_dir, lang, False)
+            audio_paths, srt_paths = await scripts_to_audio(
+                scene_scripts, work_dir, lang, subtitles, tone_modes,
+            )
 
-            # Render themed slides (subtitles are burnt in by Pillow)
+            # Render themed slides (Playwright HTML → fallback Pillow)
             task.update({"progress": 50, "message": "Rendering themed slides..."})
-            slide_paths = render_scene_slides(scenes, work_dir, subtitles)
+            slide_paths = render_scene_slides_v2(scenes, work_dir, subtitles)
 
             pair_count = min(len(slide_paths), len(audio_paths))
             slide_paths = slide_paths[:pair_count]
             audio_paths = audio_paths[:pair_count]
 
-            # FFmpeg clips (concurrent)
+            # FFmpeg clips (concurrent) — with Ken Burns, fade, SRT overlay
             task.update({"progress": 65, "message": f"Compositing {pair_count} clips..."})
             loop = asyncio.get_event_loop()
             clip_jobs = [
@@ -58,6 +61,7 @@ async def run_video_pipeline(
                     None, _make_clip,
                     slide_paths[i], audio_paths[i],
                     work_dir / f"clip_{i:03d}.mp4",
+                    srt_paths[i] if srt_paths and i < len(srt_paths) else None,
                 )
                 for i in range(pair_count)
             ]
