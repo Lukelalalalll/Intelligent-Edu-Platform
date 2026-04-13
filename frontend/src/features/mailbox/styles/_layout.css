@@ -1,0 +1,88 @@
+/* =========================================
+   1. Page Shell, Banner & Section Titles
+   ========================================= */
+
+.mailboxContainer {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 32px 40px;
+}
+
+.mailboxBanner {
+    text-align: center;
+    margin-bottom: 1.25rem;
+    padding: 3.5rem 2rem;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    opacity: 1;
+}
+
+.mailboxBanner h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+}
+
+.mailboxBanner p {
+    max-width: 640px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.loadingLine,
+.emptyLine {
+    color: var(--text-sub);
+    font-size: 0.84rem;
+    margin: 0;
+}
+
+/* ── Step view transition ── */
+.stepView {
+    animation: scaleIn 0.4s var(--ease-out-back) forwards;
+}
+
+.sectionTitle {
+    font-size: 1.4rem;
+    color: var(--text-main);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sectionTitle i {
+    color: var(--primary-color);
+}
+
+/* ── Shared Keyframes ── */
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.98) translateY(15px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%);  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .mailboxContainer {
+        padding: 0 12px 28px;
+    }
+}
