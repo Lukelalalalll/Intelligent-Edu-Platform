@@ -463,7 +463,9 @@
 }
 
 
-.pageHeader {}
+.pageHeader {
+    margin-bottom: 1rem !important; /* matching QuestionGenerator banner gap */
+}
 
 /* 定义占位符以便在 JS 中引入不报 undef 错 */
 

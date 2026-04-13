@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import client from '../../../api/client';
+import client from '../../../../api/client';
 import SpecifyPage from './SpecifyPage';
-import { log } from '../../../utils/logger';
+import { log } from '../../../../utils/logger';
 
 export default function Specify() {
     const navigate = useNavigate();

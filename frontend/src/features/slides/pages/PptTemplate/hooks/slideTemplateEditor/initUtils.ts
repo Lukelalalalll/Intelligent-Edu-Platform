@@ -1,4 +1,4 @@
-import client from '../../../../api/client';
+import client from '../../../../../../api/client';
 import { enrichSchemaWithChapterText, readSchemaFromStorage } from './schemaUtils';
 
 export async function initializeTemplateEditorData(): Promise<{

@@ -1,6 +1,6 @@
 // Highlighter.tsx
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import styles from '../../styles/highlighter.module.css';
+import styles from './styles/highlighter.module.css';
 import ReaderSection from './components/ReaderSection';
 import HighlightsPanel from './components/HighlightsPanel';
 import { log } from '../../../../utils/logger';

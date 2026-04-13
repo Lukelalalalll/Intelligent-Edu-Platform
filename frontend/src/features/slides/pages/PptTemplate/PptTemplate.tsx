@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../styles/pptTemplate.module.css';
+import styles from './styles/pptTemplate.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import type { PptTemplateProps } from './types';
 
@@ -100,10 +100,9 @@ export default function PptTemplate({ states, handlers }: PptTemplateProps) {
             )}
 
             <div className={`card ${styles.sectionCard} ${styles.cardStep1}`}>
-                <div className={styles.cardHeader}>
-                    <div className={styles.cardIcon}><i className="fas fa-paint-brush"></i></div>
-                    <h2 className={styles.sectionTitle}>1. Choose Presentation Theme</h2>
-                </div>
+                <h5 className="card-title mb-4">
+                    <i className="fas fa-paint-brush" aria-hidden="true"></i> 1. Choose Presentation Theme
+                </h5>
                 <div className={styles.themeGrid}>
                     {visibleThemes.map((theme: any) => (
                         <div
@@ -134,10 +133,9 @@ export default function PptTemplate({ states, handlers }: PptTemplateProps) {
 
             {selectedTheme && (
                 <div className={`card ${styles.sectionCard} ${styles.cardStep2}`}>
-                    <div className={styles.cardHeader}>
-                        <div className={styles.cardIcon}><i className="fas fa-th-large"></i></div>
-                        <h2 className={styles.sectionTitle}>2. Customize Slide Layouts</h2>
-                    </div>
+                    <h5 className="card-title mb-4">
+                        <i className="fas fa-th-large" aria-hidden="true"></i> 2. Customize Slide Layouts
+                    </h5>
 
                     <div className={styles.progressWrapper}>
                         <span className={styles.progressText}>Progress: <strong>{configuredCount} / {totalSlides}</strong> Configured</span>

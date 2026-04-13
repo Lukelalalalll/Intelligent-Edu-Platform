@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import client from '../../../api/client';
-import HighlighterView from './Highlighter/Highlighter';
-import { log } from '../../../utils/logger';
+import client from '../../../../api/client';
+import HighlighterView from './Highlighter';
+import { log } from '../../../../utils/logger';
 
 export default function HighlighterPage() {
     const navigate = useNavigate();

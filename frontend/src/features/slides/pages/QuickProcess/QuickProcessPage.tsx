@@ -1,7 +1,7 @@
 import React from 'react';
-import styles from '../styles/quickProcess.module.css';
-import WelcomeBanner from '../../../shared/components/WelcomeBanner';
-import SlidesLoadingState from '../components/SlidesLoadingState';
+import styles from './styles/quickProcess.module.css';
+import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
+import SlidesLoadingState from '../../components/SlidesLoadingState';
 
 export default function QuickProcess({
     loading, contentLoading, sections, formState, setFormState,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import styles from '../../../styles/highlighter.module.css';
+import styles from '../styles/highlighter.module.css';
 
 const CATEGORY_COLORS = {
     definition: { bg: '#E3F2FD', color: '#1565C0', icon: 'fa-book' },

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
-import client from '../../../api/client';
+import client from '../../../../api/client';
 import QuickProcessPage from './QuickProcessPage';
-import { slidesGenerationApi } from '../api/slidesApi';
+import { slidesGenerationApi } from '../../api/slidesApi';
 
 export default function QuickProcess() {
     const navigate = useNavigate();

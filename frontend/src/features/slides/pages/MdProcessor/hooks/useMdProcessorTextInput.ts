@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import client from '../../../api/client';
-import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
+import client from '../../../../../api/client';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../../../shared/aiProvider';
 
 export function useMdProcessorTextInput() {
     const [inputMode, setInputMode] = useState<'file' | 'text'>('file');

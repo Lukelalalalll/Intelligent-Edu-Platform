@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '../../../styles/highlighter.module.css';
+import styles from '../styles/highlighter.module.css';
 
 const ReaderSection = ({
     loading, sections, currentSectionIndex, currentSectionTitle,

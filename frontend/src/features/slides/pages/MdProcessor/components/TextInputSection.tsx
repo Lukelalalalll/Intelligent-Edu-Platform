@@ -1,6 +1,6 @@
 import React from 'react';
-import styles from '../../styles/mdProcessor.module.css';
-import textStyles from '../../styles/mdTextInput.module.css';
+import styles from '../styles/mdProcessor.module.css';
+import textStyles from '../styles/mdTextInput.module.css';
 
 interface TextInputSectionProps {
     textContent: string;
@@ -44,17 +44,6 @@ export default function TextInputSection({
                         <option value="coze">Coze</option>
                         <option value="local_ollama">llama3.2</option>
                     </select>
-                    <div className={textStyles.cozeInputGroup}>
-                        <i className="fas fa-lightbulb"></i>
-                        <input
-                            type="text"
-                            className={textStyles.cozeInput}
-                            placeholder="Optional topic (e.g. TCP/IP four-layer model)"
-                            value={textTitle}
-                            onChange={(e) => setTextTitle(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !cozeLoading && handleCozeGenerate()}
-                        />
-                    </div>
                     <button
                         className={textStyles.cozeBtn}
                         onClick={handleCozeGenerate}
@@ -68,23 +57,45 @@ export default function TextInputSection({
                     </button>
                 </div>
 
-                <div className={textStyles.textareaWrapper}>
-                    <label className={textStyles.sectionLabel} htmlFor="seed-content-textarea">
-                        Basic Content Input
-                    </label>
-                    <textarea
-                        id="seed-content-textarea"
-                        className={textStyles.contentTextarea}
-                        placeholder={"Paste your raw notes, key ideas, or rough draft here...\n\nExample:\n- TCP/IP has four layers\n- Explain each layer's responsibility\n- Add practical protocol examples"}
-                        value={seedContent}
-                        onChange={(e) => setSeedContent(e.target.value)}
-                        rows={8}
-                    />
-                    <div className={textStyles.wordCountBar}>
-                        <span>{seedWordCount} words</span>
-                        {seedWordCount > 0 && seedWordCount < 30 && (
-                            <span className={textStyles.wordCountHint}>Tip: 50+ words gives better generation quality</span>
-                        )}
+                <div className={textStyles.textAreasContainer}>
+                    <div className={textStyles.textareaWrapper}>
+                        <label className={textStyles.sectionLabel} htmlFor="seed-content-textarea">
+                            User Input
+                        </label>
+                        <textarea
+                            id="seed-content-textarea"
+                            className={textStyles.contentTextarea}
+                            placeholder={"Paste your raw notes, key ideas, or rough draft here...\n\nExample:\n- TCP/IP has four layers\n- Explain each layer's responsibility\n- Add practical protocol examples"}
+                            value={seedContent}
+                            onChange={(e) => setSeedContent(e.target.value)}
+                            rows={14}
+                        />
+                        <div className={textStyles.wordCountBar}>
+                            <span>{seedWordCount} words</span>
+                            {seedWordCount > 0 && seedWordCount < 30 && (
+                                <span className={textStyles.wordCountHint}>Tip: 50+ words gives better generation quality</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className={textStyles.textareaWrapper}>
+                        <label className={textStyles.sectionLabel} htmlFor="generated-md-textarea">
+                            AI Generated Markdown
+                        </label>
+                        <textarea
+                            id="generated-md-textarea"
+                            className={textStyles.contentTextarea}
+                            placeholder={"Write your content here using Markdown...\n\n## Section Title\n- Key point 1\n- Key point 2\n\n## Another Section\n- More content..."}
+                            value={textContent}
+                            onChange={(e) => setTextContent(e.target.value)}
+                            rows={14}
+                        />
+                        <div className={textStyles.wordCountBar}>
+                            <span>{wordCount} words</span>
+                            {wordCount > 0 && wordCount < 50 && (
+                                <span className={textStyles.wordCountHint}>Tip: 100+ words recommended for good PPT content</span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -93,26 +104,6 @@ export default function TextInputSection({
                         <i className="fas fa-exclamation-circle"></i> {cozeError}
                     </div>
                 )}
-
-                <div className={textStyles.textareaWrapper}>
-                    <label className={textStyles.sectionLabel} htmlFor="generated-md-textarea">
-                        Generated Markdown
-                    </label>
-                    <textarea
-                        id="generated-md-textarea"
-                        className={textStyles.contentTextarea}
-                        placeholder={"Write your content here using Markdown...\n\n## Section Title\n- Key point 1\n- Key point 2\n\n## Another Section\n- More content..."}
-                        value={textContent}
-                        onChange={(e) => setTextContent(e.target.value)}
-                        rows={14}
-                    />
-                    <div className={textStyles.wordCountBar}>
-                        <span>{wordCount} words</span>
-                        {wordCount > 0 && wordCount < 50 && (
-                            <span className={textStyles.wordCountHint}>Tip: 100+ words recommended for good PPT content</span>
-                        )}
-                    </div>
-                </div>
 
                 <div className={textStyles.textActionRow}>
                     <button
