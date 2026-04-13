@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import styles from './styles/auth.module.css';
+import styles from '../styles/auth.module.css';
 
 export default function Login({
     username, setUsername, password, setPassword, showPassword, setShowPassword,

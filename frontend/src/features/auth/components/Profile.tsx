@@ -1,6 +1,5 @@
 import React from 'react';
-// 【修改处】导入 Module CSS 样式对象
-import styles from './styles/profile.module.css';
+import styles from '../styles/profile.module.css';
 
 export default function Profile({
     user, formData, handleInputChange, showPassword, setShowPassword,

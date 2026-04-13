@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../../api/client';
-import Forgot from '../Forgot';
+import Forgot from '../components/Forgot';
 
 export default function ForgotPage() {
     const navigate = useNavigate();

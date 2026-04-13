@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import client from '../../../api/client';
-import Profile from '../Profile';
+import Profile from '../components/Profile';
 
 export default function ProfilePage() {
     const storedUser = JSON.parse(localStorage.getItem('user'));

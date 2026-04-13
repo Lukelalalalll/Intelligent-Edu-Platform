@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import client from '../../../api/client';
-import Login from '../Login';
+import Login from '../components/Login';
 
 export default function LoginPage() {
     const navigate = useNavigate();
