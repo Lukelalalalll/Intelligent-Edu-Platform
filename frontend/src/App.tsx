@@ -11,12 +11,12 @@ import {
   LoginPage, RegisterPage, ForgotPage, ProfilePage,
   HomePage, HomeStudentPage,
   AdminDashboardPage, AdminDbConsolePage, AdminFileCenterPage,
-  AIInteractPage, EmailAgentPage,
+  AIInteractPage,
   MailboxPage, GradingWorkbenchPage,
   KnowledgeBasePage, DiagramPage, QuestionGeneratorPage,
   MdProcessorPage, HighlighterPage, SpecifyPage, QuickProcessPage, PptTemplatePage,
   StudyNotesPage, VideoGenPage,
-  ChatPage, DiagnosticFeedbackPage, PublishHomework,
+  ChatPage, PublishHomework,
 } from './router';
 
 import client from './api/client';
@@ -131,13 +131,9 @@ function App() {
           <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBasePage /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="diagnostic-feedback" element={<RouteErrorBoundary><ProtectedRoute><DiagnosticFeedbackPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="video-gen" element={<RouteErrorBoundary><ProtectedRoute><VideoGenPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchPage /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="email-agent" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentPage /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="gmail/callback" element={<RouteErrorBoundary><ProtectedRoute><EmailAgentPage /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="ai-email" element={<Navigate to="/email-agent" replace />} />
           <Route path="chat" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="chat/room/:roomId" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
         </Route>

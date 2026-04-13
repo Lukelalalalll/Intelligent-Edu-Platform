@@ -69,20 +69,7 @@ async def index_course_material(
     if upload is None:
         raise HTTPException(400, "No file provided")
 
-    chapter_id = str(form.get("chapter_id") or "").strip()
-    if not chapter_id:
-        raise HTTPException(400, "chapter_id is required. Please select a chapter before upload.")
-
-    chapter = await db.diagnostic_chapters.find_one(
-        {
-            "chapter_id": chapter_id,
-            "course_id": course_id,
-            "diagnostic_enabled": True,
-        },
-        {"_id": 1},
-    )
-    if not chapter:
-        raise HTTPException(404, "Selected chapter not found for this course or is disabled")
+    chapter_id = str(form.get("chapter_id") or "").strip() or None
 
     filename: str = getattr(upload, "filename", "untitled")
     content_bytes: bytes = await upload.read()

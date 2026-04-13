@@ -1,7 +1,9 @@
 """Step D — Slide image rendering (Playwright HTML + Pillow fallback)."""
 from __future__ import annotations
 
+import base64
 import json
+import mimetypes
 import textwrap
 from pathlib import Path
 from typing import Optional
@@ -10,6 +12,21 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .extract import pdf_to_images
 from .types import logger
+
+
+def _img_to_data_uri(img_path: str) -> str:
+    """Convert a local image file to a base64 data URI.
+
+    Playwright's ``set_content()`` loads HTML from ``about:blank`` which
+    blocks ``file://`` resource loads.  Embedding images as data URIs
+    avoids this entirely.
+    """
+    p = Path(img_path)
+    if not p.exists():
+        return ""
+    mime = mimetypes.guess_type(str(p))[0] or "image/png"
+    data = base64.b64encode(p.read_bytes()).decode()
+    return f"data:{mime};base64,{data}"
 
 SLIDE_W, SLIDE_H = 1920, 1080  # upgraded to Full HD
 BG_COLORS = ["#1e3a5f", "#1a3a2f", "#3a1e1e", "#2d1e3a", "#1e2d3a", "#2a1e3f", "#1e3a3a", "#3a2e1e"]
@@ -77,6 +94,7 @@ def render_themed_slide(
 
     # Custom image mode — load user-uploaded image as background
     slide_mode = scene.get("slideMode", "theme")
+    layout_type = scene.get("layoutType", "title-bullets")
     if slide_mode == "image" and scene.get("customImagePath"):
         try:
             img = Image.open(scene["customImagePath"]).convert("RGB")
@@ -90,38 +108,80 @@ def render_themed_slide(
     title = scene.get("slideTitle", "")[:60]
     body = scene.get("slideBody", "")
 
-    if slide_mode != "image" or not scene.get("customImagePath"):
-        # Draw accent bar
+    # ── Parse bullets once ──
+    body_lines: list[str] = []
+    try:
+        parsed = json.loads(body)
+        if isinstance(parsed, dict) and "bullets" in parsed:
+            body_lines = [f"• {b}" for b in parsed["bullets"][:7]]
+        elif isinstance(parsed, list):
+            body_lines = [f"• {str(b)[:50]}" for b in parsed[:7]]
+    except (json.JSONDecodeError, TypeError):
+        pass
+    if not body_lines:
+        raw_lines = [l.strip() for l in body.split("\n") if l.strip()]
+        for rl in raw_lines[:7]:
+            wrapped = textwrap.wrap(rl, width=50)
+            body_lines.extend(wrapped)
+            if len(body_lines) >= 7:
+                break
+        body_lines = body_lines[:7]
+
+    # ── Layout image embedding for image-left / image-right / image-top ──
+    layout_img_path = scene.get("layoutImagePath", "")
+    layout_img: Image.Image | None = None
+    if layout_img_path and layout_type in ("image-left", "image-right", "image-top"):
+        try:
+            layout_img = Image.open(layout_img_path).convert("RGB")
+        except Exception:
+            layout_img = None
+
+    if layout_type in ("image-left", "image-right") and layout_img:
+        # ── Side-by-side: 45% image panel + 55% text panel ──
+        img_panel_w = int(SLIDE_W * 0.45)
+        text_panel_w = SLIDE_W - img_panel_w
+        layout_img_resized = layout_img.resize((img_panel_w, SLIDE_H), Image.LANCZOS)
+        if layout_type == "image-left":
+            img.paste(layout_img_resized, (0, 0))
+            text_x = img_panel_w + 50
+        else:
+            img.paste(layout_img_resized, (text_panel_w, 0))
+            text_x = 80
+        draw = ImageDraw.Draw(img)  # refresh after paste
+        title_font = _get_font(48)
+        draw.text((text_x, 70), title, font=title_font, fill=theme["title"])
+        draw.line([(text_x, 140), (text_x + text_panel_w - 120, 140)], fill=theme["accent"], width=3)
+        body_font = _get_font(32)
+        body_text = "\n".join(body_lines) if body_lines else textwrap.fill(body[:400], width=40)
+        draw.multiline_text((text_x, 165), body_text, font=body_font, fill=theme["body"], spacing=16)
+        num_font = _get_font(28)
+        draw.text((SLIDE_W - 90, SLIDE_H - 55), f"{idx + 1}", font=num_font, fill=theme["body"])
+
+    elif layout_type == "image-top" and layout_img:
+        # ── Top image (45%) + bottom text (55%) ──
+        img_panel_h = int(SLIDE_H * 0.45)
+        layout_img_resized = layout_img.resize((SLIDE_W, img_panel_h), Image.LANCZOS)
+        img.paste(layout_img_resized, (0, 0))
+        draw = ImageDraw.Draw(img)
+        text_y = img_panel_h + 30
+        title_font = _get_font(44)
+        draw.text((100, text_y), title, font=title_font, fill=theme["title"])
+        draw.line([(100, text_y + 55), (SLIDE_W - 100, text_y + 55)], fill=theme["accent"], width=3)
+        body_font = _get_font(30)
+        body_text = "\n".join(body_lines) if body_lines else textwrap.fill(body[:400], width=50)
+        draw.multiline_text((100, text_y + 75), body_text, font=body_font, fill=theme["body"], spacing=14)
+        num_font = _get_font(28)
+        draw.text((SLIDE_W - 90, SLIDE_H - 55), f"{idx + 1}", font=num_font, fill=theme["body"])
+
+    elif slide_mode != "image" or not scene.get("customImagePath"):
+        # ── Standard text-only rendering (title-bullets, big-quote, two-column, etc.) ──
         draw.rectangle([(0, 0), (12, SLIDE_H)], fill=theme["accent"])
-        # Title
         title_font = _get_font(56)
         draw.text((100, 70), title, font=title_font, fill=theme["title"])
-        # Divider
         draw.line([(100, 150), (SLIDE_W - 100, 150)], fill=theme["accent"], width=3)
-        # Body — render as bullets, max 7 lines
         body_font = _get_font(36)
-        body_lines: list[str] = []
-        # If body contains JSON-style bullets, parse them
-        try:
-            parsed = json.loads(body)
-            if isinstance(parsed, dict) and "bullets" in parsed:
-                body_lines = [f"• {b}" for b in parsed["bullets"][:7]]
-            elif isinstance(parsed, list):
-                body_lines = [f"• {str(b)[:50]}" for b in parsed[:7]]
-        except (json.JSONDecodeError, TypeError):
-            pass
-        if not body_lines:
-            # Split by newline or create wrapped lines
-            raw_lines = [l.strip() for l in body.split("\n") if l.strip()]
-            for rl in raw_lines[:7]:
-                wrapped = textwrap.wrap(rl, width=50)
-                body_lines.extend(wrapped)
-                if len(body_lines) >= 7:
-                    break
-            body_lines = body_lines[:7]
         body_text = "\n".join(body_lines) if body_lines else textwrap.fill(body[:400], width=50)
         draw.multiline_text((100, 180), body_text, font=body_font, fill=theme["body"], spacing=18)
-        # Page number
         num_font = _get_font(28)
         draw.text((SLIDE_W - 90, SLIDE_H - 55), f"{idx + 1}", font=num_font, fill=theme["body"])
 
@@ -301,12 +361,17 @@ def _build_html_for_scene(scene: dict, idx: int, subtitles: bool = True) -> str:
     bg_img_html = ""
     slide_mode = scene.get("slideMode", "theme")
     if slide_mode == "image" and scene.get("customImagePath"):
-        img_path = scene["customImagePath"]
-        bg_img_html = f'<div class="bg-img"><img src="file://{img_path}"/></div>'
+        data_uri = _img_to_data_uri(scene["customImagePath"])
+        if data_uri:
+            bg_img_html = f'<div class="bg-img"><img src="{data_uri}"/></div>'
 
-    # Layout embedded image
+    # Layout embedded image (image-left / image-right / image-top)
     layout_img = scene.get("layoutImagePath", "")
-    img_tag = f'<img src="file://{layout_img}"/>' if layout_img else '<div style="font-size:64px;opacity:.2">📷</div>'
+    if layout_img:
+        layout_data_uri = _img_to_data_uri(layout_img)
+        img_tag = f'<img src="{layout_data_uri}"/>' if layout_data_uri else '<div style="font-size:64px;opacity:.2">📷</div>'
+    else:
+        img_tag = '<div style="font-size:64px;opacity:.2">📷</div>'
 
     # Build inner HTML based on layout type
     if layout == "title-bullets":

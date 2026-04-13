@@ -10,8 +10,6 @@ import CreateGroupModal from '../components/CreateGroupModal';
 import CreateCourseGroupModal from '../components/CreateCourseGroupModal';
 import FriendRequestsPanel from '../components/FriendRequestsPanel';
 import { useChatStore } from '../store/chatStore';
-import { useChatWebSocket } from '../hooks/useChatWebSocket';
-import { useChatRooms } from '../hooks/useChatRooms';
 import { chatApi } from '../api';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';
@@ -68,14 +66,15 @@ export default function ChatPage() {
         document.addEventListener('mouseup', handleMouseUp);
     }, []);
 
-    // Initialize WebSocket + rooms
-    useChatWebSocket();
-    useChatRooms();
-
     // Sync URL param to store
     useEffect(() => {
         if (roomId && roomId !== activeRoomId) {
             setActiveRoom(roomId);
+            return;
+        }
+        // Entering /chat (without /room/:id) should not auto-open any room.
+        if (!roomId && activeRoomId) {
+            setActiveRoom(null);
         }
     }, [roomId, activeRoomId, setActiveRoom]);
 

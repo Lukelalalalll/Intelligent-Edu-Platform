@@ -43,6 +43,9 @@
 .historyListView {
     margin-top: 1.5rem;
     animation: historyPanelFadeIn 0.32s ease-out;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px; /* padding for scrollbar */
 }
 
 .historyTitleRow {
@@ -98,6 +101,8 @@
     position: absolute;
     left: 0; right: 0; top: 0;
     height: 5px;
+    border-top-left-radius: 21px;
+    border-top-right-radius: 21px;
     background: linear-gradient(90deg, rgba(0, 123, 85, 0.9), rgba(0, 164, 116, 0.8));
 }
 .historyItemCard:hover {
@@ -191,6 +196,9 @@
 .historyDetailView {
     margin-top: 1.5rem;
     animation: historyDetailIn 0.34s ease-out;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px; /* padding for scrollbar */
 }
 
 .historyDetailHeader {
@@ -238,6 +246,7 @@
     padding: 1rem 1.1rem;
     margin-bottom: 1rem;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    overflow: hidden;
 }
 
 .historyDetailMetaTop {
@@ -282,6 +291,7 @@
     padding: 0.95rem 1rem;
     background: rgba(255, 255, 255, 0.86);
     margin-bottom: 1rem;
+    overflow: hidden;
 }
 
 .historyParamsTitle {
@@ -317,6 +327,7 @@
     border-radius: 16px;
     padding: 1.5rem;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
 }
 
 .historyDetailLoading {

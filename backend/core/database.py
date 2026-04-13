@@ -219,15 +219,6 @@ async def ensure_indexes() -> None:
             background=True,
         )
 
-        # Email classification cache indexes
-        await db.email_classifications.create_index("messageId", unique=True, background=True)
-        # TTL: auto-delete classification cache after 7 days
-        await db.email_classifications.create_index(
-            "cachedAt",
-            expireAfterSeconds=7 * 24 * 3600,
-            background=True,
-        )
-
         # --- Chat feature (contacts, rooms, messages) ---
         await db.chat_contacts.create_index(
             [("userId", 1), ("contactId", 1)], unique=True, background=True,
@@ -444,64 +435,6 @@ async def ensure_indexes() -> None:
         )
         await db.study_review_queue.create_index(
             [("user_id", 1), ("due_at", 1), ("status", 1)],
-            background=True,
-        )
-
-        # --- Chapter diagnostic domain ---
-        await db.diagnostic_chapters.create_index(
-            [("course_id", 1), ("chapter_order", 1)],
-            background=True,
-        )
-        await db.diagnostic_chapters.create_index(
-            [("chapter_id", 1)],
-            unique=True,
-            background=True,
-        )
-
-        await db.diagnostic_configs.create_index(
-            [("chapter_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.diagnostic_configs.create_index(
-            [("course_id", 1), ("chapter_id", 1)],
-            background=True,
-        )
-
-        await db.diagnostic_sessions.create_index(
-            [("session_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.diagnostic_sessions.create_index(
-            [("student_id", 1), ("started_at", -1)],
-            background=True,
-        )
-        await db.diagnostic_sessions.create_index(
-            [("course_id", 1), ("chapter_id", 1), ("started_at", -1)],
-            background=True,
-        )
-
-        await db.diagnostic_reports.create_index(
-            [("report_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.diagnostic_reports.create_index(
-            [("student_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.diagnostic_reports.create_index(
-            [("course_id", 1), ("chapter_id", 1), ("created_at", -1)],
-            background=True,
-        )
-
-        await db.diagnostic_feedback.create_index(
-            [("report_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.diagnostic_feedback.create_index(
-            [("student_id", 1), ("created_at", -1)],
             background=True,
         )
 

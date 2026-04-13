@@ -1,0 +1,5 @@
+{"id":"q01","query":"What is the definition of an embedded system?","course_ids":["ELEC3332"],"expected_doc_names":["Mod-1-Intro-2025-26.pdf"],"expected_keywords":["embedded","definition","invisible","interface"]}
+{"id":"q02","query":"What is a Cyber-Physical System?","course_ids":["ELEC3332"],"expected_doc_names":["Mod-1-Intro-2025-26.pdf"],"expected_keywords":["CPS","cyber-physical","physical environment","embedded"]}
+{"id":"q03","query":"What are the learning outcomes of this embedded systems course?","course_ids":["ELEC3332"],"expected_doc_names":["Mod-1-Intro-2025-26.pdf"],"expected_keywords":["hardware-software","co-design","performance","power","energy"]}
+{"id":"q04","query":"What are the specifications of Raspberry Pi 2 Model B?","course_ids":["ELEC3332"],"expected_doc_names":["Mod-1-Intro-2025-26.pdf"],"expected_keywords":["Raspberry Pi","ARM","Cortex","GPIO","RAM"]}
+{"id":"q05","query":"How does data privacy relate to embedded systems?","course_ids":["ELEC3332"],"expected_doc_names":["Mod-1-Intro-2025-26.pdf"],"expected_keywords":["data","insurance","manufacturer","consumer","privacy"]}

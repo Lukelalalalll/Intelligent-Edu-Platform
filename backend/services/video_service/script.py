@@ -9,6 +9,74 @@ from typing import Optional
 
 from .types import logger
 
+
+def _parse_json_object(raw: str) -> dict | None:
+    """Robustly extract and parse the first JSON object from an LLM response.
+
+    Handles:
+    - Prose before/after the JSON block
+    - Extra data after the closing brace
+    - Invalid escape sequences emitted by local LLMs (e.g. \\d, \\s, \\p)
+    """
+    # Find the start of the first '{' character
+    start = raw.find('{')
+    if start == -1:
+        return None
+
+    # Walk forward to find the matching closing '}'
+    depth = 0
+    end = -1
+    in_string = False
+    escape_next = False
+    for i, ch in enumerate(raw[start:], start):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\' and in_string:
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+
+    if end == -1:
+        # No matched brace found; try rfind as best-effort
+        end = raw.rfind('}') + 1
+        if end <= start:
+            return None
+
+    candidate = raw[start:end]
+
+    # Try parsing directly first
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    # Fix invalid escape sequences: replace \X where X is not a valid JSON escape char
+    # Valid: \" \\ \/ \b \f \n \r \t \uXXXX
+    fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', candidate)
+    try:
+        return json.loads(fixed)
+    except json.JSONDecodeError:
+        pass
+
+    # Last resort: strip ALL backslash sequences that aren't \" or \\
+    stripped = re.sub(r'\\(?!["\\/])', '', candidate)
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        return None
+
 # ── Narration script prompts ──
 
 SCRIPT_PROMPT_ZH = """你是一名大学教授，正在录制教学视频。{audience_hint}
@@ -147,7 +215,26 @@ async def optimize_full_script(
         )
         json_match = re.search(r"\[.*\]", raw, re.DOTALL)
         if json_match:
-            segments = json.loads(json_match.group())
+            # Fix invalid escape sequences before parsing the array
+            arr_str = json_match.group()
+            arr_str_fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', arr_str)
+            try:
+                segments = json.loads(arr_str_fixed)
+            except json.JSONDecodeError:
+                segments = json.loads(re.sub(r'\\(?!["\\/])', '', arr_str))
+            # Normalize: LLMs sometimes return [{text:...}] instead of ["..."]
+            def _to_str(item) -> str:
+                if isinstance(item, str):
+                    return item
+                if isinstance(item, dict):
+                    # Try common keys the model might use
+                    for key in ("text", "script", "narration", "content", "segment"):
+                        if key in item:
+                            return str(item[key])
+                    # Fall back to joining all values
+                    return " ".join(str(v) for v in item.values())
+                return str(item)
+            segments = [_to_str(s) for s in segments if s]
             return segments[:n]  # hard cap to requested max
     except Exception as exc:
         logger.warning("AI script split failed: %s", exc)
@@ -203,6 +290,9 @@ async def generate_slide_contents(
     audience_hint = hint["zh"] if lang == "zh" else hint["en"]
     template = SLIDE_PROMPT_ZH if lang == "zh" else SLIDE_PROMPT_EN
 
+    # Ensure every script is a plain string even if upstream returned dicts
+    scripts = [s if isinstance(s, str) else str(s) for s in scripts]
+
     # Build RAG context if source_text is available
     rag_context_str = ""
     if source_text and len(source_text) > 100:
@@ -211,7 +301,7 @@ async def generate_slide_contents(
             rag_svc = LocalRagService()
             rag_result = rag_svc.build_rag_context(
                 document_text=source_text,
-                query=" ".join(s[:60] for s in scripts[:3]),
+                query=" ".join(str(s)[:60] for s in scripts[:3]),
                 top_k=4,
             )
             chunks = rag_result.get("retrieved_chunks", [])
@@ -226,31 +316,29 @@ async def generate_slide_contents(
                 template.format(
                     script=script[:500],
                     audience_hint=audience_hint,
-                    rag_context=rag_context_str or "(无额外参考)" if lang == "zh" else "(no additional context)",
+                    rag_context=rag_context_str or ("(无额外参考)" if lang == "zh" else "(no additional context)"),
                 ),
                 provider,
             )
-            # Parse JSON from AI response
-            json_match = re.search(r"\{.*\}", raw, re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group())
-                if "title" in parsed and "bullets" in parsed:
-                    result: dict = {
-                        "title": str(parsed["title"])[:60],
-                        "bullets": [str(b)[:80] for b in parsed["bullets"][:7]],
-                    }
-                    # V2 fields
-                    valid_layouts = {"title-bullets", "image-left", "image-right", "image-top", "big-quote", "two-column"}
-                    lt = parsed.get("layoutType", "title-bullets")
-                    result["layoutType"] = lt if lt in valid_layouts else "title-bullets"
-                    if lt == "big-quote" and parsed.get("quoteText"):
-                        result["quoteText"] = str(parsed["quoteText"])[:80]
-                    if lt == "two-column":
-                        result["col1Title"] = str(parsed.get("col1Title", ""))[:40]
-                        result["col1Bullets"] = [str(b)[:60] for b in (parsed.get("col1Bullets") or [])[:5]]
-                        result["col2Title"] = str(parsed.get("col2Title", ""))[:40]
-                        result["col2Bullets"] = [str(b)[:60] for b in (parsed.get("col2Bullets") or [])[:5]]
-                    return result
+            # Parse JSON from AI response using robust parser
+            parsed = _parse_json_object(raw)
+            if parsed and "title" in parsed and "bullets" in parsed:
+                result: dict = {
+                    "title": str(parsed["title"])[:60],
+                    "bullets": [str(b)[:80] for b in parsed["bullets"][:7]],
+                }
+                # V2 fields
+                valid_layouts = {"title-bullets", "image-left", "image-right", "image-top", "big-quote", "two-column"}
+                lt = parsed.get("layoutType", "title-bullets")
+                result["layoutType"] = lt if lt in valid_layouts else "title-bullets"
+                if lt == "big-quote" and parsed.get("quoteText"):
+                    result["quoteText"] = str(parsed["quoteText"])[:80]
+                if lt == "two-column":
+                    result["col1Title"] = str(parsed.get("col1Title", ""))[:40]
+                    result["col1Bullets"] = [str(b)[:60] for b in (parsed.get("col1Bullets") or [])[:5]]
+                    result["col2Title"] = str(parsed.get("col2Title", ""))[:40]
+                    result["col2Bullets"] = [str(b)[:60] for b in (parsed.get("col2Bullets") or [])[:5]]
+                return result
         except Exception as exc:
             logger.warning("Slide content generation failed: %s", exc)
         # Fallback: extract first line as title, rest as single bullet

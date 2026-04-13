@@ -52,7 +52,7 @@ const StepSceneEditor: React.FC<Props> = ({ scenes, setScenes, subtitles, onNext
 
   return (
     <div className={vs.stepCard}>
-      <h3><i className="fas fa-palette" style={{ marginRight: 8, color: '#7c3aed' }} />Scene Editor</h3>
+      <h3><i className="fas fa-palette" style={{ marginRight: 8, color: 'var(--primary-color)' }} />Scene Editor</h3>
       <div className={s.sceneEditorWrap}>
         <Reorder.Group axis="y" values={scenes} onReorder={setScenes} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {scenes.map((sc, i) => (
@@ -70,12 +70,12 @@ const StepSceneEditor: React.FC<Props> = ({ scenes, setScenes, subtitles, onNext
 
       <div className={s.editorFooter}>
         <button className={s.addSceneBtn} onClick={addScene}>
-          ＋ 添加场景
+          + Add Scene
         </button>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className={vs.secondaryBtn} onClick={onBack}>上一步</button>
+          <button className={vs.secondaryBtn} onClick={onBack}>Back</button>
           <button className={vs.primaryBtn} onClick={onNext} disabled={scenes.length === 0}>
-            开始生成 <i className="fas fa-arrow-right" />
+            Start Generation <i className="fas fa-arrow-right" />
           </button>
         </div>
       </div>

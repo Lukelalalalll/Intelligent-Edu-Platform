@@ -86,25 +86,25 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
           <div
             onPointerDown={(e) => dragControls?.start(e)}
             style={{ cursor: 'grab', marginRight: 12, color: '#999', fontSize: 16, touchAction: 'none', flexShrink: 0 }}
-            title="拖拽排序"
+            title="Drag to reorder"
           >
             <i className="fas fa-grip-vertical" />
           </div>
           <span className={s.sceneIdx}>Scene {idx + 1}</span>
-          <button className={s.deleteBtn} onClick={() => onDelete(localScene.id)} title="删除此场景">✕</button>
+          <button className={s.deleteBtn} onClick={() => onDelete(localScene.id)} title="Delete this scene">✕</button>
         </div>
 
         {/* Script textarea */}
-        <span className={s.label}>旁白脚本</span>
+        <span className={s.label}>Narration Script</span>
         <textarea
           className={`${s.inputSmall} ${s.scriptArea}`}
           value={localScene.script}
           onChange={e => patchLocal({ script: e.target.value })}
-          placeholder="输入本场景的旁白文字..."
+          placeholder="Enter narration for this scene..."
         />
 
         {/* Tone selector */}
-        <span className={s.label}>语气模式</span>
+        <span className={s.label}>Tone Style</span>
         <div className={s.toneRow}>
           {TONE_OPTIONS.map(opt => (
             <button
@@ -119,61 +119,61 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
         </div>
 
         {/* Title */}
-        <span className={s.label}>幻灯片标题</span>
+        <span className={s.label}>Slide Title</span>
         <input
           className={s.inputSmall}
           value={localScene.slideTitle}
           onChange={e => patchLocal({ slideTitle: e.target.value })}
-          placeholder="标题"
+          placeholder="Title"
         />
 
         {/* Conditional fields based on layout */}
         {isBigQuote ? (
           <>
-            <span className={s.label}>引用语句</span>
+            <span className={s.label}>Quote Text</span>
             <textarea
               className={`${s.inputSmall} ${s.scriptArea}`}
               value={localScene.quoteText ?? ''}
               onChange={e => patchLocal({ quoteText: e.target.value })}
-              placeholder="核心概念或金句..."
+              placeholder="Key concept or quote..."
               style={{ minHeight: 60 }}
             />
           </>
         ) : isTwoColumn ? (
           <div className={s.twoColFields}>
             <div className={s.colField}>
-              <span className={s.label}>左栏标题</span>
-              <input className={s.inputSmall} value={localScene.col1Title ?? ''} onChange={e => patchLocal({ col1Title: e.target.value })} placeholder="左栏" />
-              <span className={s.label}>左栏要点 (每行一条)</span>
+              <span className={s.label}>Left Column Title</span>
+              <input className={s.inputSmall} value={localScene.col1Title ?? ''} onChange={e => patchLocal({ col1Title: e.target.value })} placeholder="Left" />
+              <span className={s.label}>Left Column Bullets (one per line)</span>
               <textarea
                 className={`${s.inputSmall} ${s.scriptArea}`}
                 value={(localScene.col1Bullets ?? []).join('\n')}
                 onChange={e => patchLocal({ col1Bullets: e.target.value.split('\n') })}
-                placeholder={'要点1\n要点2'}
+                placeholder={'Bullet 1\nBullet 2'}
                 style={{ minHeight: 60 }}
               />
             </div>
             <div className={s.colField}>
-              <span className={s.label}>右栏标题</span>
-              <input className={s.inputSmall} value={localScene.col2Title ?? ''} onChange={e => patchLocal({ col2Title: e.target.value })} placeholder="右栏" />
-              <span className={s.label}>右栏要点 (每行一条)</span>
+              <span className={s.label}>Right Column Title</span>
+              <input className={s.inputSmall} value={localScene.col2Title ?? ''} onChange={e => patchLocal({ col2Title: e.target.value })} placeholder="Right" />
+              <span className={s.label}>Right Column Bullets (one per line)</span>
               <textarea
                 className={`${s.inputSmall} ${s.scriptArea}`}
                 value={(localScene.col2Bullets ?? []).join('\n')}
                 onChange={e => patchLocal({ col2Bullets: e.target.value.split('\n') })}
-                placeholder={'要点1\n要点2'}
+                placeholder={'Bullet 1\nBullet 2'}
                 style={{ minHeight: 60 }}
               />
             </div>
           </div>
         ) : (
           <>
-            <span className={s.label}>幻灯片正文</span>
+            <span className={s.label}>Slide Body</span>
             <textarea
               className={`${s.inputSmall} ${s.scriptArea}`}
               value={localScene.slideBody}
               onChange={e => patchLocal({ slideBody: e.target.value })}
-              placeholder="正文内容..."
+              placeholder="Main content..."
               style={{ minHeight: 44 }}
             />
           </>
@@ -182,12 +182,12 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
         {/* Layout image upload for image-left/right/top */}
         {needsLayoutImage && (
           <>
-            <span className={s.label}>布局内嵌图片</span>
+            <span className={s.label}>Embedded Layout Image</span>
             <div className={s.layoutImgUpload} onClick={() => layoutFileRef.current?.click()}>
               {localScene._layoutImagePreviewUrl ? (
                 <img src={localScene._layoutImagePreviewUrl} alt="layout img" />
               ) : (
-                <span><i className="fas fa-image" /> 上传图片</span>
+                <span><i className="fas fa-image" /> Upload Image</span>
               )}
               <input ref={layoutFileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={handleLayoutImageUpload} />
             </div>
@@ -195,13 +195,13 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
         )}
 
         {/* Theme picker */}
-        <span className={s.label}>主题色</span>
+        <span className={s.label}>Theme Color</span>
         <ThemePicker value={localScene.themeId} onChange={(id: ThemeId) => patchImmediate({ themeId: id })} />
       </div>
 
       <div className={s.sceneRight}>
         {/* Layout type selector (6-grid) */}
-        <span className={s.label}>布局类型</span>
+        <span className={s.label}>Layout Type</span>
         <div className={s.layoutGrid}>
           {LAYOUT_OPTIONS.map(opt => (
             <button
@@ -222,13 +222,13 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
             className={`${s.modePill} ${localScene.slideMode === 'theme' ? s.active : ''}`}
             onClick={() => patchImmediate({ slideMode: 'theme' })}
           >
-            主题背景
+            Theme Background
           </button>
           <button
             className={`${s.modePill} ${localScene.slideMode === 'image' ? s.active : ''}`}
             onClick={() => bgFileRef.current?.click()}
           >
-            自定义背景
+            Custom Background
           </button>
           <input ref={bgFileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={handleBgImageUpload} />
         </div>

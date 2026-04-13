@@ -2,12 +2,12 @@
 
 import React from 'react';
 import type { ChatRoom } from '../types';
+import { useChatStore } from '../store/chatStore';
 import styles from '../styles/components/Sidebar.module.css';
 
 interface Props {
     room: ChatRoom;
     isActive: boolean;
-    unreadCount: number;
     currentUserId: string;
     onClick: () => void;
 }
@@ -35,7 +35,9 @@ function formatTime(iso: string): string {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-export default function ContactItem({ room, isActive, unreadCount, currentUserId, onClick }: Props) {
+export default function ContactItem({ room, isActive, currentUserId, onClick }: Props) {
+    // Read unread count directly from store via selector (same pattern as sidebar badge)
+    const unreadCount = useChatStore((s) => s.unreadCounts[room.id] ?? 0);
     const displayName = room.name || 'Chat';
     const initial = displayName.charAt(0).toUpperCase();
     const color = room.avatarColor || hashColor(room.id);
@@ -81,11 +83,13 @@ export default function ContactItem({ room, isActive, unreadCount, currentUserId
             </div>
 
             <div className={styles.contactMeta}>
+                {unreadCount > 0 && (
+                    <div className={styles.contactItemUnreadBadge}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                    </div>
+                )}
                 {lastMsg?.sentAt && (
                     <div className={`${styles.contactTime} ${hasUnread ? styles.contactTimeUnread : ''}`}>{formatTime(lastMsg.sentAt)}</div>
-                )}
-                {unreadCount > 0 && (
-                    <div className={styles.unreadBadge}>{unreadCount > 99 ? '99+' : unreadCount}</div>
                 )}
             </div>
         </div>

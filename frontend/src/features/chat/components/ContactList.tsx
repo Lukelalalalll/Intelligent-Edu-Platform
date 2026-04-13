@@ -41,16 +41,33 @@ export default function ContactList({
     activeTab,
     onTabChange,
 }: Props) {
-    const { rooms, contacts, activeRoomId, pendingRequests, unreadCounts } = useChatStore();
+    const rooms = useChatStore((s) => s.rooms);
+    const contacts = useChatStore((s) => s.contacts);
+    const activeRoomId = useChatStore((s) => s.activeRoomId);
+    const pendingRequests = useChatStore((s) => s.pendingRequests);
+    const unreadCounts = useChatStore((s) => s.unreadCounts);
 
     const currentUser = useCurrentUser();
     const currentUserId = currentUser?.id || '';
 
+    // Sort rooms: unread first, then by most recent activity
+    const sortedRooms = [...rooms].sort((a, b) => {
+        const aUnread = unreadCounts[a.id] || 0;
+        const bUnread = unreadCounts[b.id] || 0;
+        // Unread rooms float to top
+        if (aUnread > 0 && bUnread === 0) return -1;
+        if (bUnread > 0 && aUnread === 0) return 1;
+        // Then sort by last message time (most recent first)
+        const aTime = a.lastMessage?.sentAt || a.createdAt || '';
+        const bTime = b.lastMessage?.sentAt || b.createdAt || '';
+        return bTime.localeCompare(aTime);
+    });
+
     const filteredRooms = searchQuery
-        ? rooms.filter((r) =>
+        ? sortedRooms.filter((r) =>
               (r.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
           )
-        : rooms;
+        : sortedRooms;
 
     const filteredContacts = searchQuery
         ? contacts.filter((c) =>
@@ -117,7 +134,6 @@ export default function ContactList({
                                 key={room.id}
                                 room={room}
                                 isActive={room.id === activeRoomId}
-                                unreadCount={unreadCounts[room.id] || 0}
                                 currentUserId={currentUserId}
                                 onClick={() => onSelectRoom(room.id)}
                             />

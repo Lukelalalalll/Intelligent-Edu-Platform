@@ -27,9 +27,7 @@ from backend.routes.study_notes_routes import study_notes_router
 from backend.routes.mailbox_routes import mailbox_router as teacher_router
 from backend.routes.grading_routes import grading_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
-from backend.routes.email_routes import email_router
 from backend.routes.chat_routes import chat_router
-from backend.routes.diagnostic_routes import diagnostic_router
 from backend.routes.homework_routes import router as homework_router
 from backend.routes.video_routes import router as video_router
 
@@ -46,7 +44,6 @@ ROUTE_GROUP_PREFIXES = (
     ("/api/study-notes", "study_notes"),
     ("/api/teacher", "teacher"),
     ("/api/grading", "grading"),
-    ("/api/email", "email"),
     ("/data", "data"),
     ("/static", "static"),
     ("/test_pdf", "test_pdf"),
@@ -67,9 +64,7 @@ ROUTERS = (
     teacher_router,
     grading_router,
     ai_gateway_router,
-    email_router,
     chat_router,
-    diagnostic_router,
     homework_router,
     video_router,
 )

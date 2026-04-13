@@ -1,10 +1,31 @@
-"""Step E — FFmpeg compositing with cinematic effects."""
+"""Step E — FFmpeg compositing."""
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Optional
 
 from .types import logger
+
+# Per-clip timeout in seconds.  Even a 60-second clip should encode in < 2 min.
+_CLIP_TIMEOUT = 300
+
+
+def _probe_duration(audio_path: Path) -> float:
+    """Return audio duration (seconds) via ffprobe."""
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(audio_path),
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+    try:
+        return float(result.stdout.strip()) + 0.5
+    except ValueError:
+        return 5.0  # safe fallback
 
 
 def _make_clip(
@@ -15,121 +36,148 @@ def _make_clip(
 ) -> None:
     """Compose one slide image + audio into an MP4 clip.
 
-    Enhancements over base version:
-    - Ken Burns zoompan effect (slow zoom-in over the duration)
-    - Fade-in/fade-out on both video and audio
-    - SRT subtitle overlay via drawtext (if srt_path provided)
+    Previous implementation used ffmpeg-python's ``zoompan`` filter which
+    processes every frame individually at full 1920x1080 resolution and
+    routinely takes 5-15 minutes for an 8-clip batch, causing the pipeline
+    to appear frozen at 65%.
+
+    This version uses a direct ``subprocess`` call with a lightweight
+    scale+pad+fade filter chain that encodes the same clip in seconds.
     """
-    import ffmpeg as ffmpeg_lib
-    probe = ffmpeg_lib.probe(str(audio_path))
-    duration = float(probe["format"]["duration"]) + 0.5
-    fps = 24
-
-    # Build video input: loop the slide image at 24fps
-    video = (
-        ffmpeg_lib
-        .input(str(img_path), loop=1, t=duration, framerate=fps)
-    )
-
-    # Ken Burns: slow zoom from 100% → 108% over the clip duration
-    total_frames = int(duration * fps)
-    zoom_expr = f"min(zoom+0.0003,1.08)"
-    video = video.filter(
-        "zoompan",
-        z=zoom_expr,
-        d=total_frames,
-        x="iw/2-(iw/zoom/2)",
-        y="ih/2-(ih/zoom/2)",
-        s="1920x1080",
-        fps=fps,
-    )
-
-    # Ensure even dimensions for h264
-    video = video.filter("scale", "trunc(iw/2)*2", "trunc(ih/2)*2")
-
-    # Fade in (first 0.8s) and fade out (last 0.8s)
+    duration = _probe_duration(audio_path)
     fade_dur = 0.8
-    fade_out_start = max(0, duration - fade_dur)
-    video = video.filter("fade", type="in", start_time=0, duration=fade_dur)
-    video = video.filter("fade", type="out", start_time=fade_out_start, duration=fade_dur)
+    fade_out_start = max(0.0, duration - fade_dur)
 
-    # SRT subtitle overlay via drawtext
+    # Build video filter chain — no zoompan
+    vf_parts = [
+        # Scale to fill 1920x1080, preserve aspect ratio, black padding
+        "scale=1920:1080:force_original_aspect_ratio=decrease,"
+        "pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1",
+        # Ensure even dimensions required by libx264
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        # Fade in / out
+        f"fade=type=in:start_time=0:duration={fade_dur}",
+        f"fade=type=out:start_time={fade_out_start:.3f}:duration={fade_dur}",
+    ]
+
+    # SRT subtitle burn-in
     if srt_path and srt_path.exists():
-        video = video.filter(
-            "subtitles",
-            str(srt_path),
-            force_style="FontSize=28,PrimaryColour=&HFFFFFF&,"
-                        "OutlineColour=&H40000000&,BorderStyle=4,"
-                        "BackColour=&HB0000000&,Outline=1,"
-                        "MarginV=30,Alignment=2",
+        srt_escaped = str(srt_path).replace("'", "\\'").replace(":", "\\:")
+        vf_parts.append(
+            f"subtitles='{srt_escaped}':"
+            "force_style='FontSize=28,PrimaryColour=&HFFFFFF&,"
+            "OutlineColour=&H40000000&,BorderStyle=4,"
+            "BackColour=&HB0000000&,Outline=1,"
+            "MarginV=30,Alignment=2'"
         )
 
-    # Audio with fade
-    audio = ffmpeg_lib.input(str(audio_path))
-    audio = audio.filter("afade", type="in", start_time=0, duration=0.3)
-    audio = audio.filter("afade", type="out", start_time=max(0, duration - 0.6), duration=0.5)
+    vf = ",".join(vf_parts)
 
-    (
-        video
-        .output(
-            audio,
-            str(out_path),
-            vcodec="libx264", acodec="aac",
-            pix_fmt="yuv420p", shortest=None,
-            loglevel="error",
-        )
-        .overwrite_output()
-        .run()
+    # Audio filter: fade in + fade out
+    af = (
+        f"afade=type=in:start_time=0:duration=0.3,"
+        f"afade=type=out:start_time={max(0.0, duration - 0.6):.3f}:duration=0.5"
     )
 
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1", "-framerate", "24",
+        "-t", f"{duration:.3f}",
+        "-i", str(img_path),
+        "-i", str(audio_path),
+        "-vf", vf,
+        "-af", af,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        "-pix_fmt", "yuv420p",
+        "-shortest",
+        "-movflags", "+faststart",
+        "-loglevel", "error",
+        str(out_path),
+    ]
 
-def _concat_video(clip_paths: list[Path], final_path: Path, bgm_path: Optional[Path] = None):
-    """Concatenate clips into final video, optionally mixing in background music."""
-    import ffmpeg as ffmpeg_lib
+    logger.debug("Compositing clip: %s", out_path.name)
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=_CLIP_TIMEOUT,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"ffmpeg error for {out_path.name} (exit {result.returncode}): "
+                f"{result.stderr[:800]}"
+            )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"ffmpeg timed out after {_CLIP_TIMEOUT}s compositing {out_path.name}"
+        ) from exc
 
+
+def _concat_video(
+    clip_paths: list[Path],
+    final_path: Path,
+    bgm_path: Optional[Path] = None,
+) -> None:
+    """Concatenate MP4 clips into the final video via an ffmpeg concat demuxer."""
     list_file = final_path.parent / "concat_list.txt"
     list_file.write_text("\n".join(f"file '{p}'" for p in clip_paths))
 
     if bgm_path and bgm_path.exists():
-        # Two-pass: concat then mix BGM at low volume
+        # ── Two-pass: concat first, then mix BGM ──
         concat_tmp = final_path.parent / "concat_tmp.mp4"
-        (
-            ffmpeg_lib
-            .input(str(list_file), format="concat", safe=0)
-            .output(str(concat_tmp), c="copy", loglevel="error")
-            .overwrite_output()
-            .run()
+
+        subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0",
+                "-i", str(list_file),
+                "-c", "copy",
+                "-loglevel", "error",
+                str(concat_tmp),
+            ],
+            check=True, capture_output=True, text=True, timeout=600,
         )
 
-        # Probe video duration for BGM looping
-        probe = ffmpeg_lib.probe(str(concat_tmp))
-        vid_dur = float(probe["format"]["duration"])
+        # Probe duration for BGM loop truncation
+        probe = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(concat_tmp),
+            ],
+            capture_output=True, text=True, timeout=30,
+        )
+        try:
+            vid_dur = float(probe.stdout.strip())
+        except ValueError:
+            vid_dur = 600.0
 
-        vid = ffmpeg_lib.input(str(concat_tmp))
-        bgm = ffmpeg_lib.input(str(bgm_path), stream_loop=-1, t=vid_dur)
-        bgm = bgm.filter("volume", 0.10)  # BGM at 10% volume
-
-        (
-            ffmpeg_lib
-            .output(
-                vid.video, vid.audio, bgm,
+        subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", str(concat_tmp),
+                "-stream_loop", "-1", "-t", f"{vid_dur:.3f}", "-i", str(bgm_path),
+                "-filter_complex",
+                "[1:a]volume=0.10[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]",
+                "-map", "0:v", "-map", "[aout]",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-loglevel", "error",
                 str(final_path),
-                vcodec="copy",
-                filter_complex="[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=2[aout]",
-                map=["0:v", "[aout]"],
-                loglevel="error",
-            )
-            .overwrite_output()
-            .run()
+            ],
+            check=True, capture_output=True, text=True, timeout=600,
         )
         concat_tmp.unlink(missing_ok=True)
     else:
-        (
-            ffmpeg_lib
-            .input(str(list_file), format="concat", safe=0)
-            .output(str(final_path), c="copy", loglevel="error")
-            .overwrite_output()
-            .run()
+        subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0",
+                "-i", str(list_file),
+                "-c", "copy",
+                "-loglevel", "error",
+                str(final_path),
+            ],
+            check=True, capture_output=True, text=True, timeout=600,
         )
 
     list_file.unlink(missing_ok=True)

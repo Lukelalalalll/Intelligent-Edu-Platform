@@ -43,12 +43,10 @@ export default function StepScript({ inputData, lang, provider, audience, maxSeg
                 // Start async job
                 const { jobId } = await videoApi.optimizeScriptAsync(inputData!, lang, provider, maxSegments, audience);
 
-                // Get auth token for SSE
-                const token = localStorage.getItem('token') || '';
-
                 // Connect SSE
                 eventSource = new EventSource(
-                    `${apiRoot}/api/video/script-progress/${jobId}?token=${encodeURIComponent(token)}`
+                    `${apiRoot}/api/video/script-progress/${jobId}`,
+                    { withCredentials: true }
                 );
 
                 eventSource.onmessage = (evt) => {

@@ -72,8 +72,8 @@ export function useDiagramExtractSearch() {
     const svgDocRef = useRef<Document | null>(null);
     const textNodesRef = useRef<Element[]>([]);
 
-    const handleExtractUpload = async (incomingFile?: File | null) => {
-        const fileToUpload = incomingFile || extractFile;
+    const handleExtractUpload = async (incoming?: File | Event | null) => {
+        const fileToUpload = incoming instanceof File ? incoming : extractFile;
         if (!fileToUpload) {
             setExtractError('Please select a file first.');
             return;

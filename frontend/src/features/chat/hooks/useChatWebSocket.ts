@@ -7,7 +7,7 @@ import type { ChatMessage } from '../types';
 const WS_BASE = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009')
     .replace(/^http/, 'ws');
 
-export function useChatWebSocket() {
+export function useChatWebSocket(enabled = true) {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectCount = useRef(0);
     const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -21,9 +21,16 @@ export function useChatWebSocket() {
         setPendingRequests,
         recallMessage,
         setRooms,
+        setUnreadCounts,
     } = useChatStore();
 
     useEffect(() => {
+        if (!enabled) {
+            setWsStatus('closed');
+            setWsSend(null);
+            return;
+        }
+
         const currentUser = (() => {
             try {
                 const u = localStorage.getItem('user');
@@ -60,10 +67,15 @@ export function useChatWebSocket() {
                     }
                 });
 
-                // On reconnect, re-fetch rooms + active room messages to catch up
+                // On reconnect, re-fetch rooms + unread counts + active messages to catch up
                 if (reconnectCount.current > 0) {
                     import('../api').then(({ chatApi }) => {
-                        chatApi.getRooms().then((r) => setRooms(r.rooms));
+                        chatApi.getRooms().then((r) => {
+                            setRooms(r.rooms);
+                            const counts: Record<string, number> = {};
+                            for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
+                            setUnreadCounts(counts);
+                        });
                         const activeId = useChatStore.getState().activeRoomId;
                         if (activeId) {
                             chatApi.getMessages(activeId).then((r) => {
@@ -89,9 +101,14 @@ export function useChatWebSocket() {
                             sentAt: msg.sentAt,
                         });
 
-                        // Increment unread if not in active room
+                        // Increment unread for messages not currently visible in the open chat room.
                         const store = useChatStore.getState();
-                        if (msg.roomId !== store.activeRoomId && msg.senderId !== getCurrentUserId()) {
+                        const isChatRoute = window.location.pathname.startsWith('/chat');
+                        const isViewingRoom = isChatRoute && store.activeRoomId === msg.roomId;
+                        const myId = getCurrentUserId();
+                        console.log('[WS new_message] roomId:', msg.roomId, 'senderId:', msg.senderId, 'myId:', myId, 'isViewingRoom:', isViewingRoom);
+                        if (!isViewingRoom && msg.senderId !== myId) {
+                            console.log('[WS new_message] → incrementUnread for room', msg.roomId);
                             incrementUnread(msg.roomId);
                         }
                     } else if (type === 'message_ack') {
@@ -104,22 +121,37 @@ export function useChatWebSocket() {
                         const { roomId, messageId } = data as { roomId: string; messageId: string };
                         recallMessage(roomId, messageId);
                     } else if (type === 'room_created') {
-                        // Refresh room list
+                        // Refresh room list + unread counts
                         import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => setRooms(r.rooms));
+                            chatApi.getRooms().then((r) => {
+                                setRooms(r.rooms);
+                                const counts: Record<string, number> = {};
+                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
+                                setUnreadCounts(counts);
+                            });
                         });
                     } else if (type === 'room_updated') {
-                        // Refresh room list + notify GroupInfoPanel
+                        // Refresh room list + unread counts + notify GroupInfoPanel
                         import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => setRooms(r.rooms));
+                            chatApi.getRooms().then((r) => {
+                                setRooms(r.rooms);
+                                const counts: Record<string, number> = {};
+                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
+                                setUnreadCounts(counts);
+                            });
                         });
                         window.dispatchEvent(
                             new CustomEvent('chat_room_updated', { detail: data }),
                         );
                     } else if (type === 'room_deleted' || type === 'kicked_from_room') {
-                        // Refresh room list + if current room, navigate away
+                        // Refresh room list + unread counts + if current room, navigate away
                         import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => setRooms(r.rooms));
+                            chatApi.getRooms().then((r) => {
+                                setRooms(r.rooms);
+                                const counts: Record<string, number> = {};
+                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
+                                setUnreadCounts(counts);
+                            });
                         });
                         const store = useChatStore.getState();
                         const kickedRoomId = data.roomId as string;
@@ -189,5 +221,5 @@ export function useChatWebSocket() {
             }
             setWsSend(null);
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 }

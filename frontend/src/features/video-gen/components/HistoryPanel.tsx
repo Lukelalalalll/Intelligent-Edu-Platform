@@ -4,6 +4,8 @@ import * as api from '../api/videoApi';
 import type { GenerationHistoryItem } from '../../../types/api';
 import s from '../../../styles/history.module.css';
 
+const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+
 type VideoHistoryParams = {
     lang?: string;
     provider?: string;
@@ -26,6 +28,20 @@ type VideoHistoryDetail = VideoHistoryItem & {
 };
 
 const fmt = (v: string | number | null | undefined, fb = '-') => (v == null ? fb : String(v).trim() || fb);
+
+function formatLanguage(lang?: string): string {
+    const normalized = String(lang || '').trim().toLowerCase();
+    if (normalized === 'zh' || normalized === 'zh-cn' || normalized === 'zh-hans') return 'Chinese';
+    if (normalized === 'en' || normalized === 'en-us') return 'English';
+    return fmt(lang);
+}
+
+function resolveVideoUrl(videoPath: string): string {
+    const raw = String(videoPath || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `${apiRoot}/${raw.replace(/^\/+/, '')}`;
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
     return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
@@ -116,7 +132,7 @@ export default function VideoHistoryPanel() {
                             <div className={s.historyItemDate} title={date.title}>{date.label}</div>
                         </div>
                         <div className={s.historyItemChips}>
-                            <span className={s.historyChipPrimary}>{fmt(item.params?.lang, 'zh')}</span>
+                            <span className={s.historyChipPrimary}>{formatLanguage(item.params?.lang)}</span>
                             <span className={s.historyChip}>{fmt(item.params?.provider)}</span>
                             {item.params?.has_scenes && <span className={s.historyChip}>{fmt(item.params.scene_count)} scenes</span>}
                         </div>
@@ -128,7 +144,7 @@ export default function VideoHistoryPanel() {
                 <div>
                     <div className={s.historyDetailMetaPrimary}>
                         <strong>Video</strong>
-                        {' · '}{fmt(cur.params?.lang)}
+                        {' · '}{formatLanguage(cur.params?.lang)}
                         {' · '}{fmt(cur.params?.provider)}
                         {cur.params?.has_scenes && ' · Scene-based'}
                     </div>
@@ -137,7 +153,7 @@ export default function VideoHistoryPanel() {
             )}
             renderDetailParams={(cur) => (
                 <>
-                    <div className={s.historyParamItem}><span>Language</span><strong>{fmt(cur.params?.lang)}</strong></div>
+                    <div className={s.historyParamItem}><span>Language</span><strong>{formatLanguage(cur.params?.lang)}</strong></div>
                     <div className={s.historyParamItem}><span>Provider</span><strong>{fmt(cur.params?.provider)}</strong></div>
                     <div className={s.historyParamItem}><span>Subtitles</span><strong>{cur.params?.subtitles ? 'Yes' : 'No'}</strong></div>
                     <div className={s.historyParamItem}><span>Max Segments</span><strong>{fmt(cur.params?.max_segments)}</strong></div>
@@ -150,10 +166,16 @@ export default function VideoHistoryPanel() {
                 try {
                     const parsed = asRecord(JSON.parse(detail.result));
                     if (parsed && typeof parsed.videoPath === 'string') {
+                        const videoUrl = resolveVideoUrl(parsed.videoPath);
                         return (
                             <div style={{ textAlign: 'center', padding: '1rem' }}>
-                                <p><strong>Video Path:</strong> {parsed.videoPath}</p>
-                                <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Task ID: {fmt(toStringOrUndefined(parsed.task_id))}</p>
+                                <video src={videoUrl} controls width="640" style={{ borderRadius: 12, maxWidth: '100%' }} />
+                                <div style={{ marginTop: 12 }}>
+                                    <a className={`${s.btn} ${s.btnPrimary}`} href={videoUrl} download style={{ textDecoration: 'none' }}>
+                                        <i className="fas fa-download" /> Download MP4
+                                    </a>
+                                </div>
+                                <p style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: 12 }}>Task ID: {fmt(toStringOrUndefined(parsed.task_id))}</p>
                             </div>
                         );
                     }

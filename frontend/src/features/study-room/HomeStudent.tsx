@@ -5,7 +5,6 @@ import AIChatBox from '../home/components/AIChatBox';
 import { studentApi } from '../../api/mailboxApi';
 import styles from './styles/HomeStudent.module.css';
 import AssignmentsTab from './components/AssignmentsTab';
-import DiagnosticTab from './components/DiagnosticTab';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 
 const StudyRoom = lazy(() => import('./StudyRoom'));
@@ -151,12 +150,6 @@ export default function HomeStudent({
                 >
                     <i className="fas fa-tasks"></i> My Assignments
                 </button>
-                <button
-                    className={`${styles.tabBtn} ${activeTab === 'diagnostic' ? styles.tabActive : ''}`}
-                    onClick={() => handleTabSwitch('diagnostic')}
-                >
-                    <i className="fas fa-stethoscope"></i> Learning Diagnostic
-                </button>
             </div>
 
             {/* 3. 内容区域：根据 tab 切换显示 */}
@@ -170,7 +163,7 @@ export default function HomeStudent({
                         <StudyRoom />
                     </Suspense>
                 </section>
-            ) : activeTab === 'assignments' ? (
+            ) : (
                 <AssignmentsTab
                     courses={courses}
                     assignments={assignments}
@@ -186,8 +179,6 @@ export default function HomeStudent({
                     handleFileUploadWrapped={handleFileUploadWrapped}
                     handleSubmitWork={handleSubmitWork}
                 />
-            ) : (
-                <DiagnosticTab />
             )}
 
         </div>

@@ -2,17 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 
 /**
  * Progressively reveals `target` text frame-by-frame (typewriter effect).
- * When `isActive` is false (streaming ended or not the active message),
- * snaps immediately to the full target string.
+ * Runs a **continuous** rAF loop while `isActive` is true so there is never
+ * a stop-start gap between SSE chunks.  When `isActive` turns false
+ * (streaming ended), snaps immediately to the full target string.
  *
  * @param target       Full accumulated text to reveal (grows as chunks arrive)
  * @param isActive     True while this message is being streamed
- * @param charsPerFrame Characters to reveal per animation frame (~60fps)
+ * @param charsPerFrame Base characters to reveal per animation frame (~60fps).
+ *                      Automatically speeds up when the buffer grows large.
  */
 export function useTypewriter(
     target: string,
     isActive: boolean,
-    charsPerFrame = 8,
+    charsPerFrame = 3,
 ): string {
     const [displayed, setDisplayed] = useState(() => (isActive ? '' : target));
     const posRef = useRef(isActive ? 0 : target.length);
@@ -35,10 +37,10 @@ export function useTypewriter(
         }
     }, [isActive]);
 
-    // Start / resume animation whenever target grows and animation isn't running
+    // Continuous animation loop — runs the entire time isActive is true.
+    // Reads from targetRef (always fresh) so it doesn't need `target` as a dep.
     useEffect(() => {
-        if (!isActive || rafRef.current != null) return;
-        if (posRef.current >= target.length) return;
+        if (!isActive) return;
 
         const step = () => {
             // Snap immediately if streaming ended mid-animation
@@ -49,28 +51,34 @@ export function useTypewriter(
                 rafRef.current = null;
                 return;
             }
+
             const t = targetRef.current;
             if (posRef.current < t.length) {
-                posRef.current = Math.min(posRef.current + charsPerFrame, t.length);
+                // Adaptive speed: accelerate when buffer grows large to prevent
+                // falling too far behind a fast model, keep slow when buffer is
+                // small so the typing cadence is visible.
+                const behind = t.length - posRef.current;
+                const speed = behind > 300 ? charsPerFrame * 5
+                    : behind > 150 ? charsPerFrame * 3
+                    : behind > 60  ? charsPerFrame * 2
+                    : charsPerFrame;
+                posRef.current = Math.min(posRef.current + speed, t.length);
                 setDisplayed(t.slice(0, posRef.current));
-                rafRef.current = requestAnimationFrame(step);
-            } else {
-                // Caught up with current content; wait for next chunk
-                rafRef.current = null;
             }
+            // Keep the loop alive — don't stop when caught up; new tokens can
+            // arrive at any moment and we want zero-gap reveal.
+            rafRef.current = requestAnimationFrame(step);
         };
 
         rafRef.current = requestAnimationFrame(step);
-    }, [target, isActive, charsPerFrame]);
 
-    // Cancel RAF on unmount
-    useEffect(() => {
         return () => {
             if (rafRef.current != null) {
                 cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
             }
         };
-    }, []);
+    }, [isActive, charsPerFrame]);
 
     return displayed;
 }

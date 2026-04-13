@@ -31,6 +31,7 @@ export default function DiagramTool({
         <div className={hideBanner ? undefined : "container"}>
             {!hideBanner && (
                 <WelcomeBanner
+                    className={styles.diagramBanner}
                     title="Visual Tool"
                     subtitle="Extract diagrams & images, search SVGs, and generate with AI"
                 />

@@ -125,10 +125,16 @@ export const useChatStore = create<ChatStore>((set) => ({
     })),
 
   setUnreadCounts: (counts) =>
-    set((state) => ({
-      // Merge: server values override existing zeros, but don't clobber WS increments that happened since load
-      unreadCounts: { ...state.unreadCounts, ...counts },
-    })),
+    set((state) => {
+      // Prefer the larger of the WS-incremented value vs the server-returned value
+      const merged: Record<string, number> = { ...counts };
+      for (const [roomId, storeCount] of Object.entries(state.unreadCounts)) {
+        if (storeCount > (merged[roomId] ?? 0)) {
+          merged[roomId] = storeCount;
+        }
+      }
+      return { unreadCounts: merged };
+    }),
 
   setWsStatus: (wsStatus) => set({ wsStatus }),
 

@@ -96,7 +96,12 @@ function buildDownloadName(name?: string, mimeType?: string, fileUrl?: string): 
 
 export default function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
     const [hovering, setHovering] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        anchorRect: { top: number; left: number; right: number; bottom: number; width: number; height: number };
+        preferredSide: 'left' | 'right';
+    } | null>(null);
     const bubbleRef = useRef<HTMLDivElement>(null);
     const recallMsg = useChatStore((s) => s.recallMessage);
 
@@ -123,14 +128,38 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
         e.preventDefault();
         e.stopPropagation();
         if (multiSelect || message.recalled || message.type === 'system') return;
-        // Position menu next to the bubble
+        // Position menu next to the bubble.
         if (bubbleRef.current) {
             const rect = bubbleRef.current.getBoundingClientRect();
-            const x = isOwn ? rect.left - 6 : rect.right + 6;
+            const x = isOwn ? rect.left : rect.right;
             const y = rect.top + rect.height / 2;
-            setContextMenu({ x, y });
+            setContextMenu({
+                x,
+                y,
+                anchorRect: {
+                    top: rect.top,
+                    left: rect.left,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                },
+                preferredSide: isOwn ? 'left' : 'right',
+            });
         } else {
-            setContextMenu({ x: e.clientX, y: e.clientY });
+            setContextMenu({
+                x: e.clientX,
+                y: e.clientY,
+                anchorRect: {
+                    top: e.clientY,
+                    left: e.clientX,
+                    right: e.clientX,
+                    bottom: e.clientY,
+                    width: 0,
+                    height: 0,
+                },
+                preferredSide: isOwn ? 'left' : 'right',
+            });
         }
     }, [multiSelect, message.recalled, message.type, isOwn]);
 
@@ -138,12 +167,24 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
         if (multiSelect) return; // handled by row click
         if (message.recalled || message.type === 'system') return;
         e.stopPropagation();
-        // Position menu next to the bubble
+        // Position menu next to the bubble.
         if (bubbleRef.current) {
             const rect = bubbleRef.current.getBoundingClientRect();
-            const x = isOwn ? rect.left - 6 : rect.right + 6;
+            const x = isOwn ? rect.left : rect.right;
             const y = rect.top + rect.height / 2;
-            setContextMenu({ x, y });
+            setContextMenu({
+                x,
+                y,
+                anchorRect: {
+                    top: rect.top,
+                    left: rect.left,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                },
+                preferredSide: isOwn ? 'left' : 'right',
+            });
         }
     }, [multiSelect, message.recalled, message.type, isOwn]);
 
@@ -330,6 +371,8 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                 <MessageContextMenu
                     x={contextMenu.x}
                     y={contextMenu.y}
+                    anchorRect={contextMenu.anchorRect}
+                    preferredSide={contextMenu.preferredSide}
                     isOwn={isOwn}
                     canRecall={canRecall}
                     messageContent={message.content || ''}

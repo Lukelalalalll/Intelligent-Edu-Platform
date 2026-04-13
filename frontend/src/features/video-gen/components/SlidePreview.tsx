@@ -116,12 +116,12 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
             {renderDivider()}
             <div style={{ display: 'flex', flex: 1, gap: 10, overflow: 'hidden' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col1Title || '左栏'}</div>
+                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col1Title || 'Left'}</div>
                 {col1.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: 9, lineHeight: 1.5 }}>• {b}</div>)}
               </div>
               <div style={{ width: 1, background: t.accent, opacity: 0.3 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col2Title || '右栏'}</div>
+                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col2Title || 'Right'}</div>
                 {col2.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: 9, lineHeight: 1.5 }}>• {b}</div>)}
               </div>
             </div>

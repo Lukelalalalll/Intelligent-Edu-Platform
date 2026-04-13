@@ -45,7 +45,7 @@ export default function StepUpload({ lang, setLang, provider, setProvider, audie
             <div className={styles.langRow}>
                 <label>Video language:</label>
                 <select value={lang} onChange={(e) => setLang(e.target.value as 'zh' | 'en')}>
-                    <option value="zh">中文 Chinese</option>
+                    <option value="zh">Chinese</option>
                     <option value="en">English</option>
                 </select>
             </div>
@@ -63,10 +63,10 @@ export default function StepUpload({ lang, setLang, provider, setProvider, audie
             <div className={styles.langRow}>
                 <label>Target audience:</label>
                 <select value={audience} onChange={(e) => setAudience(e.target.value as Audience)}>
-                    <option value="student">Student (本科生)</option>
-                    <option value="teacher">Teacher (教师同行)</option>
-                    <option value="researcher">Researcher (研究者)</option>
-                    <option value="general">General (大众)</option>
+                    <option value="student">Student (Undergraduate)</option>
+                    <option value="teacher">Teacher (Peer Educators)</option>
+                    <option value="researcher">Researcher</option>
+                    <option value="general">General Audience</option>
                 </select>
             </div>
 

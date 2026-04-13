@@ -1,6 +1,8 @@
 /* sub5.module.css — Upload & Controls (studyNotesEntry) */
 
-.pageHeader {}
+.pageHeader {
+    margin-bottom: 1rem !important; /* To match Question Generator precisely */
+}
 
 .uploadCard {
     background: var(--bg-card);

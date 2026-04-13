@@ -5,6 +5,8 @@ import logoImg from '../assets/hku_logo.png';
 import { log } from '../utils/logger';
 import type { User } from '../types/api';
 import { useChatStore } from '../features/chat/store/chatStore';
+import { useChatWebSocket } from '../features/chat/hooks/useChatWebSocket';
+import { useChatRooms } from '../features/chat/hooks/useChatRooms';
 import NetworkBanner from './NetworkBanner';
 
 // 1. 引入全局样式
@@ -37,7 +39,6 @@ const NAV_SECTIONS: NavSection[] = [
         title: 'AI Tools',
         links: [
             { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
             { to: '/knowledge-base', label: 'Knowledge Base', icon: 'fa-database' },
         ],
     },
@@ -46,7 +47,6 @@ const NAV_SECTIONS: NavSection[] = [
         links: [
             { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
             { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
-            { to: '/diagnostic-feedback', label: 'Student Feedback', icon: 'fa-comment-dots' },
         ],
     },
 ];
@@ -63,7 +63,6 @@ const STUDENT_NAV_SECTIONS: NavSection[] = [
         title: 'AI Tools',
         links: [
             { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
         ],
     },
 ];
@@ -80,7 +79,6 @@ const TEACHER_NAV_SECTIONS: NavSection[] = [
         title: 'AI Tools',
         links: [
             { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-            { to: '/email-agent', label: 'Email Agent', icon: 'fa-envelope-open-text' },
             { to: '/knowledge-base', label: 'Knowledge Base', icon: 'fa-database' },
         ],
     },
@@ -89,7 +87,6 @@ const TEACHER_NAV_SECTIONS: NavSection[] = [
         links: [
             { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
             { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
-            { to: '/diagnostic-feedback', label: 'Student Feedback', icon: 'fa-comment-dots' },
         ],
     },
 ];
@@ -113,6 +110,12 @@ export default function Layout() {
     });
     const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
     const isChatPage = location.pathname.startsWith('/chat');
+
+    // Keep chat state synced globally so sidebar unread badge updates in real time.
+    // useChatWebSocket handles its own auth guard internally (reads localStorage).
+    // useChatRooms relies on cookie-based auth like all other API calls.
+    useChatWebSocket(!isAuthPage);
+    useChatRooms(!isAuthPage);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');

@@ -71,7 +71,7 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
                     <p className={styles.hint}>
                         Your <strong>{scenes.length}</strong>-scene teaching video will be generated on the server.
                         <br />
-                        Language: <strong>{lang === 'zh' ? '中文' : 'English'}</strong>
+                        Language: <strong>{lang === 'zh' ? 'Chinese' : 'English'}</strong>
                         {' | '}Subtitles: <strong>{enableSubtitles ? 'ON' : 'OFF'}</strong>
                     </p>
                     <div style={{ display: 'flex', gap: 12 }}>

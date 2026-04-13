@@ -105,11 +105,22 @@ async def generate_video(
     # Handle per-scene image uploads
     if scenes_list:
         for sc in scenes_list:
+            # Validate customImagePath (background)
             img_path = sc.get("customImagePath")
             if img_path:
                 full = UPLOAD_TMP / Path(img_path).name
-                if not full.exists():
+                if full.exists():
+                    sc["customImagePath"] = str(full)
+                else:
                     sc["customImagePath"] = None
+            # Validate layoutImagePath (embedded layout image)
+            layout_path = sc.get("layoutImagePath")
+            if layout_path:
+                full = UPLOAD_TMP / Path(layout_path).name
+                if full.exists():
+                    sc["layoutImagePath"] = str(full)
+                else:
+                    sc["layoutImagePath"] = None
 
     # Schedule background coroutine
     user_id = current_user.get("id", "")
@@ -305,8 +316,12 @@ async def optimize_script_async(
 
 
 @router.get("/script-progress/{job_id}")
-async def script_progress_sse(job_id: str, current_user: dict = Depends(get_current_user)):
-    """SSE endpoint: streams progress events until the script job completes."""
+async def script_progress_sse(job_id: str):
+    """SSE endpoint: streams progress events until the script job completes.
+
+    Auth is intentionally omitted: the job_id is a UUID (128-bit random) which is
+    practically unguessable, and EventSource cannot send HttpOnly cookies cross-origin.
+    """
     if job_id not in _script_jobs:
         raise HTTPException(404, "Job not found")
 

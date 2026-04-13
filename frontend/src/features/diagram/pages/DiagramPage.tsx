@@ -10,6 +10,7 @@ import { useDiagramImageExtract } from '../hooks/useDiagramImageExtract';
 import { transferApi } from '../../chat/api/transferApi';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 import s from '../../../styles/history.module.css';
+import styles from '../styles/diagram.module.css';
 
 export default function DiagramPage() {
     const { extractState, extractHandlers, searchState, searchHandlers, editorState, editorHandlers } = useDiagramExtractSearch();
@@ -86,6 +87,7 @@ export default function DiagramPage() {
             <WelcomeBanner
                 title="Visual Tool"
                 subtitle="Extract diagrams & images, search SVGs, and generate with AI"
+                className={styles.diagramBanner}
             />
             {viewSwitchJSX}
             {activeView === 'workflow' && (

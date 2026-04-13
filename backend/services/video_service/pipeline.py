@@ -53,9 +53,9 @@ async def run_video_pipeline(
             slide_paths = slide_paths[:pair_count]
             audio_paths = audio_paths[:pair_count]
 
-            # FFmpeg clips (concurrent) — with Ken Burns, fade, SRT overlay
+            # FFmpeg clips (concurrent) — scale+fade (no slow zoompan)
             task.update({"progress": 65, "message": f"Compositing {pair_count} clips..."})
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             clip_jobs = [
                 loop.run_in_executor(
                     None, _make_clip,
@@ -65,10 +65,17 @@ async def run_video_pipeline(
                 )
                 for i in range(pair_count)
             ]
-            await asyncio.gather(*clip_jobs)
+            results = await asyncio.gather(*clip_jobs, return_exceptions=True)
+            for i, r in enumerate(results):
+                if isinstance(r, Exception):
+                    logger.error("Clip %d failed: %s", i, r)
             task.update({"progress": 88, "message": "Merging..."})
             clip_paths = [work_dir / f"clip_{i:03d}.mp4" for i in range(pair_count)]
 
+            # Skip any clips that failed to render
+            clip_paths = [p for p in [work_dir / f"clip_{i:03d}.mp4" for i in range(pair_count)] if p.exists()]
+            if not clip_paths:
+                raise RuntimeError("All clip compositing jobs failed — check ffmpeg logs above")
             final_mp4 = VIDEO_DIR / f"{task_id}.mp4"
             await loop.run_in_executor(None, _concat_video, clip_paths, final_mp4)
 
@@ -122,7 +129,7 @@ async def run_video_pipeline(
 
         # 5. Compose all clips concurrently
         task.update({"progress": 70, "message": f"Compositing {pair_count} clips in parallel..."})
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         clip_jobs = [
             loop.run_in_executor(
                 None, _make_clip,
@@ -131,7 +138,10 @@ async def run_video_pipeline(
             )
             for i in range(pair_count)
         ]
-        await asyncio.gather(*clip_jobs)
+        results = await asyncio.gather(*clip_jobs, return_exceptions=True)
+        for i, r in enumerate(results):
+            if isinstance(r, Exception):
+                logger.error("Clip %d failed: %s", i, r)
         task.update({"progress": 88, "message": "Clips done, merging..."})
         clip_paths = [work_dir / f"clip_{i:03d}.mp4" for i in range(pair_count)]
 

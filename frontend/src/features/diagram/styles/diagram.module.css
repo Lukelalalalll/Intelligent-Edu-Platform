@@ -11,9 +11,12 @@
     }
 }
 
+.diagramBanner {
+    margin-bottom: 1rem !important; /* To match Question Generator precisely */
+}
 
 .tabSwitcher {
-    margin: 22px auto 26px;
+    margin: 10px auto 16px;
     padding: 8px;
     width: fit-content;
     max-width: 100%;

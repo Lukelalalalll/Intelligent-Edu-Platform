@@ -15,9 +15,8 @@ export const AdminDashboardPage = React.lazy(() => import('../features/admin/pag
 export const AdminDbConsolePage = React.lazy(() => import('../features/admin/pages/AdminDbConsolePage'));
 export const AdminFileCenterPage = React.lazy(() => import('../features/admin-file-center/pages/AdminFileCenterPage'));
 
-// ── AI / Email pages ──
+// ── AI pages ──
 export const AIInteractPage = React.lazy(() => import('../features/ai-interact/pages/AIInteractPage'));
-export const EmailAgentPage = React.lazy(() => import('../features/email-agent/pages/EmailAgentPage'));
 
 // ── Mailbox / Grading ──
 export const MailboxPage = React.lazy(() => import('../features/mailbox/pages/MailboxPage'));
@@ -31,10 +30,10 @@ export const QuestionGeneratorPage = React.lazy(() => import('../features/questi
 
 // ── Slides pages ──
 export const MdProcessorPage = React.lazy(() => import('../features/slides/pages/MdProcessor'));
-export const HighlighterPage = React.lazy(() => import('../features/slides/pages/HighlighterPage'));
+export const HighlighterPage = React.lazy(() => import('../features/slides/pages/Highlighter'));
 export const SpecifyPage = React.lazy(() => import('../features/slides/pages/Specify'));
 export const QuickProcessPage = React.lazy(() => import('../features/slides/pages/QuickProcess'));
-export const PptTemplatePage = React.lazy(() => import('../features/slides/pages/PptTemplate/PptTemplatePage'));
+export const PptTemplatePage = React.lazy(() => import('../features/slides/pages/PptTemplate'));
 
 // ── Study-notes / Video-gen ──
 export const StudyNotesPage = React.lazy(() => import('../features/study-notes/pages/StudyNotesPage'));
@@ -42,5 +41,4 @@ export const VideoGenPage = React.lazy(() => import('../features/video-gen/pages
 
 // ── Simple pass-through pages (no entry wrapper needed) ──
 export const ChatPage = React.lazy(() => import('../features/chat/pages/ChatPage'));
-export const DiagnosticFeedbackPage = React.lazy(() => import('../features/diagnostic-feedback/DiagnosticFeedbackPage'));
 export const PublishHomework = React.lazy(() => import('../features/homework/PublishHomework'));

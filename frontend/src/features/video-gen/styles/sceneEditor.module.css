@@ -19,23 +19,24 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .sceneCard:hover {
-  border-color: rgba(124, 58, 237, 0.3);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.1);
+  border-color: rgba(0, 123, 85, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 123, 85, 0.1);
   transform: translateY(-2px);
 }
 
 .sceneLeft {
-  flex: 1;
+  flex: 4;
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
 }
 .sceneRight {
-  flex: 0 0 360px;
+  flex: 6;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .sceneHeader {
@@ -50,7 +51,7 @@
 .sceneIdx {
   font-size: 14px;
   font-weight: 700;
-  color: #7c3aed;
+  color: var(--primary-color);
   letter-spacing: .5px;
   display: flex;
   align-items: center;
@@ -62,7 +63,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--primary-color);
 }
 .deleteBtn {
   background: none;
@@ -91,9 +92,9 @@
 }
 .inputSmall:focus {
   outline: none;
-  border-color: #7c3aed;
+  border-color: var(--primary-color);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
 }
 .scriptArea {
   resize: vertical;
@@ -123,8 +124,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 .themeSwatch.active {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.25);
 }
 
 /* ── Slide Mode Toggle ───────────── */
@@ -146,14 +147,14 @@
   transition: all .2s;
 }
 .modePill:hover {
-  background: rgba(124, 58, 237, 0.04);
-  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(0, 123, 85, 0.04);
+  border-color: rgba(0, 123, 85, 0.3);
 }
 .modePill.active {
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-yellow));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 123, 85, 0.25);
 }
 
 /* ── Slide Preview ───────────────── */
@@ -239,14 +240,14 @@
   transition: all .2s;
 }
 .tonePill:hover {
-  background: rgba(124, 58, 237, 0.04);
-  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(0, 123, 85, 0.04);
+  border-color: rgba(0, 123, 85, 0.3);
 }
 .tonePill.active {
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-yellow));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 123, 85, 0.25);
 }
 
 /* ── Layout Grid ──────────────── */
@@ -275,14 +276,14 @@
   font-size: 14px;
 }
 .layoutBtn:hover {
-  background: rgba(124, 58, 237, 0.04);
-  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(0, 123, 85, 0.04);
+  border-color: rgba(0, 123, 85, 0.3);
 }
 .layoutBtn.active {
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-yellow));
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 123, 85, 0.25);
 }
 
 /* ── Background Toggle ─────────── */
@@ -321,8 +322,8 @@
   background: #f8fafc;
 }
 .layoutImgUpload:hover {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.03);
+  border-color: var(--primary-color);
+  background: rgba(0, 123, 85, 0.03);
 }
 .layoutImgUpload img {
   width: 100%;
@@ -347,8 +348,8 @@
   background: #f8fafc;
 }
 .imgUploadZone:hover {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.03);
+  border-color: var(--primary-color);
+  background: rgba(0, 123, 85, 0.03);
 }
 .imgUploadZone img {
   width: 100%;
@@ -370,9 +371,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(124, 58, 237, 0.04);
-  border: 1.5px dashed rgba(124, 58, 237, 0.25);
-  color: #7c3aed;
+  background: rgba(0, 123, 85, 0.04);
+  border: 1.5px dashed rgba(0, 123, 85, 0.25);
+  color: var(--primary-color);
   border-radius: 10px;
   padding: 10px 20px;
   cursor: pointer;
@@ -381,8 +382,8 @@
   transition: all .2s;
 }
 .addSceneBtn:hover {
-  border-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.08);
+  border-color: var(--primary-color);
+  background: rgba(0, 123, 85, 0.08);
   transform: translateY(-1px);
 }
 
@@ -400,7 +401,7 @@
   width: 6px;
 }
 .sceneEditorWrap::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.25);
+  background: rgba(0, 123, 85, 0.25);
   border-radius: 6px;
 }
 .sceneEditorWrap::-webkit-scrollbar-track {

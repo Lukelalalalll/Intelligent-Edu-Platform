@@ -23,6 +23,8 @@ const styles = {
 interface Props {
     x: number;
     y: number;
+    anchorRect?: { top: number; left: number; right: number; bottom: number; width: number; height: number };
+    preferredSide?: 'left' | 'right';
     isOwn: boolean;
     canRecall: boolean;
     messageContent: string;
@@ -46,7 +48,7 @@ const LANG_OPTIONS = [
 ];
 
 export default function MessageContextMenu({
-    x, y, isOwn, canRecall, messageContent, messageId,
+    x, y, anchorRect, preferredSide, isOwn, canRecall, messageContent, messageId,
     onClose, onCopy, onQuote, onRecall, onMultiSelect, onAiRewrite,
 }: Props) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -74,17 +76,34 @@ export default function MessageContextMenu({
         return () => document.removeEventListener('keydown', handler);
     }, [onClose]);
 
-    // Adjust position to keep menu within viewport, centered vertically on the bubble
+    // Adjust position to keep menu beside the bubble and within viewport.
     const adjustedStyle = (() => {
-        const menuW = 180;
-        const menuH = 220;
+        const menuW = Math.max(menuRef.current?.offsetWidth ?? 0, 180);
+        const menuH = Math.max(menuRef.current?.offsetHeight ?? 0, 220);
+        const GAP = 8;
+
         let left = x;
-        let top = y - menuH / 2; // center on the bubble midpoint
-        // Flip to other side if goes off-screen
-        if (left + menuW > window.innerWidth - 8) left = x - menuW - 12;
-        if (left < 8) left = 8;
+        if (anchorRect) {
+            const side = preferredSide ?? (isOwn ? 'left' : 'right');
+            left = side === 'left'
+                ? anchorRect.left - menuW - GAP
+                : anchorRect.right + GAP;
+
+            if (left < 8) {
+                left = Math.min(window.innerWidth - menuW - 8, anchorRect.right + GAP);
+            }
+            if (left + menuW > window.innerWidth - 8) {
+                left = Math.max(8, anchorRect.left - menuW - GAP);
+            }
+        }
+
+        let top = anchorRect
+            ? anchorRect.top + anchorRect.height / 2 - menuH / 2
+            : y - menuH / 2;
+
         if (top + menuH > window.innerHeight - 8) top = window.innerHeight - menuH - 8;
         if (top < 8) top = 8;
+
         return { left, top };
     })();
 
