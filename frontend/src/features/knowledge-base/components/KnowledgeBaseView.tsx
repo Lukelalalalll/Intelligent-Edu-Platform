@@ -1,13 +1,12 @@
 import React from 'react';
-import styles from './styles/KnowledgeBase.module.css';
-import CoursePanel from './components/CoursePanel';
-import DocumentManager from './components/DocumentManager';
-import WelcomeBanner from '../../shared/components/WelcomeBanner';
-import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../../api/knowledgeBaseApi';
-import type { UploadTask } from './components/DocumentManager';
-import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../diagnostic-feedback/api/diagnosticApi';
+import styles from '../styles/KnowledgeBase.module.css';
+import CoursePanel from './CoursePanel';
+import DocumentManager from './DocumentManager';
+import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../../../api/knowledgeBaseApi';
+import type { UploadTask } from './DocumentManager';
 
-interface KnowledgeBasePageProps {
+interface KnowledgeBaseViewProps {
     courses: CourseInfo[];
     summaryMap: Record<string, IndexCourseSummary>;
     selectedCourseId: string | null;
@@ -20,27 +19,22 @@ interface KnowledgeBasePageProps {
     onUploadFile: (file: File) => void;
     onDeleteDoc: (docName: string) => void;
     uploading: boolean;
-    chapters: DiagnosticChapter[];
+    chapters: any[];
     selectedChapterId: string;
     onSelectChapter: (chapterId: string) => void;
     onCreateChapter: (chapterName: string, description?: string) => Promise<void>;
-    onUpdateChapter: (chapterId: string, payload: Partial<Pick<DiagnosticChapter, 'chapter_name' | 'chapter_order' | 'description' | 'diagnostic_enabled'>>) => Promise<void>;
+    onUpdateChapter: (chapterId: string, payload: any) => Promise<void>;
     onDeleteChapter: (chapterId: string) => Promise<void>;
-    selectedChapterConfig: DiagnosticConfig | null;
-    onSaveChapterConfig: (chapterId: string, payload: { question_count: number; pass_score: number; time_limit_minutes: number }) => void;
     onReassignDocChapter: (docName: string, chapterId: string) => void;
-    reports: DiagnosticReport[];
-    onSaveReportComment: (reportId: string, comment: string) => void;
 }
 
-export default function KnowledgeBasePage({
+export default function KnowledgeBaseView({
     courses, summaryMap, selectedCourseId, onSelectCourse,
     documents, loadingCourses, loadingDocs,
     uploadTasks, deletingDoc, onUploadFile, onDeleteDoc, uploading,
     chapters, selectedChapterId, onSelectChapter, onCreateChapter,
-    onUpdateChapter, onDeleteChapter, selectedChapterConfig, onSaveChapterConfig,
-    onReassignDocChapter, reports, onSaveReportComment,
-}: KnowledgeBasePageProps) {
+    onUpdateChapter, onDeleteChapter, onReassignDocChapter,
+}: KnowledgeBaseViewProps) {
     const selectedCourse = courses.find(c => c.courseId === selectedCourseId);
 
     return (
@@ -86,11 +80,7 @@ export default function KnowledgeBasePage({
                             onCreateChapter={onCreateChapter}
                             onUpdateChapter={onUpdateChapter}
                             onDeleteChapter={onDeleteChapter}
-                            selectedChapterConfig={selectedChapterConfig}
-                            onSaveChapterConfig={onSaveChapterConfig}
                             onReassignDocChapter={onReassignDocChapter}
-                            reports={reports}
-                            onSaveReportComment={onSaveReportComment}
                         />
                     )}
                 </div>

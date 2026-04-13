@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../../styles/KnowledgeBase.module.css';
-import type { UploadTask } from './types';
+import type { UploadTask } from '../../types';
 
 export default function UploadTasksSection({ uploadTasks }: { uploadTasks: UploadTask[] }) {
     if (uploadTasks.length === 0) return null;

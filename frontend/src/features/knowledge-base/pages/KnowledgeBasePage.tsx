@@ -1,12 +1,12 @@
 import React from 'react';
-import KnowledgeBasePage from '../index';
+import KnowledgeBaseView from '../components/KnowledgeBaseView';
 import { useKnowledgeBase } from '../hooks/useKnowledgeBase';
 
 export default function KnowledgeBasePageContainer() {
     const kb = useKnowledgeBase();
 
     return (
-        <KnowledgeBasePage
+        <KnowledgeBaseView
             courses={kb.courses}
             summaryMap={kb.summaryMap}
             selectedCourseId={kb.selectedCourseId}
@@ -25,11 +25,7 @@ export default function KnowledgeBasePageContainer() {
             onCreateChapter={kb.onCreateChapter}
             onUpdateChapter={kb.onUpdateChapter}
             onDeleteChapter={kb.onDeleteChapter}
-            selectedChapterConfig={kb.selectedChapterConfig}
-            onSaveChapterConfig={kb.onSaveChapterConfig}
             onReassignDocChapter={kb.onReassignDocChapter}
-            reports={kb.reports}
-            onSaveReportComment={kb.onSaveReportComment}
         />
     );
 }

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { knowledgeBaseApi } from '../../../../api/knowledgeBaseApi';
-import type { ChapterDraft, RetrievalResult } from './types';
-import { extractErrorMessage } from '../../../../utils/extractError';
+import { knowledgeBaseApi } from '../../../api/knowledgeBaseApi';
+import type { ChapterDraft, RetrievalResult } from '../types';
+import { extractErrorMessage } from '../../../utils/extractError';
 
 export function useDocumentManagerState({
     courseId,
     selectedChapterId,
-    selectedChapterConfig,
     chapters,
     onCreateChapter,
     onUpdateChapter,
@@ -14,7 +13,6 @@ export function useDocumentManagerState({
 }: {
     courseId: string;
     selectedChapterId: string;
-    selectedChapterConfig: any;
     chapters: any[];
     onCreateChapter: (chapterName: string, description?: string) => Promise<void>;
     onUpdateChapter: (chapterId: string, payload: any) => Promise<void>;
@@ -35,11 +33,6 @@ export function useDocumentManagerState({
 
     const [reportCommentMap, setReportCommentMap] = useState<Record<string, string>>({});
     const [chapterDraftMap, setChapterDraftMap] = useState<Record<string, ChapterDraft>>({});
-    const [configDraft, setConfigDraft] = useState<{ question_count: number; pass_score: number; time_limit_minutes: number }>({
-        question_count: 5,
-        pass_score: 70,
-        time_limit_minutes: 20,
-    });
 
     useEffect(() => {
         const next: Record<string, ChapterDraft> = {};
@@ -48,23 +41,10 @@ export function useDocumentManagerState({
                 chapter_name: c.chapter_name || '',
                 chapter_order: Number(c.chapter_order || 1),
                 description: c.description || '',
-                diagnostic_enabled: Boolean(c.diagnostic_enabled),
             };
         }
         setChapterDraftMap(next);
     }, [chapters]);
-
-    useEffect(() => {
-        if (!selectedChapterConfig) {
-            setConfigDraft({ question_count: 5, pass_score: 70, time_limit_minutes: 20 });
-            return;
-        }
-        setConfigDraft({
-            question_count: Number(selectedChapterConfig.question_count || 5),
-            pass_score: Number(selectedChapterConfig.pass_score || 70),
-            time_limit_minutes: Number(selectedChapterConfig.time_limit_minutes || 20),
-        });
-    }, [selectedChapterConfig]);
 
     const handleTestRetrieval = async () => {
         if (!testQuery.trim() || testLoading) return;
@@ -161,8 +141,6 @@ export function useDocumentManagerState({
         setReportCommentMap,
         chapterDraftMap,
         setChapterDraftMap,
-        configDraft,
-        setConfigDraft,
         handleCreateChapter,
         handleUpdateChapter,
         handleDeleteChapter,

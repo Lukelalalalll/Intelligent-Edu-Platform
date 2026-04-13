@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../../styles/docManager.module.css';
-import type { ChapterDraft } from './types';
+import type { ChapterDraft } from '../../types';
 
 export default function ChapterManagementSection({
     chapters,
@@ -35,7 +35,6 @@ export default function ChapterManagementSection({
                             chapter_name: ch.chapter_name || '',
                             chapter_order: Number(ch.chapter_order || 1),
                             description: ch.description || '',
-                            diagnostic_enabled: Boolean(ch.diagnostic_enabled),
                         };
                         return (
                             <div key={ch.chapter_id} className={styles.chapterCard}>
@@ -71,15 +70,6 @@ export default function ChapterManagementSection({
                                     </div>
                                 </div>
                                 <div className={styles.chapterCardBottom}>
-                                    <label className={styles.chapterEnableLabel}>
-                                        <input
-                                            type="checkbox"
-                                            checked={draft.diagnostic_enabled}
-                                            onChange={e => setChapterDraftMap(prev => ({ ...prev, [ch.chapter_id]: { ...draft, diagnostic_enabled: e.target.checked } }))}
-                                            className={styles.chapterEnableCheckbox}
-                                        />
-                                        Diagnostics Enabled
-                                    </label>
                                     <div className={styles.chapterActions}>
                                         <button
                                             onClick={() => onSelectChapter(ch.chapter_id)}

@@ -3,13 +3,11 @@ import styles from '../styles/docCards.module.css';
 import UploadZone from './UploadZone';
 import AddChapterModal from './document-manager/AddChapterModal';
 import TestRetrievalPanel from './document-manager/TestRetrievalPanel';
-import DiagnosticReportsPanel from './document-manager/DiagnosticReportsPanel';
 import ChapterManagementSection from './document-manager/ChapterManagementSection';
-import DiagnosticConfigSection from './document-manager/DiagnosticConfigSection';
 import UploadTasksSection from './document-manager/UploadTasksSection';
 import IndexedDocumentsSection from './document-manager/IndexedDocumentsSection';
-import { useDocumentManagerState } from './document-manager/useDocumentManagerState';
-import type { DocumentManagerProps, UploadTask } from './document-manager/types';
+import { useDocumentManagerState } from '../hooks/useDocumentManagerState';
+import type { DocumentManagerProps, UploadTask } from '../types';
 
 export type { UploadTask };
 
@@ -29,16 +27,11 @@ export default function DocumentManager({
     onCreateChapter,
     onUpdateChapter,
     onDeleteChapter,
-    selectedChapterConfig,
-    onSaveChapterConfig,
     onReassignDocChapter,
-    reports,
-    onSaveReportComment,
 }: DocumentManagerProps) {
     const dm = useDocumentManagerState({
         courseId,
         selectedChapterId,
-        selectedChapterConfig,
         chapters,
         onCreateChapter,
         onUpdateChapter,
@@ -84,13 +77,6 @@ export default function DocumentManager({
                 chapterBusy={dm.chapterBusy}
             />
 
-            <DiagnosticConfigSection
-                selectedChapterId={selectedChapterId}
-                configDraft={dm.configDraft}
-                setConfigDraft={dm.setConfigDraft}
-                onSaveChapterConfig={onSaveChapterConfig}
-            />
-
             <UploadZone courseId={courseId} onUpload={onUploadFile} disabled={uploading || !selectedChapterId} />
 
             <UploadTasksSection uploadTasks={uploadTasks as UploadTask[]} />
@@ -113,13 +99,6 @@ export default function DocumentManager({
                 onChangeQuery={dm.setTestQuery}
                 onChangeTopK={dm.setTestTopK}
                 onSearch={dm.handleTestRetrieval}
-            />
-
-            <DiagnosticReportsPanel
-                reports={reports}
-                reportCommentMap={dm.reportCommentMap}
-                onChangeComment={(reportId, value) => dm.setReportCommentMap(prev => ({ ...prev, [reportId]: value }))}
-                onSaveComment={(reportId, value) => onSaveReportComment(reportId, value)}
             />
 
             <AddChapterModal

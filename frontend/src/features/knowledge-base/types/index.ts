@@ -1,11 +1,9 @@
-import type { IndexedDoc } from '../../../../api/knowledgeBaseApi';
-import type { DiagnosticChapter, DiagnosticConfig, DiagnosticReport } from '../../../diagnostic-feedback/api/diagnosticApi';
+import type { IndexedDoc } from '../../../api/knowledgeBaseApi';
 
 export interface ChapterDraft {
     chapter_name: string;
     chapter_order: number;
     description: string;
-    diagnostic_enabled: boolean;
 }
 
 export interface UploadTask {
@@ -27,20 +25,16 @@ export interface DocumentManagerProps {
     onUploadFile: (file: File) => void;
     onDeleteDoc: (docName: string) => void;
     uploading: boolean;
-    chapters: DiagnosticChapter[];
+    chapters: any[];
     selectedChapterId: string;
     onSelectChapter: (chapterId: string) => void;
     onCreateChapter: (chapterName: string, description?: string) => Promise<void>;
     onUpdateChapter: (
         chapterId: string,
-        payload: Partial<Pick<DiagnosticChapter, 'chapter_name' | 'chapter_order' | 'description' | 'diagnostic_enabled'>>,
+        payload: Partial<Pick<ChapterDraft, 'chapter_name' | 'chapter_order' | 'description'>>,
     ) => Promise<void>;
     onDeleteChapter: (chapterId: string) => Promise<void>;
-    selectedChapterConfig: DiagnosticConfig | null;
-    onSaveChapterConfig: (chapterId: string, payload: { question_count: number; pass_score: number; time_limit_minutes: number }) => void;
     onReassignDocChapter: (docName: string, chapterId: string) => void;
-    reports: DiagnosticReport[];
-    onSaveReportComment: (reportId: string, comment: string) => void;
 }
 
 export type RetrievalResult = {
