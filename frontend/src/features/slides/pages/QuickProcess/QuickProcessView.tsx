@@ -235,21 +235,6 @@ export default function QuickProcess({
                                     </div>
                                 )}
 
-                                {Array.isArray(taskEvents) && taskEvents.length > 0 && (
-                                    <div className={`card ${styles.taskTimelineCard}`}>
-                                        <div className="card-body">
-                                            <h5 className={styles.cardTitle}><i className="fas fa-stream"></i> Task Timeline</h5>
-                                            <div className={styles.taskTimelineList}>
-                                                {taskEvents.slice(-12).map((event, idx) => (
-                                                    <div key={`${event.ts}-${idx}`} className={styles.taskTimelineEvent}>
-                                                        <strong>[{event.step}]</strong> {event.message}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
                                 <div className={styles.proceedWrap}>
                                     <button className={styles.btnProceed} onClick={handleProceed}>
                                         Confirm & Proceed to Templates <i className="fas fa-arrow-right"></i>
