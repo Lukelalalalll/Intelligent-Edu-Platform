@@ -2,7 +2,7 @@
  * studyNotesApi — unified Study Notes (Sub5) API client.
  * Merges studyNotesPlanApi and studyNotesHistoryApi.
  */
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { GenerationHistoryItem } from '../../../types/api';
 
 // ── Types ──

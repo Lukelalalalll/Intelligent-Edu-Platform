@@ -18,6 +18,7 @@ interface KnowledgeBaseViewProps {
     deletingDoc: string | null;
     onUploadFile: (file: File) => void;
     onDeleteDoc: (docName: string) => void;
+    onDismissUploadTasks: () => void;
     uploading: boolean;
     chapters: any[];
     selectedChapterId: string;
@@ -31,7 +32,7 @@ interface KnowledgeBaseViewProps {
 export default function KnowledgeBaseView({
     courses, summaryMap, selectedCourseId, onSelectCourse,
     documents, loadingCourses, loadingDocs,
-    uploadTasks, deletingDoc, onUploadFile, onDeleteDoc, uploading,
+    uploadTasks, deletingDoc, onUploadFile, onDeleteDoc, onDismissUploadTasks, uploading,
     chapters, selectedChapterId, onSelectChapter, onCreateChapter,
     onUpdateChapter, onDeleteChapter, onReassignDocChapter,
 }: KnowledgeBaseViewProps) {
@@ -73,6 +74,7 @@ export default function KnowledgeBaseView({
                             deletingDoc={deletingDoc}
                             onUploadFile={onUploadFile}
                             onDeleteDoc={onDeleteDoc}
+                            onDismissUploadTasks={onDismissUploadTasks}
                             uploading={uploading}
                             chapters={chapters}
                             selectedChapterId={selectedChapterId}

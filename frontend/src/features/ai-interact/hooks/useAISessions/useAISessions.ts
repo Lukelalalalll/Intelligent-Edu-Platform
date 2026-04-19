@@ -6,9 +6,9 @@ import {
     type AIProvider,
     type AITutorMode,
 } from '../../api/aiApi';
-import { networkBus } from '@/hooks/useNetworkStatus';
+import { networkBus } from '@/shared/hooks/useNetworkStatus';
 import type { AISession, ChatMessage, RagCitation } from '@/types/api';
-import { prepareAttachmentPayload, type AttachmentInput } from './components/attachmentHelpers';
+import { prepareAttachmentPayload, type AttachmentInput } from './utils/attachmentHelpers';
 import {
     PROVIDER_STORAGE_KEY,
     TUTOR_MODE_STORAGE_KEY,
@@ -16,15 +16,15 @@ import {
     getErrorMessage,
     mergeMessageContent,
     toPayloadMessages,
-} from './components/sessionHelpers';
-import { createRafBufferedUpdater } from './components/streamHelpers';
+} from './utils/sessionHelpers';
+import { createRafBufferedUpdater } from './utils/streamHelpers';
 import {
     useInitialSessionsLoad,
     useLazyFetchSessionMessages,
     usePersistAiPreferences,
     useProviderHealthCheck,
-} from './components/sessionLifecycle';
-import { replayFromHistory, resolveTargetSession } from './components/replayActions';
+} from './utils/sessionLifecycle';
+import { replayFromHistory, resolveTargetSession } from './utils/replayActions';
 
 interface ModalConfig {
     show: boolean;
@@ -57,9 +57,13 @@ export function useAISessions() {
     const applyFetchedSession = useCallback((id: string, data: Partial<AISession>) => {
         setSessions(prev => {
             const list = prev || [];
-            return list.map(s => (s.id === id
-                ? { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false }
-                : s));
+            return list.map(s => {
+                if (s.id !== id) return s;
+                // If _needFetch was already cleared (e.g. by sendMessage starting a stream),
+                // discard the stale server response to avoid overwriting live streaming data.
+                if (!s._needFetch) return s;
+                return { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false };
+            });
         });
     }, []);
 
@@ -83,7 +87,7 @@ export function useAISessions() {
     usePersistAiPreferences(selectedProvider, tutorMode);
     useProviderHealthCheck(selectedProvider, setProviderHealth);
     useInitialSessionsLoad(setSessions, setCurrentSessionId);
-    useLazyFetchSessionMessages(currentSessionId, sessions, applyFetchedSession, markSessionFetchDone);
+    useLazyFetchSessionMessages(currentSessionId, sessionsRef, applyFetchedSession, markSessionFetchDone);
 
     // ── Sync helper ──
     const syncToServer = useCallback(async (id: string, data: AISession) => {
@@ -222,12 +226,16 @@ export function useAISessions() {
         setSessions(prev => prev.map(s => {
             if (s.id !== targetId) return s;
             let title = s.title;
-            if (s.messages.length <= 1) {
-                let display = combinedUserContent || filesMeta[0]?.file_name || attachmentNotes[0];
+            // Bug 5 fix: only update title for genuinely new sessions (no prior user messages and not awaiting fetch)
+            const hasUserMessages = s.messages.some(m => m.role === 'user');
+            if (!s._needFetch && !hasUserMessages) {
+                const display = combinedUserContent || filesMeta[0]?.file_name || attachmentNotes[0];
                 title = display.length > 20 ? `${display.slice(0, 20)}...` : (display || "Attachment only");
             }
             return {
                 ...s,
+                // Bug 1 fix: clear _needFetch so lazy-fetch cannot overwrite the message we're about to add
+                _needFetch: false,
                 title,
                 messages: [
                     ...s.messages,
@@ -238,7 +246,8 @@ export function useAISessions() {
         }));
 
         try {
-            const sess = (sessions || []).find(s => s.id === targetId);
+            // Bug 3 fix: use sessionsRef.current (always latest) instead of the stale `sessions` closure value
+            const sess = (sessionsRef.current || []).find(s => s.id === targetId);
             const apiMsgs: ChatMessage[] = sess
                 ? [...sess.messages, { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined }]
                 : [];
@@ -258,7 +267,16 @@ export function useAISessions() {
             setSessions(prev => prev.map(s => s.id === targetId
                 ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: `Network Error: ${getErrorMessage(err)}` }] } : s));
         } finally {
-            setIsTyping(false);
+            // Defer setIsTyping(false) by two animation frames so the typewriter
+            // effect has at least one render cycle with isActive=true before snapping.
+            // Without this, React may batch the final snapshot + isTyping=false into
+            // the same render, causing the typewriter to initialise with isActive=false
+            // and snap to full content immediately.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsTyping(false);
+                });
+            });
             abortRef.current = null;
             sendingRef.current = false;
             const final = (sessionsRef.current || []).find(s => s.id === targetId);

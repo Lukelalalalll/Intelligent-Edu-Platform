@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { ChatContact, FriendRequest, CourseInfo } from '../types';
 
 export const contactApi = {

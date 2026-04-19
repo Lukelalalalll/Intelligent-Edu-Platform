@@ -24,6 +24,7 @@ export interface DocumentManagerProps {
     deletingDoc: string | null;
     onUploadFile: (file: File) => void;
     onDeleteDoc: (docName: string) => void;
+    onDismissUploadTasks: () => void;
     uploading: boolean;
     chapters: any[];
     selectedChapterId: string;

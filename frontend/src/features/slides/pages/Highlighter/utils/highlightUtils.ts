@@ -1,4 +1,4 @@
-import { log } from '../../../../../utils/logger';
+import { log } from '@/shared/utils/logger';
 
 /**
  * Converts plain text to a regex fragment that matches both raw characters

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import PptTemplate from './PptTemplate';
+import PptTemplateView from './PptTemplateView';
 import SlidesLoadingState from '../../components/SlidesLoadingState';
 import { useSlideTemplateEditor } from './hooks/useSlideTemplateEditor';
 
@@ -30,5 +30,5 @@ export default function PptTemplatePage() {
         );
     }
 
-    return <PptTemplate states={states} handlers={handlers} />;
+    return <PptTemplateView states={states} handlers={handlers} />;
 }

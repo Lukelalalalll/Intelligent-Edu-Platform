@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import client from '../../../../../../api/client';
+import client from '@/shared/api/client';
 import { slidesDeliveryApi, type DeliveryArtifactType } from '../../../../api/slidesApi';
 import { persistSchema, sanitizeBullets, updateSchemaSlide } from './schemaUtils';
 

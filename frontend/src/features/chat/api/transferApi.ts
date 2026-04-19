@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 // ── Shared file utilities ──
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);

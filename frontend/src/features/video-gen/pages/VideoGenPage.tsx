@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import VideoGenView from '../VideoGenView';
+import VideoGenView from '../components/VideoGenView';
 import HistoryPanel from '../components/HistoryPanel';
 import Button from '../../../shared/components/Button/Button';
 import Card from '../../../shared/components/Card/Card';

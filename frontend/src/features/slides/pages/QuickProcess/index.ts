@@ -1,1 +1,1 @@
-export { default } from './QuickProcess';
+export { default } from './QuickProcessPage';

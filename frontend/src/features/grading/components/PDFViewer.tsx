@@ -24,6 +24,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [localError, setLocalError] = useState('');
     const [pdfLoadError, setPdfLoadError] = useState('');
     const [loadRetry, setLoadRetry] = useState(0);
+    const MAX_AUTO_RETRIES = 3;
     const [containerWidth, setContainerWidth] = useState(0);
     const containerRef = useRef(null);
 
@@ -144,14 +145,15 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                     <div style={{ position: 'relative', display: 'inline-block' }}>
                         <Document
                             file={resolvedFile}
+                            options={{ withCredentials: true }}
                             onLoadSuccess={({ numPages: n }) => {
                                 setNumPages(n);
                                 setPdfLoadError('');
                             }}
                             onLoadError={(err) => {
                                 setPdfLoadError(`PDF load failed: ${err?.message || 'network error'}`);
-                                // Network transport can be flaky; retry once with a fresh cache-busting URL.
-                                setLoadRetry((prev) => (prev < 1 ? prev + 1 : prev));
+                                // Auto-retry up to MAX_AUTO_RETRIES with fresh cache-busting URL.
+                                setLoadRetry((prev) => (prev < MAX_AUTO_RETRIES ? prev + 1 : prev));
                             }}
                             loading={<div style={{ padding: 20 }}>Loading PDF...</div>}
                         >
@@ -164,8 +166,18 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                             />
                         </Document>
                         {pdfLoadError && (
-                            <div style={{ marginTop: 10, color: '#b91c1c', fontSize: 13 }}>
-                                {pdfLoadError}
+                            <div style={{ marginTop: 10, color: '#b91c1c', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span>{pdfLoadError}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => { setPdfLoadError(''); setLoadRetry((p) => p + 1); }}
+                                    style={{
+                                        border: '1px solid #b91c1c', background: '#fff', color: '#b91c1c',
+                                        borderRadius: 4, padding: '2px 10px', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    Retry
+                                </button>
                             </div>
                         )}
                         <AnnotationLayer

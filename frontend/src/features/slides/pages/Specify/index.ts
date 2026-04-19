@@ -1,1 +1,1 @@
-export { default } from './Specify';
+export { default } from './SpecifyPage';

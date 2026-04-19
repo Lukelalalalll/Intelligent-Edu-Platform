@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { knowledgeBaseApi } from '../../../api/knowledgeBaseApi';
 import type { ChapterDraft, RetrievalResult } from '../types';
-import { extractErrorMessage } from '../../../utils/extractError';
+import { extractErrorMessage } from '@/shared/utils/extractError';
 
 export function useDocumentManagerState({
     courseId,

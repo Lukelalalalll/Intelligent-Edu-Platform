@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { ChatRoom, ChatContact } from '../types';
 
 export const roomApi = {

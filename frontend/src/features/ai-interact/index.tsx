@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 import styles from './styles/AIInteract.module.css';
-import type { AIRoleInfo } from './api/aiApi';
-import type { AIProvider } from './api/aiApi';
-import type { AITutorMode } from './api/aiApi';
+import type { AIRoleInfo, AIProvider, AITutorMode } from './api/aiApi';
+import { useResizableSidebar } from './hooks/useResizableSidebar';
 
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';
@@ -11,93 +10,98 @@ import ChatInput from './components/ChatInput';
 import ConfirmModal from './components/ConfirmModal';
 import MemoryModal from './components/MemoryModal';
 
-interface AIInteractPageProps {
+// ── Sidebar dimension constants ───────────────────────────────────────────────
+const SIDEBAR_MIN_WIDTH = 180;
+const SIDEBAR_MAX_WIDTH = 520;
+const SIDEBAR_DEFAULT_WIDTH = 300;
+
+// ── Prop types grouped by domain ──────────────────────────────────────────────
+
+interface SessionProps {
     sessions?: Array<{ id: string; title?: string; messages?: Array<{ role: string; content: string }> }>;
     currentSessionId?: string;
-    inputText?: string;
-    isTyping?: boolean;
-    modalConfig?: { show: boolean; sessionId: string | null };
-    toastVisible?: boolean;
-    chatMessagesRef?: React.RefObject<HTMLElement | null>;
-    inputRef?: React.RefObject<HTMLTextAreaElement | null>;
     createNewSession?: () => void;
     deleteSession?: (id: string) => void;
     confirmDelete?: () => void;
-    setModalConfig?: (config: { show: boolean; sessionId: string | null }) => void;
+    deletingId?: string;
+}
+
+interface ChatProps {
+    inputText?: string;
+    isTyping?: boolean;
+    toastVisible?: boolean;
+    chatMessagesRef?: React.RefObject<HTMLElement | null>;
+    inputRef?: React.RefObject<HTMLTextAreaElement | null>;
     handleInput?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     handleKeyDown?: (e: React.KeyboardEvent) => void;
     handleSend?: () => void;
+    handleStop?: () => void;
     copyToClipboard?: (text: string) => void;
     handleChatAreaClick?: (e?: React.MouseEvent) => void;
-    deletingId?: string;
     handleRegenerate?: (msgId: string) => void;
     handleEditUserMsg?: (msgId: string, content: string) => void;
-    handleStop?: () => void;
+}
+
+interface AttachmentProps {
     attachedFiles?: File[];
     isUploadingFile?: boolean;
     fileInputRef?: React.RefObject<HTMLInputElement | null>;
     handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     removeAttachedFile?: (index: number) => void;
+}
+
+interface MemoryProps {
     memoryModalOpen?: boolean;
     setMemoryModalOpen?: (open: boolean) => void;
     aiMemory?: Record<string, unknown>;
     saveMemory?: (data: Record<string, unknown>) => void;
     savingMemory?: boolean;
-    roleInfo?: AIRoleInfo | null;
+}
+
+interface ModalProps {
+    modalConfig?: { show: boolean; sessionId: string | null };
+    setModalConfig?: (config: { show: boolean; sessionId: string | null }) => void;
+}
+
+interface ProviderProps {
     selectedProvider?: AIProvider;
     setSelectedProvider?: (provider: AIProvider) => void;
     providerHealth?: { ok: boolean; detail: string };
     tutorMode?: AITutorMode;
     setTutorMode?: (mode: AITutorMode) => void;
+    roleInfo?: AIRoleInfo | null;
 }
 
+export type AIInteractPageProps = SessionProps & ChatProps & AttachmentProps & MemoryProps & ModalProps & ProviderProps;
+
 export default function AIInteractPage({
-    sessions, currentSessionId, inputText, isTyping, modalConfig, toastVisible,
-    chatMessagesRef, inputRef, createNewSession, deleteSession, confirmDelete,
-    setModalConfig, handleInput, handleKeyDown, handleSend, copyToClipboard, handleChatAreaClick, deletingId,
-    // Methods passed down from Entry wrapper
-    handleRegenerate, handleEditUserMsg, handleStop,
+    // Session
+    sessions, currentSessionId, createNewSession, deleteSession, confirmDelete, deletingId,
+    // Chat
+    inputText, isTyping, toastVisible, chatMessagesRef, inputRef,
+    handleInput, handleKeyDown, handleSend, handleStop,
+    copyToClipboard, handleChatAreaClick, handleRegenerate, handleEditUserMsg,
+    // Attachments
     attachedFiles, isUploadingFile, fileInputRef, handleFileChange, removeAttachedFile,
     // Memory
     memoryModalOpen, setMemoryModalOpen, aiMemory, saveMemory, savingMemory,
-    // Role info
-    roleInfo,
-    selectedProvider,
-    setSelectedProvider,
-    providerHealth,
-    tutorMode,
-    setTutorMode,
+    // Modal
+    modalConfig, setModalConfig,
+    // Provider / role
+    selectedProvider, setSelectedProvider, providerHealth, tutorMode, setTutorMode, roleInfo,
 }: AIInteractPageProps) {
-    const currentSession = (sessions || []).find(s => s.id === currentSessionId) || (sessions || [])[0];
+    const currentSession = currentSessionId
+        ? (sessions ?? []).find(s => s.id === currentSessionId)
+        : undefined;
 
     // ── Resizable sidebar ──
-    const [sidebarWidth, setSidebarWidth] = useState(300);
-    const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isDraggingRef = useRef(false);
-
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        isDraggingRef.current = true;
-        setIsDragging(true);
-
-        const handleMouseMove = (ev: MouseEvent) => {
-            if (!isDraggingRef.current || !containerRef.current) return;
-            const rect = containerRef.current.getBoundingClientRect();
-            const newWidth = ev.clientX - rect.left;
-            if (newWidth >= 180 && newWidth <= 520) setSidebarWidth(newWidth);
-        };
-
-        const handleMouseUp = () => {
-            isDraggingRef.current = false;
-            setIsDragging(false);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }, []);
+    const { sidebarWidth, isDragging, handleMouseDown } = useResizableSidebar({
+        minWidth: SIDEBAR_MIN_WIDTH,
+        maxWidth: SIDEBAR_MAX_WIDTH,
+        defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+        containerRef,
+    });
 
     return (
         <>
@@ -130,7 +134,7 @@ export default function AIInteractPage({
 
                     <main className={styles['chat-main']}>
                         <ChatHeader
-                            onOpenMemory={() => setMemoryModalOpen(true)}
+                            onOpenMemory={() => setMemoryModalOpen?.(true)}
                             roleInfo={roleInfo}
                             tutorMode={tutorMode}
                             setTutorMode={setTutorMode}
@@ -165,26 +169,23 @@ export default function AIInteractPage({
             </div>
 
             <ConfirmModal
-                show={modalConfig.show}
+                show={modalConfig?.show ?? false}
                 setModalConfig={setModalConfig}
                 confirmDelete={confirmDelete}
             />
 
             <MemoryModal
-                show={memoryModalOpen}
-                onClose={() => setMemoryModalOpen(false)}
+                show={memoryModalOpen ?? false}
+                onClose={() => setMemoryModalOpen?.(false)}
                 memory={aiMemory}
                 onSave={saveMemory}
                 saving={savingMemory}
             />
 
-            <div className={`toast ${toastVisible ? 'show' : ''}`} style={{
-                position: 'fixed', top: '20px', right: '20px', background: '#333', color: 'white',
-                padding: '10px 20px', borderRadius: '5px', opacity: toastVisible ? 1 : 0,
-                transition: 'opacity 0.3s', pointerEvents: 'none', zIndex: 9999
-            }}>Copied to clipboard!</div>
-
-            <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }`}</style>
+            {/* Toast – styles defined in AIInteract.module.css (.copy-toast / .copy-toast-visible) */}
+            <div className={`${styles['copy-toast']} ${toastVisible ? styles['copy-toast-visible'] : ''}`}>
+                Copied to clipboard!
+            </div>
         </>
     );
 }

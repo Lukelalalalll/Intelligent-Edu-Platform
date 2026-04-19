@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 export interface QuestionOpsRunPayload {
     task_id?: string | null;

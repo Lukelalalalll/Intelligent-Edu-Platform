@@ -15,7 +15,10 @@ export default function StepOutline({ scripts, onEdit, onNext, onBack }: Props) 
 
     return (
         <div className={styles.stepCard}>
-            <h3>Step 3: Content Outline</h3>
+            <div className={styles.stepTitle}>
+                <div className={styles.stepIcon}>3</div>
+                Content Outline
+            </div>
             <p className={styles.hint}>
                 This video will have <strong>{scripts.length}</strong> segments.
                 Each segment = 1 slide image + AI narration audio.

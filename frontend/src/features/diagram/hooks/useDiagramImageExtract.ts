@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 export function useDiagramImageExtract() {
     const [imgIsDragging, setImgIsDragging] = useState(false);
@@ -97,6 +97,12 @@ export function useDiagramImageExtract() {
         handleFileInput: (e: any) => { imgProcessUpload(e.target.files[0]); e.target.value = ''; },
         handleTransferFile: async (file: File) => {
             await imgProcessUpload(file);
+        },
+        injectImageResult: (imagesByChapter: Record<string, any[]>, status: string) => {
+            setImgImagesByChapter(imagesByChapter);
+            setImgUploadStatus(status);
+            setImgCurrentChapter(Object.keys(imagesByChapter)[0] || 'None');
+            setImgActiveTab('uploaded');
         },
         setCurrentChapter: setImgCurrentChapter, setActiveTab: setImgActiveTab,
         setAiPrompt: setImgAiPrompt, setAiNum: setImgAiNum,

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
     studyNotesPlanApi,
     type ReviewQueueItem,
@@ -31,10 +31,16 @@ export function useSpacedReview({
     const [customDays, setCustomDays] = useState('');
     const [durationError, setDurationError] = useState('');
     const [reviewQueueItem, setReviewQueueItem] = useState<ReviewQueueItem | null>(null);
-    const [reviewMessage, setReviewMessage] = useState('Generate a plan, then click Next Review to start.');
+    const [reviewMessage, setReviewMessage] = useState('Generate a plan first, then click Next Review to start.');
     const [reviewLoading, setReviewLoading] = useState(false);
     const [reviewSubmitting, setReviewSubmitting] = useState<ReviewRating | null>(null);
     const [reviewProgressMap, setReviewProgressMap] = useState<Record<string, number>>({});
+    // Dedicated inline error for the review panel — separate from the global page error
+    const [reviewError, setReviewError] = useState('');
+
+    // Use a ref for reviewLoading so the guard check always sees the latest value
+    // without stale-closure issues from useCallback deps.
+    const reviewLoadingRef = useRef(false);
 
     const validateCustomDays = useCallback((rawDays: string): number | null => {
         const parsed = Number.parseInt(rawDays, 10);
@@ -42,39 +48,47 @@ export function useSpacedReview({
         return parsed;
     }, []);
 
-    const handleLoadNextReview = useCallback(async () => {
-        if (!studyPlan?.plan_id) { setError('Generate a study plan first.'); return; }
-        if (reviewLoading) return;
+    const handleLoadNextReview = useCallback(async (planId?: string) => {
+        // Use the ref instead of closure state to avoid stale-closure silent no-ops
+        if (reviewLoadingRef.current) return;
 
+        const targetPlanId = planId ?? studyPlan?.plan_id;
+        if (!targetPlanId) {
+            setReviewError('Generate a study plan first.');
+            return;
+        }
+
+        reviewLoadingRef.current = true;
         setReviewLoading(true);
-        setError('');
+        setReviewError('');
         try {
-            const res = await studyNotesPlanApi.getNextReview(studyPlan.plan_id);
+            const res = await studyNotesPlanApi.getNextReview(targetPlanId);
             if (res.ready && res.item) {
                 setReviewQueueItem(res.item);
-                setReviewMessage('Ready to review. Choose a rating after you recall the topic.');
+                setReviewMessage('Topic ready for review — try to recall it, then rate how well you remembered.');
                 return;
             }
             setReviewQueueItem(null);
             if (res.next_upcoming?.due_at) {
                 const nextAt = new Date(res.next_upcoming.due_at).toLocaleString();
-                setReviewMessage(`No item is due now. Next review is scheduled at ${nextAt}.`);
+                setReviewMessage(`All caught up! Next review scheduled for ${nextAt}.`);
             } else {
                 setReviewMessage(res.message || 'No review items available yet.');
             }
         } catch (err: unknown) {
             const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-            setError(typeof detail === 'string' ? detail : 'Failed to load the next review item');
+            setReviewError(typeof detail === 'string' ? detail : 'Failed to load next review item.');
         } finally {
+            reviewLoadingRef.current = false;
             setReviewLoading(false);
         }
-    }, [studyPlan?.plan_id, reviewLoading, setError]);
+    }, [studyPlan?.plan_id]);
 
     const handleSubmitReview = useCallback(async (rating: ReviewRating) => {
         if (!reviewQueueItem?.queue_id || reviewSubmitting) return;
 
         setReviewSubmitting(rating);
-        setError('');
+        setReviewError('');
         try {
             const res = await studyNotesPlanApi.submitReview({
                 queue_id: reviewQueueItem.queue_id,
@@ -83,15 +97,16 @@ export function useSpacedReview({
             });
             setReviewProgressMap((prev) => ({ ...prev, [res.queue_id]: res.repetitions }));
             setReviewQueueItem(null);
-            setReviewMessage('Saved. Loading the next item...');
-            await handleLoadNextReview();
+            setReviewMessage('Great! Loading next item...');
+            // Pass plan_id directly to avoid stale closure in handleLoadNextReview
+            await handleLoadNextReview(reviewQueueItem.plan_id ?? studyPlan?.plan_id);
         } catch (err: unknown) {
             const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-            setError(typeof detail === 'string' ? detail : 'Failed to submit review feedback');
+            setReviewError(typeof detail === 'string' ? detail : 'Failed to submit review feedback.');
         } finally {
             setReviewSubmitting(null);
         }
-    }, [reviewQueueItem, reviewSubmitting, handleLoadNextReview, setError]);
+    }, [reviewQueueItem, reviewSubmitting, handleLoadNextReview, studyPlan?.plan_id]);
 
     const handleGeneratePlan = useCallback(async () => {
         if (!notes) { setError('Generate study notes first.'); return; }
@@ -133,8 +148,12 @@ export function useSpacedReview({
                 });
                 setReviewQueueItem(null);
                 setReviewProgressMap({});
-                setReviewMessage('Plan created. Click Next Review to fetch your first due item.');
+                setReviewError('');
+                setReviewMessage('Plan created! Loading your first review item...');
                 setActiveTab('plan');
+                // Auto-load the first due review item — pass plan_id directly
+                // so we don't depend on studyPlan state being updated yet.
+                await handleLoadNextReview(res.plan_id);
             }
         } catch (err: unknown) {
             const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
@@ -143,7 +162,7 @@ export function useSpacedReview({
             setIsLoading(false);
             setLoadingText('');
         }
-    }, [notes, flashcards, durationOption, customDays, file, validateCustomDays, setError, setIsLoading, setLoadingText, setActiveTab]);
+    }, [notes, flashcards, durationOption, customDays, file, validateCustomDays, setError, setIsLoading, setLoadingText, setActiveTab, handleLoadNextReview]);
 
     return {
         studyPlan, setStudyPlan,
@@ -152,6 +171,7 @@ export function useSpacedReview({
         durationError, setDurationError,
         reviewQueueItem,
         reviewMessage,
+        reviewError,
         reviewLoading,
         reviewSubmitting,
         reviewProgressMap,

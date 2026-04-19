@@ -2,7 +2,7 @@
  * slidesApi — unified Slides (Sub1) API client.
  * Merges slidesDeliveryApi, slidesGenerationApi, and slidesHistoryApi.
  */
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { AIProvider } from '../../../shared/aiProvider';
 import type { GenerationHistoryItem } from '../../../types/api';
 
@@ -156,3 +156,100 @@ import { createHistoryApi } from '../../../api/historyApiFactory';
 
 const _historyApi = createHistoryApi<GenerationHistoryItem>('/slides');
 export const { getGenerationHistory, getGenerationDetail, replayGeneration } = _historyApi;
+
+// ── Editor Types ──
+
+export interface EditorBbox {
+    x: number; y: number; w: number; h: number;
+}
+
+export interface EditorElement {
+    id: string;
+    type: 'text' | 'image';
+    placeholder_idx: number;
+    bbox: EditorBbox;
+    content: string | null;
+    font_size?: number | null;
+    bold?: boolean;
+    font_color?: string | null;
+    align?: string;
+    editable: boolean;
+}
+
+export interface EditorSlide {
+    index: number;
+    preview_url: string;
+    elements: EditorElement[];
+}
+
+export interface EditorSession {
+    session_id: string;
+    theme: string;
+    slide_width_pt: number;
+    slide_height_pt: number;
+    slides: EditorSlide[];
+}
+
+export interface EditorEdit {
+    slide_index: number;
+    element_id: string;
+    content?: string;
+    image_asset_id?: string;
+}
+
+export interface SlideImage {
+    slide_index: number;
+    asset_id: string;
+    ext: string;
+    x_pct?: number;
+    y_pct?: number;
+    w_pct?: number;
+}
+
+// ── Editor API ──
+
+export const slidesEditorApi = {
+    async autoAssignLayouts(payload: {
+        provider?: AIProvider;
+        theme: string;
+        ppt_schema: Record<string, unknown>;
+    }): Promise<{ ppt_schema: Record<string, unknown> }> {
+        const res = await client.post('/slides/auto-assign-layouts', payload);
+        return res.data;
+    },
+
+    async renderEditorSession(payload: {
+        theme: string;
+        ppt_schema: Record<string, unknown>;
+    }): Promise<EditorSession> {
+        const res = await client.post('/slides/render-editor-session', payload);
+        return res.data;
+    },
+
+    async reRenderSession(payload: {
+        session_id: string;
+        edits: EditorEdit[];
+        slide_images?: SlideImage[];
+    }): Promise<EditorSession> {
+        const res = await client.post('/slides/re-render-session', payload);
+        return res.data;
+    },
+
+    async exportPptx(payload: {
+        session_id: string;
+        theme: string;
+        ppt_schema: Record<string, unknown>;
+        edits?: EditorEdit[];
+        slide_images?: SlideImage[];
+    }): Promise<Blob> {
+        const res = await client.post('/slides/export-pptx', payload, { responseType: 'blob' });
+        return res.data;
+    },
+
+    async uploadImage(file: File): Promise<{ asset_id: string; url: string }> {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await client.post('/slides/upload-image', form);
+        return res.data;
+    },
+};

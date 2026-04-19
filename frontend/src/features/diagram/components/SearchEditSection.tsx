@@ -7,7 +7,7 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
         <div className="card">
             <div className="card-header">
                 <div className="card-icon"><i className="fas fa-search"></i></div>
-                <h4>2. Search & Edit SVG</h4>
+                <h4>Search & Edit SVG</h4>
             </div>
             <div className="card-content">
                 <div className={styles.searchBox}>
@@ -30,7 +30,12 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
                         {searchState.results === null ? null : searchState.results.length > 0 ? (
                             searchState.results.map((item, idx) => (
                                 <div key={idx} className={styles.searchResultItem} onClick={() => editorHandlers.loadEditor(item.svg)}>
-                                    <img src={item.thumb} alt={item.title} title={item.title} />
+                                    <img
+                                        src={item.thumb}
+                                        alt={item.title}
+                                        title={item.title}
+                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                    />
                                     <div>{item.title || 'Untitled'}</div>
                                 </div>
                             ))
@@ -46,7 +51,12 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
                         {editorState.loading ? (
                             <p><i className="fas fa-spinner fa-spin"></i> Loading SVG editor...</p>
                         ) : editorState.error ? (
-                            <p style={{ color: 'red' }}>{editorState.error}</p>
+                            <>
+                                <p style={{ color: 'red' }}>{editorState.error}</p>
+                                <button className={editorStyles.editorBtn} onClick={() => editorHandlers.setIsVisible(false)}>
+                                    <i className="fas fa-arrow-left"></i> Back to Results
+                                </button>
+                            </>
                         ) : (
                             <>
                                 <div className={editorStyles.editorButtons}>
@@ -57,12 +67,17 @@ export default function SearchEditSection({ searchState, searchHandlers, editorS
                                 <div className={editorStyles.editorContainer}>
                                     <div className={editorStyles.preview}>
                                         <h3 style={{ padding: '10px', margin: 0, borderBottom: '1px solid #eee' }}>Preview</h3>
-                                        <iframe srcDoc={editorState.previewHtml} title="SVG Preview"></iframe>
+                                        <iframe srcDoc={editorState.previewHtml} title="SVG Preview" sandbox="allow-same-origin"></iframe>
                                     </div>
                                     <div className={editorStyles.editorFields}>
                                         <h3 style={{ margin: '0 0 10px 0' }}>Editable Text Fields</h3>
                                         {editorState.fields.length === 0 ? (
-                                            <p>No editable text fields found in this SVG.</p>
+                                            <p style={{ color: '#888', fontSize: '0.9rem' }}>No editable text fields found in this SVG.</p>
+                                        ) : editorState.fields[0]?._readonly ? (
+                                            <p style={{ color: '#e67e22', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                                                <i className="fas fa-info-circle" style={{ marginRight: 6 }}></i>
+                                                {editorState.fields[0].value}
+                                            </p>
                                         ) : (
                                             editorState.fields.map((field, idx) => (
                                                 <div key={field.id} className={editorStyles.entry}>

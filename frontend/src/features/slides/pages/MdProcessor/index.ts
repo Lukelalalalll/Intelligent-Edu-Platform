@@ -1,1 +1,1 @@
-export { default } from './MdProcessor';
+export { default } from './MdProcessorPage';

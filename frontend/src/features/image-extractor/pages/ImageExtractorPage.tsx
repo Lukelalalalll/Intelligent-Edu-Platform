@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import { transferApi } from '../../chat/api/transferApi';
-import ImageExtractorView from '../ImageExtractor';
+import ImageExtractorView from '../components/ImageExtractor';
 import HistoryPanel from '../components/HistoryPanel';
 import Button from '../../../shared/components/Button/Button';
 import Card from '../../../shared/components/Card/Card';

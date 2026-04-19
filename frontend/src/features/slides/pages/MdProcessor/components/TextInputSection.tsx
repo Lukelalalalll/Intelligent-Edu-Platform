@@ -117,6 +117,13 @@ export default function TextInputSection({
                             <><i className="fas fa-highlighter"></i> Next Step</>
                         )}
                     </button>
+                    <button
+                        className={`btn btn-secondary ${textStyles.textProceedBtn}`}
+                        onClick={() => handleProcessText('/slides/quick-process')}
+                        disabled={!textContent.trim() || textProcessing}
+                    >
+                        <i className="fas fa-bolt"></i> Quick Process
+                    </button>
                 </div>
             </div>
         </section>

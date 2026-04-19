@@ -52,7 +52,10 @@ const StepSceneEditor: React.FC<Props> = ({ scenes, setScenes, subtitles, onNext
 
   return (
     <div className={vs.stepCard}>
-      <h3><i className="fas fa-palette" style={{ marginRight: 8, color: 'var(--primary-color)' }} />Scene Editor</h3>
+      <div className={vs.stepTitle}>
+        <div className={vs.stepIcon}><i className="fas fa-palette" /></div>
+        Scene Editor
+      </div>
       <div className={s.sceneEditorWrap}>
         <Reorder.Group axis="y" values={scenes} onReorder={setScenes} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {scenes.map((sc, i) => (

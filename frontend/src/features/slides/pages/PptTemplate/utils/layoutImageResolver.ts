@@ -1,5 +1,8 @@
 type ThemeFamily = 'Business' | 'Classic' | 'Dark' | 'Light';
 
+// These lists mirror exactly what is on disk in backend/static/img/{family}/.
+// Only include layouts that should appear in the manual picker (auto-managed
+// pages like Title / Section / Ending are intentionally absent).
 const FAMILY_FILES: Record<ThemeFamily, string[]> = {
     Business: [
         'Bullet Listing_dynamic.png',
@@ -21,22 +24,15 @@ const FAMILY_FILES: Record<ThemeFamily, string[]> = {
         'Picture & Diagram_Vertical.png',
         'Picture & Diagram_Vertical_reverse.png',
         'Single Picture.png',
-        'Title.png',
     ],
     Light: [
-        '1_Chart layout 1.png',
-        '1_Chart layout 2.png',
-        '1_Title and 2 Column Content.png',
-        '1_Title and 2 content.png',
-        '1_Title and content 2.png',
-        'Chart .png',
         'Chart layout 1.png',
         'Chart layout 2.png',
-        'Custom Layout.png',
-        'End Slide.png',
+        'Chart .png',
         'Title and 2 Column Content.png',
         'Title and 2 content.png',
         'Title and content 2.png',
+        'Custom Layout.png',
         '标题和内容.png',
         '自定义版式.png',
     ],

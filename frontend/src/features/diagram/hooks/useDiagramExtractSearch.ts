@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import client from '../../../api/client';
-import { extractErrorMessage } from '../../../utils/extractError';
+import client from '@/shared/api/client';
+import { extractErrorMessage } from '@/shared/utils/extractError';
 
 const normalizeText = (value: any) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -13,35 +13,129 @@ const isVisibleSvgNode = (el: any) => {
         const style = (current.getAttribute('style') || '').toLowerCase();
         if (
             display === 'none' || visibility === 'hidden' || opacity === '0' ||
-            style.includes('display:none') || style.includes('visibility:hidden')
+            style.includes('display:none') || style.includes('display: none') ||
+            style.includes('visibility:hidden') || style.includes('visibility: hidden')
         ) return false;
         current = current.parentNode;
     }
     return true;
 };
 
+/**
+ * Parse inline <style> blocks from the SVG and return CSS selectors that
+ * set display:none or visibility:hidden.  DOMParser documents are not rendered
+ * so getComputedStyle() is unavailable; we replicate it manually.
+ */
+function buildHiddenCssSelectors(doc: Document): Set<string> {
+    const hidden = new Set<string>();
+    doc.querySelectorAll('style').forEach((styleEl) => {
+        const css = (styleEl.textContent || '').replace(/\/\*[\s\S]*?\*\//g, ''); // strip comments
+        const ruleRe = /([^{]+)\{([^}]*)\}/g;
+        let m: RegExpExecArray | null;
+        while ((m = ruleRe.exec(css)) !== null) {
+            const declarations = m[2];
+            if (/display\s*:\s*none/i.test(declarations) || /visibility\s*:\s*hidden/i.test(declarations)) {
+                m[1].split(',').forEach((sel) => {
+                    const trimmed = sel.trim();
+                    if (trimmed) hidden.add(trimmed);
+                });
+            }
+        }
+    });
+    return hidden;
+}
+
+/**
+ * Returns true if the element or any ancestor (up to <svg>) matches a
+ * CSS selector that hides elements.
+ */
+function isHiddenByCss(el: Element, hiddenSelectors: Set<string>): boolean {
+    if (hiddenSelectors.size === 0) return false;
+    let current: Element | null = el;
+    while (current && current.tagName.toLowerCase() !== 'svg') {
+        for (const sel of hiddenSelectors) {
+            try {
+                if (current.matches(sel)) return true;
+            } catch { /* malformed selector — skip */ }
+        }
+        current = current.parentElement;
+    }
+    return false;
+}
+
+/**
+ * SVG <switch> renders only the FIRST child whose conditional attributes
+ * (systemLanguage, requiredFeatures, requiredExtensions) evaluate to true,
+ * OR the first child without any such attributes as the default.
+ * DOMParser does NOT apply this rule — all children are present in the DOM.
+ * We must filter out language-specific <switch> variants manually.
+ *
+ * Returns true if the element is inside a non-default branch of a <switch>.
+ */
+function isInsideUnrenderedSwitchBranch(el: Element): boolean {
+    let current: Element | null = el;
+    while (current && current.tagName.toLowerCase() !== 'svg') {
+        const parent = current.parentElement;
+        if (parent && parent.tagName.toLowerCase() === 'switch') {
+            // current is a direct child of <switch>
+            const hasCondition = (
+                current.hasAttribute('systemLanguage') ||
+                current.hasAttribute('requiredFeatures') ||
+                current.hasAttribute('requiredExtensions')
+            );
+            if (hasCondition) return true; // language/feature-specific variant → skip
+            // current is the default branch → keep it
+            return false;
+        }
+        current = parent;
+    }
+    return false;
+}
+
 function collectEditableTextNodes(doc: Document) {
-    const isBlocked = (el: Element) => !!el.closest('defs, symbol, clipPath, mask, pattern, style, script, metadata');
+    const hiddenCssSelectors = buildHiddenCssSelectors(doc);
+
+    // defs/symbol: do NOT block — draw.io/Lucidchart defines text in <symbol>
+    // clipPath/mask/script/metadata: always block, they're never user-visible text
+    const isStructurallyBlocked = (el: Element) =>
+        !!el.closest('clipPath, mask, pattern, style, script, metadata');
+
+    // Icon-font PUA characters look like boxes/garbled in text inputs
+    const isPuaOnly = (text: string) => /^[\uE000-\uF8FF\s]+$/.test(text);
+
     const picked: Element[] = [];
     const seen = new Set<Element>();
 
     const maybePush = (el: Element) => {
         if (!el || seen.has(el)) return;
         const text = normalizeText(el.textContent);
-        if (!text || isBlocked(el) || !isVisibleSvgNode(el)) return;
+        if (!text || isPuaOnly(text)) return;
+        if (isStructurallyBlocked(el)) return;
+        if (!isVisibleSvgNode(el)) return;
+        if (isHiddenByCss(el, hiddenCssSelectors)) return;
+        if (isInsideUnrenderedSwitchBranch(el)) return;
         seen.add(el);
         picked.push(el);
     };
 
+    // Pass 1: leaf tspan / textPath (most precise — draw.io, Mermaid, Lucidchart)
     Array.from(doc.querySelectorAll('tspan, textPath')).forEach((el) => {
         if (Array.from(el.children).length === 0) maybePush(el);
     });
 
-    if (picked.length === 0) {
-        Array.from(doc.querySelectorAll('text')).forEach((el) => maybePush(el));
-    }
+    // Pass 2: bare <text> elements with no tspan/textPath children
+    // Always independent of Pass 1 — fixes plain-text SVGs losing all labels
+    Array.from(doc.querySelectorAll('text')).forEach((el) => {
+        if (!el.querySelector('tspan, textPath')) maybePush(el);
+    });
 
+    // Pass 3: HTML leaf nodes inside <foreignObject>
     Array.from(doc.querySelectorAll('foreignObject *')).forEach((el) => {
+        if (Array.from(el.children).length === 0) maybePush(el);
+    });
+
+    // Pass 4: SVG 1.2 flowRoot / flowPara (Inkscape sometimes uses these)
+    Array.from(doc.querySelectorAll('flowRoot, flowPara')).forEach((el) => {
         if (Array.from(el.children).length === 0) maybePush(el);
     });
 
@@ -122,8 +216,21 @@ export function useDiagramExtractSearch() {
             svgDocRef.current = doc;
             textNodesRef.current = validNodes;
 
-            const fields = validNodes.map((n, i) => ({ id: i, value: normalizeText(n.textContent) }));
-            setEditorFields(fields);
+            // If no text nodes found, detect whether this is a path-only SVG (outlined text)
+            // so we can show a meaningful explanation instead of a blank fields panel.
+            if (validNodes.length === 0) {
+                const hasTextTags = doc.querySelector('text, tspan, textPath') !== null;
+                const hasPathsOnly = !hasTextTags && doc.querySelectorAll('path').length > 0;
+                const hint = hasPathsOnly
+                    ? 'This SVG uses outlined paths for text (no editable text nodes). Try a different SVG.'
+                    : 'No editable text fields found in this SVG.';
+                // Still open the editor so the user can preview; note is shown in fields panel
+                const fields: any[] = [{ id: 0, value: hint, _readonly: true }];
+                setEditorFields(fields);
+            } else {
+                const fields = validNodes.map((n, i) => ({ id: i, value: normalizeText(n.textContent) }));
+                setEditorFields(fields);
+            }
             updatePreviewHtml();
         } catch (err) {
             setEditorError(extractErrorMessage(err));
@@ -139,6 +246,7 @@ export function useDiagramExtractSearch() {
         if (textNodesRef.current[idx]) {
             textNodesRef.current[idx].textContent = val;
         }
+        updatePreviewHtml();
     };
 
     const handleEditorRemoveField = (idx: number) => {
@@ -170,6 +278,10 @@ export function useDiagramExtractSearch() {
             handleTransferFile: async (file: File) => {
                 setExtractFile(file);
                 await handleExtractUpload(file);
+            },
+            injectExtractResult: (data: any) => {
+                setExtractData(data);
+                setExtractError('');
             },
             handleDragOver: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsExtractDragging(true); },
             handleDragLeave: (e: any) => { e.preventDefault(); e.stopPropagation(); setIsExtractDragging(false); },

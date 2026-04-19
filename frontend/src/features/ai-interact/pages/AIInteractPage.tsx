@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AIInteract from '../index';
-import { usePretextMeasure } from '../../../hooks/usePretextMeasure';
+import { usePretextMeasure } from '@/shared/hooks/usePretextMeasure';
 import { useAISessions, useAIMemory } from '../hooks/useAISessions/useAISessions';
 import { getRoleInfo, type AIRoleInfo } from '../api/aiApi';
 

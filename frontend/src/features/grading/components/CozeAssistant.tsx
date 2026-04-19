@@ -38,10 +38,11 @@ interface CozeAssistantProps {
 export default function CozeAssistant({ submissionId, assignment, rubric, onAnalysis, className, provider = 'local_ollama', setProvider }: CozeAssistantProps) {
     const {
         messages, input, setInput,
-        loading, analyzeLoading, localError, streamError,
+        loading, analyzeLoading, regradeLoading, localError, streamError,
         lastRagInfo, lastLatencyMs, lastFailedQuestion,
+        lowConfidenceCount,
         chatAreaRef,
-        handleAsk, handleStop, handleAnalyze, handleInputKeyDown,
+        handleAsk, handleStop, handleAnalyze, handleRegradeLowConfidence, handleInputKeyDown,
     } = useCozeAssistant({ submissionId, assignment, rubric, onAnalysis, provider });
 
     return (
@@ -65,6 +66,14 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                 </div>
                 <div className={className?.cozeActions || ''}>
                     <button onClick={handleAnalyze} disabled={loading || analyzeLoading} className={className?.primaryBtn || ''}>Analyze Submission</button>
+                    <button
+                        onClick={handleRegradeLowConfidence}
+                        disabled={loading || analyzeLoading || regradeLoading || !lowConfidenceCount}
+                        className={className?.ghostBtn || ''}
+                        title={lowConfidenceCount ? `Regrade ${lowConfidenceCount} low-confidence question(s)` : 'No low-confidence questions'}
+                    >
+                        {regradeLoading ? 'Regrading...' : `Regrade Low-Confidence (${lowConfidenceCount || 0})`}
+                    </button>
                     {loading && (
                         <button type="button" onClick={handleStop} className={className?.ghostBtn || ''}>Stop</button>
                     )}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styles from '../styles/videoGen.module.css';
-import type { AIProvider, Audience } from '../VideoGenView';
+import type { AIProvider, Audience } from '../components/VideoGenView';
 
 interface Props {
     lang: 'zh' | 'en';
@@ -39,7 +39,10 @@ export default function StepUpload({ lang, setLang, provider, setProvider, audie
 
     return (
         <div className={styles.stepCard}>
-            <h3>Step 1: Input Content</h3>
+            <div className={styles.stepTitle}>
+                <div className={styles.stepIcon}><i className="fas fa-upload" /></div>
+                Input Content
+            </div>
 
             {/* Language selector */}
             <div className={styles.langRow}>

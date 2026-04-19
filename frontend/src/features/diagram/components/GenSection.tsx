@@ -8,6 +8,9 @@ const INPUT_TABS = [
     { key: 'text', icon: 'fas fa-keyboard', label: 'Type Text' },
 ];
 
+const CHAR_WARN = 300;
+const CHAR_MAX = 2000;
+
 function downloadSvgBlob(svgString) {
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
@@ -19,16 +22,21 @@ function downloadSvgBlob(svgString) {
 }
 
 export default function GenSection({ genState, genHandlers }) {
-    const { inputMode, file, isDragging, loading, data, error, text, provider } = genState;
+    const {
+        inputMode, file, isDragging, loading, data, error,
+        text, provider, aiDescription, aiExpandLoading, aiExpandError,
+    } = genState;
+
+    const charCount = (text || '').length;
     const canGenerate =
         (inputMode === 'file' && !!file) ||
-        (inputMode === 'text' && !!text?.trim());
+        (inputMode === 'text' && !!(aiDescription?.trim() || text?.trim()));
 
     return (
         <div className="card">
             <div className="card-header">
                 <div className="card-icon"><i className="fas fa-robot"></i></div>
-                <h4>3. AI Generate</h4>
+                <h4>AI Generate</h4>
             </div>
             <div className="card-content">
                 {/* ─── Input Mode Tabs ─── */}
@@ -67,16 +75,63 @@ export default function GenSection({ genState, genHandlers }) {
                     </div>
                 )}
 
-                {/* ─── Direct Text Panel ─── */}
+                {/* ─── Type Text Panel — split: left = user input, right = AI description ── */}
                 {inputMode === 'text' && (
-                    <div className={genStyles.genTextPanel}>
-                        <textarea
-                            className={genStyles.genTextArea}
-                            rows={6}
-                            placeholder="Describe the diagram you want to generate... e.g. 'A flowchart showing the software development lifecycle with 6 phases'"
-                            value={text}
-                            onChange={e => genHandlers.setText(e.target.value)}
-                        />
+                    <div className={genStyles.genTextSplit}>
+                        {/* Left: user input */}
+                        <div className={genStyles.genTextHalf}>
+                            <div className={genStyles.genTextHalfLabel}>
+                                <span><i className="fas fa-pencil-alt" style={{ marginRight: 5 }}></i>Your Input</span>
+                                <span className={charCount > CHAR_WARN ? genStyles.genCharCountWarn : genStyles.genCharCount}>
+                                    {charCount} / {CHAR_MAX}
+                                </span>
+                            </div>
+                            <textarea
+                                className={genStyles.genTextArea}
+                                rows={6}
+                                maxLength={CHAR_MAX}
+                                placeholder="Enter keywords or a brief description, e.g. 'Software development lifecycle, 6 phases, iterative'"
+                                value={text}
+                                onChange={e => genHandlers.setText(e.target.value)}
+                            />
+                            <button
+                                className={genStyles.genAiExpandBtn}
+                                onClick={genHandlers.handleAiExpand}
+                                disabled={aiExpandLoading || !text?.trim()}
+                                title="Let AI expand your input into a detailed diagram prompt"
+                            >
+                                {aiExpandLoading
+                                    ? <><i className="fas fa-spinner fa-spin"></i> Expanding...</>
+                                    : <><i className="fas fa-wand-magic-sparkles"></i> AI Generate Content</>}
+                            </button>
+                            {aiExpandError && <span className={genStyles.genAiExpandError}>{aiExpandError}</span>}
+                        </div>
+
+                        {/* Right: AI-generated diagram description */}
+                        <div className={genStyles.genTextHalf}>
+                            <div className={genStyles.genTextHalfLabel}>
+                                <span><i className="fas fa-robot" style={{ marginRight: 5 }}></i>AI Diagram Description</span>
+                                {aiDescription && (
+                                    <span
+                                        style={{ fontSize: '0.78rem', color: '#94a3b8', cursor: 'pointer' }}
+                                        onClick={() => genHandlers.setAiDescription('')}
+                                        title="Clear AI content"
+                                    >
+                                        <i className="fas fa-times"></i> Clear
+                                    </span>
+                                )}
+                            </div>
+                            <textarea
+                                className={genStyles.genAiTextArea}
+                                rows={6}
+                                placeholder={aiExpandLoading
+                                    ? 'AI is generating detailed diagram description...'
+                                    : 'AI-expanded diagram description will appear here.\nYou can also edit it manually before generating.'}
+                                value={aiDescription}
+                                onChange={e => genHandlers.setAiDescription(e.target.value)}
+                                readOnly={aiExpandLoading}
+                            />
+                        </div>
                     </div>
                 )}
 

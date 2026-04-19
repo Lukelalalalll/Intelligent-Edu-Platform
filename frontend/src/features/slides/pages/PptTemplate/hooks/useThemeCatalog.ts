@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import client from '../../../../../api/client';
-import { useDebouncedValue } from '../hooks';
+import client from '@/shared/api/client';
+import { useDebouncedValue } from './useDebouncedValue';
 import type { LayoutItem, ThemeItem, ThemeLayoutCountCache, ThemePreviewCache } from '../types';
 import { getPreviewPlaceholders } from '../utils/previewUtils';
 

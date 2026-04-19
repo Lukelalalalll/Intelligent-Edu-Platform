@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { usePretextMeasure } from '../../../../hooks/usePretextMeasure';
+import { usePretextMeasure } from '@/shared/hooks/usePretextMeasure';
 import type { ChatMsg, StreamMessage } from './types';
 import { WELCOME_MESSAGE } from './types';
 import { replaceMessageText, toApiMessages } from './messageUtils';

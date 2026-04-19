@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
 import { chatApi } from '../api';
 import { useCurrentUser } from './useCurrentUser';
-import { networkBus } from '../../../hooks/useNetworkStatus';
+import { networkBus } from '@/shared/hooks/useNetworkStatus';
 import type { ChatMessage } from '../types';
 
 export function useChatRoom(roomId: string) {

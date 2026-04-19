@@ -43,33 +43,24 @@ marked.setOptions({ breaks: true, renderer });
 function CitationPanel({ citations }: { citations: RagCitation[] }) {
     const [expanded, setExpanded] = useState(false);
     return (
-        <div style={{
-            marginTop: '12px', padding: '8px 12px', borderRadius: '8px',
-            background: 'rgba(0,123,85,0.06)', border: '1px solid rgba(0,123,85,0.15)',
-            fontSize: '12px', color: '#4b5563',
-        }}>
-            <div
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#007B55' }}
+        <div className={styles.citationsWrap}>
+            <button
+                className={styles.citationsToggle}
                 onClick={() => setExpanded(v => !v)}
             >
-                <i className="fas fa-book-open" style={{ fontSize: '11px' }} />
-                Sources ({citations.length})
-                <i className={`fas fa-chevron-${expanded ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: 'auto' }} />
-            </div>
+                <i className="fas fa-book-open" /> {citations.length} source{citations.length > 1 ? 's' : ''}
+                <i className={`fas fa-chevron-${expanded ? 'up' : 'down'}`} style={{ marginLeft: 4, fontSize: '0.7rem' }} />
+            </button>
             {expanded && (
-                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className={styles.citationsList}>
                     {citations.map(c => (
-                        <div key={c.index} style={{
-                            padding: '6px 8px', borderRadius: '6px', background: '#fff',
-                            border: '1px solid #e5e7eb', fontSize: '11px',
-                        }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                                <span style={{ fontWeight: 600, color: '#111' }}>{c.doc_name || 'Unknown'}</span>
-                                <span style={{ color: '#9ca3af' }}>score: {c.score.toFixed(2)}</span>
-                                <span style={{ color: '#9ca3af' }}>course: {c.course_id}</span>
+                        <div key={c.index} className={styles.citationCard}>
+                            <div className={styles.citationDoc}>
+                                <i className="fas fa-file-alt" /> {c.doc_name || 'Unknown'}
+                                <span className={styles.citationScore}>{(c.score * 100).toFixed(0)}%</span>
                             </div>
-                            <div style={{ color: '#6b7280', lineHeight: 1.4, maxHeight: '60px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {c.text.slice(0, 200)}{c.text.length > 200 ? '…' : ''}
+                            <div className={styles.citationText}>
+                                {(c.text || '').slice(0, 150)}{(c.text || '').length > 150 ? '...' : ''}
                             </div>
                         </div>
                     ))}
@@ -91,6 +82,7 @@ function AIMessageBubble({ content, citations, isTyping, isLastAssistant, render
 }) {
     const isStreaming = isTyping && isLastAssistant;
     const displayed = useTypewriter(content, isStreaming);
+    const stillTyping = isStreaming || displayed !== content;
 
     return (
         <div className={`${styles.bubble} markdown-body`} style={{ minHeight: '20px' }}>
@@ -99,7 +91,7 @@ function AIMessageBubble({ content, citations, isTyping, isLastAssistant, render
             ) : (
                 <>
                     <div dangerouslySetInnerHTML={renderContent(displayed)} />
-                    {isStreaming && <span className={styles['typing-cursor']} />}
+                    {stillTyping && <span className={styles['typing-cursor']} />}
                 </>
             )}
             {/* RAG Citations */}

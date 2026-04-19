@@ -48,7 +48,11 @@
 
 /* ── Step view transition ── */
 .stepView {
-    animation: scaleIn 0.4s var(--ease-out-back) forwards;
+    /* outer wrapper stays mounted; animation is on inner .stepContent */
+}
+
+.stepContent {
+    animation: scaleIn 0.35s var(--ease-out-back) both;
 }
 
 .sectionTitle {

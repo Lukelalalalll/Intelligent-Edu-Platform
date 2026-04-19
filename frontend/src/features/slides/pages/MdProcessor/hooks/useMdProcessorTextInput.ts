@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import client from '../../../../../api/client';
+import client from '@/shared/api/client';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../../../shared/aiProvider';
 
 export function useMdProcessorTextInput() {

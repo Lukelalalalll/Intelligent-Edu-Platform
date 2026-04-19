@@ -64,7 +64,10 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
 
     return (
         <div className={styles.stepCard}>
-            <h3>Step 4: Generate Video</h3>
+            <div className={styles.stepTitle}>
+                <div className={styles.stepIcon}><i className="fas fa-video" /></div>
+                Generate Video
+            </div>
 
             {status === 'idle' && (
                 <>

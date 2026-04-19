@@ -2,13 +2,32 @@
  * cozeApi — AI Gateway REST API client.
  * Replaces {cozeApi} previously in api.ts.
  */
-import client from '../../../api/client';
-import type { ChatMessage } from '../types/api';
+import client from '@/shared/api/client';
+import type { ChatMessage } from '@/types/api';
 import type { AIProvider } from '../../../shared/aiProvider';
 
 export const cozeApi = {
     analyzeSubmission: (submissionId: string, provider: AIProvider = 'local_ollama') =>
         client.post('/ai/gateway/analyze', { submissionId, provider }).then(r => r.data),
+
+    regradeQuestion: (
+        submissionId: string,
+        payload: {
+            questionId: string;
+            questionText?: string;
+            studentAnswer: string;
+            referenceAnswer?: string;
+            keyPoints?: string[];
+            maxScore?: number;
+            assignment?: string;
+            rubric?: Record<string, unknown>;
+        },
+        provider: AIProvider = 'local_ollama',
+    ) => client.post('/ai/gateway/analyze/regrade-question', {
+        submissionId,
+        provider,
+        ...payload,
+    }).then(r => r.data),
 
     debugRag: (submissionId: string, selectedText: string, options: { useRag?: boolean; ragTopK?: number } = {}) =>
         client.post('/ai/gateway/rag/debug', {

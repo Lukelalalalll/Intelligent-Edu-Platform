@@ -148,7 +148,10 @@ export default function StepScript({ inputData, lang, provider, audience, maxSeg
 
     return (
         <div className={styles.stepCard}>
-            <h3>Step 2: AI-Optimized Script</h3>
+            <div className={styles.stepTitle}>
+                <div className={styles.stepIcon}><i className="fas fa-scroll" /></div>
+                AI-Optimized Script
+            </div>
 
             {loading ? (
                 <div className={styles.progressArea}>

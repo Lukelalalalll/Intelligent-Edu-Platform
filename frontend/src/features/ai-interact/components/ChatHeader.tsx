@@ -34,15 +34,17 @@ export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'tutor'
                 </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <select
-                    value={tutorMode}
-                    onChange={(e) => setTutorMode?.(e.target.value as AITutorMode)}
-                    className={styles['tutor-mode-select']}
-                    title="Response style"
-                >
-                    <option value="tutor">Tutor (detailed)</option>
-                    <option value="hint_only">Hint-only</option>
-                </select>
+                {roleInfo?.role === 'admin' && (
+                    <select
+                        value={tutorMode}
+                        onChange={(e) => setTutorMode?.(e.target.value as AITutorMode)}
+                        className={styles['tutor-mode-select']}
+                        title="Student response style (admin only)"
+                    >
+                        <option value="tutor">Tutor (detailed)</option>
+                        <option value="hint_only">Hint-only (students)</option>
+                    </select>
+                )}
                 <button className={styles['memory-btn']} onClick={onOpenMemory} title="AI Memory — personalize your experience">
                     <i className="fas fa-brain"></i> Memory
                 </button>

@@ -121,10 +121,16 @@
 .doc-manager-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .doc-manager-header h3 {
@@ -142,4 +148,43 @@
     border-radius: 999px;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+/* ── Tab Switcher ────────────── */
+.tabSwitcher {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.tabBtn {
+    border: none;
+    background: transparent;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tabBtn:hover {
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.tabActive {
+    background: white !important;
+    color: var(--primary-color) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tabContent {
+    display: flex;
+    flex-direction: column;
 }

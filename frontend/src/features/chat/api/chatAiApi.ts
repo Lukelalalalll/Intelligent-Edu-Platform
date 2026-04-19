@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { AIProvider } from '../../../shared/aiProvider';
 
 // ── AI Assistant Types ──

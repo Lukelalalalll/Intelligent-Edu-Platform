@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { ChatMessage } from '../types';
 
 export const messageApi = {

@@ -464,6 +464,75 @@
     font-weight: bold !important;
 }
 
+/* ── RAG Citations ── */
+.citationsWrap {
+    margin-top: 12px;
+}
+
+.citationsToggle {
+    background: none;
+    border: none;
+    color: var(--primary-color, #007b55);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.citationsToggle:hover {
+    background: rgba(0, 123, 85, 0.08);
+}
+
+.citationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+    padding-left: 4px;
+}
+
+.citationCard {
+    background: rgba(0, 123, 85, 0.04);
+    border: 1px solid rgba(0, 123, 85, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+}
+
+.citationDoc {
+    font-weight: 600;
+    color: var(--text-main, #111);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+.citationDoc i {
+    color: var(--primary-color, #007b55);
+    font-size: 0.72rem;
+}
+
+.citationScore {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--primary-color, #007b55);
+    background: rgba(0, 123, 85, 0.1);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.citationText {
+    color: var(--text-sub, #666);
+    line-height: 1.4;
+    font-size: 0.75rem;
+}
+
 /* ── Typewriter cursor shown while AI is streaming ── */
 .typing-cursor {
     display: inline-block;

@@ -12,7 +12,7 @@
     grid-template-columns: 1.8fr 1fr;
     /* 左侧内容区稍大，提供阅读舒适度 */
     gap: 2.5rem;
-    align-items: start;
+    align-items: stretch;
     margin-top: 1rem;
 }
 
@@ -42,8 +42,26 @@
 }
 
 /* --- 1. Original Content 阅读器优化 (重点) --- */
+.contentCard {
+    height: 100%;
+    position: relative;
+    /* 让高度由右侧的 settingsCard 来主导 */
+}
+
+.contentCardBody {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem;
+}
+
 .markdownContent {
-    max-height: 75vh;
+    flex: 1;
+    min-height: 0; /* 必须有这行以便内部滚动生效 */
     overflow-y: auto;
     padding: 10px 20px 10px 0;
 }
@@ -287,6 +305,14 @@
 @media (max-width: 1200px) {
     .layoutGrid {
         grid-template-columns: 1fr;
+    }
+
+    .contentCard {
+        min-height: 50vh;
+    }
+
+    .contentCardBody {
+        position: static;
     }
 
     .markdownContent {

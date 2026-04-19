@@ -66,20 +66,32 @@
     margin-bottom: 6px;
 }
 
-.form-input {
+.formInput {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--radius-sm, 8px);
     font-size: 1rem;
     transition: all 0.2s;
     background: white;
+    color: var(--text-main, #1a202c);
+    box-sizing: border-box;
 }
 
-.form-input:focus {
-    border-color: var(--primary-color);
+.formInput::placeholder {
+    color: var(--text-sub, #a0aec0);
+}
+
+.formInput:focus {
+    border-color: var(--primary-color, #007b55);
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.1);
+}
+
+.formInput:disabled {
+    background: var(--bg-input, #f7fafc);
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .modalErrorText {

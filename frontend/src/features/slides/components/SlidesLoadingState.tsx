@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './slidesLoadingState.module.css';
+import styles from '../styles/slidesLoadingState.module.css';
 
 type SlidesLoadingStateProps = {
   title?: string;

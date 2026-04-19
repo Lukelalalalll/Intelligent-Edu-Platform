@@ -25,6 +25,18 @@ export type LayoutItem = {
     placeholders?: LayoutPlaceholder[];
 };
 
+export type SlideSchemaItem = {
+    title?: string;
+    content?: string[];
+    layout?: LayoutItem;
+};
+
+export type PptSchema = {
+    presentation_title?: string;
+    slides?: SlideSchemaItem[];
+    theme?: string;
+};
+
 export type PreviewBlock = {
     key: string;
     left: number;
@@ -44,6 +56,28 @@ export type DeliveryTabItem = {
 };
 
 export type PptTemplateProps = {
-    states: any;
-    handlers: any;
+    states: {
+        themes: ThemeItem[];
+        selectedTheme: string | null;
+        pptSchema: PptSchema | null;
+        errorMsg: string;
+        layouts: LayoutItem[];
+        currentSlideIndex: number;
+    };
+    handlers: {
+        selectTheme: (name: string) => void;
+        setCurrentSlideIndex: (index: number) => void;
+        selectLayout: (layout: LayoutItem) => void;
+        applyLayoutToAll: () => void;
+    };
+};
+
+export type FloatingImage = {
+    id: string;
+    previewUrl: string;
+    assetId: string;
+    ext: string;
+    xPct: number;   // 0–1, left position relative to slide canvas
+    yPct: number;   // 0–1, top position relative to slide canvas
+    wPct: number;   // 0–1, width relative to slide canvas
 };

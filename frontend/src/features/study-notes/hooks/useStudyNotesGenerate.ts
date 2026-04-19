@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 export function useStudyNotesGenerate(file: File | null) {
@@ -47,9 +47,11 @@ export function useStudyNotesGenerate(file: File | null) {
             if (flashRes.data.success && flashRes.data.flashcards?.length > 0) {
                 setFlashcards(flashRes.data.flashcards);
             }
+            return true;
         } catch (err: unknown) {
             const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
             setError(typeof detail === 'string' ? detail : 'Failed to generate notes');
+            return false;
         } finally {
             setIsLoading(false);
             setLoadingText('');
@@ -57,7 +59,10 @@ export function useStudyNotesGenerate(file: File | null) {
     }, [provider]);
 
     const handleGenerate = useCallback(async () => {
-        if (file) await generateFromFile(file, style);
+        if (file) {
+            return await generateFromFile(file, style);
+        }
+        return false;
     }, [file, style, generateFromFile]);
 
     return {

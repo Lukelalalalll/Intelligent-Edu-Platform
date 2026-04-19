@@ -60,14 +60,8 @@
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
-    opacity: 0;
-    transform: translateY(15px);
-    animation: fadeInUp 0.4s var(--ease-out-back) forwards;
+    animation: fadeInUp 0.35s ease-out both;
 }
-
-.submissionItem:nth-child(1) { animation-delay: 0.05s; }
-.submissionItem:nth-child(2) { animation-delay: 0.1s;  }
-.submissionItem:nth-child(3) { animation-delay: 0.15s; }
 
 .submissionItem:hover {
     transform: translateX(4px);

@@ -1,4 +1,6 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/diagram.module.css';
 
 const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
@@ -39,8 +41,90 @@ export default function ImageExtractSection({ imageState, imageHandlers }) {
         setLightboxImage, exportZip, exportPDF,
     } = imageHandlers;
 
+    const lightboxPortal = createPortal(
+        <AnimatePresence>
+            {lightboxImage && (
+                <motion.div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                        zIndex: 9999,
+                        background: 'rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setLightboxImage(null)}
+                >
+                    {/* Close */}
+                    <motion.button
+                        onClick={() => setLightboxImage(null)}
+                        style={{
+                            position: 'absolute', top: 18, right: 22,
+                            background: 'rgba(255,255,255,0.12)', border: 'none',
+                            color: '#fff', fontSize: '1.5rem', width: 40, height: 40,
+                            borderRadius: '50%', cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                        }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        title="Close"
+                    >
+                        <i className="fas fa-times" />
+                    </motion.button>
+
+                    {/* Image + Download */}
+                    <motion.div
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, maxWidth: '88vw' }}
+                        initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <img
+                            src={lightboxImage}
+                            alt="Preview"
+                            style={{
+                                maxWidth: '80vw', maxHeight: '70vh',
+                                objectFit: 'contain',
+                                borderRadius: 10,
+                                boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+                                background: '#fff',
+                            }}
+                        />
+                        <button
+                            onClick={() => {
+                                const a = document.createElement('a');
+                                a.href = lightboxImage;
+                                a.download = 'image.png';
+                                a.click();
+                            }}
+                            style={{
+                                background: '#0f766e', border: 'none', color: '#fff',
+                                padding: '8px 20px', borderRadius: 8, cursor: 'pointer',
+                                fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: 6,
+                                fontWeight: 500,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#0d655f')}
+                            onMouseLeave={e => (e.currentTarget.style.background = '#0f766e')}
+                        >
+                            <i className="fas fa-download" /> Download
+                        </button>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>,
+        document.body,
+    );
+
     return (
         <div>
+            {lightboxPortal}
+
             {/* Notifications */}
             {notifications.map(n => (
                 <div key={n.id} className={styles.notification} style={{
@@ -52,20 +136,6 @@ export default function ImageExtractSection({ imageState, imageHandlers }) {
                     {' '}{n.message}
                 </div>
             ))}
-
-            {/* Lightbox */}
-            {lightboxImage && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={() => setLightboxImage(null)}>
-                    <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setLightboxImage(null)}
-                            style={{ position: 'absolute', top: -12, right: -12, width: 32, height: 32, borderRadius: '50%', border: 'none', background: '#fff', fontSize: 18, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                            &times;
-                        </button>
-                        <img src={lightboxImage} alt="Preview" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 8 }} />
-                    </div>
-                </div>
-            )}
 
             {/* Loading */}
             {loading && (

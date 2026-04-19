@@ -18,6 +18,7 @@ export default function KnowledgeBasePageContainer() {
             deletingDoc={kb.deletingDoc}
             onUploadFile={kb.onUploadFile}
             onDeleteDoc={kb.onDeleteDoc}
+            onDismissUploadTasks={kb.onDismissUploadTasks}
             uploading={kb.uploading}
             chapters={kb.chapters}
             selectedChapterId={kb.selectedChapterId}

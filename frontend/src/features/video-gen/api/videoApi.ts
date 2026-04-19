@@ -2,7 +2,7 @@
  * videoApi — Video generation REST API client + history.
  * Combines videoApi (from api.ts) and videoHistoryApi.ts.
  */
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { GenerationHistoryItem } from '../../../types/api';
 
 export const videoApi = {

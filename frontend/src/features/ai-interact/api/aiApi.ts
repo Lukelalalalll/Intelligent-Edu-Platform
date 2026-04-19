@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '../../../types/api';
 
 const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';

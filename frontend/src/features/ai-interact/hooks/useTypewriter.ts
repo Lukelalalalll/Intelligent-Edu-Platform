@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
  * Progressively reveals `target` text frame-by-frame (typewriter effect).
  * Runs a **continuous** rAF loop while `isActive` is true so there is never
  * a stop-start gap between SSE chunks.  When `isActive` turns false
- * (streaming ended), snaps immediately to the full target string.
+ * (streaming ended), continues the animation at accelerated speed until
+ * caught up, then stops.
  *
  * @param target       Full accumulated text to reveal (grows as chunks arrive)
  * @param isActive     True while this message is being streamed
@@ -25,17 +26,48 @@ export function useTypewriter(
     targetRef.current = target;
     isActiveRef.current = isActive;
 
-    // When isActive turns off, cancel animation and snap to full content
+    // When isActive turns off, start a finish-up animation instead of snapping.
+    // If already caught up, snap immediately.
     useEffect(() => {
         if (!isActive) {
+            const t = targetRef.current;
+            if (posRef.current >= t.length) {
+                // Already caught up — just sync displayed
+                setDisplayed(t);
+                return;
+            }
+            // Cancel the streaming loop — we'll start a new finish-up loop
             if (rafRef.current != null) {
                 cancelAnimationFrame(rafRef.current);
                 rafRef.current = null;
             }
-            posRef.current = targetRef.current.length;
-            setDisplayed(targetRef.current);
+            const finishStep = () => {
+                const t = targetRef.current;
+                if (posRef.current >= t.length) {
+                    posRef.current = t.length;
+                    setDisplayed(t);
+                    rafRef.current = null;
+                    return;
+                }
+                // Accelerated speed for finish-up: at least 5x base speed
+                const behind = t.length - posRef.current;
+                const speed = behind > 300 ? charsPerFrame * 8
+                    : behind > 100 ? charsPerFrame * 6
+                    : Math.max(charsPerFrame * 4, 12);
+                posRef.current = Math.min(posRef.current + speed, t.length);
+                setDisplayed(t.slice(0, posRef.current));
+                rafRef.current = requestAnimationFrame(finishStep);
+            };
+            rafRef.current = requestAnimationFrame(finishStep);
         }
-    }, [isActive]);
+        return () => {
+            // Only clean up if isActive is false (finish-up loop)
+            if (!isActive && rafRef.current != null) {
+                cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, [isActive, charsPerFrame]);
 
     // Continuous animation loop — runs the entire time isActive is true.
     // Reads from targetRef (always fresh) so it doesn't need `target` as a dep.
@@ -43,11 +75,8 @@ export function useTypewriter(
         if (!isActive) return;
 
         const step = () => {
-            // Snap immediately if streaming ended mid-animation
+            // Stream ended mid-animation — let the isActive effect handle finish-up
             if (!isActiveRef.current) {
-                const t = targetRef.current;
-                posRef.current = t.length;
-                setDisplayed(t);
                 rafRef.current = null;
                 return;
             }

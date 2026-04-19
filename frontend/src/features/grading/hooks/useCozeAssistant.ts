@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { cozeApi } from '../api/cozeApi';
-import { useLLMStream } from '../../../hooks/useLLMStream';
+import { useLLMStream } from '@/shared/hooks/useLLMStream';
 import type { ChatMessage, ChatRole } from '../../../types/llm';
-import { usePretextMeasure } from '../../../hooks/usePretextMeasure';
+import { usePretextMeasure } from '@/shared/hooks/usePretextMeasure';
 import type { AIProvider } from '../../../shared/aiProvider';
 
 interface UseCozeAssistantOptions {
@@ -19,8 +19,10 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
     ]);
     const [input, setInput] = useState('');
     const [analyzeLoading, setAnalyzeLoading] = useState(false);
+    const [regradeLoading, setRegradeLoading] = useState(false);
     const [localError, setLocalError] = useState('');
     const [lastRagInfo, setLastRagInfo] = useState(null);
+    const [lastStructuredReport, setLastStructuredReport] = useState<Record<string, any> | null>(null);
     const {
         loading,
         error: streamError,
@@ -71,9 +73,48 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
         }
     };
 
-    const formatAnalyzeResponse = (rawText: string) => {
-        const parsed = tryParseAnalysisJson(rawText);
+    const formatAnalyzeResponse = (rawText: string, parsedOverride?: Record<string, any> | null) => {
+        const parsed = parsedOverride || tryParseAnalysisJson(rawText);
         if (!parsed) return String(rawText || 'Analysis complete');
+
+        const questionGrades = Array.isArray(parsed.question_grades) ? parsed.question_grades : [];
+        if (questionGrades.length) {
+            const overallScore = typeof parsed.overall_score === 'number'
+                ? parsed.overall_score
+                : questionGrades.reduce((sum, item) => sum + Number(item?.score || 0), 0);
+            const overallFeedback = String(parsed.overall_feedback || '').trim();
+            const suggestions = Array.isArray(parsed.improvement_suggestions) ? parsed.improvement_suggestions : [];
+
+            const lines: string[] = [];
+            lines.push('Structured Grading Result');
+            lines.push(`Overall Score: ${overallScore}/100`);
+            lines.push('', 'Question Breakdown:');
+            questionGrades.forEach((item) => {
+                const qid = String(item?.question_id || 'Q?');
+                const score = item?.score ?? '-';
+                const maxScore = item?.max_score ?? '-';
+                const rationale = String(item?.rationale || '').trim();
+                const evidence = String(item?.evidence || '').trim();
+                lines.push(`- ${qid}: ${score}/${maxScore}`);
+                if (rationale) lines.push(`  Why: ${rationale}`);
+                if (evidence) lines.push(`  Evidence: ${evidence}`);
+            });
+            if (overallFeedback) lines.push('', 'Overall Feedback:', overallFeedback);
+            if (suggestions.length) {
+                lines.push('', 'Improvement Suggestions:');
+                suggestions.forEach((item) => lines.push(`- ${String(item)}`));
+            }
+            const lowConfidence = Array.isArray(parsed.low_confidence_questions) ? parsed.low_confidence_questions : [];
+            if (lowConfidence.length) {
+                lines.push('', `Low-Confidence Questions: ${lowConfidence.length}`);
+                lowConfidence.forEach((item) => {
+                    const qid = String(item?.question_id || 'Q?');
+                    const reason = String(item?.reason || 'low_confidence');
+                    lines.push(`- ${qid}: ${reason}`);
+                });
+            }
+            return lines.join('\n');
+        }
 
         const overallScore = parsed.overall_score;
         const overallFeedback = String(parsed.overall_feedback || '').trim();
@@ -153,18 +194,98 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
     const handleStop = useCallback(() => stopStream(), [stopStream]);
 
     const handleAnalyze = useCallback(async () => {
+        if (!submissionId) {
+            setLocalError('No submission selected');
+            return;
+        }
         setAnalyzeLoading(true);
         try {
             const res = await cozeApi.analyzeSubmission(submissionId, provider);
-            const rawResponse = res.analysis?.raw_response || 'Analysis complete';
-            appendMessage('assistant', formatAnalyzeResponse(rawResponse));
-            onAnalysis?.({ ...res.analysis, parsed: tryParseAnalysisJson(rawResponse) });
-        } catch {
-            setLocalError('Analyze request failed');
+            const report = res.analysis?.structured_report;
+            const rawResponse = res.analysis?.raw_response || (report ? JSON.stringify(report) : 'Analysis complete');
+            const parsed = tryParseAnalysisJson(rawResponse) || report || null;
+            setLastStructuredReport(parsed);
+            appendMessage('assistant', formatAnalyzeResponse(rawResponse, parsed));
+            onAnalysis?.({ ...res.analysis, parsed });
+        } catch (err: any) {
+            const msg = err?.response?.data?.detail
+                || err?.response?.data?.message
+                || err?.message
+                || 'Analyze request failed';
+            setLocalError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         } finally {
             setAnalyzeLoading(false);
         }
     }, [submissionId, onAnalysis, provider]);
+
+    const handleRegradeLowConfidence = useCallback(async () => {
+        if (!submissionId || !lastStructuredReport) return;
+
+        const questionGrades = Array.isArray(lastStructuredReport.question_grades) ? lastStructuredReport.question_grades : [];
+        const answerKey = Array.isArray(lastStructuredReport.answer_key) ? lastStructuredReport.answer_key : [];
+        const keyById = new Map(answerKey.map((item) => [String(item?.question_id || ''), item]));
+
+        const lowConfidence = Array.isArray(lastStructuredReport.low_confidence_questions)
+            ? lastStructuredReport.low_confidence_questions
+            : questionGrades
+                .filter((item) => Number(item?.confidence ?? 0) < 0.55)
+                .map((item) => ({ question_id: item.question_id, reason: 'low_confidence<0.55' }));
+
+        if (!lowConfidence.length) {
+            setLocalError('No low-confidence questions to regrade.');
+            return;
+        }
+
+        setRegradeLoading(true);
+        setLocalError('');
+        try {
+            const refreshedGrades = [...questionGrades];
+            for (const item of lowConfidence) {
+                const qid = String(item?.question_id || '').trim();
+                const current = refreshedGrades.find((x) => String(x?.question_id || '').trim() === qid);
+                if (!current) continue;
+                const key = keyById.get(qid);
+                const res = await cozeApi.regradeQuestion(
+                    submissionId,
+                    {
+                        questionId: qid,
+                        questionText: String(current?.question_text || ''),
+                        studentAnswer: String(current?.student_answer || ''),
+                        referenceAnswer: String(key?.reference_answer || current?.reference_answer || ''),
+                        keyPoints: Array.isArray(key?.key_points) ? key.key_points.map((x: unknown) => String(x)) : [],
+                        maxScore: Number(current?.max_score ?? key?.max_score ?? 0),
+                        assignment: assignment?.description,
+                        rubric,
+                    },
+                    provider,
+                );
+                const nextGrade = res?.analysis?.question_grade;
+                if (nextGrade && typeof nextGrade === 'object') {
+                    const idx = refreshedGrades.findIndex((x) => String(x?.question_id || '').trim() === qid);
+                    if (idx >= 0) refreshedGrades[idx] = nextGrade;
+                }
+            }
+
+            const totalScore = refreshedGrades.reduce((sum, item) => sum + Number(item?.score || 0), 0);
+            const totalMax = refreshedGrades.reduce((sum, item) => sum + Number(item?.max_score || 0), 0);
+            const nextOverall = totalMax > 0 ? Number(((totalScore / totalMax) * 100).toFixed(2)) : 0;
+            const nextReport = {
+                ...lastStructuredReport,
+                question_grades: refreshedGrades,
+                overall_score: nextOverall,
+                low_confidence_questions: refreshedGrades
+                    .filter((x) => Number(x?.confidence ?? 0) < 0.55)
+                    .map((x) => ({ question_id: x.question_id, reason: 'low_confidence<0.55', confidence: x.confidence })),
+            };
+            setLastStructuredReport(nextReport);
+            appendMessage('assistant', formatAnalyzeResponse(JSON.stringify(nextReport), nextReport));
+            onAnalysis?.({ parsed: nextReport, structured_report: nextReport, action: 'regrade_low_confidence' });
+        } catch {
+            setLocalError('Regrade request failed');
+        } finally {
+            setRegradeLoading(false);
+        }
+    }, [submissionId, lastStructuredReport, assignment?.description, rubric, provider, onAnalysis]);
 
     const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -175,9 +296,12 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
 
     return {
         messages, input, setInput,
-        loading, analyzeLoading, localError, streamError,
+        loading, analyzeLoading, regradeLoading, localError, streamError,
         lastRagInfo, lastLatencyMs, lastFailedQuestion,
+        lowConfidenceCount: Array.isArray(lastStructuredReport?.low_confidence_questions)
+            ? lastStructuredReport.low_confidence_questions.length
+            : 0,
         chatAreaRef,
-        handleAsk, handleStop, handleAnalyze, handleInputKeyDown,
+        handleAsk, handleStop, handleAnalyze, handleRegradeLowConfidence, handleInputKeyDown,
     };
 }

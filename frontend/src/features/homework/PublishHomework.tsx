@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
-import client from '../../api/client';
+import client from '@/shared/api/client';
 import styles from './styles/publishHomework.module.css';
 
 export default function PublishHomework() {

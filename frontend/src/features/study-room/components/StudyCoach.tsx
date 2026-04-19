@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import styles from '../styles/StudyRoom.module.css';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 

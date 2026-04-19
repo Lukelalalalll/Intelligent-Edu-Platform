@@ -123,6 +123,10 @@ export function useKnowledgeBase() {
         }
     }, [selectedCourseId, selectedChapterId, loadDocs, refreshSummary]);
 
+    const handleDismissUploadTasks = useCallback(() => {
+        setUploadTasks(prev => prev.filter(t => t.status === 'uploading'));
+    }, []);
+
     const handleDeleteDoc = useCallback(async (docName: string) => {
         if (!selectedCourseId) return;
         setDeletingDoc(docName);
@@ -159,6 +163,7 @@ export function useKnowledgeBase() {
         onSelectChapter: setSelectedChapterId,
         onUploadFile: handleUploadFile,
         onDeleteDoc: handleDeleteDoc,
+        onDismissUploadTasks: handleDismissUploadTasks,
         onCreateChapter: handleCreateChapter,
         onUpdateChapter: handleUpdateChapter,
         onDeleteChapter: handleDeleteChapter,

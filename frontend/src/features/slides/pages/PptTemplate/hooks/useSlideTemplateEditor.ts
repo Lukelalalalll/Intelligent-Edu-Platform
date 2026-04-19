@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import client from '../../../../../api/client';
+import client from '@/shared/api/client';
 import { type DeliveryArtifactType } from '../../../api/slidesApi';
 import { createSlideTemplateHandlers } from './slideTemplateEditor/handlerFactory';
 import { initializeTemplateEditorData } from './slideTemplateEditor/initUtils';
@@ -22,6 +23,8 @@ type SlideTemplateState = {
 };
 
 export function useSlideTemplateEditor() {
+  const location = useLocation();
+  const preferredSchema = (location.state as any)?.pptSchema || null;
   const [themes, setThemes] = useState<any[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [pptSchema, setPptSchema] = useState<any>(null);
@@ -45,7 +48,9 @@ export function useSlideTemplateEditor() {
     const init = async () => {
       setErrorMsg('');
       try {
-        const { schema, initialTheme, themes: fetchedThemes, error } = await initializeTemplateEditorData();
+        const { schema, initialTheme, themes: fetchedThemes, error } = await initializeTemplateEditorData({
+          preferredSchema,
+        });
 
         if (error) {
           setError(error);
@@ -67,7 +72,7 @@ export function useSlideTemplateEditor() {
     };
 
     init();
-  }, []);
+  }, [preferredSchema]);
 
   useEffect(() => {
     if (!selectedTheme) return;
@@ -76,7 +81,25 @@ export function useSlideTemplateEditor() {
       .get(`/slides/get_placeholders/${selectedTheme}`)
       .then((res) => {
         const placeholders = Array.isArray(res.data) ? res.data : [];
-        const filtered = placeholders.filter((l: any) => !['Title', 'Catalogue', 'Ending'].includes(l.name));
+        // Layouts that are auto-managed by the creator and should never appear
+        // in the manual layout picker:
+        //   • Business: Title, Catalogue, Section-1..5, Ending
+        //   • Dark:     Title, Section, Ending  (newly added layouts)
+        //   • Light:    标题幻灯片 (title), Section title, End Slide
+        //   • 1_* prefix: duplicate layouts from a secondary slide master in Light
+        const EXCLUDED = new Set([
+          'Title', 'Catalogue', 'Ending',
+          'Section-1', 'Section-2', 'Section-3', 'Section-4', 'Section-5',
+          'Section',
+          'Section title', 'End Slide',
+          '标题幻灯片',
+        ]);
+        const filtered = placeholders.filter((l: any) => {
+          const name: string = l.name || '';
+          if (EXCLUDED.has(name)) return false;
+          if (name.startsWith('1_')) return false; // secondary-master duplicates in Light
+          return true;
+        });
         setLayouts(filtered);
       })
       .catch((err: any) => {

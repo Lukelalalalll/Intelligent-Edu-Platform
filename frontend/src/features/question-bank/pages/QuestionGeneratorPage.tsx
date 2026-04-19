@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import QuestionGeneratorView from '../QuestionGenerator';
+import QuestionGeneratorView from '../components/QuestionGeneratorView';
 import ToastContainer from '../../../shared/ToastContainer';
 import { useQuestionGenerator } from '../hooks/useQuestionGenerator';
 import { transferApi } from '../../chat/api/transferApi';
