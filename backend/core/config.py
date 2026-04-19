@@ -1,0 +1,327 @@
+"""Application configuration — pydantic-settings based.
+
+All settings are read from environment variables (with .env file support).
+Usage (unchanged across the codebase):
+    from backend.config import Config
+    value = Config.SECRET_KEY
+"""
+from __future__ import annotations
+
+import math
+import os
+from collections import Counter
+from datetime import timedelta
+from typing import ClassVar
+
+from dotenv import load_dotenv
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load .env files before pydantic-settings picks them up natively.
+_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+load_dotenv()
+load_dotenv(os.path.join(_BASE_DIR, ".env"))
+
+SENSITIVE_ENVS: tuple[str, ...] = ('production', 'prod', 'staging', 'preprod')
+
+
+def _is_sensitive(env: str) -> bool:
+    return env.lower() in SENSITIVE_ENVS
+
+
+class Settings(BaseSettings):
+    """Central application settings backed by environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(_BASE_DIR, ".env"),
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
+    # ── Base ──────────────────────────────────────────────────────────
+    BASE_DIR: ClassVar[str] = _BASE_DIR
+
+    ENV: str = Field(default="development", alias="ENV")
+    LOG_LEVEL: str = "INFO"
+
+    # ── Security ──────────────────────────────────────────────────────
+    SECRET_KEY: str = "your-secret-key"
+    JWT_SECRET_KEY: str = "jwt-secret-key-change-this-in-prod"
+    JWT_TOKEN_LOCATION: ClassVar[list[str]] = ["cookies"]
+    JWT_COOKIE_CSRF_PROTECT: bool = False   # overridden by model_validator
+    JWT_ACCESS_COOKIE_NAME: ClassVar[str] = "access_token_cookie"
+    JWT_COOKIE_SAMESITE: str = "lax"
+    JWT_COOKIE_SECURE: bool = False          # overridden by model_validator
+    JWT_EXPIRES_HOURS: int = 24
+
+    @property
+    def JWT_ACCESS_TOKEN_EXPIRES(self) -> timedelta:
+        return timedelta(hours=self.JWT_EXPIRES_HOURS)
+
+    # ── External API keys ─────────────────────────────────────────────
+    SERP_API_KEY: str | None = None
+    DEEPSEEK_API_KEY: str | None = None
+    MONGO_URI: str = "mongodb://localhost:27017/intelligent_edu"
+    COZE_TOKEN: str | None = None
+    COZE_BOT_ID: str | None = None
+    COZE_API_BASE: str = "https://api.coze.com/v3/chat"
+    COZE_API_ROOT: ClassVar[str] = "https://api.coze.com"
+    COZE_REQUEST_TIMEOUT_SECONDS: float = 90.0
+    COZE_POLL_INTERVAL_SECONDS: float = 1.2
+    COZE_POLL_MAX_ATTEMPTS: int = 50
+
+    # ── AI provider ───────────────────────────────────────────────────
+    AI_DEFAULT_PROVIDER: str = "local_ollama"
+    AI_ALLOW_PROVIDER_SWITCH: bool = True
+    # OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_BASE_URL: str = "http://hp-z2-hcwu.tail545784.ts.net:11434"
+    OLLAMA_MODEL: str = "llama3.2-vision:11b"
+    OLLAMA_REQUEST_TIMEOUT_SECONDS: float = 180.0
+    OLLAMA_LIGHT_TEMPERATURE: float = 0.2
+    OLLAMA_LIGHT_NUM_PREDICT: int = 256
+    OLLAMA_LIGHT_NUM_CTX: int = 4096
+    OLLAMA_HEAVY_TEMPERATURE: float = 0.4
+    OLLAMA_HEAVY_NUM_PREDICT: int = 1024
+    OLLAMA_HEAVY_NUM_CTX: int = 8192
+
+    # ── RAG ───────────────────────────────────────────────────────────
+    RAG_VECTORSTORE_DIR: str = ""
+    RAG_EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    RAG_TWO_STAGE_CHAT_ENABLED: bool = True
+    RAG_EMPTY_RETRY_ENABLED: bool = True
+    RAG_POSTCHECK_ENABLED: bool = True
+    RAG_RETRIEVE_TOP_N: int = 10
+    RAG_ANSWER_TOP_K: int = 4
+    RAG_EVIDENCE_MAX_CHARS: int = 1600
+    RAG_EVIDENCE_MAX_CHARS_PER_CHUNK: int = 420
+
+    # ── Upload / folder paths ─────────────────────────────────────────
+    UPLOAD_FOLDER: str = ""
+    MAX_CONTENT_LENGTH: int = 50 * 1024 * 1024  # 50 MB
+    MARKDOWN_FOLDER: str = ""
+    HIGHLIGHTS_FOLDER: str = ""
+    SUB1_UPLOAD_FOLDER: str = ""
+    SUB1_MD_FOLDER: str = ""
+    SUB1_HIGHLIGHTS_FOLDER: str = ""
+    PPT_TEMPLATES_FOLDER: str = ""
+    PPT_RESULTS_FOLDER: str = ""
+    SCRIPT_RESULTS_FOLDER: str = ""
+
+    # Sub2
+    UPLOAD_FOLDER_SUB2: str = ""
+    GENERATED_FOLDER_SUB2: str = ""
+    SCREENSHOTS_FOLDER_SUB2: str = ""
+    KNOWLEDGE_BASE_UPLOAD_DIR: str = ""
+    ALLOWED_EXTENSIONS_SUB2: ClassVar[set[str]] = {"pdf", "png", "jpg", "jpeg"}
+    SUB2_FILE_TTL_HOURS: int = 72
+    SUB2_UPLOAD_FILE_TTL_HOURS: int = 2160
+
+    # ── OCR / question generation ─────────────────────────────────────
+    TEXTIN_API_KEY: str | None = None
+    TEXTIN_SECRET_CODE: str | None = None
+    TESSERACT_CMD: str | None = None
+
+    # ── Chat / transfer ───────────────────────────────────────────────
+    CHAT_AI_ENABLED: bool = True
+    CHAT_TRANSFER_ENABLED: bool = True
+    CHAT_TRANSFER_TICKET_TTL_HOURS: int = 24
+    CHAT_AI_CONTEXT_WINDOW: int = 50
+    CHAT_FILE_MAX_MB: int = 20
+
+    # ── Misc ──────────────────────────────────────────────────────────
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    # Business constant (not from env, kept as ClassVar)
+    DIFFICULTY_MAP: ClassVar[dict[int, str]] = {
+        1: "Basic", 2: "Easy", 3: "Medium", 4: "Difficult", 5: "Competition Level"
+    }
+
+    # ── Validators ────────────────────────────────────────────────────
+
+    @field_validator("LOG_LEVEL", mode="before")
+    @classmethod
+    def _upper_log_level(cls, v: str) -> str:
+        return str(v or "INFO").upper()
+
+    @field_validator("OLLAMA_BASE_URL", mode="before")
+    @classmethod
+    def _strip_ollama_url(cls, v: str) -> str:
+        return (str(v or "http://localhost:11434") or "").strip().rstrip("/")
+
+    @field_validator("JWT_COOKIE_SAMESITE", mode="before")
+    @classmethod
+    def _lower_samesite(cls, v: str) -> str:
+        return str(v or "lax").strip().lower()
+
+    @field_validator("AI_DEFAULT_PROVIDER", mode="before")
+    @classmethod
+    def _normalize_provider(cls, v: str) -> str:
+        return str(v or "local_ollama").strip().lower()
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def _parse_origins(cls, v) -> list[str]:
+        if isinstance(v, list):
+            return v
+        default = "http://localhost:5173,http://127.0.0.1:5173"
+        raw = str(v or default)
+        return [item.strip() for item in raw.split(",") if item.strip()]
+
+    @model_validator(mode="after")
+    def _set_defaults_and_env_flags(self) -> "Settings":
+        env = self.ENV.lower()
+        sensitive = _is_sensitive(env)
+
+        # JWT_COOKIE_CSRF_PROTECT defaults to True in sensitive envs
+        # (only override if the field is still at its pydantic default of False)
+        if os.getenv("JWT_COOKIE_CSRF_PROTECT") is None:
+            object.__setattr__(self, "JWT_COOKIE_CSRF_PROTECT", sensitive)
+
+        # JWT_COOKIE_SECURE defaults to True in sensitive envs
+        jwt_secure_env = os.getenv("JWT_COOKIE_SECURE")
+        if jwt_secure_env is None:
+            object.__setattr__(self, "JWT_COOKIE_SECURE", sensitive)
+
+        # Derive path fields that weren't explicitly set via env
+        base = _BASE_DIR
+
+        def _default(field: str, fallback: str) -> None:
+            if not getattr(self, field):
+                object.__setattr__(self, field, fallback)
+
+        _default("RAG_VECTORSTORE_DIR", os.path.join(base, "generated", "vectorstore"))
+        _default("UPLOAD_FOLDER", os.path.join(base, "uploads"))
+        _default("MARKDOWN_FOLDER", os.path.join(base, "md"))
+        _default("HIGHLIGHTS_FOLDER", os.path.join(base, "highlights"))
+        _default("SUB1_UPLOAD_FOLDER", os.path.join(base, "uploads", "sub1"))
+        _default("SUB1_MD_FOLDER", os.path.join(base, "md", "sub1"))
+        _default("SUB1_HIGHLIGHTS_FOLDER", os.path.join(base, "highlights", "sub1"))
+        _default("PPT_TEMPLATES_FOLDER", os.path.join(base, "static", "ppt_templates"))
+        _default("PPT_RESULTS_FOLDER", os.path.join(base, "static", "ppt_results", "sub1"))
+        _default("SCRIPT_RESULTS_FOLDER", os.path.join(base, "static", "script_results", "sub1"))
+        _default("UPLOAD_FOLDER_SUB2", os.path.join(base, "uploads", "sub2"))
+        _default("GENERATED_FOLDER_SUB2", os.path.join(base, "generated", "sub2"))
+        _default("SCREENSHOTS_FOLDER_SUB2", os.path.join(base, "static", "sub2", "screenshots"))
+        _default("KNOWLEDGE_BASE_UPLOAD_DIR", os.path.join(base, "uploads", "knowledge_base"))
+
+        return self
+
+    @property
+    def ALL_FOLDERS(self) -> list[str]:
+        """Ordered, deduplicated list of folders to create at startup."""
+        raw = [
+            self.UPLOAD_FOLDER, self.MARKDOWN_FOLDER, self.HIGHLIGHTS_FOLDER,
+            self.PPT_TEMPLATES_FOLDER, self.PPT_RESULTS_FOLDER, self.SCRIPT_RESULTS_FOLDER,
+            os.path.join(_BASE_DIR, "uploads/sub1"),
+            os.path.join(_BASE_DIR, "md/sub1"),
+            os.path.join(_BASE_DIR, "highlights/sub1"),
+            os.path.join(_BASE_DIR, "static", "ppt_results", "sub1"),
+            os.path.join(_BASE_DIR, "static", "script_results", "sub1"),
+            self.UPLOAD_FOLDER_SUB2,
+            self.GENERATED_FOLDER_SUB2,
+            self.SCREENSHOTS_FOLDER_SUB2,
+            os.path.join(_BASE_DIR, "uploads/sub4"),
+            os.path.join(_BASE_DIR, "static/sub4/results"),
+            os.path.join(_BASE_DIR, "uploads/sub5"),
+            os.path.join(_BASE_DIR, "generated/sub5"),
+            self.KNOWLEDGE_BASE_UPLOAD_DIR,
+            self.RAG_VECTORSTORE_DIR,
+            os.path.join(_BASE_DIR, "uploads/submissions"),
+            os.path.join(_BASE_DIR, "uploads/homeworks"),
+        ]
+        return list(dict.fromkeys(raw))
+
+    def validate_startup(self) -> list[str]:
+        """Check critical config on startup. Returns list of warnings.
+        Raises SystemExit for insecure defaults in non-dev environments."""
+        import logging as _logging
+        _logger = _logging.getLogger("config.validation")
+        warnings: list[str] = []
+
+        def _shannon_entropy_per_char(value: str) -> float:
+            if not value:
+                return 0.0
+            counts = Counter(value)
+            length = len(value)
+            entropy = 0.0
+            for count in counts.values():
+                p = count / length
+                entropy -= p * math.log2(p)
+            return entropy
+
+        def _key_strength_issues(key_value: str, key_name: str) -> list[str]:
+            value = str(key_value or "")
+            lowered = value.lower()
+            issues: list[str] = []
+            weak_markers = {
+                'your-secret-key', 'jwt-secret-key-change-this-in-prod',
+                'change-this', 'secret', 'default', 'password',
+            }
+            if not value.strip():
+                issues.append(f"{key_name} is empty")
+                return issues
+            if len(value) < 32:
+                issues.append(f"{key_name} length must be >= 32")
+            classes = 0
+            classes += 1 if any(c.islower() for c in value) else 0
+            classes += 1 if any(c.isupper() for c in value) else 0
+            classes += 1 if any(c.isdigit() for c in value) else 0
+            classes += 1 if any(not c.isalnum() for c in value) else 0
+            if classes < 3:
+                issues.append(f"{key_name} must include at least 3 character classes")
+            entropy = _shannon_entropy_per_char(value)
+            if entropy < 3.0:
+                issues.append(f"{key_name} entropy too low ({entropy:.2f} bits/char)")
+            if lowered in weak_markers or any(marker in lowered for marker in weak_markers):
+                issues.append(f"{key_name} appears to use a weak/default pattern")
+            return issues
+
+        sensitive_env = _is_sensitive(self.ENV)
+        secret_issues = _key_strength_issues(self.SECRET_KEY, 'SECRET_KEY')
+        jwt_issues = _key_strength_issues(self.JWT_SECRET_KEY, 'JWT_SECRET_KEY')
+
+        for msg in [*secret_issues, *jwt_issues]:
+            if sensitive_env:
+                _logger.critical("CRITICAL CONFIG: %s", msg)
+            else:
+                _logger.warning("DEV SECURITY WARNING: %s", msg)
+                warnings.append(msg)
+
+        if sensitive_env and (secret_issues or jwt_issues):
+            raise SystemExit(
+                "Refusing to start: SECRET_KEY/JWT_SECRET_KEY failed security checks. "
+                "Use strong random values with >=32 chars and high entropy."
+            )
+
+        valid_samesite = {'lax', 'strict', 'none'}
+        if self.JWT_COOKIE_SAMESITE not in valid_samesite:
+            msg = f"JWT_COOKIE_SAMESITE must be one of {sorted(valid_samesite)}"
+            if sensitive_env:
+                _logger.critical(msg)
+                raise SystemExit(f"Refusing to start: {msg}")
+            _logger.warning("DEV SECURITY WARNING: %s", msg)
+            warnings.append(msg)
+
+        if sensitive_env and not self.JWT_COOKIE_SECURE:
+            msg = "JWT_COOKIE_SECURE must be true in production/staging environments"
+            _logger.critical(msg)
+            raise SystemExit(f"Refusing to start: {msg}")
+
+        optional_keys = {
+            'DEEPSEEK_API_KEY': self.DEEPSEEK_API_KEY,
+            'COZE_TOKEN': self.COZE_TOKEN,
+        }
+        for name, value in optional_keys.items():
+            if not value:
+                msg = f"CONFIG: {name} is not set — related features will be degraded."
+                warnings.append(msg)
+                _logger.info(msg)
+
+        return warnings
+
+
+# ---------------------------------------------------------------------------
+# Public singleton — drop-in for the old class-attribute-style Config usage
+# ---------------------------------------------------------------------------
+Config = Settings()

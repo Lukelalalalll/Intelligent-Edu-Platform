@@ -111,6 +111,8 @@ requests>=2.28.0
 rsa==4.9.1
 safetensors==0.7.0
 scikit-learn==1.8.0
+rank-bm25==0.2.2
+tdigest==0.5.2.2
 scipy==1.17.1
 seaborn==0.13.2
 six==1.17.0
@@ -138,7 +140,6 @@ Werkzeug==3.1.3
 WTForms==3.2.1
 xlsxwriter==3.2.9
 yarl==1.20.0
-zhipuai==2.1.5.20250825
 langchain==0.3.27
 langchain-chroma==0.2.6
 langchain-community==0.3.31
@@ -148,5 +149,6 @@ chromadb==1.0.21
 sentence-transformers==5.1.1
 slowapi==0.1.9
 gunicorn==23.0.0
+pytest-asyncio==1.3.0
 # Optional: Playwright for high-quality HTML slide rendering (requires: playwright install chromium)
 playwright==1.52.0

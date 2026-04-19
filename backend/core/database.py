@@ -1,9 +1,29 @@
 import logging
 from datetime import datetime, timedelta, timezone
+
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ASCENDING, DESCENDING, IndexModel
+
 from backend.config import Config
 
 logger = logging.getLogger(__name__)
+
+# ── TTL constants (seconds) ───────────────────────────────────────────────────
+_TTL_7D       =   7 * 24 * 3600
+_TTL_30D      =  30 * 24 * 3600
+_TTL_90D      =  90 * 24 * 3600
+_TTL_180D     = 180 * 24 * 3600
+_TTL_ON_FIELD = 0  # MongoDB expires document when its own expires_at is reached
+
+# ── Collections that share identical generation-history index structure ────────
+_GEN_HISTORY_COLS = [
+    "sub1_generation_history",
+    "sub2_generation_history",
+    "sub3_generation_history",
+    "sub4_generation_history",
+    "sub5_generation_history",
+    "video_generation_history",
+]
 
 client = AsyncIOMotorClient(
     Config.MONGO_URI,
@@ -32,411 +52,225 @@ async def compute_history_expires_at(user_id: str) -> datetime | None:
 async def ensure_indexes() -> None:
     """Create recommended indexes for core collections. Safe to call repeatedly."""
     try:
-        await db.users.create_index("username", unique=True, background=True)
-        await db.users.create_index("email", sparse=True, background=True)
+        # ── core auth / domain ────────────────────────────────────────────────
+        await db.users.create_indexes([
+            IndexModel([("username", ASCENDING)], unique=True),
+            IndexModel([("email", ASCENDING)], sparse=True),
+        ])
 
-        await db.annotations.create_index("submissionId", unique=True, background=True)
+        await db.annotations.create_indexes([
+            IndexModel([("submissionId", ASCENDING)], unique=True),
+        ])
 
-        # --- v2 flat domain model collections ---
-        await db.course_sections.create_index("courseCode", background=True)
-        await db.course_sections.create_index("ownerTeacherId", background=True)
-        await db.course_sections.create_index(
-            [("courseCode", 1), ("semester", 1)],
-            background=True,
-        )
+        # ── v2 flat domain model ──────────────────────────────────────────────
+        await db.course_sections.create_indexes([
+            IndexModel([("courseCode", ASCENDING)]),
+            IndexModel([("ownerTeacherId", ASCENDING)]),
+            IndexModel([("courseCode", ASCENDING), ("semester", ASCENDING)]),
+        ])
 
-        await db.enrollments.create_index(
-            [("courseSectionId", 1), ("userId", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.enrollments.create_index("userId", background=True)
+        await db.enrollments.create_indexes([
+            IndexModel([("courseSectionId", ASCENDING), ("userId", ASCENDING)], unique=True),
+            IndexModel([("userId", ASCENDING)]),
+        ])
 
-        await db.assignments.create_index("courseSectionId", background=True)
-        await db.assignments.create_index(
-            [("courseSectionId", 1), ("dueAt", -1)],
-            background=True,
-        )
+        await db.assignments.create_indexes([
+            IndexModel([("courseSectionId", ASCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING)]),
+        ])
 
-        await db.submissions.create_index(
-            [("assignmentId", 1), ("studentId", 1)],
-            background=True,
-        )
-        await db.submissions.create_index("studentId", background=True)
-        await db.submissions.create_index(
-            [("status", 1), ("submittedAt", -1)],
-            background=True,
-        )
+        await db.submissions.create_indexes([
+            IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING)]),
+            IndexModel([("studentId", ASCENDING)]),
+            IndexModel([("status", ASCENDING), ("submittedAt", DESCENDING)]),
+        ])
 
-        await db.documents.create_index(
-            [("ownerId", 1), ("sourceType", 1)],
-            background=True,
-        )
+        await db.documents.create_indexes([
+            IndexModel([("ownerId", ASCENDING), ("sourceType", ASCENDING)]),
+        ])
 
-        await db.grades.create_index("submissionId", background=True)
-        await db.grades.create_index(
-            [("graderId", 1), ("gradedAt", -1)],
-            background=True,
-        )
+        await db.grades.create_indexes([
+            IndexModel([("submissionId", ASCENDING)]),
+            IndexModel([("graderId", ASCENDING), ("gradedAt", DESCENDING)]),
+        ])
 
-        # --- legacy courses collection (kept for backward compat during migration) ---
-        await db.courses.create_index("courseId", background=True)
+        # legacy courses collection (kept for backward compat during migration)
+        await db.courses.create_indexes([
+            IndexModel([("courseId", ASCENDING)]),
+        ])
 
-        await db.llm_telemetry.create_index(
-            [("timestamp", -1), ("provider", 1)],
-            background=True,
-        )
-        # TTL index: auto-delete telemetry records older than 90 days
-        await db.llm_telemetry.create_index(
-            "timestamp",
-            expireAfterSeconds=90 * 24 * 3600,
-            background=True,
-        )
-        # v2 telemetry indexes for new aggregation queries
-        await db.llm_telemetry.create_index(
-            [("timestamp", -1), ("endpoint", 1)],
-            background=True,
-        )
-        await db.llm_telemetry.create_index(
-            [("success", 1), ("timestamp", -1)],
-            background=True,
-        )
-        await db.llm_telemetry.create_index(
-            [("api_type", 1), ("timestamp", -1)],
-            background=True,
-        )
+        # ── telemetry ─────────────────────────────────────────────────────────
+        await db.llm_telemetry.create_indexes([
+            IndexModel([("timestamp", DESCENDING), ("provider", ASCENDING)]),
+            IndexModel([("timestamp", DESCENDING), ("endpoint", ASCENDING)]),
+            IndexModel([("success", ASCENDING), ("timestamp", DESCENDING)]),
+            IndexModel([("api_type", ASCENDING), ("timestamp", DESCENDING)]),
+            # TTL: auto-delete records older than 90 days
+            IndexModel([("timestamp", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
 
-        # Sub1 task tracking indexes
-        await db.sub1_task_tracking.create_index("request_id", unique=True, background=True)
-        await db.sub1_task_tracking.create_index(
-            [("created_at", -1), ("task_type", 1)],
-            background=True,
-        )
-        await db.sub1_task_tracking.create_index(
-            [("status", 1), ("created_at", -1)],
-            background=True,
-        )
-        # TTL: auto-delete task records older than 30 days
-        await db.sub1_task_tracking.create_index(
-            "created_at",
-            expireAfterSeconds=30 * 24 * 3600,
-            background=True,
-        )
+        # ── sub1 task tracking ────────────────────────────────────────────────
+        await db.sub1_task_tracking.create_indexes([
+            IndexModel([("request_id", ASCENDING)], unique=True),
+            IndexModel([("created_at", DESCENDING), ("task_type", ASCENDING)]),
+            IndexModel([("status", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete records older than 30 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
+        ])
 
-        # Sub1 checkpoint indexes
-        await db.sub1_checkpoints.create_index(
-            [("task_id", 1), ("step", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.sub1_checkpoints.create_index(
-            [("step", 1), ("input_hash", 1)],
-            background=True,
-        )
-        # TTL: auto-delete expired checkpoints
-        await db.sub1_checkpoints.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
+        # ── sub1 checkpoints ──────────────────────────────────────────────────
+        await db.sub1_checkpoints.create_indexes([
+            IndexModel([("task_id", ASCENDING), ("step", ASCENDING)], unique=True),
+            IndexModel([("step", ASCENDING), ("input_hash", ASCENDING)]),
+            # TTL: expire when document's own expires_at is reached
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+        ])
 
-        # Sub1 audit log index
-        await db.sub1_audit_log.create_index(
-            [("timestamp", -1), ("user_id", 1)],
-            background=True,
-        )
-        # TTL: auto-delete audit logs older than 90 days
-        await db.sub1_audit_log.create_index(
-            "timestamp",
-            expireAfterSeconds=90 * 24 * 3600,
-            background=True,
-        )
+        # ── sub1 audit log ────────────────────────────────────────────────────
+        await db.sub1_audit_log.create_indexes([
+            IndexModel([("timestamp", DESCENDING), ("user_id", ASCENDING)]),
+            # TTL: auto-delete records older than 90 days
+            IndexModel([("timestamp", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
 
-        # Sub2 generation history indexes
-        await db.sub2_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        # TTL: auto-delete when expires_at is reached (per-user configurable)
-        await db.sub2_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
+        # ── generation history (sub1-5 + video share identical structure) ─────
+        for _col in _GEN_HISTORY_COLS:
+            await db[_col].create_indexes([
+                IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+                # TTL: per-user configurable, expire on expires_at field
+                IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+            ])
 
-        # Sub1 slides generation history indexes
-        await db.sub1_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.sub1_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
+        # ── chat contacts / rooms / messages ──────────────────────────────────
+        await db.chat_contacts.create_indexes([
+            IndexModel([("userId", ASCENDING), ("contactId", ASCENDING)], unique=True),
+            IndexModel([("userId", ASCENDING), ("status", ASCENDING)]),
+            IndexModel([("contactId", ASCENDING), ("status", ASCENDING)]),
+        ])
 
-        # Sub3 image extractor generation history indexes
-        await db.sub3_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.sub3_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
-
-        # Sub4 diagram generation history indexes
-        await db.sub4_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.sub4_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
-
-        # Sub5 study notes generation history indexes
-        await db.sub5_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.sub5_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
-
-        # Video generation history indexes
-        await db.video_generation_history.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.video_generation_history.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
-
-        # --- Chat feature (contacts, rooms, messages) ---
-        await db.chat_contacts.create_index(
-            [("userId", 1), ("contactId", 1)], unique=True, background=True,
-        )
-        await db.chat_contacts.create_index(
-            [("userId", 1), ("status", 1)], background=True,
-        )
-        await db.chat_contacts.create_index(
-            [("contactId", 1), ("status", 1)], background=True,
-        )
-        await db.chat_rooms.create_index("members", background=True)
-        await db.chat_rooms.create_index(
-            [("members", 1), ("createdAt", -1)], background=True,
-        )
-        # Unique index for course groups — prevents duplicate course rooms
+        # Drop stale index name before re-creating with correct definition
         try:
             await db.chat_rooms.drop_index("courseId_1_type_1")
         except Exception:
-            pass  # index may not exist yet
-        await db.chat_rooms.create_index(
-            [("courseId", 1), ("type", 1)],
-            unique=True,
-            partialFilterExpression={"courseId": {"$exists": True}},
-            background=True,
-        )
-        # Unique index for direct pair rooms — prevents duplicate DMs
-        await db.chat_rooms.create_index(
-            "directPairKey",
-            unique=True,
-            partialFilterExpression={"directPairKey": {"$exists": True}},
-            background=True,
-        )
-        await db.chat_messages.create_index(
-            [("roomId", 1), ("sentAt", -1)], background=True,
-        )
-        await db.chat_messages.create_index(
-            [("roomId", 1), ("readBy", 1), ("senderId", 1)], background=True,
-        )
+            pass  # index may not exist yet — safe to ignore
 
-        # --- AI Chat Sessions ---
-        await db.ai_chat_sessions.create_index(
-            [("userId", 1), ("updatedAt", -1)],
-            background=True,
-        )
-        # Keep AI sessions permanently: remove legacy TTL index if present.
+        await db.chat_rooms.create_indexes([
+            IndexModel([("members", ASCENDING)]),
+            IndexModel([("members", ASCENDING), ("createdAt", DESCENDING)]),
+            # Unique: prevents duplicate course group rooms
+            IndexModel(
+                [("courseId", ASCENDING), ("type", ASCENDING)],
+                unique=True,
+                partialFilterExpression={"courseId": {"$exists": True}},
+            ),
+            # Unique: prevents duplicate DM rooms
+            IndexModel(
+                [("directPairKey", ASCENDING)],
+                unique=True,
+                partialFilterExpression={"directPairKey": {"$exists": True}},
+            ),
+        ])
+
+        await db.chat_messages.create_indexes([
+            IndexModel([("roomId", ASCENDING), ("sentAt", DESCENDING)]),
+            IndexModel([("roomId", ASCENDING), ("readBy", ASCENDING), ("senderId", ASCENDING)]),
+        ])
+
+        # ── AI chat sessions ──────────────────────────────────────────────────
+        # Remove legacy TTL index so sessions are kept permanently
         try:
             await db.ai_chat_sessions.drop_index("updatedAt_1")
         except Exception:
             pass
-        await db.ai_chat_sessions.create_index(
-            "updatedAt",
-            background=True,
-        )
 
-        # --- Staff codes (one-time teacher registration codes) ---
-        await db.staff_codes.create_index("code", unique=True, background=True)
-        await db.staff_codes.create_index("is_used", background=True)
-        # TTL: auto-delete expired codes
-        await db.staff_codes.create_index(
-            "expires_at",
-            expireAfterSeconds=0,
-            background=True,
-        )
+        await db.ai_chat_sessions.create_indexes([
+            IndexModel([("userId", ASCENDING), ("updatedAt", DESCENDING)]),
+            IndexModel([("updatedAt", ASCENDING)]),
+        ])
 
-        # --- Chat AI Jobs (audit log for AI usage) ---
-        await db.chat_ai_jobs.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.chat_ai_jobs.create_index(
-            [("room_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        # TTL: auto-delete AI job records older than 90 days
-        await db.chat_ai_jobs.create_index(
-            "created_at",
-            expireAfterSeconds=90 * 24 * 3600,
-            background=True,
-        )
+        # ── staff codes ───────────────────────────────────────────────────────
+        await db.staff_codes.create_indexes([
+            IndexModel([("code", ASCENDING)], unique=True),
+            IndexModel([("is_used", ASCENDING)]),
+            # TTL: expire on expires_at field value
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+        ])
 
-        # --- Chat File Transfers ---
-        await db.chat_file_transfers.create_index(
-            "transfer_id", unique=True, background=True,
-        )
-        await db.chat_file_transfers.create_index(
-            [("owner_user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.chat_file_transfers.create_index(
-            [("status", 1), ("expires_at", 1)],
-            background=True,
-        )
-        await db.chat_file_transfers.create_index(
-            [("source_room_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        # TTL: auto-delete expired transfer records after 7 days past expiry
-        await db.chat_file_transfers.create_index(
-            "expires_at",
-            expireAfterSeconds=7 * 24 * 3600,
-            background=True,
-        )
+        # ── chat AI jobs ──────────────────────────────────────────────────────
+        await db.chat_ai_jobs.create_indexes([
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("room_id", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete records older than 90 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
 
-        # --- Knowledge indexing jobs ---
-        await db.indexing_jobs.create_index(
-            [("job_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.indexing_jobs.create_index(
-            [("course_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.indexing_jobs.create_index(
-            "created_at",
-            expireAfterSeconds=180 * 24 * 3600,
-            background=True,
-        )
+        # ── chat file transfers ───────────────────────────────────────────────
+        await db.chat_file_transfers.create_indexes([
+            IndexModel([("transfer_id", ASCENDING)], unique=True),
+            IndexModel([("owner_user_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("status", ASCENDING), ("expires_at", ASCENDING)]),
+            IndexModel([("source_room_id", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete 7 days past expiry
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_7D),
+        ])
 
-        # --- File assets registry ---
-        await db.file_assets.create_index(
-            [("file_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("file_type", 1), ("status", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("owner_type", 1), ("owner_id", 1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("course_id", 1), ("status", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("scope", 1), ("status", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("room_id", 1), ("status", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("user_id", 1), ("scope", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("session_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.file_assets.create_index(
-            [("conversation_date", 1), ("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
+        # ── knowledge indexing jobs ───────────────────────────────────────────
+        await db.indexing_jobs.create_indexes([
+            IndexModel([("job_id", ASCENDING)], unique=True),
+            IndexModel([("course_id", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete records older than 180 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_180D),
+        ])
 
-        # --- QuestionOps runs/items ---
-        await db.question_ops_runs.create_index(
-            [("run_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.question_ops_runs.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.question_ops_runs.create_index(
-            "created_at",
-            expireAfterSeconds=90 * 24 * 3600,
-            background=True,
-        )
-        await db.question_ops_items.create_index(
-            [("run_id", 1), ("item_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.question_ops_items.create_index(
-            [("run_id", 1), ("quality_score", -1)],
-            background=True,
-        )
+        # ── file assets registry ──────────────────────────────────────────────
+        await db.file_assets.create_indexes([
+            IndexModel([("file_id", ASCENDING)], unique=True),
+            IndexModel([("file_type", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("owner_type", ASCENDING), ("owner_id", ASCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("room_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("user_id", ASCENDING), ("scope", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("session_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("conversation_date", ASCENDING), ("user_id", ASCENDING), ("created_at", DESCENDING)]),
+        ])
 
-        # --- Slides delivery jobs ---
-        await db.slides_delivery_jobs.create_index(
-            [("job_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.slides_delivery_jobs.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.slides_delivery_jobs.create_index(
-            "created_at",
-            expireAfterSeconds=30 * 24 * 3600,
-            background=True,
-        )
+        # ── question ops runs / items ─────────────────────────────────────────
+        await db.question_ops_runs.create_indexes([
+            IndexModel([("run_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete records older than 90 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
 
-        # --- Study plan and review queue ---
-        await db.study_plan_profiles.create_index(
-            [("plan_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.study_plan_profiles.create_index(
-            [("user_id", 1), ("created_at", -1)],
-            background=True,
-        )
-        await db.study_review_queue.create_index(
-            [("plan_id", 1), ("queue_id", 1)],
-            unique=True,
-            background=True,
-        )
-        await db.study_review_queue.create_index(
-            [("user_id", 1), ("due_at", 1), ("status", 1)],
-            background=True,
-        )
+        await db.question_ops_items.create_indexes([
+            IndexModel([("run_id", ASCENDING), ("item_id", ASCENDING)], unique=True),
+            IndexModel([("run_id", ASCENDING), ("quality_score", DESCENDING)]),
+        ])
+
+        # ── slides delivery jobs ──────────────────────────────────────────────
+        await db.slides_delivery_jobs.create_indexes([
+            IndexModel([("job_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+            # TTL: auto-delete records older than 30 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
+        ])
+
+        # ── study plan + review queue ─────────────────────────────────────────
+        await db.study_plan_profiles.create_indexes([
+            IndexModel([("plan_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+        ])
+
+        await db.study_review_queue.create_indexes([
+            IndexModel([("plan_id", ASCENDING), ("queue_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("due_at", ASCENDING), ("status", ASCENDING)]),
+        ])
+
+        # ── AI session buckets (Bucket Pattern for large sessions) ────────────
+        await db.ai_session_buckets.create_indexes([
+            IndexModel([("sessionId", ASCENDING), ("bucketIndex", ASCENDING)], unique=True),
+        ])
 
         logger.info("MongoDB indexes ensured successfully")
     except Exception:

@@ -1,13 +1,10 @@
 import os
 import logging
-import time
-import uuid
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI
-from fastapi import Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +12,8 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from backend.config import Config
 from starlette.middleware.sessions import SessionMiddleware
+from backend.exceptions.handlers import register_exception_handlers
+from backend.middleware.logging import register_logging_middleware
 # 导入路由
 from backend.routes.auth_routes import auth_router
 from backend.routes.admin_routes import admin_router
@@ -30,32 +29,20 @@ from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.chat_routes import chat_router
 from backend.routes.homework_routes import router as homework_router
 from backend.routes.video_routes import router as video_router
+from backend.routes.file_center_routes import file_center_router
 
 logger = logging.getLogger(__name__)
 
-ROUTE_GROUP_PREFIXES = (
-    ("/api/auth", "auth"),
-    ("/api/admin", "admin"),
-    ("/api/ai", "ai"),
-    ("/api/slides", "slides"),
-    ("/api/questions", "questions"),
-    ("/api/image-extractor", "image_extractor"),
-    ("/api/diagram", "diagram"),
-    ("/api/study-notes", "study_notes"),
-    ("/api/teacher", "teacher"),
-    ("/api/grading", "grading"),
-    ("/data", "data"),
-    ("/static", "static"),
-    ("/test_pdf", "test_pdf"),
-    ("/grading_annotated", "grading_annotated"),
-)
+# ── API versioning ──
+API_V1_PREFIX = "/api/v1"
+API_COMPAT_PREFIX = "/api"
 
-ROUTERS = (
+# Routers with resource-only prefixes (e.g. /admin, /ai) — mounted under both v1 and compat
+_VERSIONED_ROUTERS = (
     auth_router,
     admin_router,
     ai_router,
     slides_router,
-    public_slides_router,
     legacy_sub1_router,
     questions_router,
     image_extractor_router,
@@ -65,8 +52,14 @@ ROUTERS = (
     grading_router,
     ai_gateway_router,
     chat_router,
-    homework_router,
     video_router,
+    file_center_router,
+)
+
+# Routers mounted directly on the app (non-API pages or self-versioned)
+_DIRECT_ROUTERS = (
+    public_slides_router,   # /slides – rendered HTML
+    homework_router,        # /api/v2/homeworks – already versioned
 )
 
 
@@ -88,22 +81,11 @@ def _setup_logging() -> None:
     logger.info("Logging initialized with level=%s", Config.LOG_LEVEL)
 
 
-def _resolve_route_group(path: str) -> str:
-    normalized = str(path or "").strip().lower()
-    for prefix, group in ROUTE_GROUP_PREFIXES:
-        if normalized.startswith(prefix):
-            return group
-    return "app"
-
 
 def _ensure_dir_and_mount(app_instance: FastAPI, mount_path: str, directory: str, name: str) -> None:
     os.makedirs(directory, exist_ok=True)
     app_instance.mount(mount_path, StaticFiles(directory=directory), name=name)
 
-
-def _get_route_logger(path: str) -> logging.Logger:
-    group = _resolve_route_group(path)
-    return logging.getLogger(f"backend.route.{group}")
 
 
 @asynccontextmanager
@@ -157,6 +139,8 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _setup_logging()
+register_exception_handlers(app)
+register_logging_middleware(app)
 
 # 配置 CORS
 app.add_middleware(
@@ -168,27 +152,23 @@ app.add_middleware(
 )
 
 
-# ── Global exception handler ──
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    request_id = getattr(request.state, "request_id", "unknown")
-    logger.exception(
-        "Unhandled exception | request_id=%s path=%s",
-        request_id,
-        request.url.path,
-    )
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "internal_server_error",
-            "message": "An unexpected error occurred. Please try again.",
-            "request_id": request_id,
-        },
-    )
+# ── Deprecation header for unversioned /api/ routes ──
+@app.middleware("http")
+async def deprecation_header(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/") and not path.startswith("/api/v"):
+        response.headers["Deprecation"] = "true"
+        response.headers["Sunset"] = "2026-12-31"
+        response.headers["Link"] = f'</api/v1{path[4:]}>; rel="successor-version"'
+    return response
 
 
-# ── Health check endpoint ──
-@app.get("/api/health", tags=["System"])
+# ── Health check endpoint (included in both v1 and compat) ──
+_health_router = APIRouter(tags=["System"])
+
+
+@_health_router.get("/health")
 async def health_check():
     from backend.core.database import check_health
     db_health = await check_health()
@@ -197,43 +177,6 @@ async def health_check():
         "database": db_health,
     }
 
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    incoming_request_id = request.headers.get("X-Request-ID")
-    request_id = incoming_request_id or uuid.uuid4().hex[:12]
-    request.state.request_id = request_id
-    started_at = time.perf_counter()
-    method = request.method
-    path = request.url.path
-    client = request.client.host if request.client else "unknown"
-    route_logger = _get_route_logger(path)
-
-    route_logger.info("Request started | rid=%s method=%s path=%s client=%s", request_id, method, path, client)
-    try:
-        response = await call_next(request)
-    except Exception:  # noqa: BLE001
-        duration_ms = (time.perf_counter() - started_at) * 1000
-        route_logger.exception(
-            "Request failed | rid=%s method=%s path=%s duration_ms=%.2f",
-            request_id,
-            method,
-            path,
-            duration_ms,
-        )
-        raise
-
-    duration_ms = (time.perf_counter() - started_at) * 1000
-    response.headers["X-Request-ID"] = request_id
-    route_logger.info(
-        "Request completed | rid=%s method=%s path=%s status=%s duration_ms=%.2f",
-        request_id,
-        method,
-        path,
-        response.status_code,
-        duration_ms,
-    )
-    return response
 
 # 创建目录
 for folder in Config.ALL_FOLDERS:
@@ -262,9 +205,19 @@ _ensure_dir_and_mount(app, "/uploads", UPLOADS_ROOT, "uploads")
 GENERATED_ROOT = os.path.join(Config.BASE_DIR, 'generated', 'videos')
 _ensure_dir_and_mount(app, "/generated/videos", GENERATED_ROOT, "generated_videos")
 
-# 注册所有路由
-for router in ROUTERS:
-    app.include_router(router)
+GENERATED_SUB4_ROOT = os.path.join(Config.BASE_DIR, 'generated', 'sub4')
+_ensure_dir_and_mount(app, "/generated/sub4", GENERATED_SUB4_ROOT, "generated_sub4")
+
+GENERATED_SUB3_ROOT = os.path.join(Config.BASE_DIR, 'generated', 'sub3')
+_ensure_dir_and_mount(app, "/generated/sub3", GENERATED_SUB3_ROOT, "generated_sub3")
+
+# ── Register versioned API routes ──
+for _r in (*_VERSIONED_ROUTERS, _health_router):
+    app.include_router(_r, prefix=API_V1_PREFIX)
+    app.include_router(_r, prefix=API_COMPAT_PREFIX, deprecated=True)
+
+for _r in _DIRECT_ROUTERS:
+    app.include_router(_r)
 
 # === 启动命令 ===
 # 在根目录下终端运行：
