@@ -46,35 +46,61 @@ class PresentonAdapterService:
     async def check_provider_health(self) -> tuple[bool, str]:
         return await self.ai.check_provider_health(self.provider)
 
-    async def generate_outline(self, source_text: str, total_pages: int) -> list[dict[str, Any]]:
+    async def generate_outline(
+        self,
+        source_text: str,
+        total_pages: int,
+        chapter_data: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
         prompt = (
             "You are a presentation planner. Generate a JSON object with key 'slides' as an array of "
             f"exactly {total_pages} items. Each item must include: title (string), objective (string), "
-            "key_points (array of 3-5 concise strings). Return only JSON.\n\n"
+            "key_points (array of 3-5 concise strings). Return ONLY valid JSON and nothing else.\n\n"
             "Source content:\n"
             f"{source_text[:12000]}"
         )
-        raw = await self.ai.chat_with_provider(message=prompt, provider=self.provider, context=None)
-        parsed = self._safe_json_loads(raw) or {}
-        slides = parsed.get("slides") if isinstance(parsed, dict) else None
-        if isinstance(slides, list) and slides:
-            return slides[:total_pages]
 
-        # Fallback outline if model output is malformed.
-        fallback = []
-        for idx in range(total_pages):
-            fallback.append(
-                {
-                    "title": f"Slide {idx + 1}",
-                    "objective": "Explain one key idea clearly",
-                    "key_points": [
-                        "Core concept",
-                        "Why it matters",
-                        "Practical takeaway",
-                    ],
-                }
-            )
-        return fallback
+        # Try up to 2 times before falling back
+        raw = None
+        parsed = None
+        for attempt in range(2):
+            raw = await self.ai.chat_with_provider(message=prompt, provider=self.provider, context=None)
+            parsed = self._safe_json_loads(raw) or {}
+            slides = parsed.get("slides") if isinstance(parsed, dict) else None
+            if isinstance(slides, list) and slides:
+                return slides[:total_pages]
+
+        # Fallback: build outline from actual chapter_data (section titles + real text snippets)
+        if chapter_data:
+            fallback = []
+            # If total_pages > len(chapter_data), we cycle through chapters
+            for idx in range(total_pages):
+                chapter = chapter_data[idx % len(chapter_data)]
+                title = chapter.get("sectionTitle") or f"Slide {idx + 1}"
+                text = chapter.get("text", "")
+                # Extract up to 4 key sentences from the plain text
+                sentences = [s.strip() for s in re.split(r'[。.!！?？\n]', text) if len(s.strip()) > 4]
+                key_points = sentences[:4] if sentences else [
+                    "Core concept",
+                    "Why it matters",
+                    "Practical takeaway",
+                ]
+                fallback.append({
+                    "title": title,
+                    "objective": f"Explain: {title}",
+                    "key_points": key_points,
+                })
+            return fallback
+
+        # Last-resort generic fallback
+        return [
+            {
+                "title": f"Slide {idx + 1}",
+                "objective": "Explain one key idea clearly",
+                "key_points": ["Core concept", "Why it matters", "Practical takeaway"],
+            }
+            for idx in range(total_pages)
+        ]
 
     async def generate_slide_content(
         self,
@@ -102,10 +128,10 @@ class PresentonAdapterService:
         bullets = parsed.get("content") if isinstance(parsed.get("content"), list) else []
         bullets = [str(x).strip() for x in bullets if str(x).strip()]
         if len(bullets) < num_of_bullets:
-            seed = [
-                f"{title}: key takeaway {i + 1}"
-                for i in range(num_of_bullets)
-            ]
+            # Use actual key_points from the outline item as fallback seeds
+            seed = [str(kp).strip() for kp in key_points if str(kp).strip()]
+            if len(seed) < num_of_bullets:
+                seed += [f"{title}: point {i + 1}" for i in range(num_of_bullets)]
             bullets = (bullets + seed)[:num_of_bullets]
         else:
             bullets = bullets[:num_of_bullets]

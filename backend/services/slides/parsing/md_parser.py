@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import ast
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 from mrkdwn_analysis import MarkdownAnalyzer
 from .header_correcter_ds import header_correction
@@ -129,11 +131,13 @@ class MarkdownViewer:
 
         if use_llm:
             print("\033[93m Fetching corrected headers from LLM...\033[0m")
-            # headers_data = header_correction(raw_headers_data)
-            headers_data = asyncio.run(header_correction(str(raw_headers_data)))
+            headers_data = self._run_header_correction(raw_headers_data)
             if isinstance(headers_data, str) and headers_data != str(raw_headers_data):
                 print("\033[92m✓ Corrected headers fetched!\033[0m")
-                headers_data = eval(headers_data)
+                headers_data = self._parse_headers_payload(headers_data)
+                if not headers_data or not isinstance(headers_data, dict) or 'Header' not in headers_data:
+                    print("\033[91m Invalid corrected headers payload, raw headers are used\033[0m")
+                    return self._normalize_header_levels(raw_headers)
                 corrected_headers = [{
                     'level': item['level'],
                     'text': item['text'],
@@ -146,6 +150,35 @@ class MarkdownViewer:
         else:
             print("\033[93m User chose to use raw headers.\033[0m")
             return self._normalize_header_levels(raw_headers)
+
+    def _run_header_correction(self, raw_headers_data):
+        """Run async header correction safely in both sync and async contexts."""
+        payload = str(raw_headers_data)
+
+        try:
+            asyncio.get_running_loop()
+            # Already inside an event loop (e.g. FastAPI async endpoint):
+            # execute coroutine in a dedicated thread to avoid asyncio.run conflict.
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(lambda: asyncio.run(header_correction(payload)))
+                return future.result()
+        except RuntimeError:
+            # No running loop in current thread.
+            return asyncio.run(header_correction(payload))
+
+    def _parse_headers_payload(self, payload_text):
+        """Parse corrected header payload from JSON or Python-literal text."""
+        text = str(payload_text or '').strip()
+        if not text:
+            return None
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+        try:
+            return ast.literal_eval(text)
+        except Exception:
+            return None
 
     def _load_full_content(self, filepath):
         """Load file content"""

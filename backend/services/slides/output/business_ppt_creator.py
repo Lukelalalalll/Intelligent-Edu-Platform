@@ -16,7 +16,7 @@ from ..business import (
 )
 from ..generation.img_chart_processor import ImageChartProcessor
 from .ppt_creator import PPTCreator
-import asyncio
+from .text_layout_engine import clean_bullets, log_slide_layout_audit
 
 
 class BusinessPPTCreator(PPTCreator):
@@ -206,9 +206,37 @@ class BusinessPPTCreator(PPTCreator):
         # 获取标题和内容
         title = slide_data.get('title', '')
         content_list = slide_data.get('content', [])
-        
+
+        # ── Bullet cleaner (P0/P1 fix) ───────────────────────────────────────
+        content_list = clean_bullets(content_list)
+        # Propagate cleaned list back so downstream handlers (table, LaTeX) see it.
+        slide_data = {**slide_data, 'content': content_list}
+
         # 使用content_processor计算字体大小
         content_font_size, title_font_size = self.content_processor.get_font_sizes(content_list, title)
+
+        def _font_pt_or_default(font_size, default_pt=12.0):
+            """Convert Pt/number/None to a safe float for audit logging."""
+            if font_size is None:
+                return default_pt
+            if hasattr(font_size, 'pt'):
+                return float(font_size.pt)
+            try:
+                return float(font_size)
+            except (TypeError, ValueError):
+                return default_pt
+
+        # Emit structured layout audit line for observability.
+        log_slide_layout_audit(
+            slide_idx=slide_data.get('slide_number', '?'),
+            title=title,
+            layout_name=getattr(getattr(slide, 'slide_layout', None), 'name', 'unknown'),
+            shape_w_pt=0,  # shape dims resolved per-placeholder inside placeholder_processor
+            shape_h_pt=0,
+            bullet_count=len(content_list),
+            initial_pt=_font_pt_or_default(content_font_size),
+            final_pt=_font_pt_or_default(content_font_size),
+        )
         
         # 检查是否为动态布局，如果是则使用动态布局处理
         layout = getattr(slide, 'custom_layout', None) or getattr(slide, 'slide_layout', None)
@@ -321,8 +349,15 @@ class BusinessPPTCreator(PPTCreator):
             # 创建内容幻灯片
             if 'layout' not in slide_data:
                 continue
-                
-            layout_name = slide_data['layout'].get('name')
+
+            layout_raw = slide_data.get('layout')
+            if isinstance(layout_raw, dict):
+                layout_name = (layout_raw.get('name') or '').strip()
+            elif layout_raw is None:
+                layout_name = ''
+            else:
+                layout_name = str(layout_raw).strip()
+
             if not layout_name:
                 continue
                 
@@ -331,6 +366,16 @@ class BusinessPPTCreator(PPTCreator):
             if not layout:
                 print(f"Warning: Layout '{layout_name}' not found in Business template")
                 continue
+
+            # If slide has content but layout has no body placeholder, fallback
+            content_list_check = slide_data.get('content', [])
+            if content_list_check and not self._layout_has_body(layout):
+                fallback = self._find_content_layout(prs)
+                if fallback:
+                    print(f"⚠️ Layout '{layout_name}' has no body placeholder "
+                          f"but slide has {len(content_list_check)} bullets — "
+                          f"falling back to '{fallback.name}'")
+                    layout = fallback
                 
             # 如果是动态布局，在创建幻灯片之前先修改布局
             if hasattr(layout, 'is_dynamic') and layout.is_dynamic:

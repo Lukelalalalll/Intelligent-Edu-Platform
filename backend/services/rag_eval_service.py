@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from backend.core.database import db
+from backend.services.rag_eval_scoring import compute_mrr, score_case
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ async def run_evaluation(
     for case in cases:
         query = case.get("query", "")
         expected_docs = set(case.get("expected_doc_names", []))
+        expected_keywords = [str(k) for k in case.get("expected_keywords", []) if k]
 
         t0 = time.perf_counter()
         retrieved = course_rag_service.retrieve_for_student(
@@ -106,8 +108,10 @@ async def run_evaluation(
         latency_ms = round((time.perf_counter() - t0) * 1000, 2)
         total_latency += latency_ms
 
+        is_degenerate = not expected_docs and not expected_keywords
+        scoring = score_case(retrieved, expected_docs, expected_keywords, is_degenerate)
         retrieved_docs = {r.get("doc_name", "") for r in retrieved}
-        hit = bool(expected_docs and expected_docs & retrieved_docs)
+        hit = scoring["hit"]
         if hit:
             hits += 1
         if not retrieved:
@@ -120,6 +124,7 @@ async def run_evaluation(
             "retrieved": retrieved,
             "retrieved_doc_names": list(retrieved_docs),
             "hit": hit,
+            "correct_citations": scoring["correct_citations"],
             "latency_ms": latency_ms,
             "top_k": top_k,
         }
@@ -133,10 +138,7 @@ async def run_evaluation(
     mrr_sum = 0.0
     for res in results:
         expected = set(res["expected_doc_names"])
-        for rank, doc_name in enumerate(res["retrieved_doc_names"], 1):
-            if doc_name in expected:
-                mrr_sum += 1.0 / rank
-                break
+        mrr_sum += compute_mrr(res["retrieved_doc_names"], expected)
 
     metrics = {
         "case_count": len(cases),

@@ -138,7 +138,6 @@ class CourseRagService:
         ]
         store.add_texts(texts=[c["text"] for c in chunks], ids=ids, metadatas=metadatas)
 
-        # Update meta
         docs_meta[doc_name] = {
             "hash": current_hash,
             "chunk_count": len(chunks),
@@ -220,10 +219,15 @@ class CourseRagService:
     # TF-IDF sparse retrieval for hybrid mode
     # ------------------------------------------------------------------
 
-    def _tfidf_retrieve(self, course_id: str, query: str, top_k: int, chapter_id: str = "") -> List[Dict[str, Any]]:
-        """Simple TF-IDF retrieval over indexed chunks for a course."""
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
+    def _bm25_retrieve(self, course_id: str, query: str, top_k: int, chapter_id: str = "") -> List[Dict[str, Any]]:
+        """BM25 sparse retrieval over indexed chunks for a course.
+
+        Uses Okapi BM25 (Robertson et al., 2009) which improves upon TF-IDF
+        by incorporating document-length normalisation via parameters k1 and b,
+        making it fairer for corpora with variable-length chunks such as lecture slides.
+        """
+        import re as _re
+        from rank_bm25 import BM25Okapi
         import numpy as np
 
         meta = self._load_meta(course_id)
@@ -256,24 +260,32 @@ class CourseRagService:
                         "page_num": (md or {}).get("page_num", -1),
                     })
         except Exception:
+            logger.warning("BM25: failed to load chunks from ChromaDB for course %s", course_id, exc_info=True)
             return []
 
         if not all_chunks:
             return []
 
-        corpus = [c["text"] for c in all_chunks]
+        # Tokenize for BM25
+        def _tokenize(text: str) -> List[str]:
+            return _re.findall(r"[a-zA-Z0-9\u4e00-\u9fff]+", str(text or "").lower())
+
+        corpus_tokens = [_tokenize(c["text"]) for c in all_chunks]
+        query_tokens = _tokenize(query)
+
+        if not query_tokens:
+            return []
+
         try:
-            vectorizer = TfidfVectorizer(max_features=5000, stop_words="english")
-            tfidf_matrix = vectorizer.fit_transform(corpus + [query])
-            query_vec = tfidf_matrix[-1]
-            similarities = cosine_similarity(query_vec, tfidf_matrix[:-1]).flatten()
+            bm25 = BM25Okapi(corpus_tokens, k1=1.5, b=0.75)
+            scores = bm25.get_scores(query_tokens)
         except Exception:
             return []
 
-        top_indices = np.argsort(similarities)[::-1][:top_k]
+        top_indices = np.argsort(scores)[::-1][:top_k]
         results = []
         for idx in top_indices:
-            score = float(similarities[idx])
+            score = float(scores[idx])
             if score < 0.01:
                 continue
             c = all_chunks[idx]
@@ -367,13 +379,13 @@ class CourseRagService:
         if not use_hybrid:
             return rerank_results(query=query, items=vector_results, top_k=top_k)
 
-        # TF-IDF sparse retrieval for hybrid fusion
+        # BM25 sparse retrieval for hybrid fusion
         sparse_results: List[Dict[str, Any]] = []
         for cid in target_courses:
             try:
-                sparse_results.extend(self._tfidf_retrieve(cid, query, top_k * 2, chapter_id=chapter_id))
+                sparse_results.extend(self._bm25_retrieve(cid, query, top_k * 2, chapter_id=chapter_id))
             except Exception:
-                logger.debug("TF-IDF retrieval failed for course %s", cid, exc_info=True)
+                logger.warning("BM25 retrieval failed for course %s", cid, exc_info=True)
 
         if not sparse_results:
             return rerank_results(query=query, items=vector_results, top_k=top_k)

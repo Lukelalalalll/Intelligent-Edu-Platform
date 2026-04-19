@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import List, Dict, Any
 import re
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from rank_bm25 import BM25Okapi
+import numpy as np
 
 
 @dataclass
@@ -21,8 +21,10 @@ class RetrievedChunk:
 class LocalRagService:
     """Lightweight local retriever for single-document RAG.
 
-    Uses sentence-boundary-aware chunking and TF-IDF + cosine similarity
-    for fast retrieval without external infra.
+    Uses sentence-boundary-aware chunking and BM25 (Okapi BM25, Robertson
+    et al. 2009) for fast retrieval without external infra.  BM25 improves
+    on TF-IDF by incorporating document-length normalisation (parameters
+    k1 and b), which is fairer for corpora with variable-length chunks.
     """
 
     def __init__(self, chunk_size: int = 800, overlap: int = 120, min_score: float = 0.02):
@@ -117,24 +119,22 @@ class LocalRagService:
 
         chunk_texts = [c["text"] for c in chunks]
 
-        # Fit over query + document chunks to keep vocabulary aligned.
-        corpus = [clean_query] + chunk_texts
-        vectorizer = TfidfVectorizer(
-            ngram_range=(1, 2),
-            min_df=1,
-            max_features=10000,
-            sublinear_tf=True,
-        )
-        matrix = vectorizer.fit_transform(corpus)
+        # Tokenize for BM25
+        def _tokenize(text: str) -> list[str]:
+            return re.findall(r"[a-zA-Z0-9\u4e00-\u9fff]+", str(text or "").lower())
 
-        query_vec = matrix[0]
-        chunk_vecs = matrix[1:]
-        sims = cosine_similarity(query_vec, chunk_vecs).flatten()
+        corpus_tokens = [_tokenize(t) for t in chunk_texts]
+        query_tokens = _tokenize(clean_query)
+        if not query_tokens:
+            return []
 
-        ranked_idx = sims.argsort()[::-1][: max(1, top_k)]
+        bm25 = BM25Okapi(corpus_tokens, k1=1.5, b=0.75)
+        scores = bm25.get_scores(query_tokens)
+
+        ranked_idx = np.argsort(scores)[::-1][: max(1, top_k)]
         results: List[RetrievedChunk] = []
         for idx in ranked_idx:
-            score = float(sims[idx])
+            score = float(scores[idx])
             if score < self.min_score:
                 continue
             chunk_meta = chunks[idx]

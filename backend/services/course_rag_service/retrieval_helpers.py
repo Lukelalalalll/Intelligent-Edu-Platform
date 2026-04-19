@@ -82,3 +82,5 @@ def rrf_merge(
         item["score"] = round(scores[key], 4)
         merged.append(item)
     return merged
+
+

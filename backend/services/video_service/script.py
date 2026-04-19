@@ -79,15 +79,15 @@ def _parse_json_object(raw: str) -> dict | None:
 
 # ── Narration script prompts ──
 
-SCRIPT_PROMPT_ZH = """你是一名大学教授，正在录制教学视频。{audience_hint}
-以下是某一页或某段的原始内容：
+SCRIPT_PROMPT_ZH = """You are a university professor recording a teaching video. {audience_hint}
+Below is the raw content from one slide or section:
 
 {content}
 
 {rag_context}
-请为这段内容生成一段 60~100 字的口语化讲解旁白（中文），适合 TTS 朗读。
-要求：自然流畅，保留关键概念，避免使用"这一页"等视觉指示词。
-只输出旁白正文，不要任何前缀说明。"""
+Generate a 60-100 character spoken Chinese narration suitable for TTS.
+Keep it natural and fluent, retain key concepts, avoid visual cues like "on this page".
+Output only the narration text, no prefixes."""
 
 SCRIPT_PROMPT_EN = """You are a university professor recording a teaching video. {audience_hint}
 Below is the raw content from one slide or section:
@@ -99,12 +99,12 @@ Generate a 40-80 word spoken narration in English suitable for TTS.
 Keep it natural, retain key concepts, avoid phrases like "on this slide".
 Output only the narration text, no prefixes."""
 
-SPLIT_PROMPT_ZH = """你是一名教学设计师。{audience_hint}
-以下是一段课程内容：
+SPLIT_PROMPT_ZH = """You are an instructional designer. {audience_hint}
+Below is some course content:
 {text}
 
-请将其拆分为 {n} 个教学段落，每段 60~100 字口语化旁白（中文），适合TTS朗读。
-以 JSON 数组格式输出，每个元素是一段旁白字符串。只输出 JSON，不要其他内容。"""
+Split it into {n} teaching segments, each 60-100 characters of spoken Chinese suitable for TTS.
+Output as a JSON array of strings. Output ONLY the JSON, nothing else."""
 
 SPLIT_PROMPT_EN = """You are an instructional designer. {audience_hint}
 Below is some course content:
@@ -126,24 +126,24 @@ AUDIENCE_HINTS: dict[str, dict[str, str]] = {
 }
 
 # ── Slide content prompt (generates structured title+bullets+layoutType) ──
-SLIDE_PROMPT_ZH = """你是教学视频编导。{audience_hint}
-以下是本课程的背景参考资料（来自RAG检索）：
+SLIDE_PROMPT_ZH = """You are a teaching video director. {audience_hint}
+Background reference material (from RAG retrieval):
 {rag_context}
 
-以下是本段的旁白脚本：
+Narration script for this segment:
 {script}
 
-请为本段视频幻灯片生成结构化内容（JSON），要求：
-- title: 一行标题（≤20字），高度概括本段主题
-- bullets: 3~5 条要点，每条 ≤25 字
-- layoutType: 推荐最适合本段的幻灯片布局，从以下6种中选一个：
-  "title-bullets"(标准列表), "image-left"(左图右文), "image-right"(右文左图),
-  "image-top"(顶部大图), "big-quote"(大引用/金句), "two-column"(双栏对比)
-  选择依据：概念讲解用title-bullets，对比分析用two-column，核心金句用big-quote，需要图示的用image-*
-- quoteText: 如果layoutType是"big-quote"，提供一句精炼的核心金句（≤40字）
-- col1Title/col1Bullets/col2Title/col2Bullets: 如果layoutType是"two-column"，提供左右两栏标题和要点
+Generate structured slide content (JSON) with Chinese text:
+- title: one-line Chinese heading (≤20 characters) summarising this segment
+- bullets: 3-5 key points in Chinese, each ≤25 characters
+- layoutType: recommend the best slide layout from these 6:
+  "title-bullets"(standard list), "image-left"(left image), "image-right"(right image),
+  "image-top"(top image), "big-quote"(key quote), "two-column"(two-column compare)
+  Choose based on: concept explanation → title-bullets, comparison → two-column, key quote → big-quote, visual needed → image-*
+- quoteText: if layoutType is "big-quote", provide a concise Chinese key quote (≤40 characters)
+- col1Title/col1Bullets/col2Title/col2Bullets: if layoutType is "two-column", provide both columns
 
-只输出 JSON 对象，形如 {{"title":"...","bullets":["..."],"layoutType":"title-bullets"}}"""
+Output ONLY a JSON object like {{"title":"...","bullets":["..."],"layoutType":"title-bullets"}}"""
 
 SLIDE_PROMPT_EN = """You are a teaching video director. {audience_hint}
 Background reference material (from RAG retrieval):

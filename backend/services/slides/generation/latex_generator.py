@@ -1,5 +1,10 @@
-import matplotlib.pyplot as plt
 import matplotlib
+# Force non-interactive backend BEFORE importing pyplot so that figure
+# creation works from FastAPI worker threads (macOS GUI backend crashes
+# when used outside the main thread).
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import re

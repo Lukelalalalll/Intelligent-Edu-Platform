@@ -4,7 +4,10 @@ import logging
 import os
 import re
 
-import opendataloader_pdf
+try:
+    import opendataloader_pdf
+except ModuleNotFoundError:  # optional dependency
+    opendataloader_pdf = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

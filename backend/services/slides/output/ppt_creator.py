@@ -10,29 +10,42 @@ from ..generation.img_chart_processor import ImageChartProcessor
 from ..business.table_handler import BusinessTableHandler
 from ..generation.latex_generator import process_slide_latex
 from .theme_catalog import resolve_base_theme
+from .text_layout_engine import (
+    fit_font_size,
+    clean_bullets,
+    shape_dimensions_pt,
+    log_slide_layout_audit,
+)
+from .batch_context import BatchContext
+from . import ppt_utils
 
 
 class PPTCreator:
     def __init__(self, template_base_path=None):
         self.template_base_path = template_base_path or "static/ppt_templates"
         self.image_processor = ImageChartProcessor()
-        
-        # 收集队列相关属性
-        self.collected_tasks = []  # 收集的任务队列
-        self.is_collecting = False  # 是否正在收集模式
-        self.batch_results = []  # 批量处理结果
+        self._ctx = BatchContext(
+            template_base_path=self.template_base_path,
+            image_processor=self.image_processor,
+        )
+
+        # Keep legacy attributes as aliases to BatchContext fields
+        # so subclass code that reads/writes them still works.
+        self.collected_tasks = self._ctx.collected_tasks
+        self.is_collecting = self._ctx.is_collecting
+        self.batch_results = self._ctx.batch_results
         
     def start_collecting(self):
         """开始收集模式"""
-        self.collected_tasks = []
-        self.is_collecting = True
-        self.batch_results = []
-        print("🔄 [Batch Processing] Started collecting image placeholder tasks...")
+        self._ctx.start_collecting()
+        self.collected_tasks = self._ctx.collected_tasks
+        self.is_collecting = self._ctx.is_collecting
+        self.batch_results = self._ctx.batch_results
         
     def stop_collecting(self):
         """停止收集模式"""
-        self.is_collecting = False
-        print(f"⏹️ [Batch Processing] Stopped collecting. Total collected tasks: {len(self.collected_tasks)}")
+        self._ctx.stop_collecting()
+        self.is_collecting = self._ctx.is_collecting
         
     async def process_all_collected_tasks(self):
         """批量处理所有收集的任务"""
@@ -102,88 +115,140 @@ class PPTCreator:
         print(f"🎉 [Batch Processing] Batch application completed! Applied: {applied_count}, Errors: {error_count}")
         
     def _prepare_image_data(self, slide_data, placeholder_info, placeholder_index):
-        """准备单个占位符的图片数据
-        
-        Args:
-            slide_data (dict): 幻灯片数据
-            placeholder_info (dict): 占位符信息
-            placeholder_index (int): 占位符索引（用于结果映射）
-            
-        Returns:
-            dict: 图片数据字典
-        """
-        title = slide_data.get('title', '')
-        content_list = slide_data.get('content', [])
-        chart_type = slide_data.get('chart_type', '')
-        chart_reasoning = slide_data.get('chart_reasoning', '')
-        original_text = slide_data.get('original_text', '')
-        
-        image_data = {
-            'title': title,
-            'content_list': content_list,
-            'ratio': placeholder_info['ratio'],
-            'type': placeholder_info['image_type'],
-            'chart_type': chart_type,
-            'chart_reasoning': chart_reasoning,
-            'original_text': original_text,
-            'placeholder_type': placeholder_info['placeholder_type'],  # 占位符类型信息
-            'placeholder_index': placeholder_index,                    # 用于结果映射
-            'aspect_ratio': placeholder_info['aspect_ratio']           # 宽高比信息
-        }
-        
-        return image_data
+        """准备单个占位符的图片数据"""
+        return ppt_utils.prepare_image_data(slide_data, placeholder_info, placeholder_index)
 
     def _get_template_path(self, theme):
         """获取主题模板路径"""
-        available_themes = [
-            os.path.splitext(name)[0]
-            for name in os.listdir(self.template_base_path)
-            if name.endswith('.pptx')
-        ]
-        resolved_theme = resolve_base_theme(theme, available_themes)
-        return os.path.join(self.template_base_path, f"{resolved_theme}.pptx")
+        return ppt_utils.get_template_path(self.template_base_path, theme)
     
     def _find_layout_by_name(self, prs, layout_name):
         """根据布局名称查找对应的布局"""
-        for layout in prs.slide_layouts:
-            if layout.name == layout_name:
-                return layout
-        return None
-    
-    def _get_template_creator_mapping(self):
-        """获取模板创建器映射
-        
-        Returns:
-            dict: 模板名称到创建器类的映射
+        return ppt_utils.find_layout_by_name(prs, layout_name)
+
+    @staticmethod
+    def _is_meaningful_chart_type(chart_type) -> bool:
+        """Return True only when chart_type represents a real chart/diagram request."""
+        return ppt_utils.is_meaningful_chart_type(chart_type)
+
+    @staticmethod
+    def _layout_has_body(layout) -> bool:
+        """Check if a slide layout has a BODY (2) or OBJECT (7) placeholder."""
+        return ppt_utils.layout_has_body(layout)
+
+    def _find_content_layout(self, prs):
+        """Find the first slide layout that contains a body/object placeholder."""
+        return ppt_utils.find_content_layout(prs)
+
+    @staticmethod
+    def _clear_existing_slides(prs):
+        """Remove all slides from a template while keeping masters/layouts intact."""
+        ppt_utils.clear_existing_slides(prs)
+
+    def _collect_visual_tasks(
+        self, slide, slide_data: dict, *, content_was_handled: bool = True
+    ):
+        """Collect PICTURE (type 18) and OBJECT/Diagram (type 7) placeholders for
+        batch or immediate AI image/diagram generation.
+
+        Unlike _process_placeholders(), this method NEVER writes text to any
+        placeholder — it is safe to call after the specialized creator has already
+        filled title and body text (Bug 1 fix).
+
+        Args:
+            slide:               python-pptx Slide object.
+            slide_data:          slide dict (with original content list intact).
+            content_was_handled: when True, type-7 OBJECT placeholders are only
+                                 queued when chart_type is a meaningful diagram
+                                 type (Bug 2 fix / guard now always fires).
         """
-        return {
-            'business': 'BusinessPPTCreator',
-            # 未来可以在这里添加更多模板
-            # 'academic': 'AcademicPPTCreator',
-            # 'creative': 'CreativePPTCreator',
-            # 'minimal': 'MinimalPPTCreator',
-        }
+        chart_type = slide_data.get('chart_type', '')
+        slide_title = slide_data.get('title', 'Unknown')
+        placeholder_infos: list = []
+
+        for shape in slide.shapes:
+            if not shape.is_placeholder:
+                continue
+            ptype = shape.placeholder_format.type
+
+            if ptype == 18:  # PICTURE
+                aspect_ratio = shape.width / shape.height
+                if abs(aspect_ratio - 1.778) < 0.1:
+                    ratio = 1
+                elif abs(aspect_ratio - 1.333) < 0.1:
+                    ratio = 0
+                else:
+                    continue  # unsupported aspect ratio
+                placeholder_infos.append({
+                    'shape': shape,
+                    'left': shape.left,
+                    'top': shape.top,
+                    'width': shape.width,
+                    'height': shape.height,
+                    'placeholder_type': ptype,
+                    'aspect_ratio': aspect_ratio,
+                    'ratio': ratio,
+                    'image_type': 'image',
+                })
+
+            elif ptype == 7:  # OBJECT / Diagram
+                # Bug 2 fix: guard now always fires correctly because
+                # content_was_handled is an explicit flag, not inferred from
+                # a mutable `content_written` variable that could be False.
+                if content_was_handled and not self._is_meaningful_chart_type(chart_type):
+                    continue
+                aspect_ratio = shape.width / shape.height
+                if abs(aspect_ratio - 1.778) < 0.1:
+                    ratio = 1
+                elif abs(aspect_ratio - 1.333) < 0.1:
+                    ratio = 0
+                else:
+                    continue
+                placeholder_infos.append({
+                    'shape': shape,
+                    'left': shape.left,
+                    'top': shape.top,
+                    'width': shape.width,
+                    'height': shape.height,
+                    'placeholder_type': ptype,
+                    'aspect_ratio': aspect_ratio,
+                    'ratio': ratio,
+                    'image_type': 'diagram',
+                })
+
+        if not placeholder_infos:
+            return
+
+        print(f'🔍 [Visual] {len(placeholder_infos)} visual placeholder(s) in: "{slide_title}"')
+
+        if self.is_collecting:
+            self.collected_tasks.append({
+                'slide': slide,
+                'slide_data': slide_data,
+                'placeholder_infos': placeholder_infos,
+                'slide_title': slide_title,
+            })
+            print(f'📦 [Batch] Collected visual task for: "{slide_title}"')
+        else:
+            image_data_list = [
+                self._prepare_image_data(slide_data, ph, i)
+                for i, ph in enumerate(placeholder_infos)
+            ]
+            print(f'🚀 [Visual] Processing {len(placeholder_infos)} placeholder(s) immediately...')
+            image_paths = asyncio.run(
+                self.image_processor.process_multiple_images_async(image_data_list)
+            )
+            for ph_info, image_path in zip(placeholder_infos, image_paths):
+                if image_path:
+                    self._insert_picture_into_placeholder(slide, ph_info['shape'], image_path)
+
+    def _get_template_creator_mapping(self):
+        """获取模板创建器映射"""
+        return dict(ppt_utils.THEME_CREATOR_MAPPING)
     
     def _should_use_specialized_creator(self, theme):
-        """判断是否应该使用专门的模板创建器
-        
-        Args:
-            theme (str): 主题名称
-            
-        Returns:
-            bool: 是否使用专门的创建器
-        """
-        creator_mapping = self._get_template_creator_mapping()
-        try:
-            available_themes = [
-                os.path.splitext(name)[0]
-                for name in os.listdir(self.template_base_path)
-                if name.endswith('.pptx')
-            ]
-            resolved_theme = resolve_base_theme(theme, available_themes)
-        except Exception:
-            resolved_theme = theme
-        return resolved_theme.lower() in creator_mapping
+        """判断是否应该使用专门的模板创建器"""
+        return ppt_utils.should_use_specialized_creator(self.template_base_path, theme)
     
     def _get_specialized_creator(self, theme):
         """获取专门的模板创建器实例
@@ -206,24 +271,37 @@ class PPTCreator:
             resolved_theme = theme
 
         creator_class_name = creator_mapping.get(resolved_theme.lower())
-        
+
         if not creator_class_name:
             return None
-            
+
+        # Explicit import map — avoids unreliable string-based reflection (P0 fix)
+        _CREATOR_IMPORT_MAP: dict[str, type] = {}
         try:
-            # 动态导入创建器类
-            module_name = f"utils.{theme.lower()}_ppt_creator"
-            module = __import__(module_name, fromlist=[creator_class_name])
-            creator_class = getattr(module, creator_class_name)
-            
-            # 创建实例
-            creator_instance = creator_class(self.template_base_path)
-            print(f"Using {creator_class_name} for theme: {theme}")
-            return creator_instance
-            
-        except (ImportError, AttributeError) as e:
-            print(f"Warning: {creator_class_name} not found for theme '{theme}', falling back to default creator. Error: {e}")
+            from .business_ppt_creator import BusinessPPTCreator  # lazy, avoids circular at module level
+            _CREATOR_IMPORT_MAP['BusinessPPTCreator'] = BusinessPPTCreator
+        except ImportError as ie:
+            print(f"⚠️ [CreatorImport] Could not import BusinessPPTCreator: {ie}")
+        try:
+            from .light_ppt_creator import LightPPTCreator  # lazy import
+            _CREATOR_IMPORT_MAP['LightPPTCreator'] = LightPPTCreator
+        except ImportError as ie:
+            print(f"⚠️ [CreatorImport] Could not import LightPPTCreator: {ie}")
+        try:
+            from .dark_ppt_creator import DarkPPTCreator  # lazy import
+            _CREATOR_IMPORT_MAP['DarkPPTCreator'] = DarkPPTCreator
+        except ImportError as ie:
+            print(f"⚠️ [CreatorImport] Could not import DarkPPTCreator: {ie}")
+
+        creator_class = _CREATOR_IMPORT_MAP.get(creator_class_name)
+
+        if creator_class is None:
+            print(f"⚠️ [CreatorImport] No class found for '{creator_class_name}' (theme='{theme}'). Falling back to default creator.")
             return None
+
+        creator_instance = creator_class(self.template_base_path)
+        print(f"✅ [CreatorImport] Using {creator_class_name} for theme: {resolved_theme}")
+        return creator_instance
     
     def _read_table_csv(self, table_index, presentation_title):
         """读取表格CSV文件
@@ -360,50 +438,12 @@ class PPTCreator:
             cell.text = content
     
     def _determine_content_font_size(self, bullet_count, avg_words_per_bullet):
-        """根据bullet points数量和平均词数确定字体大小
-        
-        Args:
-            bullet_count (int): bullet points数量
-            avg_words_per_bullet (float): 每个bullet point的平均词数
-            
-        Returns:
-            Pt: 字体大小
-        """
-        # 条件1: bullet point数在3个及以下，并且每个bullet point平均词数在20以下
-        if bullet_count <= 3 and avg_words_per_bullet < 20:
-            return Pt(18)
-        
-        # 条件2: bullet point数在4-5个，并且每个bullet point平均词数在15以下
-        elif bullet_count == 4 and avg_words_per_bullet < 12:
-            return Pt(16)
-        
-        # 其他情况
-        else:
-            return Pt(14)
+        """根据bullet points数量和平均词数确定字体大小"""
+        return ppt_utils.determine_content_font_size(bullet_count, avg_words_per_bullet)
     
     def _insert_picture_into_placeholder(self, slide, placeholder, image_path):
-        """将图片插入到占位符中
-        
-        Args:
-            slide: 幻灯片对象
-            placeholder: 占位符对象
-            image_path (str): 图片文件路径
-        """
-        if not os.path.exists(image_path):
-            print(f"Warning: Image file not found: {image_path}")
-            return
-            
-        try:
-            # 获取占位符的位置和尺寸
-            left = placeholder.left
-            top = placeholder.top
-            width = placeholder.width
-            height = placeholder.height
-            
-            # 添加图片
-            slide.shapes.add_picture(image_path, left, top, width, height)
-        except Exception as e:
-            print(f"Warning: Failed to insert picture: {e}")
+        """将图片插入到占位符中"""
+        ppt_utils.insert_picture_into_placeholder(slide, placeholder, image_path)
     
     def _process_placeholders(self, slide, slide_data, presentation_title, prs=None, is_title_slide=False):
         """处理幻灯片占位符"""
@@ -414,6 +454,10 @@ class PPTCreator:
         
         # 计算bullet points数量和平均词数
         content_list = slide_data.get('content', [])
+
+        # ── Bullet cleaner (P0/P1 fix) ───────────────────────────────────────
+        content_list = clean_bullets(content_list)
+
         bullet_count = len(content_list)
         total_words = sum(len(content.split()) for content in content_list)
         avg_words_per_bullet = total_words / bullet_count if bullet_count > 0 else 0
@@ -421,11 +465,6 @@ class PPTCreator:
         # 确定字体大小
         title_font_size = Pt(24) if title_word_count > 4 else None
         content_font_size = self._determine_content_font_size(bullet_count, avg_words_per_bullet)
-        
-        # 调试信息
-        print(f"Slide '{title}':")
-        print(f"  - Title words: {title_word_count} (font size: {title_font_size.pt if title_font_size else 'default'})")
-        print(f"  - Bullet count: {bullet_count}, avg words: {avg_words_per_bullet:.1f} (font size: {content_font_size.pt})")
         
         # 收集图片和对象占位符信息
         placeholder_infos = []
@@ -440,9 +479,36 @@ class PPTCreator:
         def fill_content_text(target_shape):
             nonlocal content_written
             text_frame = target_shape.text_frame
-            text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+
+            # ── Controlled scaling (P0 fix: replace TEXT_TO_FIT_SHAPE) ───────
+            # Disable PowerPoint's built-in auto-size — it produces inconsistent
+            # results across slides.  Instead, we estimate capacity ourselves and
+            # step down the font size through a pre-defined ladder.
+            text_frame.auto_size = MSO_AUTO_SIZE.NONE
             text_frame.word_wrap = True
             text_frame.clear()
+
+            # Determine the best font size for this specific shape.
+            shape_w_pt, shape_h_pt = shape_dimensions_pt(target_shape)
+            chosen_pt = fit_font_size(
+                content_list,
+                shape_w_pt,
+                shape_h_pt,
+                preferred_pt=content_font_size.pt,
+            )
+            final_font_size = Pt(chosen_pt)
+
+            # Emit layout audit line.
+            log_slide_layout_audit(
+                slide_idx=slide_data.get('slide_number', '?'),
+                title=title,
+                layout_name=getattr(getattr(target_shape, 'placeholder_format', None), 'type', 'N/A'),
+                shape_w_pt=shape_w_pt,
+                shape_h_pt=shape_h_pt,
+                bullet_count=len(content_list),
+                initial_pt=content_font_size.pt,
+                final_pt=chosen_pt,
+            )
 
             if content_list:
                 for i, content in enumerate(content_list):
@@ -450,8 +516,11 @@ class PPTCreator:
                     p.text = content
                     p.level = 0
                     p.alignment = PP_ALIGN.LEFT
+                    p.font.size = final_font_size
             elif title:
-                text_frame.paragraphs[0].text = title
+                p = text_frame.paragraphs[0]
+                p.text = title
+                p.font.size = final_font_size
             content_written = True
 
         def is_fallback_text_placeholder(target_shape):
@@ -555,6 +624,22 @@ class PPTCreator:
 
             # 收集对象占位符 (type=7)
             elif placeholder_type == 7:
+                # Some templates (e.g. Light) use OBJECT as the only text body slot.
+                # If content has not been written yet and this shape supports text,
+                # prioritize writing bullets here instead of treating it as media.
+                if (not content_written) and getattr(shape, 'has_text_frame', False) and content_list:
+                    fill_content_text(shape)
+                    continue
+
+                # If text content was already written to a BODY (type=2) placeholder on
+                # this slide, only proceed with AI chart generation when chart_type is
+                # explicitly set to a real diagram type.  Without this guard, layouts
+                # that contain BOTH a BODY and an OBJECT placeholder (e.g. Classic
+                # "B1-D1-H", Light "Chart layout 1") would trigger spurious AI-generated
+                # images on every slide, producing garbled output.
+                if content_written and not self._is_meaningful_chart_type(chart_type):
+                    continue
+
                 aspect_ratio = shape.width / shape.height
                 if abs(aspect_ratio - 1.778) < 0.1:  # 16:9
                     ratio = 1
@@ -663,6 +748,10 @@ class PPTCreator:
         # 处理LaTeX公式（如果存在）
         self._process_latex_formulas(slide, slide_data)
     
+    def _apply_speaker_notes(self, slide, slide_data):
+        """Write speaker notes to a slide if provided in slide_data."""
+        ppt_utils.apply_speaker_notes(slide, slide_data)
+
     def _process_latex_formulas(self, slide, slide_data):
         """处理LaTeX公式
         
@@ -756,38 +845,8 @@ class PPTCreator:
         return other_placeholders
     
     def _insert_picture_with_aspect_ratio(self, slide, placeholder_shape, image_path, left, top, width, height):
-        """将图片插入到占位符中，根据原始宽高比计算高度
-        
-        Args:
-            slide: 幻灯片对象
-            placeholder_shape: 占位符形状对象
-            image_path (str): 图片文件路径
-            left: 左边距
-            top: 上边距
-            width: 目标宽度
-            height: 占位符高度（将被忽略，根据宽高比计算）
-        """
-        try:
-            # 获取图片的原始尺寸
-            with Image.open(image_path) as img:
-                original_width, original_height = img.size
-                
-            # 计算宽高比
-            aspect_ratio = original_height / original_width
-            
-            # 根据目标宽度和原始宽高比计算新的高度
-            calculated_height = int(width * aspect_ratio)
-            
-            print(f"📏 Image dimensions - Original: {original_width}x{original_height}, "
-                  f"Target: {width}x{calculated_height} (aspect ratio: {aspect_ratio:.3f})")
-            
-            # 添加图片到指定位置，使用计算出的高度
-            slide.shapes.add_picture(image_path, left, top, width, calculated_height)
-            
-        except Exception as e:
-            print(f"❌ Failed to get image dimensions, using original height: {e}")
-            # 如果获取图片尺寸失败，回退到使用原始height参数
-            slide.shapes.add_picture(image_path, left, top, width, height)
+        """将图片插入到占位符中，根据原始宽高比计算高度"""
+        ppt_utils.insert_picture_with_aspect_ratio(slide, placeholder_shape, image_path, left, top, width, height)
     
     def create_presentation(self, ppt_schema, output_path):
         """创建演示文稿
@@ -818,12 +877,26 @@ class PPTCreator:
             
         # 创建演示文稿
         prs = Presentation(template_path)
+        # Template files may contain demo/sample slides. Start from a clean deck
+        # so exported content never includes original template pages.
+        self._clear_existing_slides(prs)
         
         # 获取演示文稿标题
         presentation_title = ppt_schema.get('presentation_title', '')
         
         # 创建标题幻灯片
         title_layout = self._find_layout_by_name(prs, 'Title')
+        if not title_layout:
+            # Fuzzy fallback: some templates name the title layout in other languages
+            # (e.g. Light.pptx uses "标题幻灯片").  Find the first layout that has a
+            # CENTER_TITLE or TITLE placeholder but no BODY/OBJECT content area.
+            for _layout in prs.slide_layouts:
+                _ph_types = {sh.placeholder_format.type for sh in _layout.placeholders}
+                if _ph_types & {1, 3} and not (_ph_types & {2, 7}):
+                    title_layout = _layout
+                    break
+            if not title_layout and prs.slide_layouts:
+                title_layout = prs.slide_layouts[0]
         if title_layout:
             title_slide = prs.slides.add_slide(title_layout)
             title_data = {
@@ -841,16 +914,38 @@ class PPTCreator:
             try:
                 if 'layout' not in slide_data:
                     continue
-                    
-                layout_name = slide_data['layout'].get('name')
+
+                layout_raw = slide_data.get('layout')
+                if isinstance(layout_raw, dict):
+                    layout_name = (layout_raw.get('name') or '').strip()
+                elif layout_raw is None:
+                    layout_name = ''
+                else:
+                    layout_name = str(layout_raw).strip()
+
                 if not layout_name:
                     continue
                     
                 # 查找对应的布局
                 layout = self._find_layout_by_name(prs, layout_name)
                 if not layout:
-                    print(f"Warning: Layout '{layout_name}' not found in template")
-                    continue
+                    print(f"Warning: Layout '{layout_name}' not found in template — trying content-capable fallback")
+                    layout = self._find_content_layout(prs)
+                    if not layout:
+                        print(f"Warning: No content-capable fallback layout found — skipping slide")
+                        continue
+
+                # If this slide has content bullets but the assigned layout has no
+                # body/object placeholder, swap to a content-capable layout so the
+                # text is not silently dropped.
+                content_list = slide_data.get('content', [])
+                if content_list and not self._layout_has_body(layout):
+                    fallback = self._find_content_layout(prs)
+                    if fallback:
+                        print(f"⚠️ Layout '{layout_name}' has no body placeholder "
+                              f"but slide has {len(content_list)} bullets — "
+                              f"falling back to '{fallback.name}'")
+                        layout = fallback
                     
                 # 创建幻灯片
                 slide = prs.slides.add_slide(layout)
