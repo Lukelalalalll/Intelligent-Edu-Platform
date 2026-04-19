@@ -3,9 +3,9 @@ from typing import Literal, Optional
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-slides_router = APIRouter(prefix="/api/slides", tags=["Slides"])
+slides_router = APIRouter(prefix="/slides", tags=["Slides"])
 public_slides_router = APIRouter(prefix="/slides", tags=["SlidesPublic"])
-legacy_sub1_router = APIRouter(prefix="/api/sub1", tags=["SlidesLegacy"])
+legacy_sub1_router = APIRouter(prefix="/sub1", tags=["SlidesLegacy"])
 
 
 class SlidesDeliveryJobSchema(BaseModel):

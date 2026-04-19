@@ -21,7 +21,7 @@ from backend.core.dependencies import (
 from backend.schemas import FeedbackSchema
 from backend.services.ai_gateway_service import AIGatewayService
 from .router import ai_gateway_router, STREAM_CHUNK_DELAY_SECONDS, STREAM_MAX_WAIT_SECONDS
-from .helpers import (
+from .grading_context_helpers import (
     _get_submission_bundle,
     _compact_chat_history,
     _build_rag_context_for_request,

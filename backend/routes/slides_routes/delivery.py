@@ -102,12 +102,31 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resol
         await PresentonTaskService.add_event(task_id, "step_done", "provider_health",
                                              "Provider is healthy", progress=18)
 
+        import re as _re
+
+        def _strip_html(html_text: str) -> str:
+            """Remove HTML tags and collapse whitespace for clean LLM input."""
+            if not html_text:
+                return ""
+            clean = _re.sub(r'<[^>]+>', ' ', str(html_text))
+            clean = _re.sub(r'\s+', ' ', clean)
+            return clean.strip()
+
         source_text = (req.content or "").strip()
+        chapter_data_clean: list[dict] = []
         if not source_text and req.chapterData:
-            source_text = "\n\n".join([
-                f"{item.get('sectionTitle', f'Chapter {idx + 1}')}\n{item.get('text', '')}"
-                for idx, item in enumerate(req.chapterData) if isinstance(item, dict)
-            ])
+            chapter_data_clean = [
+                {
+                    "sectionTitle": item.get("sectionTitle", f"Chapter {idx + 1}"),
+                    "text": _strip_html(item.get("text", "")),
+                }
+                for idx, item in enumerate(req.chapterData)
+                if isinstance(item, dict)
+            ]
+            source_text = "\n\n".join(
+                f"{c['sectionTitle']}\n{c['text']}"
+                for c in chapter_data_clean
+            )
         if not source_text:
             raise RuntimeError("content or chapterData is required")
 
@@ -117,7 +136,9 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resol
 
         await PresentonTaskService.add_event(task_id, "step_start", "outline",
                                              "Generating outline", progress=25)
-        outline = await adapter.generate_outline(source_text=source_text, total_pages=pages)
+        outline = await adapter.generate_outline(
+            source_text=source_text, total_pages=pages, chapter_data=chapter_data_clean
+        )
         await PresentonTaskService.add_event(task_id, "step_done", "outline",
                                              f"Outline generated with {len(outline)} slides", progress=45)
 

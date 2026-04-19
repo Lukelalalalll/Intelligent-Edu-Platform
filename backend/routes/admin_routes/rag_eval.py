@@ -1,11 +1,22 @@
-"""RAG evaluation endpoints: datasets, runs, baselines, quality gate."""
+"""RAG evaluation endpoints: datasets, runs, baselines, quality gate, wizard."""
 from __future__ import annotations
 
+import asyncio
 import logging
+from functools import partial
 
 from fastapi import Depends, HTTPException, Query
 
 from backend.core.security import get_admin_user
+from backend.schemas.rag_eval import (
+    CaseTestRequest,
+    CreateDatasetRequest,
+    EvaluateABRequest,
+    GenerateQuestionsRequest,
+    QualityGateRequest,
+    RunEvaluationRequest,
+    SetBaselineRequest,
+)
 from .router import admin_router
 
 logger = logging.getLogger(__name__)
@@ -18,15 +29,9 @@ async def list_eval_datasets(admin: dict = Depends(get_admin_user)):
 
 
 @admin_router.post("/rag-eval/datasets")
-async def create_eval_dataset(req: dict, admin: dict = Depends(get_admin_user)):
+async def create_eval_dataset(req: CreateDatasetRequest, admin: dict = Depends(get_admin_user)):
     from backend.services.rag_eval_service import create_dataset
-    name = (req.get("name") or "").strip()
-    if not name:
-        raise HTTPException(400, "Dataset name is required")
-    cases = req.get("cases", [])
-    if not cases:
-        raise HTTPException(400, "At least one test case is required")
-    ds = await create_dataset(name, cases, req.get("description", ""))
+    ds = await create_dataset(req.name, [c.model_dump() for c in req.cases], req.description)
     return ds
 
 
@@ -49,20 +54,14 @@ async def delete_eval_dataset(dataset_id: str, admin: dict = Depends(get_admin_u
 
 
 @admin_router.post("/rag-eval/run")
-async def run_rag_evaluation(req: dict, admin: dict = Depends(get_admin_user)):
+async def run_rag_evaluation(req: RunEvaluationRequest, admin: dict = Depends(get_admin_user)):
     """Start a full evaluation run on a dataset."""
     from backend.services.rag_eval_service import run_evaluation
 
-    dataset_id = (req.get("dataset_id") or "").strip()
-    course_id = (req.get("course_id") or "").strip()
-    if not dataset_id or not course_id:
-        raise HTTPException(400, "dataset_id and course_id are required")
-
-    config = req.get("config", {})
     triggered_by = str(admin.get("username", admin.get("_id", "admin")))
 
     try:
-        result = await run_evaluation(dataset_id, course_id, config, triggered_by)
+        result = await run_evaluation(req.dataset_id, req.course_id, req.config, triggered_by)
         return result
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -91,31 +90,23 @@ async def get_eval_run(run_id: str, admin: dict = Depends(get_admin_user)):
 
 
 @admin_router.post("/rag-eval/case-test")
-async def rag_case_test(req: dict, admin: dict = Depends(get_admin_user)):
+async def rag_case_test(req: CaseTestRequest, admin: dict = Depends(get_admin_user)):
     """Single-query debug test — not persisted."""
     from backend.services.rag_eval_service import case_test
 
-    course_id = (req.get("course_id") or "").strip()
-    query = (req.get("query") or "").strip()
-    if not course_id or not query:
-        raise HTTPException(400, "course_id and query are required")
-
     result = await case_test(
-        course_id=course_id,
-        query=query,
-        top_k=int(req.get("top_k", 5)),
-        use_hybrid=bool(req.get("use_hybrid", True)),
+        course_id=req.course_id,
+        query=req.query,
+        top_k=req.top_k,
+        use_hybrid=req.use_hybrid,
     )
     return result
 
 
 @admin_router.post("/rag-eval/baseline/{run_id}")
-async def set_eval_baseline(run_id: str, req: dict, admin: dict = Depends(get_admin_user)):
+async def set_eval_baseline(run_id: str, req: SetBaselineRequest, admin: dict = Depends(get_admin_user)):
     from backend.services.rag_eval_service import set_baseline
-    course_id = (req.get("course_id") or "").strip()
-    if not course_id:
-        raise HTTPException(400, "course_id is required")
-    return await set_baseline(run_id, course_id)
+    return await set_baseline(run_id, req.course_id)
 
 
 @admin_router.get("/rag-eval/baseline/{course_id}")
@@ -142,7 +133,7 @@ async def compare_eval_runs(
 
 
 @admin_router.post("/rag-eval/quality-gate")
-async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
+async def rag_quality_gate(req: QualityGateRequest, admin: dict = Depends(get_admin_user)):
     """
     Release quality gate: run evaluation on a dataset, compare against baseline,
     and return pass/fail based on configurable thresholds.
@@ -151,13 +142,7 @@ async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
         run_evaluation, get_baseline, compare_runs,
     )
 
-    dataset_id = (req.get("dataset_id") or "").strip()
-    course_id = (req.get("course_id") or "").strip()
-    if not dataset_id or not course_id:
-        raise HTTPException(400, "dataset_id and course_id are required")
-
-    config = req.get("config", {})
-    th = req.get("thresholds", {})
+    th = req.thresholds
     max_hit_rate_drop = th.get("max_hit_rate_drop_pct", 3)
     max_p95_increase = th.get("max_p95_latency_increase_pct", 20)
     max_empty_rate = th.get("max_error_rate", 0.02)
@@ -166,7 +151,7 @@ async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
 
     # 1) Run evaluation
     try:
-        run = await run_evaluation(dataset_id, course_id, config, triggered_by)
+        run = await run_evaluation(req.dataset_id, req.course_id, req.config, triggered_by)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception:
@@ -178,8 +163,7 @@ async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
 
     # 2) Compare against baseline if one exists
     gate_checks: list[dict] = []
-    baseline = await get_baseline(course_id)
-
+    baseline = await get_baseline(req.course_id)
     if baseline:
         baseline_run_id = baseline.get("run_id", "")
         try:
@@ -242,3 +226,72 @@ async def rag_quality_gate(req: dict, admin: dict = Depends(get_admin_user)):
         "metrics": run_metrics,
         "checks": gate_checks,
     }
+
+
+# ---------------------------------------------------------------------------
+# Wizard endpoints — courses, docs, generate questions, A/B evaluate
+# ---------------------------------------------------------------------------
+
+@admin_router.get("/rag-eval/courses")
+async def list_rag_courses(admin: dict = Depends(get_admin_user)):
+    """Return all courses (admin view). Courses with indexed documents show their doc counts."""
+    from backend.services.rag_eval_wizard_service import list_rag_courses_data
+    return {"courses": await list_rag_courses_data()}
+
+
+@admin_router.get("/rag-eval/docs")
+async def list_rag_docs(
+    course_id: str = Query(...),
+    admin: dict = Depends(get_admin_user),
+):
+    """Return indexed documents for a specific course."""
+    from backend.services.course_rag_service import course_rag_service
+
+    docs = course_rag_service.list_indexed_documents(course_id)
+    return {"docs": docs}
+
+
+@admin_router.post("/rag-eval/generate-questions")
+async def generate_eval_questions(req: GenerateQuestionsRequest, admin: dict = Depends(get_admin_user)):
+    """Use AI to generate evaluation questions from indexed course documents."""
+    from backend.services.rag_eval_wizard_service import generate_eval_questions_data
+
+    questions = await generate_eval_questions_data(
+        course_id=req.course_id,
+        doc_names=req.doc_names,
+        n_questions=req.n_questions,
+        topic_hint=req.topic_hint,
+        provider=req.provider,
+    )
+    return {"questions": questions}
+
+
+@admin_router.post("/rag-eval/evaluate-ab")
+async def evaluate_ab(req: EvaluateABRequest, admin: dict = Depends(get_admin_user)):
+    """A/B evaluation: run dataset through both hybrid and vector-only modes."""
+    from backend.services.rag_eval_wizard_service import run_ab_evaluation, persist_ab_results
+
+    dataset_dicts = [c.model_dump() for c in req.dataset]
+
+    loop = asyncio.get_running_loop()
+    eval_result = await loop.run_in_executor(
+        None,
+        partial(
+            run_ab_evaluation,
+            dataset=dataset_dicts,
+            top_k=req.top_k,
+            mode=req.mode,
+            selected_docs=req.selected_docs if req.selected_docs else None,
+        ),
+    )
+
+    # Persist results so they survive page refreshes
+    run_id = await persist_ab_results(eval_result, {
+        "mode": req.mode,
+        "top_k": req.top_k,
+        "dataset": dataset_dicts,
+        "course_id": dataset_dicts[0].get("course_ids", [""])[0] if dataset_dicts else "",
+    })
+    eval_result["run_id"] = run_id
+
+    return eval_result

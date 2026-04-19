@@ -24,7 +24,7 @@ from backend.services.video_service import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/video", tags=["video"])
+router = APIRouter(prefix="/video", tags=["video"])
 
 UPLOAD_TMP = BACKEND_ROOT / "uploads" / "video_tmp"
 UPLOAD_TMP.mkdir(parents=True, exist_ok=True)

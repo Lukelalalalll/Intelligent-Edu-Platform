@@ -12,7 +12,7 @@ from backend.core.database import db
 from backend.config import Config
 from backend.services.grading_service import load_courses, normalize_courses_data, save_courses
 
-admin_router = APIRouter(prefix="/api/admin", tags=["Admin"])
+admin_router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # ── Course payload helpers (v1 JSON-based) ──

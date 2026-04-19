@@ -8,7 +8,7 @@ from backend.services.grading_service import (
 from backend.core.security import get_current_user, can_access_course
 
 
-grading_router = APIRouter(prefix="/api/grading", tags=["Grading"])
+grading_router = APIRouter(prefix="/grading", tags=["Grading"])
 PERMISSION_DENIED = "Permission denied"
 
 

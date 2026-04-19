@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-ai_gateway_router = APIRouter(prefix="/api/ai/gateway", tags=["AI Gateway"])
+ai_gateway_router = APIRouter(prefix="/ai/gateway", tags=["AI Gateway"])
 
 DEFAULT_RAG_TOP_K = 4
 STREAM_TEXT_CHUNK_SIZE = 24

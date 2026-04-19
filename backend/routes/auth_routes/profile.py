@@ -18,6 +18,13 @@ async def get_profile_courses(current_user: dict = Depends(get_current_user)):
     all_courses = (await load_courses()).get("courses", [])
     role = current_user.get("role", "student")
 
+    if role == "admin":
+        return {
+            "role": role,
+            "semester": _current_semester_label(),
+            "courses": [_course_summary(c) for c in all_courses],
+        }
+
     if role == "teacher":
         semester = _current_semester_label()
         teaching_courses = [c for c in all_courses if _teacher_owns_course(current_user, c)]

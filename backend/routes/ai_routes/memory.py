@@ -8,7 +8,7 @@ from backend.core.database import db
 from backend.core.security import get_current_user
 
 from .router import ai_router, _SUPPORTED_PROVIDERS, ai_gateway_service
-from .helpers import _extract_text_from_pdf_bytes, _PDF_EXTRACT_MAX_CHARS
+from .chat_context_helpers import _extract_text_from_pdf_bytes, _PDF_EXTRACT_MAX_CHARS
 
 logger = logging.getLogger(__name__)
 
@@ -47,18 +47,17 @@ async def get_ai_role_info(user: dict = Depends(get_current_user)):
     role = user.get("role", "student")
     is_student = role not in ("teacher", "admin")
     rag_indexed_courses: list[str] = []
-    if is_student:
-        try:
-            from backend.services.course_rag_service import course_rag_service
-            rag_indexed_courses = course_rag_service.get_indexed_courses_for_student(
-                str(user.get("_id", user.get("id", "")))
-            )
-        except Exception as exc:
-            logger.warning("Failed to load indexed courses for role-info | user=%s err=%s", str(user.get("id") or ""), str(exc)[:240])
+    try:
+        from backend.services.course_rag_service import course_rag_service
+        rag_indexed_courses = course_rag_service.get_indexed_courses_for_student(
+            str(user.get("_id", user.get("id", "")))
+        )
+    except Exception as exc:
+        logger.warning("Failed to load indexed courses for role-info | user=%s err=%s", str(user.get("id") or ""), str(exc)[:240])
     return {
         "role": role,
         "mode": "socratic" if is_student else "direct",
-        "rag_active": is_student and len(rag_indexed_courses) > 0,
+        "rag_active": len(rag_indexed_courses) > 0,
         "rag_courses": rag_indexed_courses,
     }
 

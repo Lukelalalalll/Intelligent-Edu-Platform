@@ -13,11 +13,11 @@ from backend.core.dependencies import (
     get_langchain_rag_service,
     get_process_pool,
 )
-from backend.schemas import AnalyzeSubmissionSchema, AnnotateSchema, FeedbackSchema
+from backend.schemas import AnalyzeSubmissionSchema, AnnotateSchema, FeedbackSchema, RegradeQuestionSchema
 from backend.services.ai_gateway_service import AIGatewayService
 from backend.services.grading_service import load_annotations
 from .router import ai_gateway_router
-from .helpers import (
+from .grading_context_helpers import (
     _get_submission_bundle,
     _read_submission_text,
     _compact_chat_history,
@@ -58,6 +58,36 @@ async def analyze_submission(
         "rubric": rubric,
         "assignment": assignment,
         "annotations": annotations,
+    }
+
+
+@ai_gateway_router.post("/analyze/regrade-question")
+async def regrade_question(
+    payload: RegradeQuestionSchema,
+    ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
+):
+    resolved_provider = resolve_provider(payload.provider, feature="grading.regrade_question")
+    _, assignment, _ = await _get_submission_bundle(payload.submissionId)
+
+    rubric = payload.rubric or assignment.get("rubric", {})
+    assignment_desc = payload.assignment or assignment.get("description", "")
+
+    response = await ai_gateway_service.regrade_single_question(
+        rubric=rubric,
+        assignment=assignment_desc,
+        question_id=str(payload.questionId or "Q?").strip() or "Q?",
+        question_text=str(payload.questionText or "").strip(),
+        student_answer=str(payload.studentAnswer or "").strip(),
+        reference_answer=str(payload.referenceAnswer or "").strip(),
+        key_points=payload.keyPoints or [],
+        max_score=float(payload.maxScore or 0),
+        provider=resolved_provider,
+    )
+
+    return {
+        "analysis": response,
+        "rubric": rubric,
+        "assignment": assignment,
     }
 
 

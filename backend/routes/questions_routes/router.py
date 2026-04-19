@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-questions_router = APIRouter(prefix="/api/questions", tags=["Question Generator"])
+questions_router = APIRouter(prefix="/questions", tags=["Question Generator"])
 
 
 def _get_task(request: Request, task_id: str) -> dict | None:

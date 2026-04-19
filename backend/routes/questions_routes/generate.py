@@ -19,9 +19,9 @@ from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.schemas import ExtractQuestionsSchema, GenerateQuestionsSchema
 from backend.services.questions_service import (
-    allowed_file, call_zhipu_ocr,
+    allowed_file, extract_text_from_image,
     call_provider_generate,
-    extract_pdf_text_with_loader, call_zhipu_layout_from_text,
+    extract_pdf_text_with_loader, format_extracted_text,
 )
 from .router import questions_router, _get_task, _set_task
 from .validators import (
@@ -92,10 +92,11 @@ async def upload_file(request: Request, file: UploadFile = File(...), user: dict
 
 @questions_router.post("/extract_questions")
 async def extract_questions_route(req: ExtractQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
+    resolved_provider = resolve_provider(getattr(req, 'provider', None), feature="questions.extract", user=user)
     timer = TelemetryTimer(
-        provider="zhipu", model="glm-4v/glm-4-plus",
+        provider=resolved_provider, model="question-extractor",
         endpoint="sub2/extract", user_id=user.get('id', ''),
-        api_type="vision", credential_alias="ZHIPU_API_KEY",
+        api_type="vision", credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
     )
     with timer:
         try:
@@ -109,9 +110,9 @@ async def extract_questions_route(req: ExtractQuestionsSchema, request: Request,
 
             if uploaded_file.lower().endswith('.pdf'):
                 extracted_markdown = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
-                structured_data = call_zhipu_layout_from_text(extracted_markdown, extract_prompt=req.prompt)
+                structured_data = await format_extracted_text(extracted_markdown, extract_prompt=req.prompt, provider=resolved_provider)
             else:
-                structured_data = call_zhipu_ocr(uploaded_file, extract_prompt=req.prompt)
+                structured_data = await extract_text_from_image(uploaded_file, extract_prompt=req.prompt, provider=resolved_provider)
 
         except Exception as e:
             await timer.save(success=False, error=str(e))
@@ -166,7 +167,7 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
                     markdown_text = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
                     base_content = markdown_text
                 else:
-                    ocr_struct = call_zhipu_ocr(uploaded_file, extract_prompt='exercise')
+                    ocr_struct = await extract_text_from_image(uploaded_file, extract_prompt='exercise', provider=resolved_provider)
                     base_content = json.dumps(ocr_struct.get('exercises', []), ensure_ascii=False)
             else:
                 if cache_path and os.path.exists(cache_path):

@@ -5,7 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from backend.services.ai_gateway_service import AIGatewayService
 
-ai_router = APIRouter(prefix="/api/ai", tags=["AI Chat"])
+ai_router = APIRouter(prefix="/ai", tags=["AI Chat"])
 ai_gateway_service = AIGatewayService()
 _limiter = Limiter(key_func=get_remote_address)
 

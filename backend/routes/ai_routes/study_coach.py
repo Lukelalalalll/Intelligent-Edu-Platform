@@ -1,4 +1,4 @@
-"""Non-streaming Coze study coach endpoint (/study-coze)."""
+"""Study coach AI endpoint (/study-coze) — supports Ollama and Coze providers."""
 
 import asyncio
 import logging
@@ -14,13 +14,14 @@ from backend.services.rag_chat_pipeline import pack_evidence
 
 from .router import ai_router, _limiter
 from .prompting import _STUDY_COZE_SYSTEM
-from .helpers import _build_evidence_cards
+from .chat_context_helpers import _build_evidence_cards
 
 logger = logging.getLogger(__name__)
 
 
-async def _call_coze_study(system_prompt: str, user_content: str, context: str = "", user_id: str = "study_coach", history_messages: list = None, provider: str = "local_ollama") -> str:
+async def _call_study_ai(system_prompt: str, user_content: str, context: str = "", user_id: str = "study_coach", history_messages: list = None, provider: str = "local_ollama") -> str:
     from backend.services.ai_gateway_service import AIGatewayService
+    from backend.services.local_llm_service import LocalLLMUnavailableError
     ai_service = AIGatewayService()
     ai_context = {
         "system_override": system_prompt,
@@ -28,7 +29,13 @@ async def _call_coze_study(system_prompt: str, user_content: str, context: str =
         "chat_history": history_messages or [],
         "coze_user_id": user_id
     }
-    return await ai_service.chat_with_provider(message=user_content, context=ai_context, provider=provider)
+    # allow_fallback=False: if user explicitly chose a provider, don't silently switch
+    return await ai_service.chat_with_provider(
+        message=user_content,
+        context=ai_context,
+        provider=provider,
+        allow_fallback=False,
+    )
 
 
 @ai_router.post("/study-coze")
@@ -87,16 +94,22 @@ async def study_coze(request: Request, req: StudyCozeSchema, user: dict = Depend
     # Use per-user id so Coze doesn't mix conversations across students
     coze_user_id = f"study_{str(user.get('_id', 'anon'))}"
 
+    # Timeout budget: Ollama heavy profile can take up to 150 s on a loaded GPU
+    _timeout = 150.0
     try:
         reply = await asyncio.wait_for(
-            _call_coze_study(system, content, context=context, user_id=coze_user_id, history_messages=history, provider=resolved_provider),
-            timeout=60,
+            _call_study_ai(system, content, context=context, user_id=coze_user_id, history_messages=history, provider=resolved_provider),
+            timeout=_timeout,
         )
         return JSONResponse({"reply": reply, "citations": rag_citations})
     except asyncio.TimeoutError:
-        raise HTTPException(504, "AI study coach timed out")
+        raise HTTPException(504, "AI study coach timed out — the model is taking too long, please try again")
     except HTTPException:
         raise
-    except Exception:
-        logger.exception("study-coze error")
+    except Exception as exc:
+        err_str = str(exc)
+        # Surface a clear provider-specific error instead of a generic 500
+        if "Local" in err_str or "Ollama" in err_str or "health check" in err_str.lower():
+            raise HTTPException(503, f"Local Ollama is unavailable: {err_str}")
+        logger.exception("study-coach error")
         raise HTTPException(500, "AI study coach encountered an internal error")

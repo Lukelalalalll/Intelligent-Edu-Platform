@@ -10,6 +10,11 @@ from backend.schemas import UpdateAiSessionSchema
 from backend.services.ai_session_service import sanitize_session_update_payload
 from backend.services.file_asset_service import ensure_ai_session_image_assets
 from backend.services.security_audit import log_security_event
+from backend.services.session_bucket_service import (
+    delete_session_buckets,
+    load_all_messages,
+    save_messages_bucketed,
+)
 
 import logging
 
@@ -122,6 +127,14 @@ async def update_session(
     update_fields["lastWriterUserId"] = str(user.get("id") or "")
     update_fields["lastWriteRequestId"] = request_id
 
+    # ── Bucket pattern: split large message arrays into buckets ────
+    if "messages" in update_fields:
+        bucket_result = await save_messages_bucketed(
+            session_id, update_fields["messages"],
+        )
+        update_fields["messages"] = bucket_result["inline_messages"]
+        update_fields["bucketCount"] = bucket_result["bucket_count"]
+
     await db.ai_chat_sessions.update_one(
         {"_id": ObjectId(session_id)},
         {"$set": update_fields},
@@ -147,6 +160,7 @@ async def delete_session(session_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=403, detail=_ERR_FORBIDDEN)
 
     await db.ai_chat_sessions.delete_one({"_id": ObjectId(session_id)})
+    await delete_session_buckets(session_id)
     return {"ok": True}
 
 
@@ -162,9 +176,16 @@ async def get_session(session_id: str, user: dict = Depends(get_current_user)):
     if str(doc["userId"]) != user["id"]:
         raise HTTPException(status_code=403, detail=_ERR_FORBIDDEN)
 
+    # ── Reconstruct full messages from buckets + inline tail ──────
+    inline_msgs = doc.get("messages", [])
+    if doc.get("bucketCount", 0) > 0:
+        all_msgs = await load_all_messages(session_id, inline_msgs)
+    else:
+        all_msgs = inline_msgs
+
     # Strip createdAt from each message for frontend compat, and ObjectId fields
     messages = []
-    for m in doc.get("messages", []):
+    for m in all_msgs:
         msg = {
             "role": m.get("role", ""),
             "content": m.get("content", ""),

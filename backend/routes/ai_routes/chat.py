@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from cachetools import TTLCache
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
@@ -25,7 +26,7 @@ from backend.services.rag_chat_pipeline import task_profile_for_phase
 from .chat_models import ParsedRequest, RAGResult, StreamMeta
 from .chat_providers import generate_chat_response
 from .chat_streaming import sse_error
-from .helpers import (
+from .chat_context_helpers import (
     _compact_chat_history,
     _is_document_summary_request,
     _split_user_prompt_and_attachment_text,
@@ -35,11 +36,18 @@ from .prompting import (
     _STUDENT_HINT_MODE_MSG,
     _STUDENT_SYSTEM_MSG,
     _STUDENT_TUTOR_MODE_MSG,
+    _TEACHER_SYSTEM_MSG,
 )
 from .rag_orchestrator import run_student_rag
 from .router import _SUPPORTED_PROVIDERS, _limiter, ai_router
 
 logger = logging.getLogger(__name__)
+
+# ── Cache-Aside TTL caches for hot-path DB queries ────────────────
+# Avoids repeated MongoDB round-trips for data that rarely changes.
+# Reference: Podlipnig & Böszörményi, "A Survey of Web Cache Replacement
+# Strategies", ACM Computing Surveys 35(4), 2003.
+_ai_memory_cache: TTLCache[str, str] = TTLCache(maxsize=1024, ttl=300)
 
 # ── Memory profile fields we surface to the LLM ───────────────────
 _MEMORY_FIELDS = ("name", "major", "year", "preferences")
@@ -74,6 +82,11 @@ def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
     if tutor_mode not in _VALID_TUTOR_MODES:
         tutor_mode = "tutor"
 
+    # Teachers and admins always get full tutor mode — hint_only only affects students
+    role = user.get("role", "student")
+    if role in ("teacher", "admin"):
+        tutor_mode = "tutor"
+
     if not latest_user_message and not latest_user_images:
         raise HTTPException(status_code=400, detail="Latest user message is empty")
 
@@ -106,13 +119,23 @@ def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
     )
 
 
-# ── AI memory ─────────────────────────────────────────────────────
+# ── AI memory (with Cache-Aside) ──────────────────────────────────
 
 async def _load_ai_memory(user: dict) -> str:
-    """Load the user's stored AI-memory profile from MongoDB."""
+    """Load the user's stored AI-memory profile from MongoDB.
+
+    Uses an in-memory TTL cache (5 min) to avoid hitting MongoDB on
+    every chat message for data that changes at most once per session.
+    """
+    cache_key = str(user.get("_id") or user.get("id") or "")
+    cached = _ai_memory_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     user_doc = await db.users.find_one({"_id": user["_id"]})
     ai_memory: dict = (user_doc or {}).get("ai_memory", {})
     if not ai_memory:
+        _ai_memory_cache[cache_key] = ""
         return ""
 
     parts = [
@@ -121,8 +144,11 @@ async def _load_ai_memory(user: dict) -> str:
         if ai_memory.get(field)
     ]
     if not parts:
+        _ai_memory_cache[cache_key] = ""
         return ""
-    return "Student profile — " + "; ".join(parts) + ". Adapt your responses to this student's background."
+    result = "Student profile — " + "; ".join(parts) + ". Adapt your responses to this student's background."
+    _ai_memory_cache[cache_key] = result
+    return result
 
 
 # ── System override ───────────────────────────────────────────────
@@ -133,6 +159,9 @@ def _build_system_override(
 ) -> str | None:
     """Build the system-level prompt override for students; ``None`` for teachers."""
     if not parsed.is_student:
+        # Teachers / admins: use teacher prompt + RAG evidence if available
+        if rag_context_text:
+            return _TEACHER_SYSTEM_MSG + "\n\n" + rag_context_text
         return None
 
     if parsed.tutor_mode == "hint_only":
@@ -177,23 +206,16 @@ async def ai_chat(
     # 2. Load AI memory
     parsed.memory_text = await _load_ai_memory(user)
 
-    # 3. RAG retrieval (students only)
-    if parsed.is_student:
-        rag_dict = await run_student_rag(
-            user=user,
-            effective_question=parsed.effective_question,
-            uploaded_attachment_text=parsed.uploaded_attachment_text,
-            tutor_mode=parsed.tutor_mode,
-            resolved_provider=parsed.resolved_provider,
-            cleaned_messages=parsed.cleaned_messages,
-        )
-        rag = RAGResult.from_dict(rag_dict)
-    else:
-        rag = RAGResult(
-            rag_retrieval_query=parsed.effective_question,
-            rag_rewritten_query=parsed.effective_question,
-            compact_history=parsed.compact_history,
-        )
+    # 3. RAG retrieval (all roles with courses)
+    rag_dict = await run_student_rag(
+        user=user,
+        effective_question=parsed.effective_question,
+        uploaded_attachment_text=parsed.uploaded_attachment_text,
+        tutor_mode=parsed.tutor_mode,
+        resolved_provider=parsed.resolved_provider,
+        cleaned_messages=parsed.cleaned_messages,
+    )
+    rag = RAGResult.from_dict(rag_dict)
 
     # 4. Build system override & LLM context
     system_override = _build_system_override(parsed, rag.rag_context_text)

@@ -17,7 +17,7 @@ from backend.infrastructure import TelemetryTimer
 from backend.schemas import SuggestConstraintsSchema, UploadScreenshotSchema
 from backend.services.ai_gateway_service import AIGatewayService
 from backend.services.questions_service import (
-    call_zhipu_ocr, extract_pdf_text_with_loader,
+    extract_text_from_image, extract_pdf_text_with_loader,
 )
 from .router import questions_router, _get_task
 
@@ -54,7 +54,7 @@ async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Requ
                     if uploaded_file.lower().endswith('.pdf'):
                         source_text = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
                     else:
-                        ocr_struct = call_zhipu_ocr(uploaded_file, extract_prompt='exercise')
+                        ocr_struct = await extract_text_from_image(uploaded_file, extract_prompt='exercise', provider=resolved_provider)
                         source_text = json.dumps(ocr_struct.get('exercises', []), ensure_ascii=False)
             else:
                 if not uploaded_file or not os.path.exists(uploaded_file):
@@ -62,7 +62,7 @@ async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Requ
                 if uploaded_file.lower().endswith('.pdf'):
                     source_text = extract_pdf_text_with_loader(uploaded_file, req.page_numbers)
                 else:
-                    ocr_struct = call_zhipu_ocr(uploaded_file, extract_prompt='exercise')
+                    ocr_struct = await extract_text_from_image(uploaded_file, extract_prompt='exercise', provider=resolved_provider)
                     source_text = json.dumps(ocr_struct.get('exercises', []), ensure_ascii=False)
 
             if not str(source_text).strip():

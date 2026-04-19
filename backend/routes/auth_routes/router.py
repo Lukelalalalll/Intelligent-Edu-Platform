@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from backend.core.security import teacher_owns_course, student_enrolled_in_course
 
 limiter = Limiter(key_func=get_remote_address)
-auth_router = APIRouter(prefix="/api", tags=["Auth"])
+auth_router = APIRouter(prefix="", tags=["Auth"])
 
 
 def _current_semester_label() -> str:

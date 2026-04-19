@@ -18,10 +18,9 @@ from backend.services.local_llm_service import LocalLLMUnavailableError
 from backend.services.rag_chat_pipeline import postcheck_and_downgrade, task_profile_for_phase
 
 from .chat_models import ParsedRequest, RAGResult, StreamMeta
-from .chat_streaming import SSE_DONE, sse_delta, sse_meta
+from .chat_streaming import SSE_DONE, sse_delta, sse_meta, stream_text_as_sse
 from .chat_telemetry import record_chat_telemetry
-from .helpers import (
-    _chunk_text,
+from .chat_context_helpers import (
     _compact_chat_history,
     _looks_truncated_response,
     _sanitize_answer_text,
@@ -75,19 +74,16 @@ async def _generate_via_local_ollama(
         )
         full_answer = _sanitize_answer_text(full_answer)
 
-        for part in _chunk_text(full_answer, size=2):
-            yield sse_delta(part)
+        async for frame in stream_text_as_sse(full_answer, chunk_size=2, delay=0.01):
+            yield frame
     else:
         # True streaming — yield chunks as they arrive
         streamed_parts: list[str] = []
         async for chunk in local_svc.chat_stream(req.latest_user_message, context):
             streamed_parts.append(chunk)
+            yield sse_delta(chunk)
         full_answer = "".join(streamed_parts)
         answer_latency_ms = round((time.perf_counter() - answer_t0) * 1000, 2)
-
-        full_answer = _sanitize_answer_text(full_answer)
-        for part in _chunk_text(full_answer, size=2):
-            yield sse_delta(part)
 
     # ── Truncation continuation ──
     if _looks_truncated_response(full_answer):
@@ -178,14 +174,11 @@ async def _generate_via_coze(
 
     yield sse_meta(meta.to_dict())
 
-    chunks = _chunk_text(reply, size=1)
-    if not chunks:
-        chunks = [_NO_RESPONSE_PLACEHOLDER]
-
-    import asyncio
-    for part in chunks:
-        yield sse_delta(part)
-        await asyncio.sleep(0.01)
+    if not reply:
+        yield sse_delta(_NO_RESPONSE_PLACEHOLDER)
+    else:
+        async for frame in stream_text_as_sse(reply, chunk_size=2, delay=0.01):
+            yield frame
 
     yield SSE_DONE
 
@@ -198,14 +191,11 @@ async def _generate_forced_response(
     meta: StreamMeta,
 ) -> AsyncIterator[str]:
     """Emit a pre-built forced response (e.g. insufficient evidence)."""
-    import asyncio
-
     meta.warning = "insufficient_evidence"
     yield sse_meta(meta.to_dict())
 
-    for part in _chunk_text(rag.forced_response_message, size=2):
-        yield sse_delta(part)
-        await asyncio.sleep(0.01)
+    async for frame in stream_text_as_sse(rag.forced_response_message, chunk_size=2, delay=0.01):
+        yield frame
 
     yield SSE_DONE
 
@@ -239,11 +229,7 @@ async def generate_chat_response(
 
     Handles the local→coze fallback transparently.
     """
-    # 1. Forced response (insufficient evidence)?
-    if req.is_student and rag.forced_response_message:
-        async for frame in _generate_forced_response(req, rag, meta):
-            yield frame
-        return
+    # 1. RAG found nothing? Continue — LLM answers without evidence context.
 
     # 2. Local Ollama (with fallback to Coze)
     if meta.provider == "local_ollama":

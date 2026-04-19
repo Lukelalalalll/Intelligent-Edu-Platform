@@ -16,7 +16,7 @@ from pydantic import JsonValue
 from backend.config import Config
 from backend.prompts import prompt_registry
 from backend.schemas import ChatMessageSchema, GradingContextSchema, RagContextSchema
-from backend.services.grading_service import find_submission_v2
+from backend.services.grading_service import find_submission_v2, get_document
 from backend.services.tfidf_rag_service import LocalRagService
 from backend.utils.pdf_extractor import extract_text_from_pdf
 from .router import (
@@ -47,12 +47,30 @@ async def _run_in_process_pool(process_pool: ProcessPoolExecutor, func, *args):
 
 def _resolve_submission_pdf_path(submission: dict[str, Any]) -> Path:
     pdf_path = str((submission or {}).get("pdfPath", ""))
-    root_dir = Path(__file__).resolve().parents[3]
-    candidate = Path(pdf_path)
+    # parents[2] = backend/, parents[3] = project root
+    backend_dir = Path(__file__).resolve().parents[2]
+    root_dir = backend_dir.parent
+
+    # Normalize: strip leading slash (matches annotation_service.get_source_pdf_path logic)
+    normalized = pdf_path.lstrip("/")
+    if not normalized:
+        raise HTTPException(status_code=422, detail="Submission has no PDF path")
+
+    candidate = Path(normalized)
     if candidate.is_absolute():
         resolved = candidate.resolve()
+    elif normalized.startswith("data/"):
+        # data/ paths are relative to project root
+        resolved = (root_dir / normalized).resolve()
+    elif normalized.startswith(("uploads/", "test_pdf/")):
+        # uploads/ and test_pdf/ are relative to backend/
+        resolved = (backend_dir / normalized).resolve()
     else:
-        resolved = (root_dir / pdf_path).resolve()
+        # Unknown prefix: try backend/ first, then project root
+        resolved = (backend_dir / normalized).resolve()
+        if not resolved.exists():
+            resolved = (root_dir / normalized).resolve()
+
     # Prevent path traversal — resolved path must be under the project root
     if not resolved.is_relative_to(root_dir):
         raise HTTPException(status_code=403, detail="Access denied: path outside project root")
@@ -63,12 +81,23 @@ async def _get_submission_bundle(submission_id: str):
     course, assignment, submission = await find_submission_v2(submission_id)
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
+    # Backfill pdfPath from linked document record if missing (mirrors get_submission_bundle logic)
+    if not submission.get("pdfPath") and submission.get("latestDocumentId"):
+        doc_record = await get_document(submission["latestDocumentId"])
+        if doc_record and doc_record.get("storageKey"):
+            submission = {**submission, "pdfPath": doc_record["storageKey"]}
     return course, assignment, submission
 
 
 async def _read_submission_text(submission: dict[str, Any], process_pool: ProcessPoolExecutor) -> str:
     candidate = _resolve_submission_pdf_path(submission)
-    return await _run_in_process_pool(process_pool, _extract_text_from_pdf_job, str(candidate))
+    text = await _run_in_process_pool(process_pool, _extract_text_from_pdf_job, str(candidate))
+    if not text.strip():
+        logger.warning(
+            "Empty text from PDF: path=%s exists=%s pdfPath=%r",
+            candidate, candidate.exists(), submission.get("pdfPath", ""),
+        )
+    return text
 
 
 # ── RAG context helpers ──

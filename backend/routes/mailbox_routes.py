@@ -14,7 +14,7 @@ from backend.services.grading_service import (
     get_course_section, get_assignment, get_submission as get_submission_v2,
 )
 
-teacher_router = mailbox_router = APIRouter(prefix="/api/teacher", tags=["TeacherMailbox"])
+teacher_router = mailbox_router = APIRouter(prefix="/teacher", tags=["TeacherMailbox"])
 PERMISSION_DENIED = "Permission denied"
 
 

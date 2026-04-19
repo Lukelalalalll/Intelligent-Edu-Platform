@@ -39,7 +39,7 @@ os.makedirs(CHAT_FILES_DIR, exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
-chat_router = APIRouter(prefix="/api/chat", tags=["Chat"])
+chat_router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 # ── Helpers ──

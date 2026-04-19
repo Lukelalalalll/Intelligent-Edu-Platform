@@ -1,13 +1,12 @@
 """Core PPT pipeline routes: parse, combine, highlight, summarize, script generation."""
-import os
-import re
 import json
-import shutil
 import logging
+import os
+import shutil
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
+from fastapi import UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
 from werkzeug.utils import secure_filename
 
@@ -25,71 +24,23 @@ from backend.schemas import (
     ClassifyHighlightsSchema,
 )
 from backend.services.slides import (
-    MarkdownViewer as MDParser,
-    PPTCreator,
-    ChapterSummarizer,
-    generate_talking_script_word,
     TaskTracker,
     StepStatus,
 )
-from backend.services.ai_gateway_service import AIGatewayService
 from .router import slides_router, public_slides_router, legacy_sub1_router
 
 logger = logging.getLogger(__name__)
 
-# ── Outline generation helpers ──
-
-OUTLINE_SYSTEM_PROMPT = """You are an expert educational content writer.
-Given a topic or keywords, generate well-structured content in Markdown format, suitable for creating a presentation (PPT).
-
-Requirements:
-- Use ## for major sections (3-6 sections)
-- Use - bullet points for key sub-points under each section
-- Each section body: 3-5 concise bullet points
-- Write in the same language as the input keywords
-- Start directly with the first ## heading, no preamble
-- Total length: 300-600 words"""
-
-
-async def _call_coze_text_sub1(system_prompt: str, user_content: str, provider: str = "local_ollama") -> str:
-    ai_service = AIGatewayService()
-    context = {"system_override": system_prompt}
-    return await ai_service.chat_with_provider(message=user_content, context=context, provider=provider)
-
-
-# ── Parsing cache ──
-
-_SUB1_PARSE_CACHE = {}
-
-
-def _parse_md_impl(filepath: str, use_llm: bool) -> dict:
-    """Parse a markdown file using MarkdownViewer."""
-    parser = MDParser()
-    parser.load_file(filepath, use_llm)
-    return {
-        'headers': [
-            {'index': i + 1, 'level': s['header']['level'], 'text': s['header']['text']}
-            for i, s in enumerate(parser.header_sections)
-        ],
-        'full_content': parser.full_content,
-        'sections': parser.header_sections,
-        'tables': [
-            {'index': i + 1, 'section_title': s['section']['text'], 'table': s['table']}
-            for i, s in enumerate(parser.table_sections)
-        ],
-    }
-
-
-def _get_parsed_data_with_cache(filepath: str, use_llm: bool):
-    cache_key = (filepath, bool(use_llm))
-    stat = os.stat(filepath)
-    file_stamp = (int(stat.st_mtime_ns), int(stat.st_size))
-    cached = _SUB1_PARSE_CACHE.get(cache_key)
-    if cached and cached.get("stamp") == file_stamp:
-        return cached["data"]
-    parsed = _parse_md_impl(filepath, use_llm)
-    _SUB1_PARSE_CACHE[cache_key] = {"stamp": file_stamp, "data": parsed}
-    return parsed
+from backend.services.slides_pipeline_service import (
+    generate_outline as _svc_generate_outline,
+    get_parsed_data_with_cache as _get_parsed_data_with_cache,
+    create_ppt as _create_ppt_impl,
+    combine_sections as _svc_combine_sections,
+    save_highlights as _save_highlights_impl,
+    load_highlights as _load_highlights_impl,
+    process_text_to_md as _svc_process_text,
+    generate_script as _svc_generate_script,
+)
 
 
 # ── PPT creation ──
@@ -108,7 +59,7 @@ async def process_ppt(req: PptProcessSchema, request: Request):
 
         slides_count = len(req.ppt_schema.get("slides", []) if isinstance(req.ppt_schema, dict) else [])
         with tracker.step("ppt_generate", slides_count=slides_count):
-            filename = await asyncio.to_thread(_create_ppt, req.ppt_schema)
+            filename = await asyncio.to_thread(_create_ppt_impl, req.ppt_schema)
 
         tracker.finish(StepStatus.SUCCESS)
         tracker.result_metadata["filename"] = filename
@@ -134,16 +85,6 @@ async def process_ppt(req: PptProcessSchema, request: Request):
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] PPT generation failed", tracker.request_id)
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-def _create_ppt(ppt_schema) -> str:
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"presentation_{timestamp}.pptx"
-    output_path = os.path.join(Config.PPT_RESULTS_FOLDER, filename)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    creator = PPTCreator(Config.PPT_TEMPLATES_FOLDER)
-    creator.create_presentation(ppt_schema, output_path)
-    return filename
 
 
 @slides_router.get("/download_ppt/{filename}")
@@ -217,62 +158,10 @@ async def parse_md(
 @slides_router.post("/combine")
 def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user)):
     try:
-        filepath = os.path.join(Config.SUB1_UPLOAD_FOLDER, req.filename)
-        if not os.path.exists(filepath):
-            filepath = os.path.join(Config.UPLOAD_FOLDER, req.filename)
-
-        if req.filename.lower().endswith('.pdf'):
-            md_filename = req.filename.rsplit('.', 1)[0] + ".md"
-            filepath = os.path.join(Config.SUB1_MD_FOLDER, md_filename)
-
-        if not os.path.exists(filepath):
-            raise Exception(f"File not found: {filepath}")
-
-        parsed_data = _get_parsed_data_with_cache(filepath, req.use_llm)
-        full_content = parsed_data['full_content']
-        all_sections = parsed_data['sections']
-        all_headers = parsed_data['headers']
-
-        combined_chunks = []
-        sorted_indices = sorted([int(i) for i in req.selected_indices])
-
-        for idx in sorted_indices:
-            target_idx = -1
-            for i, h in enumerate(all_headers):
-                if int(h['index']) == idx:
-                    target_idx = i
-                    break
-
-            if target_idx != -1:
-                section = all_sections[target_idx]
-                header_text = all_headers[target_idx]['text']
-
-                start_line = section['start']
-                end_line = section['end']
-                content_slice = full_content[start_line: end_line + 1]
-
-                if content_slice and content_slice[0].strip().startswith('#'):
-                    content_slice = content_slice[1:]
-                if content_slice and content_slice[-1].strip().startswith('#'):
-                    content_slice = content_slice[:-1]
-                while content_slice and not content_slice[-1].strip():
-                    content_slice = content_slice[:-1]
-                if content_slice and content_slice[-1].strip().startswith('#'):
-                    content_slice = content_slice[:-1]
-
-                formatted_header = header_text if header_text.startswith('#') else f"# {header_text}"
-                chunk = f"{formatted_header}\n" + '\n'.join(content_slice)
-                combined_chunks.append(chunk)
-
-        final_markdown = "\n\n===SECTION_BREAK===\n\n".join(combined_chunks)
-        new_filename = f"combined_{os.path.splitext(req.filename)[0]}.md"
-        output_path = os.path.join(Config.SUB1_MD_FOLDER, new_filename)
-
-        os.makedirs(Config.SUB1_MD_FOLDER, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(final_markdown)
-
+        new_filename = _svc_combine_sections(req.filename, req.selected_indices, req.use_llm)
         return {"filename": new_filename}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.exception("Combine sections failed")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -288,44 +177,6 @@ def save_highlights(req: SaveHighlightsSchema, user: dict = Depends(get_current_
     except Exception as e:
         logger.exception("Save highlights failed")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-def _save_highlights_impl(filename: str, highlights_data) -> str:
-    import time as _time
-    os.makedirs(Config.SUB1_HIGHLIGHTS_FOLDER, exist_ok=True)
-
-    if highlights_data and hasattr(highlights_data[0], 'dict'):
-        highlights_list = [item.dict() for item in highlights_data]
-    else:
-        highlights_list = highlights_data
-
-    json_filename = f"highlights_{filename}.json"
-    json_path = os.path.join(Config.SUB1_HIGHLIGHTS_FOLDER, json_filename)
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(highlights_list, f, ensure_ascii=False, indent=2)
-
-    md_filename = f"highlights_{filename}.md"
-    md_path = os.path.join(Config.SUB1_HIGHLIGHTS_FOLDER, md_filename)
-    with open(md_path, 'w', encoding='utf-8') as f:
-        f.write(f"# Key Highlights for: {filename}\n\n")
-        f.write(f"*Generated on {_time.strftime('%Y-%m-%d %H:%M:%S')}*\n\n---\n\n")
-        for section in highlights_list:
-            section_title = (
-                section.get('sectionTitle', 'Untitled Section')
-                if isinstance(section, dict)
-                else getattr(section, 'sectionTitle', 'Untitled Section')
-            )
-            f.write(f"## {section_title}\n\n")
-            items = (
-                section.get('highlights', []) if isinstance(section, dict)
-                else getattr(section, 'highlights', [])
-            )
-            for h in items:
-                text = h.get('text', '') if isinstance(h, dict) else getattr(h, 'text', '')
-                f.write(f"> {text}\n\n")
-            f.write("\n")
-
-    return json_filename
 
 
 @slides_router.post("/classify-highlights")
@@ -398,26 +249,6 @@ def load_highlights(filename: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-def _load_highlights_impl(filename: str) -> list:
-    json_filename = f"highlights_{filename}.json"
-    json_path = os.path.join(Config.SUB1_HIGHLIGHTS_FOLDER, json_filename)
-
-    if os.path.exists(json_path):
-        with open(json_path, 'r', encoding='utf-8') as f:
-            sections_data = json.load(f)
-        flat = []
-        for section in sections_data:
-            section_title = section.get('sectionTitle', '')
-            for h in section.get('highlights', []):
-                flat.append({
-                    'id': h.get('id', ''),
-                    'text': h.get('text', ''),
-                    'sectionTitle': section_title,
-                })
-        return flat
-    return []
-
-
 # ── Outline / text processing ──
 
 from pydantic import BaseModel
@@ -440,7 +271,7 @@ async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(ge
         raise HTTPException(400, "Keywords must not be empty")
     try:
         resolved_provider = resolve_provider(req.provider, feature="slides.generate_outline")
-        text = await _call_coze_text_sub1(OUTLINE_SYSTEM_PROMPT, keywords, provider=resolved_provider)
+        text = await _svc_generate_outline(keywords, provider=resolved_provider)
 
         try:
             _exp = await compute_history_expires_at(user.get("id", ""))
@@ -478,28 +309,12 @@ async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current
     if not text:
         raise HTTPException(400, "Text must not be empty")
 
-    safe_title = re.sub(r'[^\w\s-]', '', title)[:60].strip().replace(' ', '_') or 'untitled'
-    parts = re.split(r'(?=^## )', text, flags=re.MULTILINE)
-    sections = []
-    for part in parts:
-        stripped = part.strip()
-        if not stripped:
-            continue
-        if not stripped.startswith('## '):
-            sections.append(f"## Overview\n{stripped}")
-        else:
-            sections.append(stripped)
+    try:
+        filename, sections_count = _svc_process_text(text, title)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
-    if not sections:
-        raise HTTPException(400, "Could not parse any sections from the text")
-
-    filename = f"combined_{safe_title}.md"
-    os.makedirs(Config.SUB1_MD_FOLDER, exist_ok=True)
-    filepath = os.path.join(Config.SUB1_MD_FOLDER, filename)
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write("\n===SECTION_BREAK===\n".join(sections))
-
-    logger.info("process-text: wrote %d sections to %s", len(sections), filename)
+    logger.info("process-text: wrote %d sections to %s", sections_count, filename)
 
     try:
         _exp = await compute_history_expires_at(user.get("id", ""))
@@ -509,7 +324,7 @@ async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current
                 "tool": "process_text",
                 "source_type": "text",
                 "title": title,
-                "sections_count": len(sections),
+                "sections_count": sections_count,
             },
             "source": {"title": title},
             "result_preview": text[:500],
@@ -522,7 +337,7 @@ async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current
     except Exception:
         pass
 
-    return {"filename": filename, "sections": len(sections)}
+    return {"filename": filename, "sections": sections_count}
 
 
 # ── Summarization ──
@@ -673,17 +488,6 @@ async def summarize_chapters(
 
 # ── Script generation ──
 
-async def _generate_script_impl(slides_results, style, title, provider) -> tuple:
-    summarizer = ChapterSummarizer()
-    scripts = await summarizer.generate_talking_script(slides_results, style, provider=provider)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"talking_script_{timestamp}.docx"
-    output_path = os.path.join(Config.SCRIPT_RESULTS_FOLDER, filename)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    generate_talking_script_word(scripts, output_path, title)
-    return scripts, filename
-
-
 @slides_router.post("/generate_talking_script")
 async def generate_talking_script(
     req: GenerateScriptSchema,
@@ -695,7 +499,7 @@ async def generate_talking_script(
     try:
         resolved_provider = resolve_provider(req.provider, feature="slides.generate_script", user=user)
         with tracker.step("script_generate", slides_count=len(req.slides_results), style=req.script_style):
-            scripts, filename = await _generate_script_impl(
+            scripts, filename = await _svc_generate_script(
                 slides_results=req.slides_results,
                 style=req.script_style,
                 title=req.presentation_title,

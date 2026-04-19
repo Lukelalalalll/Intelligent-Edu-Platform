@@ -3,6 +3,8 @@
 import logging
 import time
 
+from cachetools import TTLCache
+
 from backend.config import Config
 from backend.services.rag_chat_pipeline import (
     build_rewrite_prompt,
@@ -13,7 +15,7 @@ from backend.services.rag_chat_pipeline import (
     task_profile_for_phase,
 )
 
-from .helpers import (
+from .chat_context_helpers import (
     _build_evidence_cards,
     _build_uploaded_evidence_cards,
     _compact_chat_history,
@@ -21,6 +23,11 @@ from .helpers import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ── Cache-Aside for student enrollment lookups ────────────────────
+# Course enrollment changes at most once per semester; caching for 5 min
+# eliminates a MongoDB round-trip on every single chat message.
+_enrollment_cache: TTLCache[str, list[str]] = TTLCache(maxsize=1024, ttl=300)
 
 
 async def _rewrite_query_with_local_model(
@@ -81,12 +88,18 @@ async def run_student_rag(
         from backend.services.course_rag_service import course_rag_service
         from backend.routes.auth_routes import get_profile_courses
 
-        try:
-            profile = await get_profile_courses(user)
-            student_course_ids = [c["courseId"] for c in profile.get("courses", []) if c.get("courseId")]
-        except Exception as exc:
-            logger.warning("Could not resolve student courses — fail-closed, skipping RAG | err=%s", str(exc)[:240])
-            student_course_ids = []
+        user_id_str = str(user.get("_id") or user.get("id") or "")
+        cached_ids = _enrollment_cache.get(user_id_str)
+        if cached_ids is not None:
+            student_course_ids = cached_ids
+        else:
+            try:
+                profile = await get_profile_courses(user)
+                student_course_ids = [c["courseId"] for c in profile.get("courses", []) if c.get("courseId")]
+                _enrollment_cache[user_id_str] = student_course_ids
+            except Exception as exc:
+                logger.warning("Could not resolve student courses — fail-closed, skipping RAG | err=%s", str(exc)[:240])
+                student_course_ids = []
 
         if not student_course_ids:
             logger.debug("No student courses resolved, RAG context skipped")

@@ -26,7 +26,7 @@ def sse_error(message: str = "An internal error occurred. Please try again.") ->
 
 async def stream_text_as_sse(text: str, chunk_size: int = 2, delay: float = 0.01) -> AsyncIterator[str]:
     """Yield *text* as SSE delta frames, character-by-character (with configurable chunk_size)."""
-    from .helpers import _chunk_text
+    from .chat_context_helpers import _chunk_text
 
     for part in _chunk_text(text, size=chunk_size):
         yield sse_delta(part)
