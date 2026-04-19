@@ -24,6 +24,7 @@ from backend.schemas.ai import (  # noqa: F401
     AnalyzeSubmissionSchema,
     FeedbackSchema,
     AnnotateSchema,
+    RegradeQuestionSchema,
 )
 
 from backend.schemas.grading import (  # noqa: F401

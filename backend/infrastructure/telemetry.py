@@ -33,6 +33,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from tdigest import TDigest
+
 from backend.core.database import db
 
 logger = logging.getLogger(__name__)
@@ -181,10 +183,11 @@ class LLMTelemetry:
         results = await db[COLLECTION].aggregate(pipeline).to_list(100)
         providers: dict[str, Any] = {}
         for r in results:
-            latencies = sorted(r.get("latencies", []))
-            n = len(latencies)
-            p50 = latencies[n // 2] if n else 0
-            p95 = latencies[min(int(n * 0.95), n - 1)] if n else 0
+            digest = TDigest()
+            for v in r.get("latencies", []):
+                digest.update(v)
+            p50 = digest.percentile(50) if digest.weight() else 0
+            p95 = digest.percentile(95) if digest.weight() else 0
             total = r["total_calls"]
             success_rate = round(r["successful_calls"] / total * 100, 1) if total else 0
 

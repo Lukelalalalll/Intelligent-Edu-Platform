@@ -20,6 +20,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
+from tdigest import TDigest
+
 from backend.core.database import db
 
 logger = logging.getLogger(__name__)
@@ -92,10 +94,11 @@ class RAGTelemetry:
             return {"period_hours": hours, "total": 0}
 
         r = rows[0]
-        latencies = sorted(r.get("latencies", []))
-        n = len(latencies)
-        p50 = latencies[n // 2] if n else 0
-        p95 = latencies[min(int(n * 0.95), n - 1)] if n else 0
+        digest = TDigest()
+        for v in r.get("latencies", []):
+            digest.update(v)
+        p50 = digest.percentile(50) if digest.weight() else 0
+        p95 = digest.percentile(95) if digest.weight() else 0
         total = r["total"] or 1
 
         return {

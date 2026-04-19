@@ -34,6 +34,106 @@ analyze_submission:
         "improvement_suggestions": [string]
     }}
 
+extract_qa_pairs:
+  description: "Extract question-answer pairs from a submission"
+  version: "1.0"
+  template: |
+    You are an exam parser. Extract question-answer pairs from student submission text.
+
+    Assignment context:
+    {assignment}
+
+    Student submission text:
+    {text}
+
+    Rules:
+    1) Detect question boundaries and their corresponding student answers.
+    2) If question text is missing, infer a short question title from answer context.
+    3) Keep answer text concise but faithful (max 1200 chars per answer).
+    4) Return valid JSON only.
+
+    Output schema:
+    {{
+      "question_pairs": [
+        {{
+          "question_id": "Q1",
+          "question_text": string,
+          "student_answer": string,
+          "confidence": number
+        }}
+      ],
+      "unmatched_text": [string]
+    }}
+
+generate_answer_key:
+  description: "Generate reference answers and scoring points for each question"
+  version: "1.0"
+  template: |
+    You are a strict teaching assistant creating grading references.
+
+    Assignment:
+    {assignment}
+
+    Rubric (JSON):
+    {rubric_json}
+
+    Question pairs (JSON):
+    {question_pairs_json}
+
+    Task:
+    1) For each question_id, generate a concise reference answer.
+    2) Provide 2-5 key points for scoring.
+    3) Suggest max_score for each question (sum should be close to 100).
+
+    Return valid JSON only:
+    {{
+      "answer_key": [
+        {{
+          "question_id": string,
+          "reference_answer": string,
+          "key_points": [string],
+          "max_score": number
+        }}
+      ]
+    }}
+
+grade_questions:
+  description: "Grade student answers question-by-question against answer key"
+  version: "1.0"
+  template: |
+    You are a strict grader.
+
+    Rubric (JSON):
+    {rubric_json}
+
+    Question-answer pairs (JSON):
+    {question_pairs_json}
+
+    Answer key (JSON):
+    {answer_key_json}
+
+    Requirements:
+    1) Grade each question independently.
+    2) For each question, provide score, max_score, concise rationale, and evidence quote from student answer.
+    3) Provide overall feedback and 3-5 improvement suggestions.
+    4) Return JSON only.
+
+    Output schema:
+    {{
+      "question_grades": [
+        {{
+          "question_id": string,
+          "score": number,
+          "max_score": number,
+          "rationale": string,
+          "evidence": string,
+          "confidence": number
+        }}
+      ],
+      "overall_feedback": string,
+      "improvement_suggestions": [string]
+    }}
+
 feedback:
   description: "Actionable feedback for selected student text"
   version: "1.0"

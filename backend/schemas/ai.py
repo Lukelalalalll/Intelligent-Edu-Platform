@@ -92,3 +92,16 @@ class AnnotateSchema(BaseModel):
     messages: List[ChatMessageSchema] | None = None
     useRag: bool = True
     ragTopK: int = 4
+
+
+class RegradeQuestionSchema(BaseModel):
+    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    submissionId: str
+    questionId: str
+    questionText: str | None = None
+    studentAnswer: str
+    referenceAnswer: str | None = None
+    keyPoints: List[str] | None = None
+    maxScore: float | None = None
+    assignment: str | None = None
+    rubric: dict[str, JsonValue] | None = None
