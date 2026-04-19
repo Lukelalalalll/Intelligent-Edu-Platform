@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/ApiKeyPanel.module.css';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 /* ── Password verification modal (reused for unlock & edit) ── */
 function PasswordModal({ isOpen, onClose, onVerified, hint }) {

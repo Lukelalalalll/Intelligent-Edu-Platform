@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { Toast } from '../types/api';
+import type { Toast } from '@/types/api';
 
 type ToastType = Toast['type'];
 

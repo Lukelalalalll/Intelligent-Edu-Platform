@@ -2,7 +2,7 @@
  * mailboxApi — teacher + student REST API clients.
  * Replaces {teacherApi, studentApi} previously in api.ts.
  */
-import client from './client';
+import client from '@/shared/api/client';
 import type {
     Course,
     Assignment,

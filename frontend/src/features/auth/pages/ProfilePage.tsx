@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import Profile from '../components/Profile';
 
 export default function ProfilePage() {

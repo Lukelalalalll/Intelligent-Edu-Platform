@@ -16,8 +16,14 @@ import GroupChatRoomsTable from './components/GroupChatRoomsTable';
 import GroupAssetsTable from './components/GroupAssetsTable';
 import RoleUsersTable from './components/RoleUsersTable';
 import UserGroupsSection from './components/UserGroupsSection';
+import type { ToolSummary, HistoryItem, AdminUser } from '../file-center/api/fileCenterHistoryApi';
+import { fileCenterHistoryApi } from '../file-center/api/fileCenterHistoryApi';
+import ToolSummaryCards from '../file-center/components/ToolSummaryCards';
+import ToolHistoryTab from '../file-center/components/ToolHistoryTab';
+import HistoryDetailModal from '../file-center/components/HistoryDetailModal';
+import ToolHistoryUsersTable from './components/ToolHistoryUsersTable';
 
-type RootMode = 'entry' | 'group' | 'personal';
+type RootMode = 'entry' | 'group' | 'personal' | 'toolHistory';
 type RoleMode = 'teacher' | 'student';
 
 export default function AdminFileCenterPage() {
@@ -32,6 +38,14 @@ export default function AdminFileCenterPage() {
     const [selectedUser, setSelectedUser] = useState<AIUserSummary | null>(null);
     const [groupBy, setGroupBy] = useState<'day' | 'month'>('day');
     const [userGroups, setUserGroups] = useState<AIFileGroup[]>([]);
+
+    // ── Tool History state ──
+    const [toolHistoryUsers, setToolHistoryUsers] = useState<AdminUser[]>([]);
+    const [toolHistoryUsersLoading, setToolHistoryUsersLoading] = useState(false);
+    const [toolHistorySelectedUser, setToolHistorySelectedUser] = useState<AdminUser | null>(null);
+    const [toolSummary, setToolSummary] = useState<ToolSummary[]>([]);
+    const [activeTool, setActiveTool] = useState('');
+    const [detailItem, setDetailItem] = useState<HistoryItem | null>(null);
 
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -99,6 +113,31 @@ export default function AdminFileCenterPage() {
         }
     }, [groupBy]);
 
+    const loadToolHistoryUsers = useCallback(async () => {
+        setToolHistoryUsersLoading(true);
+        try {
+            const users = await fileCenterHistoryApi.adminGetUsers();
+            setToolHistoryUsers(users);
+        } catch {
+            // silent
+        } finally {
+            setToolHistoryUsersLoading(false);
+        }
+    }, []);
+
+    const loadToolSummaryForUser = useCallback(async (user: AdminUser) => {
+        try {
+            const data = await fileCenterHistoryApi.adminGetSummary(user.id);
+            setToolSummary(data);
+        } catch {
+            // silent
+        }
+    }, []);
+
+    useEffect(() => {
+        if (rootMode === 'toolHistory') { void loadToolHistoryUsers(); }
+    }, [rootMode]);
+
     const runAction = useCallback(async (asset: FileAsset, action: 'soft' | 'restore' | 'hard') => {
         setConfirmModal({ show: true, asset, action });
     }, []);
@@ -148,6 +187,16 @@ export default function AdminFileCenterPage() {
             }
             return parts;
         }
+        if (rootMode === 'toolHistory') {
+            parts.push('Tool History');
+            if (toolHistorySelectedUser) {
+                parts.push(toolHistorySelectedUser.username || toolHistorySelectedUser.id);
+                if (activeTool) {
+                    parts.push(activeTool);
+                }
+            }
+            return parts;
+        }
         parts.push('Personal Files');
         if (selectedRole) {
             parts.push(selectedRole);
@@ -156,7 +205,7 @@ export default function AdminFileCenterPage() {
             }
         }
         return parts;
-    }, [rootMode, selectedRole, selectedRoom, selectedUser]);
+    }, [rootMode, selectedRole, selectedRoom, selectedUser, toolHistorySelectedUser, activeTool]);
 
     const backAction = () => {
         if (rootMode === 'entry') return;
@@ -167,6 +216,21 @@ export default function AdminFileCenterPage() {
                 return;
             }
             setRootMode('entry');
+            return;
+        }
+
+        if (rootMode === 'toolHistory') {
+            if (activeTool) {
+                setActiveTool('');
+                return;
+            }
+            if (toolHistorySelectedUser) {
+                setToolHistorySelectedUser(null);
+                setToolSummary([]);
+                return;
+            }
+            setRootMode('entry');
+            setToolHistoryUsers([]);
             return;
         }
 
@@ -198,6 +262,13 @@ export default function AdminFileCenterPage() {
         }
         if (rootMode === 'personal' && selectedRole) {
             void loadRoleUsers(selectedRole);
+        }
+        if (rootMode === 'toolHistory') {
+            if (toolHistorySelectedUser) {
+                void loadToolSummaryForUser(toolHistorySelectedUser);
+            } else {
+                void loadToolHistoryUsers();
+            }
         }
     };
 
@@ -235,7 +306,11 @@ export default function AdminFileCenterPage() {
             {error && <div className={styles.empty}>{error}</div>}
 
             {rootMode === 'entry' && (
-                <EntryCards onOpenGroup={() => setRootMode('group')} onOpenPersonal={() => setRootMode('personal')} />
+                <EntryCards
+                    onOpenGroup={() => setRootMode('group')}
+                    onOpenPersonal={() => setRootMode('personal')}
+                    onOpenToolHistory={() => setRootMode('toolHistory')}
+                />
             )}
 
             {rootMode === 'group' && !selectedRoom && (
@@ -265,6 +340,36 @@ export default function AdminFileCenterPage() {
                     userGroups={userGroups}
                     runAction={runAction}
                 />
+            )}
+
+            {rootMode === 'toolHistory' && !toolHistorySelectedUser && (
+                <ToolHistoryUsersTable
+                    busy={toolHistoryUsersLoading}
+                    users={toolHistoryUsers}
+                    onOpenUser={(u) => { setToolHistorySelectedUser(u); void loadToolSummaryForUser(u); }}
+                />
+            )}
+
+            {rootMode === 'toolHistory' && !!toolHistorySelectedUser && !activeTool && (
+                <ToolSummaryCards tools={toolSummary} activeTool={activeTool} onSelect={setActiveTool} />
+            )}
+
+            {rootMode === 'toolHistory' && !!toolHistorySelectedUser && !!activeTool && (
+                <>
+                    <ToolHistoryTab
+                        key={`${activeTool}-${toolHistorySelectedUser.id}`}
+                        tool={activeTool}
+                        adminUserId={toolHistorySelectedUser.id}
+                        onDeleted={() => void loadToolSummaryForUser(toolHistorySelectedUser)}
+                    />
+                    {detailItem && (
+                        <HistoryDetailModal
+                            item={detailItem}
+                            tool={activeTool}
+                            onClose={() => setDetailItem(null)}
+                        />
+                    )}
+                </>
             )}
 
             <BaseModal open={confirmModal.show} onClose={() => setConfirmModal({ ...confirmModal, show: false })}>

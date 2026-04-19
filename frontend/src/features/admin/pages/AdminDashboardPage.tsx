@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import AdminDashboard from '../index';
-import { log } from '../../../utils/logger'; 
+import { log } from '@/shared/utils/logger'; 
 
 export default function AdminDashboardPage() {
     // === 1. 全局状态 ===

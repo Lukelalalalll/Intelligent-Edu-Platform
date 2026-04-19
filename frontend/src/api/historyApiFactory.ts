@@ -2,7 +2,7 @@
  * historyApiFactory — eliminates 6× duplicate getGenerationHistory / getGenerationDetail / replayGeneration.
  * Each domain calls `createHistoryApi('/diagram')` to get a typed history API scoped to its URL prefix.
  */
-import client from './client';
+import client from '@/shared/api/client';
 
 export interface GenerationHistoryPage<T = any> {
     items: T[];

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import Forgot from '../components/Forgot';
 
 export default function ForgotPage() {

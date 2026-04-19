@@ -13,6 +13,7 @@ export interface ConfirmModalProps {
     confirmLabel?: string;
     cancelLabel?: string;
     confirmDanger?: boolean;
+    hideCancel?: boolean;
     onConfirm: () => void;
     onClose: () => void;
 }
@@ -29,7 +30,7 @@ const overlayStyle: React.CSSProperties = {
 
 const cardStyle: React.CSSProperties = {
     background: '#fff',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-lg, 24px)',
     padding: '28px 32px',
     minWidth: 320,
     maxWidth: 480,
@@ -59,6 +60,7 @@ export default function ConfirmModal({
     confirmLabel = 'Confirm',
     cancelLabel = 'Cancel',
     confirmDanger = false,
+    hideCancel = false,
     onConfirm,
     onClose,
 }: ConfirmModalProps) {
@@ -90,17 +92,19 @@ export default function ConfirmModal({
                             </button>
                         </div>
                         {message && (
-                            <div style={{ marginBottom: 8, color: '#555', fontSize: '1rem' }}>
+                            <div style={{ marginBottom: 8, color: '#555', fontSize: '1rem', whiteSpace: 'pre-wrap' }}>
                                 {message}
                             </div>
                         )}
                         <div style={footerStyle}>
-                            <button
-                                onClick={onClose}
-                                style={{ ...btnBase, background: '#f1f5f9', color: '#333' }}
-                            >
-                                {cancelLabel}
-                            </button>
+                            {!hideCancel && (
+                                <button
+                                    onClick={onClose}
+                                    style={{ ...btnBase, background: '#f1f5f9', color: '#333' }}
+                                >
+                                    {cancelLabel}
+                                </button>
+                            )}
                             <button
                                 onClick={() => { onConfirm(); onClose(); }}
                                 style={{

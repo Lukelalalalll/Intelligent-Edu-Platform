@@ -1,4 +1,4 @@
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 export type FileAssetStatus = 'active' | 'soft_deleted' | 'hard_deleted';
 

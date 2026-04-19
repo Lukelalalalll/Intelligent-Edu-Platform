@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import client from '../api/client';
+import client from './api/client';
 import logoImg from '../assets/hku_logo.png';
-import { log } from '../utils/logger';
+import { log } from './utils/logger';
 import type { User } from '../types/api';
 import { useChatStore } from '../features/chat/store/chatStore';
 import { useChatWebSocket } from '../features/chat/hooks/useChatWebSocket';
@@ -47,6 +47,7 @@ const NAV_SECTIONS: NavSection[] = [
         links: [
             { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
             { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
+            { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
         ],
     },
 ];
@@ -63,6 +64,7 @@ const STUDENT_NAV_SECTIONS: NavSection[] = [
         title: 'AI Tools',
         links: [
             { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
+            { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
         ],
     },
 ];
@@ -87,6 +89,7 @@ const TEACHER_NAV_SECTIONS: NavSection[] = [
         links: [
             { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
             { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
+            { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
         ],
     },
 ];
@@ -97,6 +100,7 @@ const ADMIN_SECTION: NavSection = {
         { to: '/admin/dashboard', label: 'Dashboard', icon: 'fa-shield-alt', tone: 'admin' },
         { to: '/admin/file-center', label: 'File Center', icon: 'fa-folder-tree', tone: 'admin' },
         { to: '/admin/db-console', label: 'Database', icon: 'fa-database', tone: 'database' },
+        { to: '/admin/rag-evaluator', label: 'RAG Evaluator', icon: 'fa-flask', tone: 'admin' },
     ],
 };
 
@@ -110,6 +114,7 @@ export default function Layout() {
     });
     const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
     const isChatPage = location.pathname.startsWith('/chat');
+    const isAIPage = location.pathname === '/ai-interaction';
 
     // Keep chat state synced globally so sidebar unread badge updates in real time.
     // useChatWebSocket handles its own auth guard internally (reads localStorage).
@@ -272,11 +277,14 @@ export default function Layout() {
                 </aside>
             )}
 
-            <main className={styles.mainContent} style={isChatPage ? { gridRow: '2 / span 2' } : {}}>
+            <main
+                className={`${styles.mainContent}${isAIPage ? ' ' + styles.mainContentNoScroll : ''}`}
+                style={isChatPage ? { gridRow: '2 / span 2' } : {}}
+            >
                 <Outlet />
             </main>
 
-            {!isChatPage && (
+            {!isChatPage && !isAIPage && (
                 <footer className={styles.footer}>
                     <div className={styles.footerContent}>
                         <p>&copy; 2025 HKU Intelligent Education Platform. All rights reserved.</p>

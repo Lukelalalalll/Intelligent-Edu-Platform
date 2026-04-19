@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './styles/utilities.css'
 import App from './App'
-import { log } from './utils/logger'
+import { log } from './shared/utils/logger'
 
 log.info('frontend', 'Application bootstrapping')
 

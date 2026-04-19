@@ -8,7 +8,7 @@
  *   npm run openapi:sync
  */
 
-import client from './client';
+import client from '@/shared/api/client';
 import type { components, operations } from '../types/generated/schema';
 
 // ── Convenience aliases ─────────────────────────────────────────────────────

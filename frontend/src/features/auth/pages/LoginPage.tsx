@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import Login from '../components/Login';
 
 export default function LoginPage() {

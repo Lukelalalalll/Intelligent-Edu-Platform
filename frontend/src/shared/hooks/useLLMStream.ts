@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { StartStreamOptions, StreamDeltaFrame } from '../types/llm';
+import type { StartStreamOptions, StreamDeltaFrame } from '@/types/llm';
 
 const viteEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
 const apiRoot = (viteEnv.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');

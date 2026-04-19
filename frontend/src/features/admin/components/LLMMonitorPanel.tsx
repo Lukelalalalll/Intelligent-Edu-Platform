@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from '../styles/LlmMonitorPanel.module.css';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import { formatNumber, formatMs, formatCost } from './llm-monitor/formatters';
 import MiniBarChart from './llm-monitor/MiniBarChart';
 import BreakdownTable from './llm-monitor/BreakdownTable';

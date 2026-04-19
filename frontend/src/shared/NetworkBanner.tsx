@@ -7,8 +7,8 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useToast } from '../hooks/useToast';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useToast } from './hooks/useToast';
 import ToastContainer from './ToastContainer';
 
 export default function NetworkBanner() {

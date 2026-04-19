@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/auth.module.css';
 
@@ -8,23 +8,38 @@ export default function Login({
 }) {
     const cardRef = useRef(null);
     const sheenRef = useRef(null);
+    const rafRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, []);
+
+    const resetWillChange = (e) => {
+        e.currentTarget.style.willChange = 'auto';
+    };
 
     const handleMouseMove = (e) => {
-        if (!cardRef.current || !sheenRef.current) return;
-        const card = cardRef.current;
-        const sheen = sheenRef.current;
-        const rect = card.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const mouseX = e.clientX - centerX;
-        const mouseY = e.clientY - centerY;
-        const rotateX = (mouseY / rect.height) * -8;
-        const rotateY = (mouseX / rect.width) * 8;
-        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-        const sheenX = e.clientX - rect.left;
-        const sheenY = e.clientY - rect.top;
-        sheen.style.background = `radial-gradient(circle at ${sheenX}px ${sheenY}px, rgba(255,255,255,0.3), transparent 60%)`;
-        sheen.style.opacity = '1';
+        if (rafRef.current) return;
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            if (!cardRef.current || !sheenRef.current) return;
+            const card = cardRef.current;
+            const sheen = sheenRef.current;
+            const rect = card.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const mouseX = e.clientX - centerX;
+            const mouseY = e.clientY - centerY;
+            const rotateX = (mouseY / rect.height) * -8;
+            const rotateY = (mouseX / rect.width) * 8;
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            const sheenX = e.clientX - rect.left;
+            const sheenY = e.clientY - rect.top;
+            sheen.style.background = `radial-gradient(circle at ${sheenX}px ${sheenY}px, rgba(255,255,255,0.3), transparent 60%)`;
+            sheen.style.opacity = '1';
+        });
     };
 
     const handleMouseEnter = () => {
@@ -52,11 +67,11 @@ export default function Login({
 
             <div className={styles.welcomeSection}>
                 <h1 className={styles.welcomeTitle}>
-                    <span className={styles.textLine}>Welcome to</span>
-                    <span className={`${styles.textLine} ${styles.textGlow}`}>HKU Intelligent</span>
-                    <span className={styles.textLine}>Education Platform</span>
+                    <span className={styles.textLine} onAnimationEnd={resetWillChange}>Welcome to</span>
+                    <span className={`${styles.textLine} ${styles.textGlow}`} onAnimationEnd={resetWillChange}>HKU Intelligent</span>
+                    <span className={styles.textLine} onAnimationEnd={resetWillChange}>Education Platform</span>
                 </h1>
-                <p className={styles.welcomeSubtitle}>
+                <p className={styles.welcomeSubtitle} onAnimationEnd={resetWillChange}>
                     Empowering your future with AI-driven learning experiences.
                     <br />Sign in to continue your E-learning journey.
                 </p>
@@ -69,6 +84,7 @@ export default function Login({
                     ref={cardRef}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
+                    onAnimationEnd={resetWillChange}
                 >
                     <div
                         ref={sheenRef}

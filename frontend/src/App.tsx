@@ -3,26 +3,35 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Toaster } from 'sonner';
 import ScrollToTop from './shared/ScrollToTop';
 import Layout from './shared/Layout';
-import { CourseProvider } from './hooks/useCourseContext';
+import { CourseProvider } from './shared/hooks/useCourseContext';
 import ErrorBoundary from './shared/ErrorBoundary';
 import RouteErrorBoundary from './shared/RouteErrorBoundary';
 
 import {
   LoginPage, RegisterPage, ForgotPage, ProfilePage,
   HomePage, HomeStudentPage,
-  AdminDashboardPage, AdminDbConsolePage, AdminFileCenterPage,
+  AdminDashboardPage, AdminDbConsolePage, AdminFileCenterPage, RagEvaluatorPage,
   AIInteractPage,
-  MailboxPage, GradingWorkbenchPage,
+  MailboxPage, GradingWorkbench,
   KnowledgeBasePage, DiagramPage, QuestionGeneratorPage,
   MdProcessorPage, HighlighterPage, SpecifyPage, QuickProcessPage, PptTemplatePage,
+  SlideEditorPage,
   StudyNotesPage, VideoGenPage,
   ChatPage, PublishHomework,
+  FileCenterPage,
 } from './router';
 
-import client from './api/client';
+import client from './shared/api/client';
 
 
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+/** Forces a full remount of children when the given URL param changes. */
+function KeyedByParam({ param, children }: { param: string; children: ReactNode }) {
+  const location = useLocation();
+  const match = location.pathname.match(new RegExp(`/${param}/([^/]+)`));
+  return <React.Fragment key={match?.[1]}>{children}</React.Fragment>;
+}
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -127,16 +136,21 @@ function App() {
           <Route path="admin/dashboard" element={<RouteErrorBoundary><ProtectedRoute><AdminDashboardPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/db-console" element={<RouteErrorBoundary><ProtectedRoute><AdminDbConsolePage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="admin/file-center" element={<RouteErrorBoundary><ProtectedRoute><AdminFileCenterPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="admin/rag-evaluator" element={<RouteErrorBoundary><ProtectedRoute><RagEvaluatorPage /></ProtectedRoute></RouteErrorBoundary>} />
 
           <Route path="diagram" element={<RouteErrorBoundary><ProtectedRoute><DiagramPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="study-notes" element={<RouteErrorBoundary><ProtectedRoute><StudyNotesPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="knowledge-base" element={<RouteErrorBoundary><ProtectedRoute><KnowledgeBasePage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="video-gen" element={<RouteErrorBoundary><ProtectedRoute><VideoGenPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="file-center" element={<RouteErrorBoundary><ProtectedRoute><FileCenterPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="mailbox" element={<RouteErrorBoundary><ProtectedRoute><MailboxPage /></ProtectedRoute></RouteErrorBoundary>} />
-          <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><GradingWorkbenchPage /></ProtectedRoute></RouteErrorBoundary>} />
+          <Route path="mailbox/grade_workbench/:submissionId" element={<RouteErrorBoundary><ProtectedRoute><KeyedByParam param="grade_workbench"><GradingWorkbench /></KeyedByParam></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="chat" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
           <Route path="chat/room/:roomId" element={<RouteErrorBoundary><ProtectedRoute><ChatPage /></ProtectedRoute></RouteErrorBoundary>} />
         </Route>
+
+        {/* Full-screen editor — outside <Layout> (no sidebar/navbar) */}
+        <Route path="slides/editor/:sessionId" element={<RouteErrorBoundary><ProtectedRoute><SlideEditorPage /></ProtectedRoute></RouteErrorBoundary>} />
       </Routes>
       </Suspense>
       </CourseProvider>

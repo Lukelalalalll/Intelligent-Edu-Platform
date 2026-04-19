@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import client from '../api/client';
-import type { Course } from '../types/api';
+import type { Course } from '@/types/api';
 
 interface CourseContextValue {
     courses: Course[];

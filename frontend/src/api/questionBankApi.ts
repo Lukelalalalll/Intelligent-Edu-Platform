@@ -7,7 +7,7 @@
  * FastAPI routes return untyped `unknown` in the OpenAPI spec.
  * Regenerate schema with: npm run openapi:sync
  */
-import client from './client';
+import client from '@/shared/api/client';
 import type { components, operations } from '../types/generated/schema';
 import type {
     Sub2UploadResponse,

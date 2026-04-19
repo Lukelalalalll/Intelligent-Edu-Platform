@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AdminDashboard.module.css';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 
 interface StaffCode {
     code: string;

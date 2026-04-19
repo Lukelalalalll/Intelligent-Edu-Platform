@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import client from '../../../api/client';
+import client from '@/shared/api/client';
 import AdminDbConsole from './AdminDbConsole';
 
 export default function AdminDbConsolePage() {
