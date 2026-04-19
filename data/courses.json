@@ -11,6 +11,12 @@
       "studentList": [
         {
           "studentId": "69cbe9820c8e1c164fefa885"
+        },
+        {
+          "studentId": "69d61e9c385193d3ccf2cd17"
+        },
+        {
+          "studentId": "69d61eab385193d3ccf2cd18"
         }
       ],
       "assignments": []
@@ -23,7 +29,17 @@
       "teacher": "",
       "degreeLevel": "bachelor",
       "semester": "2026-spring",
-      "studentList": [],
+      "studentList": [
+        {
+          "studentId": "69cbe9820c8e1c164fefa885"
+        },
+        {
+          "studentId": "69d61e9c385193d3ccf2cd17"
+        },
+        {
+          "studentId": "69d61eab385193d3ccf2cd18"
+        }
+      ],
       "assignments": []
     }
   ]
