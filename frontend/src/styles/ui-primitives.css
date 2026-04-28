@@ -1,4 +1,4 @@
-/* 1. 通用版心容器 */
+/* 1. Shared centred container */
 .container,
 .image-selector-container {
     max-width: 1440px;
@@ -8,7 +8,7 @@
     flex: 1;
 }
 
-/* 2. 通用顶部动态渐变横幅 (Banner) */
+/* 2. Shared top dynamic gradient banner */
 .page-header,
 .header {
     text-align: center;
@@ -93,7 +93,7 @@
     }
 }
 
-/* 3. 通用玻璃态卡片 (涵盖各页面的 .card, .step-container, 以及各 section) */
+/* 3. Shared frosted-glass card (covers .card, .step-container, and various section classes) */
 .card,
 .step-container,
 .upload-section,
@@ -145,7 +145,7 @@
     background-color: rgba(255, 255, 255, 0.95);
 }
 
-/* 4. 通用圆圈图标与卡片标题 */
+/* 4. Shared circular icon and card title */
 .card-header,
 .step-title,
 .card-title {
@@ -175,7 +175,7 @@
     flex-shrink: 0;
 }
 
-/* 悬停变绿微动 */
+/* Subtle green animation on hover */
 .card:hover .card-icon,
 .step-container:hover .step-number,
 .card:hover .card-title i,
@@ -188,7 +188,7 @@
     box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3);
 }
 
-/* 5. 通用拖拽上传区 */
+/* 5. Shared drag-and-drop upload area */
 .upload-area,
 .file-drop-area {
     border: 2px dashed rgba(0, 123, 85, 0.2);
@@ -223,7 +223,7 @@
     opacity: 1;
 }
 
-/* 6. 通用表单控件 */
+/* 6. Shared form controls */
 .form-control,
 input[type="text"],
 .dropdown,
@@ -248,7 +248,7 @@ input[type="text"]:focus,
     box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
 }
 
-/* 7. 通用主按钮样式 */
+/* 7. Shared primary button */
 .btn,
 .g-btn-primary,
 .generate-btn,
@@ -289,7 +289,7 @@ input[type="text"]:focus,
     transform: none;
 }
 
-/* 9. 通用下拉选择器 (Select) 优雅样式 */
+/* 9. Shared elegant Select dropdown */
 select {
     appearance: none;
     -webkit-appearance: none;
@@ -344,7 +344,7 @@ select option {
     padding: 12px;
 }
 
-/* 10. HKU 高级定制版下拉选择器 (Custom Select) */
+/* 10. HKU custom-styled Select */
 select.hku-select {
     display: none;
 }

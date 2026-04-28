@@ -207,3 +207,9 @@
 .delete-chat-btn:active {
     transform: scale(0.95);
 }
+
+/* Shimmer animation for skeleton loading items (global keyframes, not module-scoped) */
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

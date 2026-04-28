@@ -13,7 +13,7 @@ main {
 }
 
 /* =========================================
-   1. 主工作区布局
+   1. Main Workspace Layout
    ========================================= */
 .contentShell {
     max-width: 1920px;
@@ -113,7 +113,7 @@ main {
 }
 
 /* =========================================
-   3. 动画体系 (继承你的 slideInRight 需求)
+   3. Animation System
    ========================================= */
 @keyframes slideInRight {
     from {
@@ -159,13 +159,13 @@ main {
     }
 }
 
-/* 统一入场动画挂载点 */
+/* Unified entrance animation mount point */
 .animatedElement {
     opacity: 0;
     animation: slideInRight 0.5s var(--ease-spring) forwards;
 }
 
-/* 阶梯延迟：形成瀑布流视觉感 */
+/* Staggered delays create a waterfall-style visual flow */
 .delay1 {
     animation-delay: 0.2s;
 }
@@ -215,7 +215,7 @@ main {
 }
 
 /* =========================================
-   4. 通用卡片样式 (用于 PDF & 打分面板)
+   4. Shared Card Styles (PDF & scoring panels)
    ========================================= */
 .card {
     background: #ffffff;
@@ -236,7 +236,7 @@ main {
     border-color: rgba(0, 123, 85, 0.15);
 }
 
-/* 顶部的渐变装饰线 */
+/* Gradient accent bar at the top of the card */
 .card::before {
     content: "";
     position: absolute;
@@ -250,7 +250,7 @@ main {
 }
 
 /* =========================================
-   5. PDF 卡片内细节
+   5. PDF Card Inner Details
    ========================================= */
 .cardHeader {
     display: flex;
@@ -279,7 +279,7 @@ main {
     border: 1px solid rgba(0, 184, 217, 0.2) !important;
     border-left: 4px solid var(--aurora-cyan) !important;
     opacity: 1;
-    /* 避免再次执行入场动画 */
+    /* Prevent entrance animation from running again */
     animation: none;
 }
 
@@ -316,7 +316,7 @@ main {
 }
 
 /* =========================================
-   7. 按钮与全局杂项
+   7. Buttons and Global Miscellaneous
    ========================================= */
 .primaryBtn {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -379,7 +379,7 @@ main {
     animation: slideDownFade 0.4s var(--ease-spring);
 }
 
-/* 响应式调整 */
+/* Responsive adjustments */
 @media (max-width: 1400px) {
     .page {
         padding: 16px 14px 18px;

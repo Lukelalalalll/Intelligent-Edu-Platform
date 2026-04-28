@@ -10,13 +10,13 @@
 .layoutGrid {
     display: grid;
     grid-template-columns: 1.8fr 1fr;
-    /* 左侧内容区稍大，提供阅读舒适度 */
+    /* Left content column is slightly wider for comfortable reading */
     gap: 2.5rem;
     align-items: stretch;
     margin-top: 1rem;
 }
 
-/* --- 卡片通用基础 --- */
+/* --- Shared card base styles --- */
 .cardTitle {
     font-size: 1.5rem;
     color: var(--text-main);
@@ -41,11 +41,11 @@
     font-size: 1.3rem;
 }
 
-/* --- 1. Original Content 阅读器优化 (重点) --- */
+/* --- 1. Original Content reader — layout refinements (primary focus) --- */
 .contentCard {
     height: 100%;
     position: relative;
-    /* 让高度由右侧的 settingsCard 来主导 */
+    /* Allow the settings card on the right to drive the overall height */
 }
 
 .contentCardBody {
@@ -61,12 +61,12 @@
 
 .markdownContent {
     flex: 1;
-    min-height: 0; /* 必须有这行以便内部滚动生效 */
+    min-height: 0; /* Required for inner scroll to work */
     overflow-y: auto;
     padding: 10px 20px 10px 0;
 }
 
-/* 章节容器 */
+/* Section container */
 .sectionItem {
     background: #fff;
     border-radius: var(--radius-md);
@@ -92,7 +92,7 @@
     border-bottom: 2px dashed rgba(0, 123, 85, 0.1);
 }
 
-/* 优化内部 HTML 渲染排版 */
+/* Refine the typography of rendered inner HTML */
 .sectionItem :global(p) {
     line-height: 1.8;
     color: var(--text-sub);
@@ -107,7 +107,7 @@
     color: var(--text-sub);
 }
 
-/* --- 2. 设置面板优化 --- */
+/* --- 2. Settings panel refinements --- */
 .settingsCard {
     padding: 2.5rem !important;
 }
@@ -205,7 +205,7 @@
     font-weight: 700;
 }
 
-/* Talking Script 面板微调 */
+/* Talking Script panel tweaks */
 .scriptOptionsPanel {
     background: #ffffff;
     border: 1px solid rgba(32, 101, 209, 0.15);
@@ -216,7 +216,7 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 }
 
-/* --- 3. 生成结果预览优化 --- */
+/* --- 3. Generated result preview refinements --- */
 .slidesGridLayout {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -275,7 +275,7 @@
     font-size: 1.05rem;
 }
 
-/* 自定义滚动条 */
+/* Custom scrollbar */
 .markdownContent::-webkit-scrollbar {
     width: 6px;
 }
@@ -289,7 +289,7 @@
     background: var(--primary-color);
 }
 
-/* --- 动画 --- */
+/* --- Animations --- */
 @keyframes slideUpFade {
     from {
         opacity: 0;

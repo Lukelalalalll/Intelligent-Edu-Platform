@@ -4,7 +4,7 @@
     --auth-radius-lg: var(--radius-lg);
     --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    /* 容器基础样式 */
+    /* Base container styles */
     min-height: calc(100vh - var(--nav-height, 72px));
     width: 100%;
     flex: 1;
@@ -58,7 +58,7 @@
     }
 }
 
-/* 登录页特有光球覆盖 (居右且动画反向) */
+/* Login-page-specific orb override — positioned to the right with reversed animation */
 .splitLayout .bgOrb {
     left: auto;
     right: -10%;
@@ -78,11 +78,11 @@
 }
 
 
-/* ================= 基础卡片 & 头部通用 ================= */
+/* ================= Base Card & Header ================= */
 .authContainer {
     width: 100%;
     max-width: 480px;
-    /* Register 默认宽度 */
+    /* Default width for the Register form */
     z-index: 10;
     display: flex;
     justify-content: center;
@@ -131,7 +131,7 @@
     font-size: 1rem;
 }
 
-/* 登录页特有头部样式覆盖 */
+/* Login-page-specific header style override */
 .splitLayout .authHeader {
     margin-bottom: 2rem;
 }
@@ -173,7 +173,7 @@
 }
 
 
-/* ================= 表单输入组通用 ================= */
+/* ================= Form Input Group (shared) ================= */
 .authForm .inputGroup {
     position: relative;
     margin-bottom: 1.5rem;
@@ -193,7 +193,7 @@
 .authForm .inputGroup input {
     width: 100%;
     padding: 16px 45px 16px 48px;
-    /* 给左右图标留出空间 */
+    /* Space reserved for left/right icons */
     font-size: 1rem;
     color: var(--text-main);
     background: var(--auth-bg-input);
@@ -215,7 +215,7 @@
     padding: 0 4px;
 }
 
-/* 聚焦动画 */
+/* Focus animation */
 .authForm .inputGroup input:focus,
 .authForm .inputGroup input:not(:placeholder-shown) {
     background: #fff;
@@ -238,7 +238,7 @@
     color: var(--primary-color);
 }
 
-/* 密码显隐图标 */
+/* Password show/hide toggle icon */
 .authForm .togglePassword {
     position: absolute;
     right: 16px;
@@ -298,7 +298,7 @@
     margin-top: 0;
 }
 
-/* Login按钮特定微调 */
+/* Login button fine-tuning */
 
 .authForm .btnSubmit:hover {
     background: var(--primary-dark);
@@ -334,7 +334,7 @@
     text-decoration: underline;
 }
 
-/* Login 特定 Footer 样式覆盖 */
+/* Login-specific footer style override */
 .splitLayout .authFooter {
     padding-top: 1.5rem;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
@@ -361,8 +361,8 @@
 }
 
 
-/* ================= 提示信息组件 (Login Message & Register Toast) ================= */
-/* 1. Login 内联 Message */
+/* ================= Notification Components (Login inline message & Register toast) ================= */
+/* 1. Login inline message */
 .authCard .message {
     padding: 10px 14px;
     border-radius: 8px;
@@ -398,7 +398,7 @@
     }
 }
 
-/* 2. Register 全局 Toast */
+/* 2. Register global toast notification */
 .toastContainer {
     position: fixed;
     top: 30px;
@@ -468,7 +468,7 @@
 }
 
 
-/* ================= Login 专属 - Cinematic Premium Reveal ================= */
+/* ================= Login Exclusive — Cinematic Premium Reveal ================= */
 .splitLayout {
     justify-content: space-between;
     padding: 2rem 10%;
@@ -539,12 +539,12 @@
     }
 }
 
-/* Login 卡片定位与专有出场动画 */
+/* Login card positioning and entrance animation */
 .splitLayout .authContainer {
     flex: 0 1 auto;
     display: flex;
     justify-content: flex-end;
-    /* 靠右排布 */
+    /* Align to the right */
     width: 100%;
     max-width: 440px;
 }
@@ -569,7 +569,7 @@
 }
 
 
-/* ================= 响应式布局适配 ================= */
+/* ================= Responsive Layout ================= */
 @media (max-width: 1200px) {
     .splitLayout {
         padding: 2rem 6%;
@@ -626,20 +626,20 @@
 }
 
 
-/* 1. 当页面处于 Auth 状态时，清除 Footer 顶部的 4rem margin */
+/* 1. Remove top margin from the footer when the page is in auth mode */
 :global(body):has(.authWrapper) :global(.footer) {
     margin-top: 0;
     border-top: none;
-    /* 可选：去掉顶部边线，衔接更完美 */
+    /* Optional: remove top border for a seamless join */
 }
 
-/* 2. 让 main 变成 flex 容器，确保内部的 .authWrapper 能够绝对撑满所有剩余高度 */
+/* 2. Make main a flex container so that .authWrapper can fill all remaining height */
 :global(main):has(.authWrapper) {
     display: flex;
     flex-direction: column;
 }
 
-/* 3. 让绿色背景区吸收掉所有剩余空间，死死贴住 Footer */
+/* 3. Let the gradient background region absorb remaining space and stay flush with the footer */
 .authWrapper {
     flex: 1;
 }

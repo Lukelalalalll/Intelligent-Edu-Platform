@@ -751,3 +751,103 @@
     cursor: not-allowed;
 }
 
+/* ── Upload Tasks — Progress Cards ────────────── */
+
+.upload-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.upload-task {
+    background: var(--bg-surface, #f9fafb);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.85rem 1rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.upload-task-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-main, #111827);
+    font-weight: 500;
+}
+
+.upload-task-info i {
+    color: var(--primary-color, #007B55);
+    font-size: 0.95rem;
+}
+
+.upload-task-status {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-sub, #6b7280);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 123, 85, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0d9488, #007B55);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
+
+/* Indexing phase — pulsing bar at 100% upload */
+.progress-fill-indexing {
+    height: 100%;
+    background: linear-gradient(90deg, #0d9488, #007B55, #0d9488);
+    background-size: 200% 100%;
+    border-radius: 999px;
+    animation: indexingPulse 1.5s ease-in-out infinite;
+    width: 100%;
+}
+
+@keyframes indexingPulse {
+    0%   { background-position: 0% 0%; }
+    50%  { background-position: 100% 0%; }
+    100% { background-position: 0% 0%; }
+}
+
+/* ── Indexed Docs — Fade-in on refresh ────────────── */
+
+.doc-entry-appear {
+    animation: docFadeIn 0.35s ease-out both;
+}
+
+@keyframes docFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

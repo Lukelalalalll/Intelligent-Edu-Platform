@@ -13,6 +13,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  /* Promote overlay to its own GPU compositing layer so backdrop-filter
+     is rasterized once and composited on the GPU — not recalculated on
+     every re-render of elements underneath (e.g. incoming WS messages). */
+  will-change: opacity;
+  transform: translateZ(0);
+  /* Contain layout/style changes to this element so the browser does not
+     propagate paint invalidation upward into the chat content layer. */
+  contain: layout style;
 }
 
 .modal {
@@ -24,6 +32,10 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
   overflow-y: auto;
+  /* Own compositing layer for spring animation — avoids forcing a
+     repaint of the overlay's blur on each animation frame. */
+  will-change: transform, opacity;
+  contain: layout style paint;
 }
 
 /* Ensure empty states within modal fit the new layout */

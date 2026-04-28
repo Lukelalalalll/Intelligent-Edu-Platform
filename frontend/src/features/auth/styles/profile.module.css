@@ -1,13 +1,13 @@
 /* profile.module.css — tokens inherited from base.css */
 
-/* 覆盖默认的 main 容器限制，实现全屏背景 
-   (使用一个全局占位类来规避 CSS Module 编译 :has 时可能遇到的问题) */
+/* Override default main container constraints to achieve a full-screen background.
+   A global placeholder class is used to work around a CSS Modules :has compilation issue. */
 :global(main:has(.global-profile-wrapper)) {
     padding: 0 !important;
     max-width: 100% !important;
 }
 
-/* --- 全屏渐变背景与光球 --- */
+/* --- Full-screen gradient background and ambient orb --- */
 .profileWrapper {
     min-height: calc(100vh - 70px);
     width: 100%;
@@ -68,7 +68,7 @@
     gap: 24px;
     position: relative;
     z-index: 1;
-    /* 确保在光球之上 */
+    /* Ensures content stacks above the ambient orb */
 }
 
 .profileGrid {
@@ -85,7 +85,7 @@
     gap: 24px;
 }
 
-/* --- 卡片通用样式 (毛玻璃效果 + 3D动画) --- */
+/* --- Shared card styles (frosted-glass effect + 3D entrance animation) --- */
 .profileHeaderCard,
 .profileEditCard,
 .profileCoursesCard {
@@ -127,7 +127,7 @@
     }
 }
 
-/* --- 顶部卡片：头像与信息 --- */
+/* --- Top card: avatar and profile information --- */
 .avatarCircle {
     width: 100px;
     height: 100px;
@@ -299,7 +299,7 @@
     margin: 0;
 }
 
-/* --- 静态固定标签输入框组 --- */
+/* --- Static labelled input group --- */
 .formGroup {
     margin-bottom: 1.5rem;
     text-align: left;
@@ -369,7 +369,7 @@
     color: var(--primary-color);
 }
 
-/* 保存按钮 */
+/* Save button */
 .btnSave {
     width: 100%;
     padding: 16px;

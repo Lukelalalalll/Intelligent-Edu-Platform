@@ -17,7 +17,7 @@
     50% { transform: translate(40px, 60px) scale(1.1); }
 }
 
-/* 使用 :global 穿透，选中全局的 auth-card 进行覆盖 */
+/* Use :global to pierce CSS Modules scope and override the global .auth-card class */
 .forgotWrapper :global(.auth-card) {
     padding-top: 2rem;
     padding-bottom: 2rem;

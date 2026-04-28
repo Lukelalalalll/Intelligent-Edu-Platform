@@ -213,7 +213,7 @@ main {
     transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
     padding: 0 !important;
     margin-bottom: 0 !important;
-    /* 移除了 opacity 和 animation */
+    /* Removed opacity and animation */
 }
 
 .card::before {
@@ -764,7 +764,7 @@ main {
     margin-bottom: 20px;
     font-size: 0.95rem;
     line-height: 1.5;
-    /* 移除了 opacity 和 animation */
+    /* Removed opacity and animation */
 }
 
 .message.user-message {
@@ -1268,4 +1268,71 @@ main {
     .message {
         font-size: 0.82rem !important;
     }
+}
+
+/* Provider Selector in AIChatBox */
+.provider-selector-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+.provider-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.provider-btn i {
+    font-size: 0.75rem;
+}
+
+.provider-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.03);
+    color: #334155;
+}
+
+.provider-btn.provider-active {
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-color);
+    border-color: rgba(0, 123, 85, 0.2);
+}
+
+.provider-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+.brand-badge.local_ollama {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.brand-badge.coze {
+    background: rgba(139, 92, 246, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(139, 92, 246, 0.2);
 }

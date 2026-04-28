@@ -109,7 +109,7 @@
 }
 .w100 { width: 100%; padding: 14px; font-size: 1rem; }
 
-/* ======== Markdown 渲染区 ======== */
+/* ======== Markdown render area ======== */
 .markdownContainer {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(10px);
@@ -129,23 +129,22 @@
     animation: smoothFadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-/* 划词选中反馈 */
+/* Text-selection feedback on mouse drag */
 .markdownContainer ::selection {
     background: rgba(0, 184, 217, 0.25);
     color: inherit;
     text-shadow: none;
 }
 
-/* ======== 【终极优化】文档内高亮呈现效果 ======== */
-/* 提高权重，强制穿透 Markdown 的默认样式 */
+/* ======== In-document highlight rendering (elevated specificity to pierce Markdown defaults) ======== */
 .markdownContainer :global(.highlighted) {
-    /* 真实的荧光笔渐变色 */
+    /* True highlighter gradient colour */
     background-image: linear-gradient(120deg, rgba(0, 184, 217, 0.35), rgba(32, 101, 209, 0.25)) !important;
     background-repeat: no-repeat;
     background-position: left center;
     background-size: 100% 100%;
 
-    /* 核心优雅属性：保证跨行的高亮，每一行都有完美的圆角，不会断层 */
+    /* Core elegance: ensures multi-line highlights have perfect border-radius on every line without gaps */
     -webkit-box-decoration-break: clone !important;
     box-decoration-break: clone !important;
 
@@ -153,18 +152,18 @@
     padding: 2px 6px !important;
     border-radius: 4px;
 
-    /* 文字颜色加深，加粗，确保在荧光底色上极度清晰 */
+    /* Darken and bold the text for maximum legibility on the highlight background */
     color: #004d5c !important;
     font-weight: 600 !important;
     cursor: pointer;
     display: inline;
 
-    /* 荧光笔涂抹动画（从左到右划过） */
+    /* Marker sweep animation (left to right) */
     animation: markerSweep 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     transition: all 0.3s ease;
 }
 
-/* 鼠标悬浮在高亮文本上时的优雅反馈 */
+/* Elegant hover feedback on highlighted text */
 .markdownContainer :global(.highlighted:hover) {
     background-image: linear-gradient(120deg, rgba(0, 184, 217, 0.5), rgba(32, 101, 209, 0.35)) !important;
     border-bottom-color: #00B8D9 !important;
@@ -173,7 +172,7 @@
     text-shadow: 0 0 1px rgba(255,255,255,0.4);
 }
 
-/* 移除高亮时的柔和褪色动画 */
+/* Soft fade-out animation when removing a highlight */
 .markdownContainer :global(.highlighted.un-highlighting) {
     background-image: none !important;
     background-color: transparent !important;
@@ -185,7 +184,7 @@
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Markdown 排版细节 */
+/* Markdown typography details */
 .markdownContainer p { margin-bottom: 1.5rem; }
 .markdownContainer h1, .markdownContainer h2, .markdownContainer h3 {
     color: #1a1a1a; font-weight: 800; margin-top: 2rem; margin-bottom: 1rem; line-height: 1.3;
@@ -196,7 +195,7 @@
     padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; font-style: italic; color: #555;
 }
 
-/* 代码块美化 */
+/* Code block styling */
 .markdownContainer p code, .markdownContainer li code {
     background: rgba(0,0,0,0.05); color: #d63384; padding: 0.2em 0.4em;
     border-radius: 6px; font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
@@ -222,7 +221,7 @@
 .markdownContainer pre::-webkit-scrollbar-track { background: transparent; }
 .markdownContainer pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
-/* 悬浮显示的 Copy 按钮 */
+/* Copy button shown on hover */
 .markdownContainer pre button {
     position: absolute; top: 10px; right: 12px; opacity: 0;
     transform: translateY(-5px); background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px);
@@ -242,7 +241,7 @@
 }
 .loadingState i { font-size: 2.5rem; margin-bottom: 1rem; color: var(--primary-color); }
 
-/* ======== 右侧高亮面板优化 ======== */
+/* ======== Right-side highlights panel ======== */
 .panelLayout { display: flex; flex-direction: column; height: 100%; }
 .panelControls { margin-bottom: 1.5rem; }
 .statusMessage { margin-top: 10px; font-size: 0.9rem; text-align: center; font-weight: 500; min-height: 20px; transition: color 0.3s; }
@@ -316,8 +315,8 @@
     transform: rotate(90deg) scale(1.1); box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
 }
 
-/* ======== 动画定义 ======== */
-/* 荧光笔画线动画：从左往右涂抹 */
+/* ======== Animation definitions ======== */
+/* Marker sweep animation: paint left to right */
 @keyframes markerSweep {
     0% { background-size: 0% 100%; color: inherit; border-bottom-color: transparent; }
     50% { color: #004d5c; border-bottom-color: rgba(0, 184, 217, 0.2); }

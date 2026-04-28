@@ -1,0 +1,274 @@
+/* =========================================
+   Attachment Preview (above input wrapper)
+   ========================================= */
+.attachmentPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 0 8px;
+    width: 100%;
+}
+
+/* ── File card (input area) ── */
+.fileCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f8fafb 0%, #f0f4f3 100%);
+    border: 1px solid rgba(0, 123, 85, 0.10);
+    width: 100%;
+    cursor: default;
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+    position: relative;
+    overflow: hidden;
+    animation: fileCardAppear 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes fileCardAppear {
+    0%   { opacity: 0; transform: translateY(8px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fileCard:hover {
+    border-color: rgba(0, 123, 85, 0.25);
+    box-shadow: 0 2px 12px rgba(0, 123, 85, 0.08);
+    transform: translateY(-1px);
+}
+
+/* Shimmer progress overlay — plays once on attach */
+.fileCard::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(0,123,85,0.06) 40%, rgba(0,123,85,0.10) 50%, rgba(0,123,85,0.06) 60%, transparent 100%);
+    animation: fileShimmer 1.2s ease-out forwards;
+    pointer-events: none;
+}
+@keyframes fileShimmer {
+    0%   { transform: translateX(-100%); opacity: 1; }
+    70%  { transform: translateX(100%); opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
+}
+
+.fileCardIconWrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.15rem;
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-color);
+    transition: background 0.2s;
+}
+.fileCard:hover .fileCardIconWrap {
+    background: rgba(0, 123, 85, 0.14);
+}
+
+/* Legacy icon class (fallback) */
+.fileCardIcon {
+    font-size: 1.15rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.fileCardInfo {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+}
+
+.fileCardName {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.fileCardMeta {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.attachmentRemoveBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+}
+.attachmentRemoveBtn:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+
+/* ── File type icon color variants ── */
+.fileIconPdf  { background: rgba(239, 68, 68, 0.08); color: #dc2626; }
+.fileIconWord { background: rgba(37, 99, 235, 0.08); color: #2563eb; }
+.fileIconImage { background: rgba(168, 85, 247, 0.08); color: #a855f7; }
+.fileIconCode { background: rgba(234, 179, 8, 0.08); color: #b45309; }
+.fileIconDefault { background: rgba(0, 123, 85, 0.08); color: var(--primary-color); }
+
+/* =========================================
+   Paperclip / Attach button
+   ========================================= */
+.attachBtn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    flex-shrink: 0;
+}
+
+.attachBtn:hover {
+    color: var(--primary-color);
+}
+
+/* =========================================
+   Web Search Toolbar
+   ========================================= */
+.webSearchBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 8px;
+}
+
+/* Globe toggle button */
+.webToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(0, 0, 0, 0.10);
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+    flex-shrink: 0;
+}
+.webToggleBtn i {
+    font-size: 0.82rem;
+}
+.webToggleBtn:hover {
+    border-color: rgba(0, 123, 85, 0.35);
+    color: var(--primary-color, #007b55);
+    background: rgba(0, 123, 85, 0.06);
+}
+/* Active (web ON) state */
+.webToggleBtnActive {
+    background: rgba(0, 123, 85, 0.10);
+    border-color: rgba(0, 123, 85, 0.45);
+    color: var(--primary-color, #007b55);
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
+}
+.webToggleBtnActive:hover {
+    background: rgba(0, 123, 85, 0.16);
+}
+
+/* Engine selector wrapper */
+.engineSelector {
+    position: relative;
+}
+
+.engineTrigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(0, 123, 85, 0.3);
+    background: #fff;
+    color: #1e293b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    white-space: nowrap;
+    animation: engineFadeIn 0.2s ease;
+}
+@keyframes engineFadeIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.engineTrigger i {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+.engineTrigger:hover {
+    border-color: rgba(0, 123, 85, 0.6);
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
+}
+
+/* Engine dropdown */
+.engineDropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    z-index: 200;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    padding: 6px;
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: dropUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes dropUp {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.engineOption {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: #374151;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.engineOption:hover {
+    background: rgba(0, 123, 85, 0.07);
+    color: var(--primary-color, #007b55);
+}
+.engineOptionActive {
+    background: rgba(0, 123, 85, 0.11);
+    color: var(--primary-color, #007b55);
+    font-weight: 700;
+}

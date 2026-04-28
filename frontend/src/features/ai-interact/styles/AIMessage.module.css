@@ -4,7 +4,7 @@
    message actions, syntax highlighting, typewriter cursor
    ============================================= */
 
-/* 消息区 */
+/* Message area */
 .chat-messages.full-workspace {
     flex: 1;
     padding: 20px 10px;
@@ -22,7 +22,7 @@
     border-radius: var(--radius-pill);
 }
 
-/* 气泡样式 */
+/* Message bubble */
 .message {
     display: flex;
     gap: 14px;
@@ -30,38 +30,63 @@
     font-size: 1rem;
     line-height: 1.6;
     opacity: 0;
-    animation: slideIn 0.4s ease forwards;
+    animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     width: 100%;
 }
 
 @keyframes slideIn {
-    to {
+    0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
+/* ── File card (in sent message bubble) ── */
 .fileCard {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 14px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    width: fit-content;
-    max-width: 250px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    width: 100%;
+    max-width: 100%;
     cursor: default;
+    position: relative;
+    overflow: hidden;
+    animation: fileSendIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes fileSendIn {
+    0%   { opacity: 0; transform: translateX(30px) scale(0.95); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+.fileCard:hover {
+    background: rgba(0, 123, 85, 0.04);
+    border-color: rgba(0, 123, 85, 0.18);
+    box-shadow: 0 2px 8px rgba(0, 123, 85, 0.06);
 }
 
-.fileCard:hover {
-    background: rgba(0, 123, 85, 0.05);
-    border-color: rgba(0, 123, 85, 0.2);
+.fileCardIconWrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-color);
 }
 
 .fileCardIcon {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: var(--primary-color);
     flex-shrink: 0;
 }
@@ -70,26 +95,43 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
+    gap: 1px;
 }
 
 .fileCardName {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1f1f1f;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.3;
 }
 
 .fileCardSize {
-    font-size: 0.75rem;
-    color: #6b7280;
+    font-size: 0.73rem;
+    color: #94a3b8;
+    font-weight: 400;
+    line-height: 1.3;
 }
 
 .user-message .fileCard {
-    background: rgba(255, 255, 255, 0.5);
-    border-color: rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.3);
 }
+.user-message .fileCard:hover {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* File type icon color variants (message bubble) */
+.fileIconPdf  { background: rgba(239, 68, 68, 0.10); color: #dc2626; }
+.fileIconWord { background: rgba(37, 99, 235, 0.10); color: #2563eb; }
+.fileIconImage { background: rgba(168, 85, 247, 0.10); color: #a855f7; }
+.fileIconCode { background: rgba(234, 179, 8, 0.10); color: #b45309; }
+.fileIconDefault { background: rgba(0, 123, 85, 0.08); color: var(--primary-color); }
 
 .message.ai-message {
     flex-direction: row;
@@ -97,6 +139,18 @@
 
 .message.user-message {
     flex-direction: row-reverse;
+    animation: elasticPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes elasticPop {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateX(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateX(0);
+    }
 }
 
 .message .avatar {
@@ -131,47 +185,82 @@
 
 .ai-message .bubble {
     background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: none;
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+        0 2px 4px -1px rgba(0, 0, 0, 0.03),
+        0 0 0 1px rgba(0, 0, 0, 0.03) inset;
     border-radius: 20px;
-    border-top-left-radius: 6px;
-    padding: 14px 20px;
+    border-top-left-radius: 12px;
+    padding: 24px 34px;
+    color: #334155;
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+    transition: box-shadow 0.3s ease;
+}
+
+.ai-message .bubble:hover {
+    box-shadow: 
+        0 10px 15px -3px rgba(0, 0, 0, 0.06), 
+        0 4px 6px -2px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(0, 0, 0, 0.03) inset;
 }
 
 .user-message .bubble {
-    background: #f0f4f9;
-    color: #1f1f1f;
-    padding: 14px 20px;
+    background: linear-gradient(135deg, #f0f7f4 0%, #e2f1ea 100%);
+    color: #064e3b;
+    border: 1px solid rgba(0, 123, 85, 0.08);
+    padding: 16px 24px;
     border-radius: 24px;
-    border-bottom-right-radius: 6px;
-    box-shadow: none;
+    border-bottom-right-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0, 123, 85, 0.04);
+    font-weight: 400;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-message .bubble:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 85, 0.08);
 }
 
 /* =========================================
    Markdown rendering
    ========================================= */
 .markdown-body {
-    padding-left: 6px !important;
+    padding-left: 0;
 }
 
 .markdown-body pre {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    background: #0f172a !important; /* Adding dark background for contrast */
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 16px !important;
+    margin: 16px 0 !important;
+    border-radius: 12px !important;
+    overflow-x: auto;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.markdown-body pre:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+    transform: translateY(-1px);
 }
 
 .markdown-body pre code {
     background: transparent !important;
     padding: 0 !important;
     white-space: pre;
+    color: #e2e8f0;
 }
 
 .markdown-body :not(pre)>code {
-    background-color: rgba(0, 0, 0, 0.06) !important;
-    color: #d63384 !important;
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    color: #0f172a !important;
+    border: 1px solid rgba(0, 0, 0, 0.06);
     padding: 3px 6px;
-    border-radius: 4px;
-    font-size: 0.9em;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.85em;
     font-family: ui-monospace, SFMono-Regular, Consolas, 'Courier New', monospace;
 }
 
@@ -181,6 +270,15 @@
 
 .markdown-body p:last-child {
     margin-bottom: 0;
+}
+
+.markdown-body blockquote {
+    border-left: 4px solid var(--primary-color);
+    background: rgba(0, 123, 85, 0.03);
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+    color: #475569;
 }
 
 .markdown-body h1,
@@ -198,7 +296,8 @@
 }
 
 .markdown-body li {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
+    padding-left: 4px;
 }
 
 /* =========================================
@@ -216,7 +315,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     padding: 6px 10px;
-    transition: all 0.25s ease;
+    transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     backdrop-filter: blur(4px);
     opacity: 1;
 }
@@ -352,7 +451,7 @@
     font-size: 0.78rem !important;
     font-weight: 600 !important;
     padding: 7px 12px !important;
-    transition: all 0.25s ease !important;
+    transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
     opacity: 1 !important;
     backdrop-filter: blur(4px);
 }
@@ -466,7 +565,9 @@
 
 /* ── RAG Citations ── */
 .citationsWrap {
-    margin-top: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .citationsToggle {
@@ -489,48 +590,114 @@
 }
 
 .citationsList {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
     margin-top: 6px;
-    padding-left: 4px;
+}
+
+/* Group header spans full width */
+.citationsList > .citationsGroupHeader {
+    grid-column: 1 / -1;
 }
 
 .citationCard {
     background: rgba(0, 123, 85, 0.04);
     border: 1px solid rgba(0, 123, 85, 0.12);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 0.78rem;
+    border-radius: 7px;
+    padding: 6px 8px;
+    font-size: 0.76rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .citationDoc {
-    font-weight: 600;
-    color: var(--text-main, #111);
+    font-weight: 500;
+    color: var(--text-main, #333);
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 3px;
+    gap: 5px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
 .citationDoc i {
     color: var(--primary-color, #007b55);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+.citationDocName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 .citationScore {
-    margin-left: auto;
-    font-size: 0.7rem;
+    flex-shrink: 0;
+    font-size: 0.68rem;
     color: var(--primary-color, #007b55);
     background: rgba(0, 123, 85, 0.1);
-    padding: 1px 6px;
+    padding: 1px 5px;
     border-radius: 4px;
 }
 
 .citationText {
-    color: var(--text-sub, #666);
-    line-height: 1.4;
-    font-size: 0.75rem;
+    display: none;
+}
+
+/* ── Citation group headers ── */
+.citationsGroupHeader {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-sub, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 6px 2px 2px;
+    margin-top: 2px;
+}
+.citationsGroupHeader i {
+    color: var(--primary-color, #007b55);
+    font-size: 0.7rem;
+}
+.citationsGroupHeaderWeb i {
+    color: #3b82f6;
+}
+
+/* ── Web citation card variant ── */
+.citationCardWeb {
+    background: rgba(59, 130, 246, 0.04);
+    border-color: rgba(59, 130, 246, 0.15);
+}
+.citationCardWeb .citationDoc i {
+    color: #3b82f6;
+}
+
+/* ── Clickable web link inside citation ── */
+.citationWebLink {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    transition: color 0.15s;
+}
+.citationWebLink:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
 }
 
 /* ── Typewriter cursor shown while AI is streaming ── */
@@ -543,9 +710,177 @@
     margin-left: 2px;
     vertical-align: text-bottom;
     animation: cursorBlink 0.7s step-end infinite;
+    will-change: opacity;
 }
 
 @keyframes cursorBlink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+}
+
+/* ── Typing indicator (loading dots before first content) ── */
+.typing-indicator-msg {
+    opacity: 1;
+    animation: none;
+}
+
+.typing-bubble {
+    display: inline-flex;
+    align-items: center;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    background: #007B55;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite;
+    will-change: transform;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* ── User message action buttons ── */
+.user-message-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.user-message:hover .user-message-actions {
+    opacity: 1;
+}
+
+/* ── Edit Box UI ── */
+.edit-box {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+    transform-origin: top right;
+    animation: elegantScaleIn 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+}
+
+@keyframes elegantScaleIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(-10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.edit-textarea {
+    width: 100%;
+    min-width: 300px;
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid rgba(0, 123, 85, 0.25);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02) inset, 0 0 0 2px transparent;
+    transition: all 0.2s ease;
+}
+
+.edit-textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02) inset, 0 0 0 3px rgba(0, 123, 85, 0.12);
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.edit-btn-cancel {
+    background: transparent;
+    color: #64748b;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.edit-btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: #0f172a;
+}
+
+.edit-btn-save {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #004D40 100%);
+    color: #ffffff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 3px 6px rgba(0, 123, 85, 0.2);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.edit-btn-save i {
+    font-size: 0.8rem;
+}
+
+.edit-btn-save:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 10px rgba(0, 123, 85, 0.3);
+}
+
+.edit-btn-save:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 123, 85, 0.2);
+}
+
+.edit-btn-save:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.message-content-display {
+    transform-origin: top right;
+    animation: elegantContentReveal 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+}
+
+@keyframes elegantContentReveal {
+    0% { opacity: 0; transform: scale(0.95) translateY(5px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
 }

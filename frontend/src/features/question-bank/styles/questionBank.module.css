@@ -11,7 +11,7 @@
     }
 }
 
-/* ================= 步骤卡片核心区 ================= */
+/* ================= Step card core area ================= */
 .stepContainer {
     background-color: var(--bg-card);
     backdrop-filter: blur(12px);
@@ -23,17 +23,17 @@
     position: relative;
     opacity: 0;
 
-    /* 【修复1】隐藏溢出：这行能把顶部的渐变线限制在圆角内，不再戳出去 */
+    /* [Fix 1] Hide overflow: clamps the gradient top bar inside the border-radius */
     overflow: hidden;
 
-    /* 【修复2】过渡效果：找回旧版的动画平滑度 */
+    /* [Fix 2] Transition: restores the smooth animation from the previous version */
     transition: all 0.3s ease;
 
-    /* 进场动画 */
+    /* Entrance animation */
     animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.5s;
 }
 
-/* Step2: 固定最大高度，内容过多时内部滚动 */
+/* Step 2: fixed max-height with internal scroll for overflow content */
 .extractScrollableContainer {
     max-height: 78vh;
     overflow-y: auto;
@@ -55,7 +55,7 @@
     border-radius: 8px;
 }
 
-/* 【修复3】悬浮效果：找回旧版的鼠标移入卡片上浮+阴影加深 */
+/* [Fix 3] Hover effect: restores the lift + shadow-deepening from the previous version */
 .stepContainer:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
@@ -70,7 +70,7 @@
     height: 4px;
     background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
     z-index: 1;
-    /* 确保线在最上层可见 */
+    /* Keeps the accent bar on top */
 }
 
 .viewSwitch {
@@ -147,7 +147,7 @@
     }
 }
 
-/* ================= 内部元素排版 ================= */
+/* ================= Inner element typography ================= */
 .stepTitle {
     display: flex;
     align-items: center;
@@ -174,13 +174,13 @@
 
 .stepContainer:hover .stepNumber {
     background: var(--primary-color);
-    /* 背景变成深绿色 */
+    /* Background turns dark green */
     color: white;
-    /* 文字变成白色 */
+    /* Text turns white */
     transform: scale(1.1);
-    /* 稍微放大一点点增加呼吸感（不需要可删去此行） */
+    /* Slight scale increase for breathing room */
     box-shadow: 0 4px 10px rgba(0, 123, 85, 0.3);
-    /* 加上一点绿色发光阴影 */
+    /* Subtle green glow shadow */
 }
 
 .uploadArea {
@@ -595,7 +595,7 @@
 }
 
 
-/* Markdown 内容容器样式 */
+/* Markdown content container */
 .markdownContainer {
     background-color: #fcfcfc;
     padding: 2rem;
@@ -606,7 +606,7 @@
     font-size: 1.05rem;
 }
 
-/* 题目级别（### 题目1） */
+/* Question-level heading (### Question 1) */
 .markdownContainer h3 {
     color: var(--primary-color);
     border-left: 4px solid var(--primary-color);
@@ -616,13 +616,13 @@
     font-size: 1.3rem;
 }
 
-/* 选项加粗 */
+/* Bold option text */
 .markdownContainer strong {
     color: #2c3e50;
     font-weight: 700;
 }
 
-/* 解析部分块引用 (> 解析：xxx) */
+/* Explanation block-quote (> Explanation: ...) */
 .markdownContainer blockquote {
     margin: 1rem 0;
     padding: 0.8rem 1.2rem;
@@ -632,12 +632,12 @@
     font-style: italic;
 }
 
-/* 公式上下间距 */
+/* Paragraph spacing for formulas */
 .markdownContainer p {
     margin-bottom: 1rem;
 }
 
-/* 分隔线 */
+/* Divider */
 .markdownContainer hr {
     border: 0;
     border-top: 1px dashed #ccc;

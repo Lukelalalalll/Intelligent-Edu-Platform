@@ -17,19 +17,15 @@
     0% {
         opacity: 0;
         transform: translateY(40px) scale(0.97);
-        /* 从下方升起并带有极其轻微的缩放 */
-        filter: blur(8px);
-        /* 入场时带有轻微模糊，极具高级感 */
     }
 
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
-        filter: blur(0);
     }
 }
 
-/* 沉浸式背景光晕 - 扩大光晕范围使其更融合 */
+/* Immersive background glow — expanded range for seamless blending */
 .workspace-glow {
     position: absolute;
     top: -100px;
@@ -42,7 +38,7 @@
     filter: blur(60px);
     pointer-events: none;
     animation: glowPulse 4s ease-in-out infinite alternate;
-    /* 光晕呼吸效果 */
+    will-change: transform, opacity;
 }
 
 @keyframes glowPulse {
@@ -61,14 +57,14 @@
     display: flex;
     height: 100%;
     background: rgba(255, 255, 255, 0.75);
-    /* 稍微降低白底透明度，让毛玻璃更透 */
-    /* iOS 级毛玻璃质感：增加 saturate 让透过去的颜色更鲜艳 */
+    /* Slightly reduced opacity for a more translucent frosted-glass effect */
+    /* iOS-grade frosted glass: saturate boosts colour vibrancy through the blur */
     backdrop-filter: blur(32px) saturate(150%);
     -webkit-backdrop-filter: blur(32px) saturate(150%);
     border-radius: var(--radius-lg);
-    /* 稍微增大圆角，配合大屏占比 */
+    /* Slightly larger corner radius to complement the wide-screen layout */
 
-    /* 核心升级：复合阴影结构 (底层大阴影制造空间感，中层阴影制造轮廓，内阴影做高光) */
+    /* Layered shadow system: outer shadow for depth, mid shadow for outline, inner shadow for highlight */
     box-shadow:
         0 24px 80px rgba(0, 0, 0, 0.08),
         0 4px 12px rgba(0, 0, 0, 0.04),
@@ -76,7 +72,7 @@
         inset 0 0 0 1px rgba(255, 255, 255, 0.5);
     overflow: hidden;
     border: 1px solid rgba(0, 123, 85, 0.15);
-    /* 加深一点点边缘轮廓光 */
+    /* Slightly stronger outline highlight on the border */
 }
 
 /* =========================================
@@ -87,7 +83,7 @@
     background-color: rgba(0, 0, 0, 0.06);
     cursor: col-resize;
     flex-shrink: 0;
-    transition: background-color 0.2s, width 0.2s;
+    transition: background-color 0.2s;
     position: relative;
     z-index: 10;
 }
@@ -96,6 +92,10 @@
 .ai-resizer-dragging {
     background-color: var(--primary-color);
     width: 4px;
+}
+/* Disable transition during active drag — prevents layout recalculation every frame */
+.ai-resizer-dragging {
+    transition: none;
 }
 
 /* Prevent child content from blocking the drag */
@@ -112,9 +112,9 @@
     flex-direction: column;
     background: transparent;
     position: relative;
-    max-width: 100% !important; /* 强制覆盖 base.css 中 main 标签默认的 1200px 宽度 */
-    padding: 0 !important;      /* 防止意外的 padding 被继承 */
-    margin: 0 !important;       /* 防止居中 margin 导致偏移 */
+    max-width: 100% !important; /* Override base.css default 1200px max-width on the main tag */
+    padding: 0 !important;      /* Prevent inherited padding from shifting the layout */
+    margin: 0 !important;       /* Prevent centring margin from causing an offset */
 }
 
 .chat-main-header {
@@ -180,7 +180,7 @@
     padding: 8px 16px;
     border-radius: var(--radius-pill);
     background: rgba(0, 0, 0, 0.1); /* NOSONAR */
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .back-home-btn:hover {
@@ -188,14 +188,52 @@
     color: white;
 }
 
-.tutor-mode-select {
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f2937;
-    padding: 7px 12px;
-    font-size: 0.82rem;
+.tutor-mode-container {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 9999px;
+    padding: 2px 2px 2px 14px;
+    gap: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.tutor-mode-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
     font-weight: 600;
+    color: #475569;
+}
+
+.tutor-mode-label i {
+    color: var(--primary-color);
+}
+
+.tutor-mode-select {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: white;
+    border-radius: 9999px;
+    color: #0f172a;
+    padding: 6px 28px 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    appearance: none;
+    -webkit-appearance: none;
+    /* Custom caret down */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tutor-mode-select:hover {
+    border-color: rgba(0, 0, 0, 0.15);
 }
 
 .tutor-mode-select:focus {
@@ -230,25 +268,26 @@
     40%            { transform: scale(1); }
 }
 
-/* 输入区 */
+/* Input area */
 .input-area {
     padding: 0 10px 10px;
     display: flex;
     flex-direction: column;
-    /* 移除居中以支持占满全宽 */
+    /* Remove centring so the input stretches full-width */
 }
 
 .input-wrapper {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    gap: 8px;
     background: #ffffff;
     border-radius: var(--radius-pill);
     padding: 10px 10px 10px 24px;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 
-    /* 移除900px限制以配合靠边布局 */
+    /* Remove the 900px cap to support the edge-aligned layout */
     width: 100%;
 }
 
@@ -283,7 +322,7 @@
     align-items: center;
     justify-content: center;
     margin-left: 12px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 4px 10px rgba(0, 123, 85, 0.2);
     flex-shrink: 0;
 }
@@ -314,7 +353,7 @@
     align-items: center;
     justify-content: center;
     margin-left: 8px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 4px 10px rgba(244, 63, 94, 0.2);
     flex-shrink: 0;
 }
@@ -341,22 +380,21 @@
     width: 100%;
 }
 
-/* 移动端适配 */
-/* 移动端适配 */
+/* Mobile layout adjustments */
 @media (max-width: 900px) {
     .ai-workspace-wrapper {
         width: 100%;
-        /* 移动端完全贴边 */
+        /* Full bleed on mobile */
         margin: 0;
         height: calc(100vh - 60px);
-        /* 视顶部导航栏调整 */
+        /* Accounts for the top navigation bar height */
         padding: 0;
-        /* 移除外边距 */
+        /* Remove outer margin */
     }
 
     .ai-workspace-container {
         border-radius: 0;
-        /* 移动端全屏铺满时取消圆角更自然 */
+        /* Remove border radius when filling the full screen on mobile */
         border-left: none;
         border-right: none;
         border-bottom: none;
@@ -364,7 +402,7 @@
 
     .chat-sidebar {
         display: none;
-        /* 移动端暂时隐藏侧边栏 */
+        /* Hide the sidebar on mobile */
     }
 
     .chat-main-header,
@@ -390,7 +428,7 @@
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 .memory-btn:hover {
@@ -400,4 +438,26 @@
 
 .memory-btn i {
     font-size: 0.78rem;
+}
+
+/* ==========================================
+   Accessibility & performance media queries
+   ========================================== */
+@media (prefers-reduced-motion: reduce) {
+    .ai-workspace-container {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.96);
+    }
+    .workspace-glow {
+        animation: none;
+    }
+}
+
+/* Reduce heavy backdrop-filter cost on lower-power mobile viewports */
+@media (max-width: 900px) {
+    .ai-workspace-container {
+        backdrop-filter: blur(16px) saturate(120%);
+        -webkit-backdrop-filter: blur(16px) saturate(120%);
+    }
 }
