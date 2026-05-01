@@ -113,6 +113,10 @@ async def create_transfer(
         raise ValueError(f"Invalid target module: {target_module}")
 
     # Fetch the message to get file info
+    # message_id must be a valid ObjectId (optimistic client IDs are not persisted yet)
+    if str(message_id).startswith("optimistic-"):
+        raise ValueError("Message is still syncing. Please retry transfer in a moment.")
+
     # message_id must be a valid ObjectId
     msg = None
     try:

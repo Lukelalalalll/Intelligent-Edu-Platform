@@ -55,27 +55,10 @@ def _fmt_srt(sec: float) -> str:
     return f"{h:02d}:{m:02d}:{s:06.3f}".replace(".", ",")
 
 
-async def synth_with_subtitles(script: str, voice: str, audio_out: Path, srt_out: Path) -> None:
-    """TTS via edge-tts streaming.
-
-    Collects WordBoundary events to produce a per-segment SRT subtitle file.
-    Groups tokens into lines capped at 15 CJK chars / 8 Latin words / 3 seconds.
-    """
-    import edge_tts
-    communicate = edge_tts.Communicate(script, voice)
-    word_events: list[dict] = []
-    audio_chunks: list[bytes] = []
-
-    async for event in communicate.stream():
-        if event["type"] == "audio":
-            audio_chunks.append(event["data"])
-        elif event["type"] == "WordBoundary":
-            word_events.append(event)
-
-    audio_out.write_bytes(b"".join(audio_chunks))
-
+def _events_to_srt(word_events: list[dict], srt_out: Path) -> None:
+    """Convert edge-tts WordBoundary events to an SRT file."""
     if not word_events:
-        return  # No timing data available — skip SRT
+        return
 
     lines: list[tuple[float, float, str]] = []
     window_tokens: list[str] = []
@@ -107,33 +90,89 @@ async def synth_with_subtitles(script: str, voice: str, audio_out: Path, srt_out
             f.write(f"{idx}\n{_fmt_srt(start)} --> {_fmt_srt(end)}\n{text}\n\n")
 
 
+async def synth_subtitles_only(script: str, voice: str, srt_out: Path) -> None:
+    """Generate subtitles from edge-tts WordBoundary events without writing audio."""
+    import edge_tts
+    communicate = edge_tts.Communicate(script, voice)
+    word_events: list[dict] = []
+
+    async for event in communicate.stream():
+        if event["type"] == "WordBoundary":
+            word_events.append(event)
+
+    _events_to_srt(word_events, srt_out)
+
+
+async def synth_with_subtitles(script: str, voice: str, audio_out: Path, srt_out: Path) -> None:
+    """TTS via edge-tts streaming.
+
+    Collects WordBoundary events to produce a per-segment SRT subtitle file.
+    Groups tokens into lines capped at 15 CJK chars / 8 Latin words / 3 seconds.
+    """
+    import edge_tts
+    communicate = edge_tts.Communicate(script, voice)
+    word_events: list[dict] = []
+    audio_chunks: list[bytes] = []
+
+    async for event in communicate.stream():
+        if event["type"] == "audio":
+            audio_chunks.append(event["data"])
+        elif event["type"] == "WordBoundary":
+            word_events.append(event)
+
+    audio_out.write_bytes(b"".join(audio_chunks))
+
+    if not word_events:
+        return  # No timing data available — skip SRT
+    _events_to_srt(word_events, srt_out)
+
+
 async def scripts_to_audio(
     scripts: list[str],
     work_dir: Path,
     lang: str = "zh",
     subtitles: bool = False,
     tone_modes: Optional[list[str]] = None,
+    tts_engine: str = "edge_tts",
 ) -> tuple[list[Path], list[Optional[Path]]]:
     """Concurrently synthesise TTS for all segments.
 
     Returns ``(audio_paths, srt_paths)``.
     ``srt_paths`` entries are ``None`` when ``subtitles=False``.
     When ``tone_modes`` is provided, uses SSML with prosody for each segment.
+    ``tts_engine`` can be ``"edge_tts"`` (default) or ``"cosyvoice"``
+    (automatically falls back to edge_tts if CosyVoice is unavailable).
     """
     import asyncio
     import edge_tts
+    from .tts_cosyvoice import synth_cosyvoice
     voice = TTS_VOICES.get(lang, TTS_VOICES["en"])
 
     async def _one(i: int, text: str) -> tuple[Path, Optional[Path]]:
         audio_out = work_dir / f"audio_{i:03d}.mp3"
         tone = (tone_modes[i] if tone_modes and i < len(tone_modes) else "lecture")
 
+        # ── CosyVoice branch (with silent fallback) ──────────────────────
+        if tts_engine == "cosyvoice":
+            ok = await synth_cosyvoice(text, lang, audio_out)
+            if ok:
+                # CosyVoice has no WordBoundary events; generate SRT via re-synthesis
+                # with edge-tts only when subtitles are requested. Keep CosyVoice audio.
+                if subtitles:
+                    srt_out = work_dir / f"sub_{i:03d}.srt"
+                    try:
+                        await synth_subtitles_only(text, voice, srt_out)
+                    except Exception:
+                        pass
+                    return audio_out, srt_out if subtitles else None
+                return audio_out, None
+            # CosyVoice failed → fall through to edge-tts below
+            logger.info("Segment %d: falling back to edge-tts", i)
+
+        # ── edge-tts branch (default) ─────────────────────────────────────
         if subtitles:
             srt_out = work_dir / f"sub_{i:03d}.srt"
-            # Use SSML for subtitle-mode TTS too
-            ssml = build_ssml(text, voice, tone)
             try:
-                communicate = edge_tts.Communicate(ssml, voice)
                 await synth_with_subtitles(text, voice, audio_out, srt_out)
             except Exception:
                 logger.warning("SSML TTS failed for segment %d, falling back to plain text", i)

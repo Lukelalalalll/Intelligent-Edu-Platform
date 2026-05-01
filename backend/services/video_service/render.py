@@ -14,6 +14,17 @@ from .extract import pdf_to_images
 from .types import logger
 
 
+def _load_themes_from_json() -> dict[str, dict[str, str]]:
+    """Load theme palette from data/slide_themes.json (shared with frontend)."""
+    import json as _json
+    json_path = Path(__file__).parent.parent.parent.parent / "data" / "slide_themes.json"
+    if json_path.exists():
+        data = _json.loads(json_path.read_text(encoding="utf-8"))
+        return {t["id"]: t["colors"] for t in data.get("themes", [])}
+    logger.warning("slide_themes.json not found at %s, using hardcoded THEMES", json_path)
+    return {}
+
+
 def _img_to_data_uri(img_path: str) -> str:
     """Convert a local image file to a base64 data URI.
 
@@ -31,37 +42,38 @@ def _img_to_data_uri(img_path: str) -> str:
 SLIDE_W, SLIDE_H = 1920, 1080  # upgraded to Full HD
 BG_COLORS = ["#1e3a5f", "#1a3a2f", "#3a1e1e", "#2d1e3a", "#1e2d3a", "#2a1e3f", "#1e3a3a", "#3a2e1e"]
 
-# ── 10 preset themes (shared with frontend themes.ts) ──
-THEMES: dict[str, dict[str, str]] = {
-    "dark-ocean":    {"bg": "#0f2744", "title": "#60a5fa", "body": "#e2e8f0", "accent": "#1e40af"},
-    "forest":        {"bg": "#0d2b1e", "title": "#4ade80", "body": "#d1fae5", "accent": "#166534"},
-    "midnight":      {"bg": "#1a0533", "title": "#c084fc", "body": "#f3e8ff", "accent": "#7c3aed"},
-    "sunset":        {"bg": "#4a1515", "title": "#fb923c", "body": "#fde8d8", "accent": "#c2410c"},
-    "minimal-white": {"bg": "#ffffff", "title": "#1e293b", "body": "#475569", "accent": "#e2e8f0"},
-    "corp-blue":     {"bg": "#1e3a5f", "title": "#ffffff", "body": "#bfdbfe", "accent": "#1d4ed8"},
-    "chalkboard":    {"bg": "#1a3028", "title": "#fef08a", "body": "#f0fdf4", "accent": "#15803d"},
-    "tech-noir":     {"bg": "#111827", "title": "#22d3ee", "body": "#94a3b8", "accent": "#0e7490"},
-    "rose-gold":     {"bg": "#3d1525", "title": "#fda4af", "body": "#fce7f3", "accent": "#be185d"},
-    "lunar":         {"bg": "#1c1c2e", "title": "#e2e8f0", "body": "#94a3b8", "accent": "#334155"},
+# ── 10 preset themes (loaded from data/slide_themes.json, shared with frontend) ──
+THEMES: dict[str, dict[str, str]] = _load_themes_from_json() or {
+    # Emergency fallback only
+    "dark-ocean": {"bg": "#0f2744", "title": "#60a5fa", "body": "#e2e8f0", "accent": "#1e40af"},
 }
 
-# Try to load a CJK-capable font on macOS; fall back to PIL default
-_FONT_CANDIDATES = [
-    "/System/Library/Fonts/PingFang.ttc",
-    "/System/Library/Fonts/STHeiti Medium.ttc",
-    "/System/Library/Fonts/Hiragino Sans GB.ttc",
-    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+# ── Font resolution: project-local → system → PIL default ──
+_FONT_DIR = Path(__file__).parent.parent.parent / "assets" / "fonts"
+_FONT_SEARCH = [
+    _FONT_DIR / "NotoSansCJK-Regular.otf",
+    _FONT_DIR / "NotoSansCJK-Regular.ttf",
+    _FONT_DIR / "NotoSansCJK-Regular.ttc",
+    _FONT_DIR / "AlibabaPuHuiTi.ttf",
+    Path("/usr/share/fonts/truetype/noto/NotoSansCJKsc-Regular.otf"),
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf"),
+    Path("/System/Library/Fonts/PingFang.ttc"),
+    Path("/System/Library/Fonts/STHeiti Medium.ttc"),
 ]
-_FONT_PATH: Optional[str] = None
-for _fp in _FONT_CANDIDATES:
-    if Path(_fp).exists():
-        _FONT_PATH = _fp
-        break
+_FONT_PATH: Optional[Path] = next((p for p in _FONT_SEARCH if p.exists()), None)
+if _FONT_PATH is None:
+    logger.warning(
+        "No CJK font found for Pillow fallback. Place a font file in backend/assets/fonts/. "
+        "Pillow will use a non-CJK default which will show tofu for Chinese text."
+    )
 
 
 def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if _FONT_PATH:
-        return ImageFont.truetype(_FONT_PATH, size)
+        try:
+            return ImageFont.truetype(str(_FONT_PATH), size)
+        except Exception:
+            pass
     return ImageFont.load_default()
 
 
@@ -325,7 +337,43 @@ body{{width:1920px;height:1080px;overflow:hidden;font-family:"PingFang SC","Noto
 .bg-img {{position:absolute;inset:0;z-index:0}}
 .bg-img img {{width:100%;height:100%;object-fit:cover}}
 .slide-content {{position:relative;z-index:1;display:flex;flex-direction:column;width:100%;height:100%}}
-</style></head><body>
+
+/* ── bar-chart ── */
+.layout-bar-chart {{padding:70px 120px;display:flex;flex-direction:column;height:100%}}
+.layout-bar-chart h1 {{font-size:50px;color:{title};margin-bottom:8px}}
+.layout-bar-chart .divider {{height:3px;background:{accent};margin:8px 0 32px;opacity:.6}}
+.layout-bar-chart .chart-area {{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:14px}}
+.layout-bar-chart .bar-row {{display:flex;align-items:center;gap:24px}}
+.layout-bar-chart .bar-label {{width:280px;font-size:26px;color:{body};text-align:right;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.layout-bar-chart .bar-track {{flex:1;height:52px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden;position:relative}}
+.layout-bar-chart .bar-fill {{height:100%;background:{accent};border-radius:6px;transition:width .4s ease}}
+.layout-bar-chart .bar-value {{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:26px;font-weight:700;color:{title}}}
+
+/* ── flowchart ── */
+.layout-flowchart {{padding:70px 80px;display:flex;flex-direction:column;height:100%}}
+.layout-flowchart h1 {{font-size:50px;color:{title};margin-bottom:8px}}
+.layout-flowchart .divider {{height:3px;background:{accent};margin:8px 0 32px;opacity:.6}}
+.layout-flowchart .flow-area {{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:0}}
+.layout-flowchart .flow-node {{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-width:200px;max-width:260px;padding:24px 20px;
+  border:2.5px solid {accent};border-radius:14px;
+  background:rgba(255,255,255,.05);text-align:center}}
+.layout-flowchart .flow-node-index {{font-size:22px;color:{accent};font-weight:700;margin-bottom:6px;opacity:.7}}
+.layout-flowchart .flow-node-text {{font-size:24px;color:{body};line-height:1.5}}
+.layout-flowchart .flow-arrow {{font-size:40px;color:{accent};opacity:.6;margin:0 8px;flex-shrink:0}}
+
+/* ── code ── */
+.layout-code {{padding:60px 100px;display:flex;flex-direction:column;height:100%}}
+.layout-code h1 {{font-size:46px;color:{title};margin-bottom:8px}}
+.layout-code .divider {{height:3px;background:{accent};margin:8px 0 24px;opacity:.6}}
+.layout-code .code-block {{flex:1;background:rgba(0,0,0,.45);border-radius:12px;padding:36px 44px;
+  overflow:hidden;border:1px solid rgba(255,255,255,.1)}}
+.layout-code pre {{font-family:"Fira Code","Cascadia Code","Menlo","Courier New",monospace;
+  font-size:26px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;word-break:break-all}}
+.layout-code .lang-badge {{display:inline-block;background:{accent};color:#fff;
+  font-size:18px;font-family:monospace;padding:4px 14px;border-radius:6px;margin-bottom:14px;opacity:.85}}
+
+{animation_css}</style></head><body>
 <div class="slide" id="slide">{bg_img_html}
 <div class="slide-content">{inner_html}</div>
 <div class="page-num">{page_num}</div>
@@ -333,7 +381,52 @@ body{{width:1920px;height:1080px;overflow:hidden;font-family:"PingFang SC","Noto
 </div></body></html>"""
 
 
-def _build_html_for_scene(scene: dict, idx: int, subtitles: bool = True) -> str:
+def _build_animation_css(level: str) -> str:
+    """Return raw CSS for the given animation level (injected into _HTML_TEMPLATE)."""
+    if level == "off":
+        return ""
+    if level == "basic":
+        # Visual polish visible in static screenshots
+        return """
+/* Phase 2.1 basic — visual polish */
+h1 { text-shadow: 0 2px 18px rgba(0,0,0,0.45); }
+.bullets li { text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.accent-bar { filter: drop-shadow(0 0 10px currentColor); }
+.col-title { text-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+.quote-text { text-shadow: 0 2px 18px rgba(0,0,0,0.45); }
+"""
+    # high — CSS keyframe animations (rendered as video via Playwright recording)
+    return """
+/* Phase 2.1 high — CSS entrance animations */
+@keyframes fadeInUp {
+  from { transform: translateY(22px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes scaleInX {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+h1 {
+  animation: fadeInUp 0.55s ease-out both;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.45);
+}
+.accent-bar { animation: fadeInUp 0.3s ease-out both; }
+.divider { transform-origin: left; animation: scaleInX 0.4s ease-out 0.45s both; }
+.bullets li:nth-child(1) { animation: fadeInUp 0.4s ease-out 0.60s both; }
+.bullets li:nth-child(2) { animation: fadeInUp 0.4s ease-out 0.72s both; }
+.bullets li:nth-child(3) { animation: fadeInUp 0.4s ease-out 0.84s both; }
+.bullets li:nth-child(4) { animation: fadeInUp 0.4s ease-out 0.96s both; }
+.bullets li:nth-child(5) { animation: fadeInUp 0.4s ease-out 1.08s both; }
+.bullets li:nth-child(6) { animation: fadeInUp 0.4s ease-out 1.20s both; }
+.bullets li:nth-child(7) { animation: fadeInUp 0.4s ease-out 1.32s both; }
+.col-title { animation: fadeInUp 0.4s ease-out 0.60s both; }
+.quote-text { animation: fadeInUp 0.55s ease-out 0.30s both; }
+"""
+
+
+def _build_html_for_scene(
+    scene: dict, idx: int, subtitles: bool = True, animation_level: str = "off",
+) -> str:
     """Build the complete HTML string for a single scene slide."""
     theme_id = scene.get("themeId", "dark-ocean")
     theme = THEMES.get(theme_id, THEMES["dark-ocean"])
@@ -426,6 +519,60 @@ def _build_html_for_scene(scene: dict, idx: int, subtitles: bool = True) -> str:
             f'<div class="col"><div class="col-title">{c2t}</div><ul>{c2_html}</ul></div>'
             f'</div></div>'
         )
+    elif layout == "bar-chart":
+        # chartData: [{label, value}] or [{label, value, maxValue}]
+        chart_data = scene.get("chartData", [])
+        if not chart_data and bullets:
+            # auto-generate from bullets: treat each as a label with sequential values
+            chart_data = [{"label": b, "value": (len(bullets) - i) * 10} for i, b in enumerate(bullets[:6])]
+        # Normalise to 0-100 range
+        raw_vals = [float(d.get("value", 0)) for d in chart_data[:7]]
+        max_val = max(raw_vals) if raw_vals else 1
+        bars_html = "".join(
+            f'<div class="bar-row">'
+            f'<div class="bar-label">{chart_data[i].get("label", "")[:24]}</div>'
+            f'<div class="bar-track">'
+            f'<div class="bar-fill" style="width:{min(100, v / max_val * 100):.1f}%"></div>'
+            f'<div class="bar-value">{v:.0f}</div>'
+            f'</div></div>'
+            for i, v in enumerate(raw_vals)
+        )
+        inner = (
+            f'<div class="layout-bar-chart">'
+            f'<h1>{title}</h1><div class="divider"></div>'
+            f'<div class="chart-area">{bars_html}</div></div>'
+        )
+    elif layout == "flowchart":
+        # flowSteps: [str] or use bullets
+        steps = scene.get("flowSteps", bullets[:6]) or bullets[:6]
+        nodes_html = ""
+        for i, step in enumerate(steps[:6]):
+            arrow = '<div class="flow-arrow">→</div>' if i < len(steps) - 1 else ""
+            nodes_html += (
+                f'<div class="flow-node">'
+                f'<div class="flow-node-index">0{i+1}</div>'
+                f'<div class="flow-node-text">{str(step)[:40]}</div>'
+                f'</div>{arrow}'
+            )
+        inner = (
+            f'<div class="layout-flowchart">'
+            f'<h1>{title}</h1><div class="divider"></div>'
+            f'<div class="flow-area">{nodes_html}</div></div>'
+        )
+    elif layout == "code":
+        # codeSnippet: str, codeLanguage: str
+        import html as _html
+        code_text = scene.get("codeSnippet", body)[:1200]
+        code_lang = scene.get("codeLanguage", "")[:20] or "code"
+        escaped = _html.escape(code_text)
+        inner = (
+            f'<div class="layout-code">'
+            f'<h1>{title}</h1><div class="divider"></div>'
+            f'<div class="code-block">'
+            f'<div class="lang-badge">{code_lang}</div>'
+            f'<pre>{escaped}</pre>'
+            f'</div></div>'
+        )
     else:
         inner = f'<div class="layout-title-bullets"><h1>{title}</h1><ul class="bullets">{bullets_html}</ul></div>'
 
@@ -437,10 +584,24 @@ def _build_html_for_scene(scene: dict, idx: int, subtitles: bool = True) -> str:
         bg=theme["bg"], title=theme["title"], body=theme["body"], accent=theme["accent"],
         bg_img_html=bg_img_html, inner_html=inner, page_num=idx + 1,
         subtitle_html=subtitle_html,
+        animation_css=_build_animation_css(animation_level),
     )
 
 
 # ── Playwright render entry ──
+
+import os as _os
+
+# URL of the React frontend renderer page (served by vite dev or vite preview)
+_FRONTEND_RENDER_URL = _os.environ.get(
+    "SLIDE_RENDERER_URL",
+    "http://127.0.0.1:5173/slide-renderer",
+)
+# Production: set env SLIDE_RENDERER_URL=http://frontend:4173/slide-renderer
+
+# ── Singleton browser instance to avoid cold-start on every generation ──
+_pw_singleton_browser = None
+_pw_singleton_context_mgr = None
 
 _PLAYWRIGHT_AVAILABLE: Optional[bool] = None
 
@@ -462,33 +623,162 @@ def _check_playwright() -> bool:
     return _PLAYWRIGHT_AVAILABLE
 
 
-def _render_html_playwright(scenes: list[dict], work_dir: Path, subtitles: bool) -> list[Path]:
-    """Render all scenes as 1920×1080 PNGs using Playwright + Chromium."""
+def _get_browser():
+    """Return a reusable Chromium browser instance (singleton pattern).
+
+    Avoids the ~1-2s chromium.launch() overhead on each generation.
+    If the browser crashes, a new one is started automatically.
+    """
+    global _pw_singleton_browser, _pw_singleton_context_mgr
     from playwright.sync_api import sync_playwright
 
+    if _pw_singleton_browser is not None:
+        try:
+            # Probe liveness — raises if browser process died
+            _pw_singleton_browser.contexts  # noqa: B018
+            return _pw_singleton_browser
+        except Exception:
+            _pw_singleton_browser = None
+            try:
+                _pw_singleton_context_mgr.__exit__(None, None, None)
+            except Exception:
+                pass
+            _pw_singleton_context_mgr = None
+
+    _pw_singleton_context_mgr = sync_playwright()
+    pw = _pw_singleton_context_mgr.__enter__()
+    _pw_singleton_browser = pw.chromium.launch(
+        headless=True,
+        args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    )
+    logger.info("Playwright Chromium launched (singleton) targeting %s", _FRONTEND_RENDER_URL)
+    return _pw_singleton_browser
+
+
+def _render_html_playwright(
+    scenes: list[dict], work_dir: Path, subtitles: bool,
+    animation_level: str = "off",
+) -> list[Path]:
+    """Render all scenes by navigating to the React headless renderer (/slide-renderer).
+
+    This is the V3 implementation. It delegates ALL visual rendering to React/CSS,
+    eliminating the _HTML_TEMPLATE Python string entirely.
+
+    Falls back to Pillow automatically if the frontend is unreachable.
+    """
+    import json as _json
+
     paths: list[Path] = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1920, "height": 1080})
+
+    try:
+        browser = _get_browser()
+        ctx_kwargs: dict = {"viewport": {"width": 1920, "height": 1080}}
+        context = browser.new_context(**ctx_kwargs)
+        page = context.new_page()
+
+        # Navigate to the renderer page once — reuse for all scenes
+        try:
+            page.goto(_FRONTEND_RENDER_URL, wait_until="networkidle", timeout=12000)
+            logger.info("Connected to React renderer at %s", _FRONTEND_RENDER_URL)
+        except Exception as nav_err:
+            logger.warning(
+                "Cannot reach React renderer at %s: %s — falling back to Pillow. "
+                "Start the frontend (npm run dev) or set SLIDE_RENDERER_URL.",
+                _FRONTEND_RENDER_URL, nav_err,
+            )
+            context.close()
+            return render_scene_slides(scenes, work_dir, subtitles)
 
         for i, scene in enumerate(scenes):
-            html = _build_html_for_scene(scene, i, subtitles)
-            page.set_content(html, wait_until="networkidle")
-            out = work_dir / f"slide_{i:03d}.png"
-            page.screenshot(path=str(out), full_page=False)
-            paths.append(out)
+            # Build the SlidePayload that matches the frontend SlidePayload interface
+            payload = {
+                "scene": {
+                    "id": scene.get("id", f"scene_{i}"),
+                    "layoutType": scene.get("layoutType", "title-bullets"),
+                    "themeId": scene.get("themeId", "dark-ocean"),
+                    "slideMode": scene.get("slideMode", "theme"),
+                    "slideTitle": scene.get("slideTitle", ""),
+                    "slideBody": scene.get("slideBody", ""),
+                    "script": scene.get("script", ""),
+                    "toneMode": scene.get("toneMode", "lecture"),
+                    # Layout-specific pre-parsed fields (from Phase 1)
+                    "quoteText": scene.get("quoteText"),
+                    "col1Title": scene.get("col1Title"),
+                    "col1Bullets": scene.get("col1Bullets") or [],
+                    "col2Title": scene.get("col2Title"),
+                    "col2Bullets": scene.get("col2Bullets") or [],
+                    "chartData": scene.get("chartData") or [],
+                    "flowSteps": scene.get("flowSteps") or [],
+                    "codeSnippet": scene.get("codeSnippet"),
+                    "codeLanguage": scene.get("codeLanguage"),
+                    # Convert file:// image paths to base64 data URIs
+                    # (browser cannot access local file:// from http:// context)
+                    "_imagePreviewUrl": (
+                        _img_to_data_uri(scene["customImagePath"])
+                        if scene.get("customImagePath") else None
+                    ),
+                    "_layoutImagePreviewUrl": (
+                        _img_to_data_uri(scene["layoutImagePath"])
+                        if scene.get("layoutImagePath") else None
+                    ),
+                },
+                "idx": i,
+                "renderSubtitles": subtitles,
+            }
 
-        browser.close()
-    return paths
+            payload_json = _json.dumps(payload, ensure_ascii=False)
+
+            # Clear ready flag from previous iteration
+            page.evaluate("window.clearRenderReady && window.clearRenderReady()")
+
+            # Inject scene data into the React page
+            page.evaluate(f"window.setSlideData({payload_json})")
+
+            # Wait for React to commit and paint (signaled by body[data-render-ready])
+            try:
+                page.wait_for_selector('body[data-render-ready="true"]', timeout=5000)
+            except Exception:
+                logger.warning("Slide %d/%d: render ready timeout — taking screenshot anyway", i + 1, len(scenes))
+
+            out = work_dir / f"slide_{i:03d}.png"
+            page.screenshot(
+                path=str(out),
+                clip={"x": 0, "y": 0, "width": 1920, "height": 1080},
+            )
+            paths.append(out)
+            logger.debug("Captured slide %d/%d -> %s", i + 1, len(scenes), out.name)
+
+        page.close()
+        context.close()
+        logger.info("React renderer: %d slides captured successfully", len(paths))
+        return paths
+
+    except Exception as exc:
+        logger.error(
+            "React renderer failed (%s) — falling back to Pillow for all %d slides",
+            exc, len(scenes), exc_info=True,
+        )
+        return render_scene_slides(scenes, work_dir, subtitles)
 
 
 def render_scene_slides_v2(
     scenes: list[dict], work_dir: Path, subtitles: bool = True,
+    animation_level: str = "off",
 ) -> list[Path]:
-    """V2 renderer: tries Playwright first, falls back to Pillow."""
+    """V2 renderer: tries Playwright first, falls back to Pillow.
+
+    animation_level: "off" (default) | "basic" (CSS polish) | "high" (animated webm)
+    """
     if _check_playwright():
         try:
-            return _render_html_playwright(scenes, work_dir, subtitles)
+            result = _render_html_playwright(scenes, work_dir, subtitles, animation_level)
+            logger.info("render_scene_slides_v2: React renderer succeeded (%d slides)", len(result))
+            return result
         except Exception as exc:
-            logger.warning("Playwright rendering failed, falling back to Pillow: %s", exc)
+            logger.error(
+                "render_scene_slides_v2: React renderer failed — falling back to Pillow. Error: %s",
+                exc, exc_info=True,
+            )
+    else:
+        logger.info("render_scene_slides_v2: Playwright not available, using Pillow fallback")
     return render_scene_slides(scenes, work_dir, subtitles)

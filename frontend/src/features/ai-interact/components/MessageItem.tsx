@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
@@ -6,12 +6,13 @@ import 'highlight.js/styles/github-dark.css';
 import styles from '../styles/AIMessage.module.css';
 import type { RagCitation } from '../../../types/api';
 import { useTypewriter } from '../hooks/useTypewriter';
+import { getFileIcon, getFileIconColor } from '../utils/fileUtils';
 
-// --- 全局只初始化一次 Markdown 渲染器 ---
+// --- Initialise the Markdown renderer once at module level ---
 const renderer = new marked.Renderer();
 renderer.code = function (token) {
-    const codeText = typeof token === 'object' ? token.text : token;
-    const langText = typeof token === 'object' ? token.lang : arguments[1];
+    const codeText = typeof token === 'object' ? token.text : String(token);
+    const langText = typeof token === 'object' ? token.lang : undefined;
     const safeCode = codeText || '';
     const validLang = langText && hljs.getLanguage(langText) ? langText : 'plaintext';
     let highlighted = '';
@@ -37,46 +38,124 @@ renderer.code = function (token) {
         </div>
     `;
 };
-marked.setOptions({ breaks: true, renderer });
+marked.use({ breaks: true, renderer });
 
 /* ── Citation panel — shows RAG sources used for the response ── */
-function CitationPanel({ citations }: { citations: RagCitation[] }) {
+function CitationPanel({ citations, isCourseRelevant }: { citations: RagCitation[]; isCourseRelevant?: boolean }) {
     const [expanded, setExpanded] = useState(false);
+
+    const localCitations = citations.filter(c => c.source_type !== 'web');
+    const webCitations   = citations.filter(c => c.source_type === 'web');
+
+    // Only show the panel when the reply is genuinely course-grounded OR has web results
+    const shouldShow = isCourseRelevant || webCitations.length > 0;
+    if (!shouldShow) return null;
+
+    const totalCount = (isCourseRelevant ? localCitations.length : 0) + webCitations.length;
+
     return (
         <div className={styles.citationsWrap}>
             <button
                 className={styles.citationsToggle}
                 onClick={() => setExpanded(v => !v)}
             >
-                <i className="fas fa-book-open" /> {citations.length} source{citations.length > 1 ? 's' : ''}
+                <i className="fas fa-book-open" /> {totalCount} source{totalCount !== 1 ? 's' : ''}
                 <i className={`fas fa-chevron-${expanded ? 'up' : 'down'}`} style={{ marginLeft: 4, fontSize: '0.7rem' }} />
             </button>
+
             {expanded && (
                 <div className={styles.citationsList}>
-                    {citations.map(c => (
-                        <div key={c.index} className={styles.citationCard}>
-                            <div className={styles.citationDoc}>
-                                <i className="fas fa-file-alt" /> {c.doc_name || 'Unknown'}
-                                <span className={styles.citationScore}>{(c.score * 100).toFixed(0)}%</span>
+                    {/* ── Local course documents ── */}
+                    {isCourseRelevant && localCitations.length > 0 && (
+                        <>
+                            <div className={styles.citationsGroupHeader}>
+                                <i className="fas fa-graduation-cap" /> Course Materials
                             </div>
-                            <div className={styles.citationText}>
-                                {(c.text || '').slice(0, 150)}{(c.text || '').length > 150 ? '...' : ''}
+                            {localCitations.map(c => (
+                                <div key={c.index} className={styles.citationCard}>
+                                    <div className={styles.citationDoc}>
+                                        <i className="fas fa-file-alt" />
+                                        <span className={styles.citationDocName} title={c.doc_name || 'Unknown'}>
+                                            {c.doc_name || 'Unknown'}
+                                        </span>
+                                    </div>
+                                    <span className={styles.citationScore}>{(c.score * 100).toFixed(0)}%</span>
+                                </div>
+                            ))}
+                        </>
+                    )}
+
+                    {/* ── Web results ── */}
+                    {webCitations.length > 0 && (
+                        <>
+                            <div className={`${styles.citationsGroupHeader} ${styles.citationsGroupHeaderWeb}`}>
+                                <i className="fas fa-globe" /> Web Results
                             </div>
-                        </div>
-                    ))}
+                            {webCitations.map(c => (
+                                <div key={c.index} className={`${styles.citationCard} ${styles.citationCardWeb}`}>
+                                    <div className={styles.citationDoc}>
+                                        <i className="fas fa-globe" />
+                                        {c.url ? (
+                                            <a
+                                                href={c.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={styles.citationWebLink}
+                                                title={c.doc_name || c.url}
+                                            >
+                                                <span className={styles.citationDocName}>{c.doc_name || c.url}</span>
+                                                <i className="fas fa-external-link-alt" style={{ fontSize: '0.6rem', flexShrink: 0 }} />
+                                            </a>
+                                        ) : (
+                                            <span className={styles.citationDocName}>{c.doc_name || 'Unknown'}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
                 </div>
             )}
         </div>
     );
 }
 
+// ── LRU render cache: avoids re-parsing identical text across re-renders ──
+// Key = full content string, Value = sanitised HTML object.
+// Max 150 entries; oldest entry evicted when full.
+const _renderCache = new Map<string, { __html: string }>();
+const _RENDER_CACHE_MAX = 150;
+
+/* ── Module-level markdown renderer — no closure deps, never recreated ── */
+function renderContent(content: string): { __html: string } {
+    if (!content) return { __html: '' };
+    const hit = _renderCache.get(content);
+    if (hit) return hit;
+    try {
+        const rawHtml = marked.parse(content) as string;
+        const cleanHtml = DOMPurify.sanitize(rawHtml, {
+            ADD_ATTR: ['class', 'data-code'],
+            ADD_TAGS: ['button', 'i', 'span'],
+        });
+        const result = { __html: cleanHtml };
+        if (_renderCache.size >= _RENDER_CACHE_MAX) {
+            _renderCache.delete(_renderCache.keys().next().value!);
+        }
+        _renderCache.set(content, result);
+        return result;
+    } catch (error) {
+        const safeText = DOMPurify.sanitize(content);
+        return { __html: `<p style="color:red">Render Error: ${safeText}</p>` };
+    }
+}
+
 /* ── AI message bubble with typewriter animation ── */
-function AIMessageBubble({ content, citations, isTyping, isLastAssistant, renderContent, onCopy, onRegenerate }: {
+function AIMessageBubble({ content, citations, isCourseRelevant, isTyping, isLastAssistant, onCopy, onRegenerate }: {
     content: string;
     citations?: RagCitation[];
+    isCourseRelevant?: boolean;
     isTyping: boolean;
     isLastAssistant: boolean;
-    renderContent: (c: string) => { __html: string };
     onCopy: (text: string, el: HTMLElement | null) => void;
     onRegenerate: () => void;
 }) {
@@ -84,19 +163,57 @@ function AIMessageBubble({ content, citations, isTyping, isLastAssistant, render
     const displayed = useTypewriter(content, isStreaming);
     const stillTyping = isStreaming || displayed !== content;
 
+    // ── Throttled Markdown rendering ────────────────────────────────────────
+    // `displayed` changes every rAF frame (~16ms) during streaming.
+    // Running marked.parse + DOMPurify on every frame causes long tasks.
+    // Fix: commit a new render at most every 50ms during streaming;
+    //      render immediately when streaming ends.
+    const [renderedHtml, setRenderedHtml] = useState<{ __html: string }>(
+        () => renderContent(isStreaming ? '' : displayed)
+    );
+    const latestDisplayedRef = useRef(displayed);
+    latestDisplayedRef.current = displayed;
+    const renderScheduledRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!isStreaming) {
+            // Streaming ended — cancel throttle timer and render immediately.
+            if (renderScheduledRef.current != null) {
+                clearTimeout(renderScheduledRef.current);
+                renderScheduledRef.current = null;
+            }
+            setRenderedHtml(renderContent(displayed));
+            return;
+        }
+        // Streaming — schedule a render only if one isn't already pending.
+        // The timer fires with the *latest* displayed text, so intermediate
+        // frames are skipped entirely (no stale/partial renders).
+        if (renderScheduledRef.current == null) {
+            renderScheduledRef.current = setTimeout(() => {
+                renderScheduledRef.current = null;
+                setRenderedHtml(renderContent(latestDisplayedRef.current));
+            }, 50);
+        }
+    }, [displayed, isStreaming]);
+
+    // Cleanup pending timer on unmount
+    useEffect(() => () => {
+        if (renderScheduledRef.current != null) clearTimeout(renderScheduledRef.current);
+    }, []);
+
     return (
         <div className={`${styles.bubble} markdown-body`} style={{ minHeight: '20px' }}>
             {displayed === '' ? (
                 <div style={{ color: '#999', fontStyle: 'italic' }}></div>
             ) : (
                 <>
-                    <div dangerouslySetInnerHTML={renderContent(displayed)} />
+                    <div dangerouslySetInnerHTML={renderedHtml} />
                     {stillTyping && <span className={styles['typing-cursor']} />}
                 </>
             )}
-            {/* RAG Citations */}
+            {/* RAG Citations — smart display */}
             {citations && citations.length > 0 && (
-                <CitationPanel citations={citations} />
+                <CitationPanel citations={citations} isCourseRelevant={isCourseRelevant} />
             )}
             {content && (
                 <div className={styles['message-actions']}>
@@ -122,21 +239,25 @@ interface MessageItemProps {
         files?: { file_name: string; mime_type: string }[];
         citations?: RagCitation[];
     };
+    idx: number;
     isUser: boolean;
     onCopy: (text: string, el: HTMLElement | null) => void;
     isLastAssistant: boolean;
-    onRegenerate: () => void;
-    onEdit: (newVal: string) => void;
+    onRegenerate: (idx: number) => void;
+    onEdit: (idx: number, newVal: string) => void;
     isTyping: boolean;
 }
 
-const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, onEdit, isTyping }: MessageItemProps) => {
+const MessageItem = memo(({ msg, idx, isUser, onCopy, isLastAssistant, onRegenerate, onEdit, isTyping }: MessageItemProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editVal, setEditVal] = useState(msg.content);
 
+    const handleRegen = useCallback(() => onRegenerate(idx), [idx, onRegenerate]);
+    const handleEdit = useCallback((v: string) => onEdit(idx, v), [idx, onEdit]);
+
     const handleSaveEdit = () => {
-        if (editVal.trim() && editVal !== msg.content) {
-            onEdit(editVal);
+        if (editVal.trim()) {
+            handleEdit(editVal);
         }
         setIsEditing(false);
     };
@@ -144,32 +265,6 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
     const handleCancelEdit = () => {
         setEditVal(msg.content);
         setIsEditing(false);
-    };
-
-    const renderContent = (content: string) => {
-        if (!content) return { __html: "" };
-        try {
-            const rawHtml = typeof marked.parse === 'function' ? marked.parse(content) as string : marked(content) as string;
-            const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                ADD_ATTR: ['class', 'data-code'],
-                ADD_TAGS: ['button', 'i', 'span']
-            });
-            return { __html: cleanHtml };
-        } catch (error) {
-            return { __html: `<p style="color:red">Render Error: ${content}</p>` };
-        }
-    };
-
-    const getFileIcon = (mimeType?: string) => {
-        if (!mimeType) return 'fa-file-alt';
-        if (mimeType.startsWith('image/')) return 'fa-file-image';
-        if (mimeType === 'application/pdf') return 'fa-file-pdf';
-        if (mimeType.includes('word') || mimeType.includes('document')) return 'fa-file-word';
-        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'fa-file-excel';
-        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'fa-file-powerpoint';
-        if (mimeType.includes('zip') || mimeType.includes('compressed') || mimeType.includes('tar')) return 'fa-file-archive';
-        if (mimeType.includes('markdown') || mimeType.includes('text/md')) return 'fa-file-code';
-        return 'fa-file-alt';
     };
 
     return (
@@ -193,16 +288,21 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
                         </div>
                     )}
                     {msg.files && msg.files.length > 0 && (
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: msg.content ? '8px' : '0' }}>
-                            {msg.files.map((f, i) => (
-                                <div key={i} className={styles.fileCard} title={f.file_name}>
-                                    <i className={`fas ${getFileIcon(f.mime_type)} ${styles.fileCardIcon}`}></i>
-                                    <div className={styles.fileCardInfo}>
-                                        <span className={styles.fileCardName}>{f.file_name}</span>
-                                        <span className={styles.fileCardSize}>Document</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: msg.content ? '8px' : '0' }}>
+                            {msg.files.map((f, i) => {
+                                const iconColorClass = styles[getFileIconColor(f.mime_type)] || '';
+                                return (
+                                    <div key={i} className={styles.fileCard} title={f.file_name}>
+                                        <div className={`${styles.fileCardIconWrap} ${iconColorClass}`}>
+                                            <i className={`fas ${getFileIcon(f.mime_type)}`}></i>
+                                        </div>
+                                        <div className={styles.fileCardInfo}>
+                                            <span className={styles.fileCardName}>{f.file_name}</span>
+                                            <span className={styles.fileCardSize}>Document</span>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                     {isEditing ? (
@@ -211,16 +311,18 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
                                 value={editVal}
                                 onChange={e => setEditVal(e.target.value)}
                                 autoFocus
+                                className={styles['edit-textarea']}
                                 rows={Math.max(2, editVal.split('\n').length)}
-                                style={{ width: '100%', minWidth: '300px', background: '#ffffff', color: '#1f1f1f', border: '1px solid rgba(0,0,0,0.15)', borderRadius: '8px', padding: '10px', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
                             />
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
-                                <button onClick={handleCancelEdit} style={{ background: 'transparent', color: '#4b5563', border: 'none', cursor: 'pointer', opacity: 0.8, fontSize: '13px' }}>Cancel</button>
-                                <button onClick={handleSaveEdit} disabled={!editVal.trim()} style={{ background: '#007B55', color: '#fff', border: 'none', padding: '4px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Save & Resend</button>
+                            <div className={styles['edit-actions']}>
+                                <button className={styles['edit-btn-cancel']} onClick={handleCancelEdit}>Cancel</button>
+                                <button className={styles['edit-btn-save']} onClick={handleSaveEdit} disabled={!editVal.trim()}>
+                                    <i className="fas fa-paper-plane"></i> Save & Resend
+                                </button>
                             </div>
                         </div>
                     ) : (
-                        <>
+                        <div className={styles['message-content-display']}>
                             {msg.content}
                             {!isTyping && (
                                 <div className={styles['user-message-actions']}>
@@ -229,18 +331,18 @@ const MessageItem = memo(({ msg, isUser, onCopy, isLastAssistant, onRegenerate, 
                                     </button>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
             ) : (
                 <AIMessageBubble
                     content={msg.content}
                     citations={msg.citations}
+                    isCourseRelevant={msg.is_course_relevant}
                     isTyping={isTyping}
                     isLastAssistant={isLastAssistant}
-                    renderContent={renderContent}
                     onCopy={onCopy}
-                    onRegenerate={onRegenerate}
+                    onRegenerate={handleRegen}
                 />
             )}
         </div>

@@ -3,6 +3,8 @@ import logging
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import httpx
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -123,6 +125,18 @@ async def lifespan(app: FastAPI):
         cleanup_old_files()
     except Exception:
         logger.exception("Failed to run sub2 file cleanup on startup")
+
+    # ── Reset stuck indexing jobs from previous server lifecycle ──
+    try:
+        from backend.core.database import db
+        result = await db["indexing_jobs"].update_many(
+            {"status": {"$in": ["pending", "processing"]}},
+            {"$set": {"status": "failed", "error": "Server restarted — job interrupted"}},
+        )
+        if result.modified_count > 0:
+            logger.warning("Reset %d stuck indexing jobs to 'failed' on startup", result.modified_count)
+    except Exception:
+        logger.exception("Failed to reset stuck indexing jobs on startup")
 
     try:
         yield

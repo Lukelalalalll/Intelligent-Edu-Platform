@@ -247,21 +247,24 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                 }
             };
             return (
-                <div className={styles.selTipBar}>
+                <div className={styles.selTipGrid}>
                     <button className={styles.selBtn} onClick={() => doAction('explain')}>
                         <i className="fas fa-lightbulb"></i> Explain
                     </button>
                     <button className={styles.selBtn} onClick={() => doAction('hint')}>
                         <i className="fas fa-search"></i> Hint
                     </button>
-                    <button className={styles.selBtn} onClick={() => doAction('note')}>
-                        <i className="fas fa-sticky-note"></i> Note
+                    <button className={styles.selBtn} onClick={() => doAction('quiz')}>
+                        <i className="fas fa-question-circle"></i> Quiz
                     </button>
-                    <button
-                        className={`${styles.selBtn} ${styles.selBtnClose}`}
-                        onClick={hideTipAndSelection}
-                    >
-                        <i className="fas fa-times"></i>
+                    <button className={styles.selBtn} onClick={() => doAction('simplify')}>
+                        <i className="fas fa-compress-alt"></i> Simplify
+                    </button>
+                    <button className={styles.selBtn} onClick={() => doAction('expand')}>
+                        <i className="fas fa-expand-alt"></i> Expand
+                    </button>
+                    <button className={`${styles.selBtn} ${styles.selBtnNote}`} onClick={() => doAction('note')}>
+                        <i className="fas fa-sticky-note"></i> Note
                     </button>
                 </div>
             );
@@ -324,21 +327,26 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                             className={styles.selPopover}
                             style={{ left: `${popover.x}px`, top: `${popover.y}px` }}
                         >
-                            <button className={styles.selBtn} onClick={() => handlePopoverAction('explain')}>
-                                <i className="fas fa-lightbulb"></i> Explain
-                            </button>
-                            <button className={styles.selBtn} onClick={() => handlePopoverAction('hint')}>
-                                <i className="fas fa-search"></i> Hint
-                            </button>
-                            <button className={styles.selBtn} onClick={() => handlePopoverAction('note')}>
-                                <i className="fas fa-sticky-note"></i> Note
-                            </button>
-                            <button
-                                className={`${styles.selBtn} ${styles.selBtnClose}`}
-                                onClick={() => { setPopover(null); globalThis.getSelection()?.removeAllRanges(); }}
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
+                            <div className={styles.selTipGrid}>
+                                <button className={styles.selBtn} onClick={() => handlePopoverAction('explain')}>
+                                    <i className="fas fa-lightbulb"></i> Explain
+                                </button>
+                                <button className={styles.selBtn} onClick={() => handlePopoverAction('hint')}>
+                                    <i className="fas fa-search"></i> Hint
+                                </button>
+                                <button className={styles.selBtn} onClick={() => handlePopoverAction('quiz')}>
+                                    <i className="fas fa-question-circle"></i> Quiz
+                                </button>
+                                <button className={styles.selBtn} onClick={() => handlePopoverAction('simplify')}>
+                                    <i className="fas fa-compress-alt"></i> Simplify
+                                </button>
+                                <button className={styles.selBtn} onClick={() => handlePopoverAction('expand')}>
+                                    <i className="fas fa-expand-alt"></i> Expand
+                                </button>
+                                <button className={`${styles.selBtn} ${styles.selBtnNote}`} onClick={() => handlePopoverAction('note')}>
+                                    <i className="fas fa-sticky-note"></i> Note
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -1,89 +1,89 @@
-import aiohttp
+"""Header correction via configurable LLM provider (local_ollama or coze).
 
-async def header_correction(input_text):
+Replaces the old DeepSeek-specific implementation.
+Provider is selected per-request and routed through AIGatewayService so the
+same auth / telemetry / fallback logic applies as the rest of the platform.
+"""
+from __future__ import annotations
+
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+# ── System instruction ───────────────────────────────────────────────────────
+
+_SYSTEM_PROMPT = (
+    "You are a document-structure specialist. "
+    "Your ONLY output is a corrected JSON object with key 'Header'. "
+    "No explanation. No markdown fences. Pure JSON only."
+)
+
+# ── User prompt ──────────────────────────────────────────────────────────────
+
+_USER_PROMPT_TEMPLATE = """\
+You receive headers auto-extracted from a PDF or Markdown file \
+(typically lecture slides or an academic paper).
+
+RULES — apply in order:
+
+REMOVE an entry if:
+  • It is not a genuine section title: e.g. bold/italic decoration, figure captions,
+    table headers, page numbers, slide numbers, dates, author names, footers, URLs,
+    file paths, code snippets, or citation lines.
+  • The text is purely symbolic (e.g. "---", "***", "©").
+
+FIX LEVEL when the nesting depth is wrong:
+  • Numbered patterns signal depth: "1." → 1, "1.1" → 2, "2.3.1" → 3.
+  • For lecture slides: module/chapter title → 1, topic → 2, subtopic → 3.
+  • Levels must be consecutive — no skipping (never jump from 1 to 3 without 2).
+  • If the whole document has only one logical depth, normalize everything to level 1.
+
+KEEP genuine section titles exactly as-is (text and line number unchanged).
+
+OUTPUT — return exactly this JSON schema, nothing else:
+{{"Header": [{{"level": <1–4>, "text": "<title>", "line": <int>}}, ...]}}
+
+--- INPUT HEADERS ---
+{input_text}
+--- END INPUT ---"""
+
+
+# ── Public API ───────────────────────────────────────────────────────────────
+
+async def header_correction(input_text: str, provider: str = "local_ollama") -> str:
+    """Correct extracted headers using the selected LLM provider.
+
+    Returns the corrected JSON string on success, or *input_text* unchanged on failure
+    so the caller can gracefully fall back to raw headers.
     """
-    异步版本的标题纠正函数，使用 aiohttp 直接调用 DeepSeek API
-    """
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {
-        "Authorization": "Bearer sk-f2b923f129634f49ac37c3d675595acf",
-        "Content-Type": "application/json"
+    from backend.services.ai_gateway_service import AIGatewayService
+
+    prompt = _USER_PROMPT_TEMPLATE.format(input_text=str(input_text or "").strip())
+    context: dict = {
+        "system_override": _SYSTEM_PROMPT,
+        "task_profile": "light",
     }
 
-    prompt = (f'''
-    You are an expert document structure analyst. I have a Markdown document with incorrectly classified headers and some non-header text mistakenly identified as headers. Your task is to analyze and correct these headers using systematic reasoning.
-
-    **CONTEXT AWARENESS**: Consider the document's hierarchical structure, typical academic/technical writing patterns, and logical content organization when making corrections.
-
-    **STEP-BY-STEP REASONING PROCESS**:
-    1. First, examine each entry and ask: "Is this actually a header or just formatted text?"
-    2. Then, evaluate the semantic meaning: "Does this represent a section/subsection title?"
-    3. Check hierarchy consistency: "Does the header level make sense in context?"
-    4. Finally, verify formatting: "Is this properly structured as a Markdown header?"
-
-    **FEW-SHOT EXAMPLES**:
-
-    Example 1 - Remove non-headers:
-    Input: {{"level": 2, "text": "**bold text**", "line": 15}}
-    Reasoning: This is just bold formatting, not a section title
-    Action: REMOVE
-
-    Example 2 - Fix hierarchy:
-    Input: {{"level": 1, "text": "Experimental Results", "line": 45}}
-    Context: Following a level 1 "Methodology" section
-    Reasoning: Should be level 2 as it's a subsection of main content
-    Action: CORRECT to level 2
-
-    Example 3 - Keep valid headers:
-    Input: {{"level": 2, "text": "Data Collection Methods", "line": 23}}
-    Reasoning: Clear section title with semantic meaning
-    Action: KEEP
-
-    **CONSTRAINT-BASED RULES** (Apply in order):
-    1. REMOVE: Code snippets, URLs, file paths, or text containing only special characters
-    2. REMOVE: Regular paragraph text that was misidentified due to formatting
-    3. REMOVE: Table headers, figure captions, or reference citations
-    4. CORRECT: Headers with wrong nesting levels (ensure logical hierarchy: 1 → 2 → 3)
-    5. KEEP: Legitimate section titles that represent content organization
-    6. MAINTAIN: Original text content for valid headers
-    7. FORMAT: Return exactly in original JSON structure
-
-    **DOCUMENT STRUCTURE CONTEXT**: Consider typical patterns:
-    - Level 1: Major sections (Introduction, Methodology, Results, Conclusion)
-    - Level 2: Subsections within major sections
-    - Level 3: Sub-subsections or detailed breakdowns
-
-    Input headers to analyze:
-    {input_text}
-
-    Think through each header systematically, then return ONLY the corrected headers in the original JSON format with no additional commentary.
-    ''')
-
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system",
-             "content": "You are a helpful assistant specialized in document structure analysis and header correction."},
-            {"role": "user", "content": prompt}
-        ],
-        "stream": False
-    }
-
+    svc = AIGatewayService()
     try:
-        # 使用 aiohttp 发起异步请求
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, ssl=False) as response:
-                response.raise_for_status()  # 检查 HTTP 状态码
-                result = await response.json()
-
-                # 提取返回的内容
-                output = result['choices'][0]['message']['content']
-                # 清理 Markdown JSON 格式标记
-                cleaned_output = output.strip('```json\n').strip('```').strip()
-
-                return cleaned_output
-
-    except Exception as e:
-        print(f"❌ Error in header_correction: {e}")
-        # 如果请求失败，直接返回原输入（避免整个程序崩溃）
+        result = await svc.chat_with_provider(
+            message=prompt,
+            context=context,
+            provider=str(provider or "local_ollama").strip().lower(),
+            allow_fallback=False,
+        )
+        return _strip_fences(result)
+    except Exception as exc:
+        logger.warning("Header correction failed (provider=%s): %s", provider, exc)
         return input_text
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _strip_fences(text: str) -> str:
+    """Remove markdown code fences that LLMs sometimes wrap JSON output in."""
+    t = str(text or "").strip()
+    t = re.sub(r"^```(?:json)?\s*\n?", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\n?```\s*$", "", t)
+    return t.strip()

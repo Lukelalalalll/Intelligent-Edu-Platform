@@ -70,6 +70,7 @@ async def index_course_material(
         raise HTTPException(400, "No file provided")
 
     chapter_id = str(form.get("chapter_id") or "").strip() or None
+    use_fast_extract = str(form.get("use_fast_extract") or "").lower() in ("true", "1", "yes")
 
     filename: str = getattr(upload, "filename", "untitled")
     content_bytes: bytes = await upload.read()
@@ -81,7 +82,7 @@ async def index_course_material(
     from backend.services.indexing_job_service import create_job
 
     user_id = str(user.get("_id", user.get("id", "")))
-    job = await create_job(course_id, filename, content_bytes, user_id, chapter_id=chapter_id)
+    job = await create_job(course_id, filename, content_bytes, user_id, chapter_id=chapter_id, use_fast_extract=use_fast_extract)
     return job
 
 
@@ -115,7 +116,12 @@ async def list_indexed_documents(
 
     from backend.services.course_rag_service import course_rag_service
 
+    meta_path = course_rag_service._meta_path(course_id)
+    print(f"[DEBUG list_indexed_documents] course={course_id} meta_path={meta_path} exists={meta_path.exists()}")
+    if meta_path.exists():
+        print(f"[DEBUG list_indexed_documents] meta content: {meta_path.read_text(encoding='utf-8')[:500]}")
     docs = course_rag_service.list_indexed_documents(course_id)
+    print(f"[DEBUG list_indexed_documents] returning {len(docs)} docs: {[d['doc_name'] for d in docs]}")
     return {"course_id": course_id, "documents": docs}
 
 
@@ -138,6 +144,18 @@ async def remove_indexed_document(
         raise HTTPException(404, "Document not found in index")
 
     now = datetime.now(timezone.utc)
+
+    # Invalidate old indexing jobs so re-uploading the same file won't be
+    # short-circuited by the duplicate detection in indexing_job_service.
+    await db.indexing_jobs.update_many(
+        {
+            "course_id": course_id,
+            "filename": doc_name,
+            "status": "done",
+        },
+        {"$set": {"status": "deleted", "updated_at": now}},
+    )
+
     await db.file_assets.update_many(
         {
             "file_type": "knowledge_source",

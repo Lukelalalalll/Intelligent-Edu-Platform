@@ -26,10 +26,12 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
     const {
         messages,
         input,
+        provider,
         isLoading,
         editingId,
         editingVal,
         inputAreaRef,
+        setProvider,
         setEditingId,
         setEditingVal,
         handleInput,
@@ -72,6 +74,8 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
                     input={input}
                     isLoading={isLoading}
                     inputAreaRef={inputAreaRef}
+                    provider={provider}
+                    setProvider={setProvider}
                     handleInput={handleInput}
                     handleKeyDown={handleKeyDown}
                     handleSend={handleSend}

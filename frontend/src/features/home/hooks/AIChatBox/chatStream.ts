@@ -3,6 +3,7 @@ import type { StreamMessage } from './types';
 type StreamParams = {
     apiRoot: string;
     messages: StreamMessage[];
+    provider?: 'coze' | 'local_ollama';
     signal: AbortSignal;
     onTextDelta: (text: string) => void;
     onErrorText?: (text: string) => void;
@@ -12,6 +13,7 @@ type StreamParams = {
 export async function streamChatCompletion({
     apiRoot,
     messages,
+    provider = 'coze',
     signal,
     onTextDelta,
     onErrorText,
@@ -20,7 +22,7 @@ export async function streamChatCompletion({
     const response = await fetch(`${apiRoot}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, provider }),
         credentials: 'include',
         signal,
     });

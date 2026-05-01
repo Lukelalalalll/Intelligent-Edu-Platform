@@ -210,7 +210,7 @@ export default function StudyNotesPage() {
                                 notes={notes} flashcards={flashcards} studyPlan={null}
                                 isLoading={isLoading} loadingText={loadingText}
                                 activeTab={activeTab === 'plan' ? 'notes' : activeTab} setActiveTab={setActiveTab}
-                                reviewQueueItem={null} reviewMessage={''}
+                                reviewQueueItem={null} reviewMessage={''} reviewError={''}
                                 reviewLoading={false} reviewSubmitting={null}
                                 reviewProgressMap={{}}
                                 onLoadNextReview={async () => {}} onSubmitReview={async () => {}}

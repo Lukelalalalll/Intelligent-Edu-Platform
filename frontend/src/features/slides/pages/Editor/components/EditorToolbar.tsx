@@ -16,21 +16,21 @@ export default function EditorToolbar({ title, canUndo, canRedo, onUndo, onRedo,
     return (
         <div className={styles.toolbar}>
             <button className={`${styles.toolbarBtn} ${styles.btnBack}`} onClick={onBack}>
-                <i className="fas fa-arrow-left" /> 返回
+                <i className="fas fa-arrow-left" /> Back
             </button>
 
             <span className={styles.toolbarTitle}>{title || 'Untitled Presentation'}</span>
 
             <button className={`${styles.toolbarBtn} ${styles.btnSecondary}`} disabled={!canUndo} onClick={onUndo}>
-                <i className="fas fa-undo" /> 撤销
+                <i className="fas fa-undo" /> Undo
             </button>
             <button className={`${styles.toolbarBtn} ${styles.btnSecondary}`} disabled={!canRedo} onClick={onRedo}>
-                <i className="fas fa-redo" /> 重做
+                <i className="fas fa-redo" /> Redo
             </button>
 
             <button className={`${styles.toolbarBtn} ${styles.btnExport}`} onClick={onExport} disabled={exporting}>
                 <i className="fas fa-file-powerpoint" />
-                {exporting ? '导出中...' : '导出 PPTX'}
+                {exporting ? 'Exporting...' : 'Export PPTX'}
             </button>
         </div>
     );

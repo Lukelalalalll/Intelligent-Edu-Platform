@@ -4,6 +4,7 @@ import client from '@/shared/api/client';
 export function useMdProcessorUpload() {
     const [file, setFile] = useState<File | null>(null);
     const [useLLM, setUseLLM] = useState(false);
+    const [headerLlmProvider, setHeaderLlmProvider] = useState<'local_ollama' | 'coze'>('local_ollama');
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'start' | 'success' | 'error'>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -66,6 +67,7 @@ export function useMdProcessorUpload() {
         const formData = new FormData();
         formData.append('file', targetFile);
         formData.append('use_llm', useLLM ? 'true' : 'false');
+        if (useLLM) formData.append('header_llm_provider', headerLlmProvider);
 
         try {
             const response = await client.post('/slides/parse-md', formData, {
@@ -91,7 +93,7 @@ export function useMdProcessorUpload() {
         } finally {
             setLoading(false);
         }
-    }, [useLLM]);
+    }, [useLLM, headerLlmProvider]);
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -111,6 +113,7 @@ export function useMdProcessorUpload() {
                 filename: currentFilename,
                 selected_indices: selectedIndices,
                 use_llm: useLLM,
+                header_llm_provider: headerLlmProvider,
             });
             const data = response.data;
             if (data.filename) {
@@ -125,7 +128,7 @@ export function useMdProcessorUpload() {
         } finally {
             setLoading(false);
         }
-    }, [selectedIndices, currentFilename, useLLM]);
+    }, [selectedIndices, currentFilename, useLLM, headerLlmProvider]);
 
     const proceedWithFullDoc = useCallback(async (redirectUrl: string, navigate: (url: string) => void) => {
         if (!currentFilename) return;
@@ -136,6 +139,7 @@ export function useMdProcessorUpload() {
                 filename: currentFilename,
                 selected_indices: (headers as Array<{ index: number }>).map((h) => h.index),
                 use_llm: useLLM,
+                header_llm_provider: headerLlmProvider,
             });
             if (res.data.filename) {
                 localStorage.setItem('combinedFilename', res.data.filename);
@@ -152,10 +156,11 @@ export function useMdProcessorUpload() {
         } finally {
             setLoading(false);
         }
-    }, [currentFilename, headers, useLLM]);
+    }, [currentFilename, headers, useLLM, headerLlmProvider]);
 
     return {
-        file, setFile, useLLM, setUseLLM, isDragging, uploadStatus, uploadProgress,
+        file, setFile, useLLM, setUseLLM, headerLlmProvider, setHeaderLlmProvider,
+        isDragging, uploadStatus, uploadProgress,
         currentFilename, headers, selectedIndices, loading, errorMsg, setErrorMsg,
         fileInputRef, handleDragOver, handleDragLeave, handleDrop, onFileChange,
         clearFile, processFile, handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,

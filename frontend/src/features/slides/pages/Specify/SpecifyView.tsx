@@ -3,7 +3,7 @@ import styles from './styles/specify.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import SlidesLoadingState from '../../components/SlidesLoadingState';
 
-/** 将单元格中的 <br> / <br/> / <br /> 转为真实换行渲染 */
+/** Converts `<br>` / `<br/>` / `<br />` inside table cells into real line-break rendering. */
 function renderCellText(text) {
     if (typeof text !== 'string') return text;
     const parts = text.split(/<br\s*\/?>/gi);

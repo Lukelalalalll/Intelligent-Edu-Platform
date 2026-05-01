@@ -57,7 +57,7 @@ export default function Toolbar({ pageNumber, numPages, scale, isPlacingLabel, o
                 {isPlacingLabel ? 'Click PDF To Place Label' : 'Add Label Comment'}
             </button>
             <span style={{ fontSize: 12, color: isPlacingLabel ? '#0f766e' : '#64748b', marginLeft: 2 }}>
-                {isPlacingLabel ? '放置模式已开启：点击 PDF 任意位置落点' : '先点击 Add Label Comment 再放置标签'}
+                {isPlacingLabel ? 'Placement mode active: click anywhere on the PDF to drop the label' : 'Click “Add Label Comment” first, then place the label on the PDF'}
             </span>
         </div>
     );

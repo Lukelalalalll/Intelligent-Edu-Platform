@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import type React from 'react';
 import { aiSessionApi, getProviderHealth, type AIProvider } from '../../../api/aiApi';
 import type { AISession } from '@/types/api';
-import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY } from './sessionHelpers';
+import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY, WEB_SEARCH_STORAGE_KEY, SEARCH_ENGINE_STORAGE_KEY } from './sessionHelpers';
 
-export function usePersistAiPreferences(selectedProvider: string, tutorMode: string): void {
+export function usePersistAiPreferences(selectedProvider: string, tutorMode: string, webSearch: boolean, searchEngine: string): void {
     useEffect(() => {
         localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
     }, [selectedProvider]);
@@ -12,6 +12,14 @@ export function usePersistAiPreferences(selectedProvider: string, tutorMode: str
     useEffect(() => {
         localStorage.setItem(TUTOR_MODE_STORAGE_KEY, tutorMode);
     }, [tutorMode]);
+
+    useEffect(() => {
+        localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(webSearch));
+    }, [webSearch]);
+
+    useEffect(() => {
+        localStorage.setItem(SEARCH_ENGINE_STORAGE_KEY, searchEngine);
+    }, [searchEngine]);
 }
 
 export function useProviderHealthCheck(
@@ -39,7 +47,7 @@ export function useProviderHealthCheck(
 }
 
 export function useInitialSessionsLoad(
-    setSessions: (updater: any) => void,
+    setSessions: React.Dispatch<React.SetStateAction<(AISession & { _needFetch?: boolean })[] | null>>,
     setCurrentSessionId: (value: string | null) => void,
 ): void {
     useEffect(() => {

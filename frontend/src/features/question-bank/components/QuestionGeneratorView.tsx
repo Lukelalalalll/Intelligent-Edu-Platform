@@ -86,9 +86,10 @@ export default function QuestionGenerator({ states, handlers }) {
 
                     <div key={currentStep} className={styles.stepView}>
 
-                        {/* 
-              利用 && 条件渲染实现“替换”效果。
-              当状态改变时，旧卡片会被卸载，新卡片会在相同位置渲染，避免了页面一直往下滑动。
+                        {/*
+              Uses && conditional rendering for a "swap" effect.
+              When the step changes, the old card unmounts and the new one renders in place,
+              preventing the page from scrolling down continuously.
             */}
 
                         {/* Step 1: File Upload */}

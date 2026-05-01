@@ -29,6 +29,8 @@ export default function DocumentManager({
     onUpdateChapter,
     onDeleteChapter,
     onReassignDocChapter,
+    useFastExtract,
+    onToggleExtractMode,
 }: DocumentManagerProps) {
     const dm = useDocumentManagerState({
         courseId,
@@ -95,6 +97,35 @@ export default function DocumentManager({
 
                         <UploadZone courseId={courseId} onUpload={onUploadFile} disabled={uploading} />
 
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                            <span style={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 500 }}>Extraction mode:</span>
+                            <button
+                                onClick={onToggleExtractMode}
+                                disabled={uploading}
+                                title={useFastExtract
+                                    ? 'Fast mode (PyMuPDF) — quick, basic text only'
+                                    : 'Precise mode (marker-pdf) — AI-powered, handles formulas, tables, scanned PDFs'}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '4px 12px', borderRadius: 20, border: 'none',
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    fontSize: '0.8rem', fontWeight: 600,
+                                    background: useFastExtract ? '#f3f4f6' : '#0d9488',
+                                    color: useFastExtract ? '#374151' : '#fff',
+                                    opacity: uploading ? 0.5 : 1,
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                <i className={`fas ${useFastExtract ? 'fa-bolt' : 'fa-brain'}`} />
+                                {useFastExtract ? 'Fast (PyMuPDF)' : 'Precise (AI)'}
+                            </button>
+                            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                {useFastExtract
+                                    ? 'Seconds per file — basic text extraction'
+                                    : 'Minutes per file — best for slides, formulas, scanned PDFs'}
+                            </span>
+                        </div>
+
                         <UploadTasksSection uploadTasks={uploadTasks as UploadTask[]} onDismissFinished={onDismissUploadTasks} />
 
                         <IndexedDocumentsSection
@@ -104,6 +135,7 @@ export default function DocumentManager({
                             deletingDoc={deletingDoc}
                             chapters={chapters}
                             onReassignDocChapter={onReassignDocChapter}
+                            uploading={uploading}
                         />
                     </>
                 )}

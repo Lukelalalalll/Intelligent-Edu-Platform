@@ -25,8 +25,17 @@ def split_document_sections(text: str) -> List[Dict[str, Any]]:
     current_level = 0
     current_lines: List[str] = []
 
+    # Enhanced heading patterns supporting Markdown, numbered, English
+    # structural words, Chinese chapter markers, and ALL-CAPS slide titles
     md_heading = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-    numbered_heading = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+?)\s*$")
+    numbered_heading = re.compile(r"^(\d+(?:\.\d+)*)\s+([A-Z\u4e00-\u9fff].+?)\s*$")
+    chapter_heading = re.compile(
+        r"^(?:Chapter|Section|Lecture|Lab|Week|Part|Module|Unit)\s+\d+",
+        re.IGNORECASE,
+    )
+    chinese_heading = re.compile(r"^第[一二三四五六七八九十百千\d]+[章节讲部分]")
+    allcaps_heading = re.compile(r"^[A-Z][A-Z\s]{3,}$")
+    indented_numbered = re.compile(r"^\s{0,4}(\d+)\s+([A-Z\u4e00-\u9fff].{5,50})\s*$")
 
     def flush_current() -> None:
         content = "\n".join(current_lines).strip()
@@ -41,22 +50,41 @@ def split_document_sections(text: str) -> List[Dict[str, Any]]:
             }
         )
 
+    def _match_heading(line: str):
+        """Try all heading patterns. Returns (level, title) or None."""
+        m = md_heading.match(line)
+        if m:
+            return len(m.group(1)), m.group(2).strip()
+
+        n = numbered_heading.match(line)
+        if n:
+            numbering = n.group(1)
+            level = min(6, numbering.count(".") + 1)
+            return level, f"{numbering} {n.group(2).strip()}"
+
+        if chapter_heading.match(line):
+            return 1, line.strip()
+
+        if chinese_heading.match(line):
+            return 1, line.strip()
+
+        if allcaps_heading.match(line) and len(line.strip()) <= 60:
+            return 2, line.strip()
+
+        ind = indented_numbered.match(line)
+        if ind:
+            return 2, f"{ind.group(1)} {ind.group(2).strip()}"
+
+        return None
+
     for raw in lines:
         line = str(raw or "").rstrip()
-        m = md_heading.match(line)
-        n = numbered_heading.match(line) if not m else None
+        heading = _match_heading(line)
 
-        if m or n:
+        if heading:
             flush_current()
             current_lines = []
-
-            if m:
-                level = len(m.group(1))
-                title = m.group(2).strip()
-            else:
-                numbering = n.group(1)
-                level = min(6, numbering.count(".") + 1)
-                title = f"{numbering} {n.group(2).strip()}"
+            level, title = heading
 
             while stack and stack[-1][0] >= level:
                 stack.pop()
@@ -90,7 +118,7 @@ def build_chunks(text: str, chunk_size: int, chunk_overlap: int) -> List[str]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=["\n\n", "\n", ". ", " ", ""],
+        separators=["\n\n", "\n", "。", "！", "？", "；", ". ", " ", ""],
     )
     return [c for c in splitter.split_text(text or "") if c.strip()]
 
@@ -101,7 +129,7 @@ def build_structured_chunks(
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=["\n\n", "\n", ". ", " ", ""],
+        separators=["\n\n", "\n", "。", "！", "？", "；", ". ", " ", ""],
     )
 
     sections = split_document_sections(text)

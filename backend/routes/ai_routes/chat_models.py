@@ -25,6 +25,8 @@ class ParsedRequest:
     cleaned_messages: list[dict]
     compact_history: list[dict]
     memory_text: str
+    session_id: str = ""
+    session_backfilled: bool = False
 
 
 @dataclass
@@ -32,6 +34,7 @@ class RAGResult:
     """All outputs from a RAG retrieval pass."""
 
     rag_context_text: str = ""
+    web_context_text: str = ""
     rag_citations: list[dict] = field(default_factory=list)
     rag_top_k: int = 4
     rag_retrieve_top_n: int = 10
@@ -44,6 +47,7 @@ class RAGResult:
     student_course_ids: list[str] = field(default_factory=list)
     forced_response_message: str = ""
     compact_history: list[dict] = field(default_factory=list)
+    is_course_relevant: bool = False
 
     @classmethod
     def from_dict(cls, d: dict) -> RAGResult:
@@ -67,6 +71,7 @@ class StreamMeta:
     rag_retrieval_latency_ms: float = 0.0
     # Optional extras
     citations: list[dict] | None = None
+    is_course_relevant: bool = False
     warning: str | None = None
     fallback_from: str | None = None
     fallback_to: str | None = None
@@ -88,6 +93,7 @@ class StreamMeta:
         }
         if self.citations:
             d["citations"] = self.citations
+        d["is_course_relevant"] = self.is_course_relevant
         if self.warning is not None:
             d["warning"] = self.warning
         if self.fallback_from is not None:
@@ -113,4 +119,5 @@ class StreamMeta:
             rag_empty_after_retry=rag.rag_empty_after_retry,
             rag_retrieval_latency_ms=rag.rag_retrieval_latency_ms,
             citations=rag.rag_citations if rag.rag_citations else None,
+            is_course_relevant=rag.is_course_relevant,
         )

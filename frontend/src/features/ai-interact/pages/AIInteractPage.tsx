@@ -18,11 +18,11 @@ export default function AIInteractPage() {
     // UI-only local state
     const [inputText, setInputText] = useState('');
     const [toastVisible, setToastVisible] = useState(false);
-    const chatMessagesRef = useRef(null);
-    const inputRef = useRef(null);
-    const fileInputRef = useRef(null);
-    const [attachedFiles, setAttachedFiles] = useState([]);
-    const [isUploadingFile] = useState(false);
+    const chatMessagesRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [attachedFiles, setAttachedFiles] = useState<Array<{ file: File; file_name: string; mime_type: string }>>([]);
+    const [isUploadingFile, setIsUploadingFile] = useState(false);
 
     // Scroll management
     const { scrollToBottom } = usePretextMeasure(chatMessagesRef, {
@@ -32,27 +32,27 @@ export default function AIInteractPage() {
     });
 
     useEffect(() => {
-        scrollToBottom(!ai.isTyping);
+        scrollToBottom(true);
     }, [ai.sessions, scrollToBottom, ai.isTyping]);
 
     // Input handling
-    const handleInput = (e) => {
+    const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInputText(e.target.value);
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
-    };
+    }, []);
 
-    const handleSend = () => {
+    const handleSend = useCallback(() => {
         if (!inputText.trim() && attachedFiles.length === 0) return;
         ai.sendMessage(inputText, attachedFiles);
         setInputText('');
         setAttachedFiles([]);
         if (inputRef.current) inputRef.current.style.height = 'auto';
-    };
+    }, [inputText, attachedFiles, ai.sendMessage]);
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-    };
+    }, [handleSend]);
 
     // Clipboard
     const showToast = useCallback(() => { setToastVisible(true); setTimeout(() => setToastVisible(false), 2500); }, []);
@@ -86,13 +86,22 @@ export default function AIInteractPage() {
     const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
+        setIsUploadingFile(true);
         setAttachedFiles(prev => [...prev, ...files.map((f: File) => ({ file: f, file_name: f.name, mime_type: f.type }))]);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        setIsUploadingFile(false);
     }, []);
 
-    const removeAttachedFile = useCallback((idx) => {
+    const removeAttachedFile = useCallback((idx: number) => {
         setAttachedFiles(prev => prev.filter((_, i) => i !== idx));
     }, []);
+
+    // Stable wrappers for hook methods — avoid inline lambdas in JSX
+    const switchSession = useCallback((id: string) => ai.setCurrentSessionId(id), [ai.setCurrentSessionId]);
+    const deleteSession = useCallback((id: string) => ai.setModalConfig({ show: true, sessionId: id }), [ai.setModalConfig]);
+    const handleStop = useCallback(() => ai.stopStream(), [ai.stopStream]);
+    const handleRegenerate = useCallback((msgId: number) => ai.regenerate(msgId), [ai.regenerate]);
+    const handleEditUserMsg = useCallback((msgId: number, content: string) => ai.editUserMsg(msgId, content), [ai.editUserMsg]);
 
     return (
         <AIInteract
@@ -105,7 +114,8 @@ export default function AIInteractPage() {
             chatMessagesRef={chatMessagesRef}
             inputRef={inputRef}
             createNewSession={ai.createNewSession}
-            deleteSession={(id: string) => ai.setModalConfig({ show: true, sessionId: id })}
+            switchSession={switchSession}
+            deleteSession={deleteSession}
             confirmDelete={ai.confirmDelete}
             setModalConfig={ai.setModalConfig}
             handleInput={handleInput}
@@ -114,9 +124,9 @@ export default function AIInteractPage() {
             copyToClipboard={copyToClipboard}
             handleChatAreaClick={handleChatAreaClick}
             deletingId={ai.deletingId}
-            handleStop={() => ai.stopStream()}
-            handleRegenerate={(msgId: string) => ai.regenerate(Number(msgId))}
-            handleEditUserMsg={(msgId: string, content: string) => ai.editUserMsg(Number(msgId), content)}
+            handleStop={handleStop}
+            handleRegenerate={handleRegenerate}
+            handleEditUserMsg={handleEditUserMsg}
             memoryModalOpen={mem.open}
             setMemoryModalOpen={mem.setOpen}
             aiMemory={mem.memory}
@@ -133,6 +143,10 @@ export default function AIInteractPage() {
             providerHealth={ai.providerHealth}
             tutorMode={ai.tutorMode}
             setTutorMode={ai.setTutorMode}
+            webSearch={ai.webSearch}
+            setWebSearch={ai.setWebSearch}
+            searchEngine={ai.searchEngine}
+            setSearchEngine={ai.setSearchEngine}
         />
     );
 }

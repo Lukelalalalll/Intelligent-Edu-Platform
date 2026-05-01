@@ -29,7 +29,7 @@ async def analyze_submission(
     provider: str = "local_ollama",
 ) -> Dict[str, Any]:
     """Analyze submission via structured grading pipeline with fallback compatibility."""
-    trimmed_text = (text or "")[:18000]
+    trimmed_text = (text or "")[:32000]
     rubric_json = json.dumps(rubric or {}, ensure_ascii=False)
 
     if not trimmed_text.strip():
@@ -64,7 +64,7 @@ async def analyze_submission(
     if not question_pairs:
         question_pairs = _fallback_question_pairs(trimmed_text)
 
-    compact_pairs_json = json.dumps(question_pairs[:12], ensure_ascii=False)
+    compact_pairs_json = json.dumps(question_pairs[:30], ensure_ascii=False)
 
     key_prompt = prompt_registry.render(
         "grading", "generate_answer_key",
@@ -76,7 +76,7 @@ async def analyze_submission(
     parsed_key = _extract_first_json_object(raw_key) or {}
     answer_key = _normalize_answer_key(parsed_key, question_pairs)
 
-    answer_key_json = json.dumps(answer_key[:12], ensure_ascii=False)
+    answer_key_json = json.dumps(answer_key[:30], ensure_ascii=False)
     grading_prompt = prompt_registry.render(
         "grading", "grade_questions",
         rubric_json=rubric_json,

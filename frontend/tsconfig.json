@@ -26,6 +26,9 @@
     "allowJs": true,
     "checkJs": false,
 
+    /* JSON imports (shared data/slide_themes.json) */
+    "resolveJsonModule": true,
+
     /* Path resolution */
     "paths": {
       "@/*": ["./src/*"]

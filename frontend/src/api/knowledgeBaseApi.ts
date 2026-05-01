@@ -39,10 +39,12 @@ export const knowledgeBaseApi = {
         file: File,
         chapterId?: string,
         onProgress?: (pct: number) => void,
+        useFastExtract?: boolean,
     ): Promise<{ job_id: string; status: string; filename: string; content_hash: string }> => {
         const formData = new FormData();
         formData.append('file', file);
         if (chapterId) formData.append('chapter_id', chapterId);
+        if (useFastExtract) formData.append('use_fast_extract', 'true');
         return client
             .post(`/ai/index-course/${encodeURIComponent(courseId)}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -57,6 +59,8 @@ export const knowledgeBaseApi = {
     getJobStatus: (jobId: string): Promise<{
         job_id: string;
         status: string;
+        progress?: number;
+        phase?: string;
         error?: string;
         result?: { indexed: boolean; chunk_count?: number; reason?: string };
     }> =>

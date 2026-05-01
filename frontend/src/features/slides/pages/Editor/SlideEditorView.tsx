@@ -36,7 +36,7 @@ export default function SlideEditorView({
             <div className={styles.editorRoot}>
                 <div className={styles.loadingScreen}>
                     <div className={styles.spinner} />
-                    <span>正在加载编辑器...</span>
+                    <span>Loading editor...</span>
                 </div>
             </div>
         );
@@ -47,9 +47,9 @@ export default function SlideEditorView({
             <div className={styles.editorRoot}>
                 <div className={styles.errorScreen}>
                     <i className="fas fa-exclamation-triangle" style={{ fontSize: 32 }} />
-                    <p>{error || '未找到编辑器会话'}</p>
+                    <p>{error || 'Editor session not found'}</p>
                     <button className={`${styles.toolbarBtn} ${styles.btnSecondary}`} onClick={onBack}>
-                        返回
+                        Back
                     </button>
                 </div>
             </div>
@@ -97,7 +97,7 @@ export default function SlideEditorView({
                             disabled={activeSlide === 0}
                             onClick={() => onSelectSlide(activeSlide - 1)}
                         >
-                            <i className="fas fa-chevron-left" /> 上一页
+                            <i className="fas fa-chevron-left" /> Previous
                         </button>
                         <span className={styles.slideNavLabel}>
                             {activeSlide + 1} / {session.slides.length}
@@ -107,7 +107,7 @@ export default function SlideEditorView({
                             disabled={activeSlide >= session.slides.length - 1}
                             onClick={() => onSelectSlide(activeSlide + 1)}
                         >
-                            下一页 <i className="fas fa-chevron-right" />
+                            Next <i className="fas fa-chevron-right" />
                         </button>
                     </div>
                 </div>

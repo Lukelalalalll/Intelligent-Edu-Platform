@@ -16,9 +16,9 @@ const formatFileSize = (bytes) => {
 };
 
 export default function MdProcessor({
-    file, useLLM, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
+    file, useLLM, headerLlmProvider, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
     currentFilename,
-    fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
+    fileInputRef, setUseLLM, setHeaderLlmProvider, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
     handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
     // Tab 2 props
     inputMode, setInputMode, textContent, setTextContent, textTitle, setTextTitle, seedContent, setSeedContent,
@@ -67,11 +67,13 @@ export default function MdProcessor({
                 <FileUploadSection
                     file={file}
                     useLLM={useLLM}
+                    headerLlmProvider={headerLlmProvider}
                     isDragging={isDragging}
                     uploadStatus={uploadStatus}
                     uploadProgress={uploadProgress}
                     fileInputRef={fileInputRef}
                     setUseLLM={setUseLLM}
+                    setHeaderLlmProvider={setHeaderLlmProvider}
                     handleDragOver={handleDragOver}
                     handleDragLeave={handleDragLeave}
                     handleDrop={handleDrop}

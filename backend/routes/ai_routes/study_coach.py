@@ -54,11 +54,26 @@ async def study_coze(request: Request, req: StudyCozeSchema, user: dict = Depend
     mode_suffix = ""
     if mode == "hint":
         mode_suffix = (
-            "\n\nThe student selected this text as something they want to understand "
-            "— provide a Socratic hint, not an explanation."
+            "\n\nThe student selected this text — provide a Socratic hint to guide their thinking, "
+            "not a direct explanation."
         )
     elif mode == "explain":
         mode_suffix = "\n\nExplain this concept in simple terms with an analogy."
+    elif mode == "quiz":
+        mode_suffix = (
+            "\n\nBased on the selected text, generate ONE multiple-choice question with 4 options (A/B/C/D) "
+            "and mark the correct answer. Format: Question → Options → Answer → Brief explanation."
+        )
+    elif mode == "simplify":
+        mode_suffix = (
+            "\n\nRewrite the selected text in very simple language, as if explaining to a 12-year-old. "
+            "Use short sentences and plain vocabulary."
+        )
+    elif mode == "expand":
+        mode_suffix = (
+            "\n\nExpand on the selected text with deeper context, related concepts, real-world examples, "
+            "and connections to broader ideas in this field."
+        )
 
     # ── RAG: retrieve relevant course material for the student ──
     rag_context_text = ""

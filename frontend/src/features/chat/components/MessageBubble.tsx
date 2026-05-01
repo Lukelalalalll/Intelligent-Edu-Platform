@@ -247,6 +247,8 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
 
     const isFile = message.messageType === 'file';
     const isImage = isFile && isImageFile(message.mimeType, message.fileName);
+    const isPersistedMessage = !String(message.id || '').startsWith('optimistic-');
+    const canTransfer = Boolean(onTransfer && !multiSelect && isPersistedMessage && !message.failed);
 
     const fileUrl = chatApi.toAbsoluteFileUrl(message.fileUrl || '');
 
@@ -349,7 +351,7 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                                     style={{ marginLeft: 'auto', opacity: 0.6 }}
                                 />
                             </div>
-                            {onTransfer && !multiSelect && (
+                            {canTransfer && (
                                 <button
                                     className={styles.transferBtn}
                                     onClick={(e) => { e.stopPropagation(); onTransfer(message); }}

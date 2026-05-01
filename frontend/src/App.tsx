@@ -19,6 +19,7 @@ import {
   StudyNotesPage, VideoGenPage,
   ChatPage, PublishHomework,
   FileCenterPage,
+  SlideRendererPage,
 } from './router';
 
 import client from './shared/api/client';
@@ -62,7 +63,10 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const res = await client.get('/session');
+        const res = await Promise.race([
+          client.get('/session'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timeout')), 8000)),
+        ]) as Awaited<ReturnType<typeof client.get>>;
         if (!alive) return;
 
         lastCheckRef.current = Date.now();
@@ -74,8 +78,9 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         console.error('Session check failed', err);
         if (!alive) return;
-        localStorage.removeItem('user');
-        setIsAuthed(false);
+        // On timeout/network error, trust localStorage so the page still renders
+        const stillHasLocal = !!localStorage.getItem('user');
+        setIsAuthed(stillHasLocal);
       } finally {
         if (alive) {
           setIsChecking(false);
@@ -151,6 +156,9 @@ function App() {
 
         {/* Full-screen editor — outside <Layout> (no sidebar/navbar) */}
         <Route path="slides/editor/:sessionId" element={<RouteErrorBoundary><ProtectedRoute><SlideEditorPage /></ProtectedRoute></RouteErrorBoundary>} />
+
+        {/* Headless renderer for Playwright — no auth required, local access only */}
+        <Route path="slide-renderer" element={<SlideRendererPage />} />
       </Routes>
       </Suspense>
       </CourseProvider>

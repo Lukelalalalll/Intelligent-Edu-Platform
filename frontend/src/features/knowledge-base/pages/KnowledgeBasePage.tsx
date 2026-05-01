@@ -27,6 +27,8 @@ export default function KnowledgeBasePageContainer() {
             onUpdateChapter={kb.onUpdateChapter}
             onDeleteChapter={kb.onDeleteChapter}
             onReassignDocChapter={kb.onReassignDocChapter}
+            useFastExtract={kb.useFastExtract}
+            onToggleExtractMode={kb.onToggleExtractMode}
         />
     );
 }

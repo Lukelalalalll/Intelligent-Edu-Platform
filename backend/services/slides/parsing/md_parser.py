@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import ast
@@ -7,6 +8,8 @@ import pandas as pd
 from mrkdwn_analysis import MarkdownAnalyzer
 from .header_correcter_ds import header_correction
 import asyncio
+
+logger = logging.getLogger(__name__)
 
 
 class MarkdownViewer:
@@ -61,8 +64,9 @@ class MarkdownViewer:
 
         return normalized
 
-    def load_file(self, filepath, use_llm=True):
+    def load_file(self, filepath, use_llm=True, header_llm_provider="local_ollama"):
         """Load and analyze a markdown file"""
+        self.header_llm_provider = str(header_llm_provider or "local_ollama").strip().lower()
         try:
             # 设置输出路径
             from backend.config import Config
@@ -91,7 +95,7 @@ class MarkdownViewer:
                 
                 # 检查是否有表格数据
                 if not tables_data or "Table" not in tables_data or not tables_data["Table"]:
-                    print("No tables found!")
+                    logger.debug("No tables found in markdown file")
                     # 创建空的表格数据结构
                     tables_data = {"Table": []}
                 else:
@@ -111,7 +115,7 @@ class MarkdownViewer:
                         df.to_csv(csv_file, index=False, encoding='utf-8')
                         print(f"CSV file generated: {csv_file}")
             except Exception as e:
-                print("No tables found!")
+                logger.debug("No tables found (exception during table analysis): %s", e)
                 tables_data = {"Table": []}
 
         except Exception as e:
@@ -130,13 +134,14 @@ class MarkdownViewer:
         } for item in raw_headers_data['Header']]
 
         if use_llm:
-            print("\033[93m Fetching corrected headers from LLM...\033[0m")
+            provider = getattr(self, 'header_llm_provider', 'local_ollama')
+            logger.debug("Fetching corrected headers from LLM (provider=%s)...", provider)
             headers_data = self._run_header_correction(raw_headers_data)
             if isinstance(headers_data, str) and headers_data != str(raw_headers_data):
-                print("\033[92m✓ Corrected headers fetched!\033[0m")
+                logger.debug("Corrected headers fetched from LLM")
                 headers_data = self._parse_headers_payload(headers_data)
                 if not headers_data or not isinstance(headers_data, dict) or 'Header' not in headers_data:
-                    print("\033[91m Invalid corrected headers payload, raw headers are used\033[0m")
+                    logger.warning("Invalid corrected headers payload from LLM, falling back to raw headers")
                     return self._normalize_header_levels(raw_headers)
                 corrected_headers = [{
                     'level': item['level'],
@@ -145,26 +150,27 @@ class MarkdownViewer:
                 } for item in headers_data['Header']]
                 return self._normalize_header_levels(corrected_headers)
             else:
-                print("\033[91m Failed to fetch corrected headers from LLM, the raw headers are used\033[0m")
+                logger.warning("Failed to fetch corrected headers from LLM, using raw headers")
                 return self._normalize_header_levels(raw_headers)
         else:
-            print("\033[93m User chose to use raw headers.\033[0m")
+            logger.debug("use_llm=False, using raw headers directly")
             return self._normalize_header_levels(raw_headers)
 
     def _run_header_correction(self, raw_headers_data):
         """Run async header correction safely in both sync and async contexts."""
         payload = str(raw_headers_data)
+        provider = getattr(self, 'header_llm_provider', 'local_ollama')
 
         try:
             asyncio.get_running_loop()
             # Already inside an event loop (e.g. FastAPI async endpoint):
             # execute coroutine in a dedicated thread to avoid asyncio.run conflict.
             with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(lambda: asyncio.run(header_correction(payload)))
+                future = executor.submit(lambda: asyncio.run(header_correction(payload, provider=provider)))
                 return future.result()
         except RuntimeError:
             # No running loop in current thread.
-            return asyncio.run(header_correction(payload))
+            return asyncio.run(header_correction(payload, provider=provider))
 
     def _parse_headers_payload(self, payload_text):
         """Parse corrected header payload from JSON or Python-literal text."""

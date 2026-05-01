@@ -1,6 +1,6 @@
 // frontend/src/features/chat/components/CreateCourseGroupModal.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import globalStyles from '../styles/globals.module.css';
@@ -41,11 +41,16 @@ export default function CreateCourseGroupModal({ onClose, onEnterRoom }: Props) 
 
     useEffect(() => {
         chatApi.getCourseList()
-            .then((r) => setCourses(r.courses))
+            .then((r) => {
+                // Deduplicate by course id (server may return duplicates)
+                const seen = new Set<string>();
+                const unique = r.courses.filter((c) => !seen.has(c.id) && seen.add(c.id));
+                setCourses(unique);
+            })
             .finally(() => setLoading(false));
     }, []);
 
-    const handleCreate = async (course: CourseInfo) => {
+    const handleCreate = useCallback(async (course: CourseInfo) => {
         setCreating(course.id);
         try {
             const res = await chatApi.createCourseGroup(course.id);
@@ -59,12 +64,12 @@ export default function CreateCourseGroupModal({ onClose, onEnterRoom }: Props) 
         } finally {
             setCreating(null);
         }
-    };
+    }, [setRooms, onEnterRoom, onClose]);
 
-    const handleEnter = (roomId: string) => {
+    const handleEnter = useCallback((roomId: string) => {
         onEnterRoom(roomId);
         onClose();
-    };
+    }, [onEnterRoom, onClose]);
 
     return createPortal(
         <motion.div 

@@ -40,10 +40,10 @@ async def generate_outline(keywords: str, provider: str) -> str:
 _SUB1_PARSE_CACHE: dict = {}
 
 
-def _parse_md_impl(filepath: str, use_llm: bool) -> dict:
+def _parse_md_impl(filepath: str, use_llm: bool, header_llm_provider: str = "local_ollama") -> dict:
     from backend.services.slides import MarkdownViewer as MDParser
     parser = MDParser()
-    parser.load_file(filepath, use_llm)
+    parser.load_file(filepath, use_llm, header_llm_provider)
     return {
         'headers': [
             {'index': i + 1, 'level': s['header']['level'], 'text': s['header']['text']}
@@ -58,14 +58,14 @@ def _parse_md_impl(filepath: str, use_llm: bool) -> dict:
     }
 
 
-def get_parsed_data_with_cache(filepath: str, use_llm: bool) -> dict:
-    cache_key = (filepath, bool(use_llm))
+def get_parsed_data_with_cache(filepath: str, use_llm: bool, header_llm_provider: str = "local_ollama") -> dict:
+    cache_key = (filepath, bool(use_llm), str(header_llm_provider or "local_ollama"))
     stat = os.stat(filepath)
     file_stamp = (int(stat.st_mtime_ns), int(stat.st_size))
     cached = _SUB1_PARSE_CACHE.get(cache_key)
     if cached and cached.get("stamp") == file_stamp:
         return cached["data"]
-    parsed = _parse_md_impl(filepath, use_llm)
+    parsed = _parse_md_impl(filepath, use_llm, header_llm_provider)
     _SUB1_PARSE_CACHE[cache_key] = {"stamp": file_stamp, "data": parsed}
     return parsed
 
@@ -89,7 +89,7 @@ def create_ppt(ppt_schema) -> str:
 
 # ── Section combining ──
 
-def combine_sections(filename: str, selected_indices: list[int], use_llm: bool) -> str:
+def combine_sections(filename: str, selected_indices: list[int], use_llm: bool, header_llm_provider: str = "local_ollama") -> str:
     """
     Combine selected sections from a parsed MD/PDF file into a new MD file.
     Returns the new filename.
@@ -107,7 +107,7 @@ def combine_sections(filename: str, selected_indices: list[int], use_llm: bool) 
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
 
-    parsed_data = get_parsed_data_with_cache(filepath, use_llm)
+    parsed_data = get_parsed_data_with_cache(filepath, use_llm, header_llm_provider)
     full_content = parsed_data['full_content']
     all_sections = parsed_data['sections']
     all_headers = parsed_data['headers']

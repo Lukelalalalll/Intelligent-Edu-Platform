@@ -135,7 +135,7 @@ export default function HomeStudentPage() {
 
     return (
         <div className={`${styles.pageContainer} ${activeTab === 'study' ? styles.pageContainerFull : ''}`}>
-            {/* 1. 顶部动态渐变横幅（带退出/入场动画） */}
+            {/* 1. Top dynamic gradient banner (with exit/enter animation) */}
             {bannerState !== 'hidden' && (
                 <div ref={bannerRef} onAnimationEnd={handleBannerAnimationEnd}>
                     <WelcomeBanner
@@ -168,7 +168,7 @@ export default function HomeStudentPage() {
                 </button>
             </div>
 
-            {/* 3. 内容区域：根据 tab 切换显示 */}
+            {/* 3. Content area: switches based on active tab */}
             {activeTab === 'ai' ? (
                 <section className={styles.geminiWrapper}>
                     <AIChatBox aiInteractUrl="/ai-interaction" />

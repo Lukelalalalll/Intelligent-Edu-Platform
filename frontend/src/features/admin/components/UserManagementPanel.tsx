@@ -94,7 +94,7 @@ export default function UserManagementPanel({
                 </table>
             </div>
 
-            {/* 用户编辑/新增的弹窗 */}
+            {/* Add / edit user modal */}
             {createPortal(
                 <AnimatePresence>
                     {modalState.isOpen && (

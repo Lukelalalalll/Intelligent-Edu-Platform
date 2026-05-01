@@ -26,6 +26,9 @@ export function useResizableSidebar({
     const [sidebarWidth, setSidebarWidth] = useState(defaultWidth);
     const [isDragging, setIsDragging] = useState(false);
     const isDraggingRef = useRef(false);
+    // rAF batching: coalesce rapid mousemove events to one setState per frame
+    const pendingWidthRef = useRef<number | null>(null);
+    const rafIdRef = useRef<number | null>(null);
 
     // Cleanup on unmount: remove any dangling listeners if still dragging
     useEffect(() => {
@@ -34,6 +37,9 @@ export function useResizableSidebar({
                 document.removeEventListener('mousemove', handleMouseMoveRef.current);
                 document.removeEventListener('mouseup', handleMouseUpRef.current);
                 isDraggingRef.current = false;
+            }
+            if (rafIdRef.current != null) {
+                cancelAnimationFrame(rafIdRef.current);
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,11 +60,30 @@ export function useResizableSidebar({
                 const rect = containerRef.current.getBoundingClientRect();
                 const newWidth = ev.clientX - rect.left;
                 if (newWidth >= minWidth && newWidth <= maxWidth) {
-                    setSidebarWidth(newWidth);
+                    // Buffer the latest width; commit once per rAF frame.
+                    pendingWidthRef.current = newWidth;
+                    if (rafIdRef.current == null) {
+                        rafIdRef.current = requestAnimationFrame(() => {
+                            rafIdRef.current = null;
+                            if (pendingWidthRef.current != null) {
+                                setSidebarWidth(pendingWidthRef.current);
+                                pendingWidthRef.current = null;
+                            }
+                        });
+                    }
                 }
             };
 
             const handleMouseUp = () => {
+                // Cancel any in-flight RAF and flush the last pending width
+                if (rafIdRef.current != null) {
+                    cancelAnimationFrame(rafIdRef.current);
+                    rafIdRef.current = null;
+                }
+                if (pendingWidthRef.current != null) {
+                    setSidebarWidth(pendingWidthRef.current);
+                    pendingWidthRef.current = null;
+                }
                 isDraggingRef.current = false;
                 setIsDragging(false);
                 document.removeEventListener('mousemove', handleMouseMove);

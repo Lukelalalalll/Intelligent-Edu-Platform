@@ -109,6 +109,7 @@ def download_ppt(filename: str):
 async def parse_md(
     file: UploadFile = File(...),
     use_llm: bool = Form(False),
+    header_llm_provider: str = Form("local_ollama"),
     user: dict = Depends(get_current_user),
     request: Request = None,
 ):
@@ -136,7 +137,7 @@ async def parse_md(
 
         step_name = "parse" if not filename.lower().endswith('.pdf') else "header_extract"
         with tracker.step(step_name, filename=filename):
-            result = _get_parsed_data_with_cache(parsing_path, use_llm)
+            result = _get_parsed_data_with_cache(parsing_path, use_llm, header_llm_provider)
 
         tracker.finish(StepStatus.SUCCESS)
         tracker.result_metadata["headers_count"] = len(result.get('headers', []))
@@ -158,7 +159,7 @@ async def parse_md(
 @slides_router.post("/combine")
 def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user)):
     try:
-        new_filename = _svc_combine_sections(req.filename, req.selected_indices, req.use_llm)
+        new_filename = _svc_combine_sections(req.filename, req.selected_indices, req.use_llm, req.header_llm_provider)
         return {"filename": new_filename}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

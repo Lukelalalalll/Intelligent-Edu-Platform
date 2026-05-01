@@ -11,13 +11,13 @@ interface ChatHeaderProps {
     setTutorMode?: (mode: AITutorMode) => void;
 }
 
-export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'tutor', setTutorMode }: ChatHeaderProps) {
+export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'hint_only', setTutorMode }: ChatHeaderProps) {
     const isSocratic = roleInfo?.mode === 'socratic';
 
     return (
         <header className={styles['chat-main-header']}>
             <div className={styles['header-info']}>
-                <h2><i className="fas fa-sparkles"></i> HKU Coze AI Assistant</h2>
+                <h2><i className="fas fa-sparkles"></i> HKU AI Assistant</h2>
                 <p>
                     Advanced Academic Model
                     {isSocratic && (
@@ -35,15 +35,20 @@ export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'tutor'
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {roleInfo?.role === 'admin' && (
-                    <select
-                        value={tutorMode}
-                        onChange={(e) => setTutorMode?.(e.target.value as AITutorMode)}
-                        className={styles['tutor-mode-select']}
-                        title="Student response style (admin only)"
-                    >
-                        <option value="tutor">Tutor (detailed)</option>
-                        <option value="hint_only">Hint-only (students)</option>
-                    </select>
+                    <div className={styles['tutor-mode-container']} title="This setting configures how the AI responds to Students. (Applies to student accounts only)">
+                        <div className={styles['tutor-mode-label']}>
+                            <i className="fas fa-user-graduate"></i>
+                            <span>Student Output:</span>
+                        </div>
+                        <select
+                            value={tutorMode}
+                            onChange={(e) => setTutorMode?.(e.target.value as AITutorMode)}
+                            className={styles['tutor-mode-select']}
+                        >
+                            <option value="tutor">Tutor (Detailed)</option>
+                            <option value="hint_only">Hint-only</option>
+                        </select>
+                    </div>
                 )}
                 <button className={styles['memory-btn']} onClick={onOpenMemory} title="AI Memory — personalize your experience">
                     <i className="fas fa-brain"></i> Memory

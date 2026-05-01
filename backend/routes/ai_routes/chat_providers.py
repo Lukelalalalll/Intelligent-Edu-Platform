@@ -38,6 +38,20 @@ _CONTINUATION_PROMPT = (
 _NO_RESPONSE_PLACEHOLDER = "No response content."
 
 
+def _build_p0_telemetry_extra(req: ParsedRequest, rag: RAGResult) -> dict[str, object]:
+    history_turns = max(0, len(rag.compact_history) // 2)
+    rewrite_applied = (str(rag.rag_rewritten_query or "").strip() != str(req.effective_question or "").strip())
+    denom = max(1, int(rag.rag_top_k or 1))
+    topk_hit_rate = round(min(len(rag.rag_citations), denom) / denom, 4)
+    return {
+        "history_turns_used": history_turns,
+        "rewrite_applied": rewrite_applied,
+        "topk_hit_rate": topk_hit_rate,
+        "session_id_present": bool(req.session_id),
+        "session_backfilled": bool(req.session_backfilled),
+    }
+
+
 # ── Local Ollama strategy ──────────────────────────────────────────
 
 async def _generate_via_local_ollama(
@@ -120,6 +134,7 @@ async def _generate_via_local_ollama(
         answer_latency_ms=answer_latency_ms,
         postcheck_downgraded=postcheck_downgraded,
         phase="answer",
+        extra=_build_p0_telemetry_extra(req, rag),
     )
 
     yield SSE_DONE
@@ -170,6 +185,7 @@ async def _generate_via_coze(
         answer_latency_ms=answer_latency_ms,
         postcheck_downgraded=postcheck_downgraded,
         phase=phase,
+        extra=_build_p0_telemetry_extra(req, rag),
     )
 
     yield sse_meta(meta.to_dict())
@@ -214,6 +230,7 @@ async def _generate_forced_response(
         answer_latency_ms=0,
         postcheck_downgraded=0,
         phase="insufficient_evidence",
+        extra=_build_p0_telemetry_extra(req, rag),
     )
 
 

@@ -9,9 +9,12 @@ interface StudyCoachProps {
     onDismissHighlight?: () => void;
     onSaveNote?: (content: string) => void;
     pdfText?: string;
+    storageKey?: string;
 }
 
-export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSaveNote, pdfText }: StudyCoachProps) {
+const MAX_HISTORY_STORED = 50;
+
+export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSaveNote, pdfText, storageKey }: StudyCoachProps) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [streaming, setStreaming] = useState(false);
@@ -20,7 +23,10 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     const [citationsMap, setCitationsMap] = useState<Record<string, any[]>>({});
     const [expandedCitations, setExpandedCitations] = useState<Record<string, boolean>>({});
     const messagesRef = useRef(null);
-    const rafIdRef = useRef(null);
+    const abortRef = useRef<AbortController | null>(null);
+
+    // Derive localStorage key from storageKey (doc identity)
+    const historyStorageKey = storageKey ? `coach_history_${storageKey}` : null;
 
     // Auto-scroll to bottom when messages change
     useEffect(() => {
@@ -28,96 +34,152 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }, [messages]);
 
-    // Cleanup rAF on unmount
+    // Abort streaming on unmount
     useEffect(() => {
-        return () => { if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); };
+        return () => { abortRef.current?.abort(); };
     }, []);
 
     useEffect(() => {
         setStoredAIProvider(provider);
     }, [provider]);
 
-    // Helpers to update a single message by id (extracted to avoid deep nesting)
-    const updateMessage = useCallback((msgId, content) => {
+    // ── History persistence ────────────────────────────────────────────────────
+
+    // Restore history when storageKey changes (new document opened)
+    useEffect(() => {
+        if (!historyStorageKey) {
+            setMessages([]);
+            return;
+        }
+        try {
+            const raw = localStorage.getItem(historyStorageKey);
+            if (raw) {
+                const stored = JSON.parse(raw);
+                if (Array.isArray(stored)) {
+                    setMessages(stored.slice(-MAX_HISTORY_STORED));
+                    return;
+                }
+            }
+        } catch { /* ignore corrupt data */ }
+        setMessages([]);
+    }, [historyStorageKey]);
+
+    // Save history to localStorage whenever messages change (skip empty)
+    useEffect(() => {
+        if (!historyStorageKey || messages.length === 0) return;
+        try {
+            const toStore = messages.slice(-MAX_HISTORY_STORED);
+            localStorage.setItem(historyStorageKey, JSON.stringify(toStore));
+        } catch { /* ignore quota errors */ }
+    }, [messages, historyStorageKey]);
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    const updateMessage = useCallback((msgId: string, content: string) => {
         setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content } : m));
     }, []);
 
-    // rAF typewriter — reveals full text frame-by-frame, cancels previous animation
-    const revealTypewriter = useCallback((fullText, msgId) => {
-        // Cancel any previous typewriter to avoid orphaned rAF chains
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = null;
-        }
-        let i = 0;
-        const CHARS_PER_FRAME = 4;
-        const tick = () => {
-            i = Math.min(i + CHARS_PER_FRAME, fullText.length);
-            updateMessage(msgId, fullText.slice(0, i));
-            if (i < fullText.length) {
-                rafIdRef.current = requestAnimationFrame(tick);
-            } else {
-                rafIdRef.current = null;
-                setStreaming(false);
-            }
-        };
-        rafIdRef.current = requestAnimationFrame(tick);
-    }, [updateMessage]);
+    // ── SSE streaming ask ──────────────────────────────────────────────────────
 
-    // Coze polling study ask
-    const askStudyCoze = useCallback(async (content, mode, history) => {
+    const askStudyStream = useCallback(async (content: string, mode: string, history: any[]) => {
         setStreaming(true);
         const msgId = 'msg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-        const assistantMsg = { role: 'assistant', content: '', id: msgId };
-        setMessages(prev => [...prev, assistantMsg]);
+        setMessages(prev => [...prev, { role: 'assistant', content: '', id: msgId }]);
+
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        const payload: Record<string, unknown> = {
+            content,
+            mode,
+            messages: history,
+            provider,
+        };
+        if (pdfText) {
+            payload.context = pdfText.slice(0, 8000);
+        }
 
         try {
-            // Always send truncated PDF context so the AI retains document awareness
-            const payload: Record<string, unknown> = {
-                content,
-                mode,
-                messages: history,
-                provider,
-            };
-            if (pdfText) {
-                payload.context = pdfText.slice(0, 8000);
+            // Use the base URL from the axios client (removes /api prefix for fetch)
+            const baseURL = (client.defaults.baseURL || '').replace(/\/$/, '');
+            const res = await fetch(`${baseURL}/ai/study-stream`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+                credentials: 'include',
+            });
+
+            if (!res.ok) {
+                const errText = await res.text().catch(() => res.statusText);
+                throw new Error(errText);
             }
 
-            const res = await client.post('/ai/study-coze', payload);
-            const text = res.data?.reply || res.data?.text || 'No response from AI.';
-            const citations = res.data?.citations || [];
-            if (citations.length > 0) {
-                setCitationsMap(prev => ({ ...prev, [msgId]: citations }));
+            const reader = res.body?.getReader();
+            if (!reader) throw new Error('No response body');
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let accumulated = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop() ?? '';
+                for (const block of lines) {
+                    for (const line of block.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        const raw = line.slice(6).trim();
+                        if (raw === '[DONE]') break;
+                        try {
+                            const evt = JSON.parse(raw);
+                            if (evt.type === 'citations' && Array.isArray(evt.data) && evt.data.length > 0) {
+                                setCitationsMap(prev => ({ ...prev, [msgId]: evt.data }));
+                            } else if (evt.type === 'text' && typeof evt.data === 'string') {
+                                accumulated += evt.data;
+                                updateMessage(msgId, accumulated);
+                            } else if (evt.type === 'done') {
+                                break;
+                            } else if (evt.type === 'error') {
+                                accumulated += `\n\n_Error: ${evt.data}_`;
+                                updateMessage(msgId, accumulated);
+                            }
+                        } catch { /* skip malformed SSE lines */ }
+                    }
+                }
             }
-            revealTypewriter(text, msgId);
-        } catch (err) {
-            updateMessage(msgId, 'Error: ' + (err?.response?.data?.detail || err.message));
+        } catch (err: any) {
+            if (err?.name === 'AbortError') return;
+            updateMessage(msgId, '_Error: ' + (err?.message || 'Unknown error') + '_');
+        } finally {
             setStreaming(false);
         }
-    }, [pdfText, revealTypewriter, provider]);
+    }, [pdfText, provider, updateMessage]);
 
-    const handleAction = useCallback((mode) => {
+    const handleAction = useCallback((mode: string) => {
         const hlText = typeof pendingHighlight === 'object' ? pendingHighlight?.text : pendingHighlight;
         if (!hlText || streaming) return;
+        const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
         const userMsg = {
             role: 'user',
-            content: `[${mode === 'hint' ? 'Hint' : 'Explain'}] ${hlText}`,
+            content: `[${modeLabel}] ${hlText}`,
             id: 'msg-' + Date.now(),
         };
         setMessages(prev => [...prev, userMsg]);
-        onDismissHighlight();
+        onDismissHighlight?.();
 
-        // Use current messages as history (userMsg not yet in state, pass it separately)
         const history = [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: userMsg.content }];
-        askStudyCoze(hlText, mode, history);
-    }, [pendingHighlight, streaming, messages, onDismissHighlight, askStudyCoze]);
+        askStudyStream(hlText, mode, history);
+    }, [pendingHighlight, streaming, messages, onDismissHighlight, askStudyStream]);
 
     // Auto-trigger when popover sends mode directly (pendingHighlight is { text, mode })
-    const prevHighlightRef = useRef(null);
+    const prevHighlightRef = useRef<string | null>(null);
     useEffect(() => {
         if (!pendingHighlight || typeof pendingHighlight !== 'object') return;
         if (!pendingHighlight.text || !pendingHighlight.mode) return;
-        // Prevent re-triggering for the same highlight
         const key = pendingHighlight.text + pendingHighlight.mode;
         if (prevHighlightRef.current === key) return;
         prevHighlightRef.current = key;
@@ -131,19 +193,18 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         setMessages(prev => [...prev, userMsg]);
         setInput('');
 
-        // Build history including this new message (not yet in state)
         const history = [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: trimmed }];
-        askStudyCoze(trimmed, 'chat', history);
-    }, [input, streaming, messages, askStudyCoze]);
+        askStudyStream(trimmed, 'chat', history);
+    }, [input, streaming, messages, askStudyStream]);
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
     };
 
-    const handleSaveAsNote = (msg) => {
+    const handleSaveAsNote = (msg: any) => {
         if (!onSaveNote || savedMsgIds.has(msg.id)) return;
         onSaveNote(msg.content);
         setSavedMsgIds(prev => new Set(prev).add(msg.id));
@@ -251,5 +312,4 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         </div>
     );
 }
-
 

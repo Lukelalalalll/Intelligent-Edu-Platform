@@ -14,6 +14,7 @@ import logging
 from typing import Any
 
 from cachetools import TTLCache
+from bson import ObjectId
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
@@ -40,6 +41,7 @@ from .prompting import (
 )
 from .rag_orchestrator import run_student_rag
 from .router import _SUPPORTED_PROVIDERS, _limiter, ai_router
+from backend.services.session_bucket_service import load_all_messages
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,83 @@ _ai_memory_cache: TTLCache[str, str] = TTLCache(maxsize=1024, ttl=300)
 # ── Memory profile fields we surface to the LLM ───────────────────
 _MEMORY_FIELDS = ("name", "major", "year", "preferences")
 _VALID_TUTOR_MODES = frozenset({"tutor", "hint_only"})
+
+
+def _normalize_chat_messages(messages: list[dict], limit: int = 100) -> list[dict]:
+    cleaned: list[dict] = []
+    for item in messages:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role", "")).strip().lower()
+        if role not in {"user", "assistant", "system"}:
+            continue
+        content = str(item.get("content", "") or "").strip()
+        images = item.get("images", [])
+        if role in {"user", "assistant"} and not content and not images:
+            continue
+        msg = {"role": role, "content": content}
+        if images:
+            msg["images"] = images
+        cleaned.append(msg)
+    return cleaned[-max(1, int(limit)):]
+
+
+def _is_same_message(a: dict, b: dict) -> bool:
+    return (
+        str(a.get("role", "")) == str(b.get("role", ""))
+        and str(a.get("content", "")) == str(b.get("content", ""))
+    )
+
+
+async def _hydrate_messages_from_session(
+    *,
+    session_id: str,
+    user: dict,
+    request_messages: list[dict],
+) -> tuple[list[dict], bool]:
+    """Backfill chat history from persisted session when request history is short.
+
+    This prevents memory loss when clients only send the latest turn.
+    """
+    session_id = str(session_id or "").strip()
+    if not session_id:
+        return request_messages, False
+
+    if not ObjectId.is_valid(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session id")
+
+    doc = await db.ai_chat_sessions.find_one({"_id": ObjectId(session_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if str(doc.get("userId", "")) != str(user.get("id", "")):
+        raise HTTPException(status_code=403, detail="Session access denied")
+
+    inline = doc.get("messages", [])
+    if int(doc.get("bucketCount", 0) or 0) > 0:
+        session_messages = await load_all_messages(session_id, inline)
+    else:
+        session_messages = inline
+
+    normalized_session = _normalize_chat_messages(session_messages)
+    normalized_request = _normalize_chat_messages(request_messages)
+    if not normalized_session:
+        return normalized_request, False
+
+    # If the request already contains enough context, trust client payload.
+    if len(normalized_request) >= max(4, len(normalized_session) - 2):
+        return normalized_request, False
+
+    merged = list(normalized_session)
+    latest_request_user = None
+    for msg in reversed(normalized_request):
+        if str(msg.get("role", "")).lower() == "user":
+            latest_request_user = msg
+            break
+
+    if latest_request_user and (not merged or not _is_same_message(merged[-1], latest_request_user)):
+        merged.append(latest_request_user)
+
+    return _normalize_chat_messages(merged), True
 
 
 # ── Request parsing & validation ──────────────────────────────────
@@ -116,6 +195,8 @@ def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
         cleaned_messages=cleaned,
         compact_history=_compact_chat_history(cleaned[:-1]),
         memory_text="",
+        session_id=str(getattr(req, "session_id", "") or "").strip(),
+        session_backfilled=False,
     )
 
 
@@ -156,6 +237,9 @@ async def _load_ai_memory(user: dict) -> str:
 def _build_system_override(
     parsed: ParsedRequest,
     rag_context_text: str,
+    web_context_text: str = "",
+    is_course_relevant: bool = False,
+    has_web_results: bool = False,
 ) -> str | None:
     """Build the system-level prompt override for students; ``None`` for teachers."""
     if not parsed.is_student:
@@ -171,7 +255,39 @@ def _build_system_override(
     else:
         mode_prompt = _STUDENT_TUTOR_MODE_MSG
 
-    return _STUDENT_SYSTEM_MSG + "\n\n" + mode_prompt + rag_context_text
+    # Only inject course RAG context if the question is genuinely course-related.
+    # When not course-relevant, injecting irrelevant local evidence confuses the LLM.
+    # Web context is always injected when present — it's explicitly requested by the user.
+    effective_rag = (rag_context_text if is_course_relevant else "") + web_context_text
+    base = _STUDENT_SYSTEM_MSG + "\n\n" + mode_prompt + effective_rag
+
+    # ── Hybrid RAG + Web synthesis instruction ────────────────────
+    if is_course_relevant and has_web_results:
+        base += (
+            "\n\n[Synthesis Mode — IMPORTANT]\n"
+            "You have access to BOTH course materials AND live web results.\n"
+            "Follow these rules strictly:\n"
+            "1. Ground your answer PRIMARILY in the course materials — they are the authoritative "
+            "source for this course.\n"
+            "2. Use web results to fill gaps, add updated information, or provide real-world "
+            "examples that reinforce course concepts.\n"
+            "3. When web information extends or contradicts course material, say so explicitly "
+            "so the student is aware.\n"
+            "4. DO NOT output any citation markers, reference numbers, or evidence labels "
+            "(e.g. Evidence 1, [Doc 1], [Web 1]) in your reply — citations are shown separately in the UI.\n"
+            "5. Produce a single, unified answer — do NOT output separate sections for course "
+            "vs. web content."
+        )
+    elif has_web_results and not is_course_relevant:
+        base += (
+            "\n\n[Web Search Mode]\n"
+            "No course-specific materials matched this query. "
+            "Your answer is based on web search results. "
+            "DO NOT output any citation markers or reference numbers in your reply — "
+            "citations are shown separately in the UI. Be accurate and concise."
+        )
+
+    return base
 
 
 # ── LLM context dict ─────────────────────────────────────────────
@@ -203,6 +319,17 @@ async def ai_chat(
     # 1. Parse & validate
     parsed = _parse_and_validate(req, user)
 
+    # 1.1 Optional server-side history hydration from persisted session
+    if parsed.session_id:
+        hydrated_messages, used_backfill = await _hydrate_messages_from_session(
+            session_id=parsed.session_id,
+            user=user,
+            request_messages=parsed.cleaned_messages,
+        )
+        parsed.cleaned_messages = hydrated_messages
+        parsed.compact_history = _compact_chat_history(parsed.cleaned_messages[:-1])
+        parsed.session_backfilled = used_backfill
+
     # 2. Load AI memory
     parsed.memory_text = await _load_ai_memory(user)
 
@@ -214,11 +341,20 @@ async def ai_chat(
         tutor_mode=parsed.tutor_mode,
         resolved_provider=parsed.resolved_provider,
         cleaned_messages=parsed.cleaned_messages,
+        web_search=bool(getattr(req, "web_search", False)),
+        search_engine=str(getattr(req, "search_engine", "auto") or "auto"),
     )
     rag = RAGResult.from_dict(rag_dict)
 
     # 4. Build system override & LLM context
-    system_override = _build_system_override(parsed, rag.rag_context_text)
+    _has_web = any(c.get("source_type") == "web" for c in rag.rag_citations)
+    system_override = _build_system_override(
+        parsed,
+        rag.rag_context_text,
+        web_context_text=rag.web_context_text,
+        is_course_relevant=rag.is_course_relevant,
+        has_web_results=_has_web,
+    )
     context = _build_llm_context(parsed, rag.compact_history, system_override)
 
     # 5. Build SSE metadata envelope

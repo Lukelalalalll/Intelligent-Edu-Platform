@@ -3,6 +3,7 @@ export interface ChatMsg {
     sender: 'user' | 'ai';
     role: 'user' | 'assistant';
     text: string;
+    modelProvider?: 'coze' | 'local_ollama';
 }
 
 export interface StreamMessage {
@@ -15,4 +16,5 @@ export const WELCOME_MESSAGE: ChatMsg = {
     sender: 'ai',
     role: 'assistant',
     text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?",
+    modelProvider: 'local_ollama',
 };

@@ -15,6 +15,13 @@ import styles from '../styles/diagram.module.css';
 
 const BASE_URL = 'http://localhost:5009';
 
+/** Normalise an image entry – may be a plain string or {src: '…'} object. */
+const toSrc = (v: unknown): string => {
+    if (typeof v === 'string') return v;
+    if (v && typeof v === 'object' && 'src' in v) return String((v as any).src ?? '');
+    return '';
+};
+
 export default function DiagramPage() {
     const { extractState, extractHandlers, searchState, searchHandlers, editorState, editorHandlers } = useDiagramExtractSearch();
     const { genState, genHandlers } = useDiagramGenerate();
@@ -66,11 +73,19 @@ export default function DiagramPage() {
             setModal({ isOpen: false, imgSrc: '', pageNum: '' });
             document.body.style.overflow = '';
         },
-        downloadImage: () => {
-            const a = document.createElement('a');
-            a.href = modal.imgSrc;
-            a.download = `extracted_page_${modal.pageNum || 'img'}.png`;
-            a.click();
+        downloadImage: async () => {
+            try {
+                const resp = await fetch(modal.imgSrc, { mode: 'cors' });
+                const blob = await resp.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = `extracted_page_${modal.pageNum || 'img'}.png`;
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+            } catch {
+                window.open(modal.imgSrc, '_blank');
+            }
         },
     };
 
@@ -98,7 +113,7 @@ export default function DiagramPage() {
 
             if (tool === 'extract_diagram' || tool === 'extract') {
                 // Restore extracted diagrams result
-                const images: string[] = parsed?.images || [];
+                const images = (parsed?.images || []).map(toSrc).filter(Boolean);
                 const fakeData = {
                     file: {
                         original_name: item.params?.source_filename || 'unknown',
@@ -114,7 +129,7 @@ export default function DiagramPage() {
 
             } else if (tool === 'extract_pdf_images') {
                 // Restore image-extract result
-                const images: string[] = parsed?.images || [];
+                const images = (parsed?.images || []).map(toSrc).filter(Boolean);
                 const chapterName = item.params?.source_filename || 'Extracted Images';
                 const fakeChapters: Record<string, any[]> = {
                     [chapterName]: images.map((url: string, idx: number) => ({

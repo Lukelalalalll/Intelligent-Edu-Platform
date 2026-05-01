@@ -31,7 +31,7 @@
     overflow-y: auto;
 }
 
-/* 隐藏原本不好看的滚动条并美化 */
+/* Hide default browser scrollbar and replace with a styled one */
 .sidebar::-webkit-scrollbar,
 .mainPanel::-webkit-scrollbar {
     width: 6px;

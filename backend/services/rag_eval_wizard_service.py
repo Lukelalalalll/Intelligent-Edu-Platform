@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 from fastapi import HTTPException
 
 from backend.core.database import db
-from backend.services.rag_eval_scoring import compute_mrr, score_case
+from backend.services.rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +258,8 @@ def _run_one_ab_mode(
     total_cites = 0
     correct_cites = 0
     mrr_sum = 0.0
+    ndcg_sum = 0.0
+    recall_sum = 0.0
     latencies: list[float] = []
     details: list[dict] = []
 
@@ -318,10 +320,12 @@ def _run_one_ab_mode(
             total_cites += scoring["total_citations"]
             correct_cites += scoring["correct_citations"]
 
-        # MRR: reciprocal rank for first matching doc
+        # MRR, NDCG, Recall: for first matching doc
         if not is_degenerate:
             retrieved_doc_names = [str(c.get("doc_name", "")) for c in retrieved]
             mrr_sum += compute_mrr(retrieved_doc_names, exp_docs)
+            ndcg_sum += compute_ndcg(retrieved_doc_names, exp_docs, k=5)
+            recall_sum += compute_recall_at_k(retrieved_doc_names, exp_docs, k=10)
 
         details.append({
             "id": case.get("id", f"q{len(details)+1}"),
@@ -357,6 +361,8 @@ def _run_one_ab_mode(
         "citation_correct_rate": round(correct_cites / max(total_cites, 1), 4),
         "empty_retrieval_rate": round(empty / n, 4),
         "mrr": round(mrr_sum / n, 4),
+        "ndcg_at_5": round(ndcg_sum / n, 4),
+        "recall_at_10": round(recall_sum / n, 4),
         "avg_latency_ms": round(sum(latencies) / max(len(latencies), 1), 2),
         "p50_latency_ms": round(sorted_lat[len(sorted_lat) // 2], 2),
         "p95_latency_ms": round(sorted_lat[min(len(sorted_lat) - 1, int(len(sorted_lat) * 0.95))], 2),

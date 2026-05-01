@@ -251,12 +251,12 @@ async def smart_extract(
     lang: str = "zh",
     provider: str = "local_ollama",
     audience: str = "student",
+    apply_arc: bool = True,
 ) -> list[str]:
     """Unified extraction: any input → full text → AI splits into exactly ≤n segments.
 
-    Unlike the old path (extract_text_from_md_txt → generate_scripts(chunks)),
-    this always sends the full document to optimize_full_script so the AI respects
-    max_segments regardless of how many paragraphs the document has.
+    When apply_arc=True (default), a second LLM call plans the narrative arc and
+    injects opening hooks, transitions, and a closing CTA into the returned segments.
     """
     from .extract import extract_text_from_pdf, extract_text_from_md_txt
     if file_path:
@@ -270,7 +270,14 @@ async def smart_extract(
     else:
         return []
 
-    return await optimize_full_script(full_text, lang, provider, max_segments, audience)
+    segments = await optimize_full_script(full_text, lang, provider, max_segments, audience)
+
+    if apply_arc and len(segments) > 1:
+        arc = await plan_narrative_arc(segments, lang, provider)
+        if arc:
+            segments = weave_narrative_arc(segments, arc, lang)
+
+    return segments
 
 
 async def generate_slide_contents(
@@ -350,3 +357,123 @@ async def generate_slide_contents(
         }
 
     return list(await asyncio.gather(*[_one(s) for s in scripts]))
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Phase 1.1 — Narrative Arc Planner
+# One LLM call → opening hook, per-segment role, transitions, closing CTA
+# ═════════════════════════════════════════════════════════════════════
+
+_ARC_PLAN_PROMPT_ZH = """你是一位专业的教学视频导演。以下是一段教学视频的所有分段脚本（共{n}段）：
+
+{segments}
+
+请为这个视频规划一个连贯的叙事弧，输出JSON：
+{{
+  "opening_hook": "一句吸引学生注意力的开场白（15-30字）",
+  "segments": [
+    {{"index": 0, "role": "这段的叙事角色，例如：引入话题/背景铺垫/深化概念/举例说明/对比分析/总结回顾", "transition": ""}},
+    {{"index": 1, "role": "...", "transition": "从上一段自然过渡到这段的短语（10-20字，不重复前一段内容）"}},
+    {{"index": 2, "role": "...", "transition": "..."}}
+  ],
+  "closing_cta": "结尾的行动号召或总结语（15-30字）"
+}}
+
+只输出合法JSON，不要解释，不要加任何前缀。"""
+
+_ARC_PLAN_PROMPT_EN = """You are a professional teaching video director. Below are all {n} narration segments for a teaching video:
+
+{segments}
+
+Plan a coherent narrative arc. Output ONLY valid JSON:
+{{
+  "opening_hook": "A 15-25 word hook to capture student attention",
+  "segments": [
+    {{"index": 0, "role": "narrative role: e.g. introduce-topic / background / deepen-concept / example / contrast / recap", "transition": ""}},
+    {{"index": 1, "role": "...", "transition": "10-20 word natural bridge from the previous segment"}},
+    {{"index": 2, "role": "...", "transition": "..."}}
+  ],
+  "closing_cta": "15-25 word closing call-to-action or summary"
+}}
+
+Output ONLY the JSON object, no explanation."""
+
+
+async def plan_narrative_arc(
+    segments: list[str],
+    lang: str = "zh",
+    provider: str = "local_ollama",
+) -> dict | None:
+    """One LLM call to plan the narrative arc for a video.
+
+    Returns a dict with keys: opening_hook, segments (list of {index, role, transition}),
+    closing_cta. Returns None on failure (caller should continue without arc).
+    """
+    if not segments:
+        return None
+
+    n = len(segments)
+    # Build a numbered summary of each segment (capped to avoid token blowout)
+    seg_lines = "\n".join(
+        f"[{i}] {s[:150]}" for i, s in enumerate(segments)
+    )
+    template = _ARC_PLAN_PROMPT_ZH if lang == "zh" else _ARC_PLAN_PROMPT_EN
+    prompt = template.format(n=n, segments=seg_lines)
+
+    try:
+        raw = await _call_ai(prompt, provider)
+        arc = _parse_json_object(raw)
+        if not arc:
+            logger.warning("plan_narrative_arc: LLM returned non-parsable JSON, skipping arc")
+            return None
+        # Validate minimal structure
+        if "segments" not in arc or not isinstance(arc.get("segments"), list):
+            return None
+        return arc
+    except Exception as exc:
+        logger.warning("plan_narrative_arc failed: %s — continuing without arc", exc)
+        return None
+
+
+def weave_narrative_arc(segments: list[str], arc: dict, lang: str = "zh") -> list[str]:
+    """Inject arc transitions and roles into the existing segment scripts.
+
+    Rules:
+    - Segment 0: prepend the opening_hook (if not already similar).
+    - Segments 1..n-1: prepend the transition_sentence for this segment.
+    - Last segment: append the closing_cta.
+    - Keeps changes minimal; original script content is preserved.
+    """
+    if not arc or not segments:
+        return segments
+
+    arc_segs: list[dict] = arc.get("segments", [])
+    # Build lookup by index
+    arc_by_idx = {item.get("index", i): item for i, item in enumerate(arc_segs)}
+
+    opening_hook: str = arc.get("opening_hook", "")
+    closing_cta: str = arc.get("closing_cta", "")
+
+    # Separator between arc injection and original text
+    sep = "，" if lang == "zh" else " — "
+
+    result: list[str] = []
+    for i, script in enumerate(segments):
+        arc_item = arc_by_idx.get(i, {})
+        transition: str = arc_item.get("transition", "")
+
+        if i == 0 and opening_hook:
+            # Avoid prepending if the script already starts similarly
+            if not script.startswith(opening_hook[:10]):
+                script = opening_hook + sep + script
+        elif transition:
+            if not script.startswith(transition[:10]):
+                script = transition + sep + script
+
+        if i == len(segments) - 1 and closing_cta:
+            if not script.endswith(closing_cta[-10:]):
+                script = script + sep + closing_cta
+
+        result.append(script)
+
+    return result

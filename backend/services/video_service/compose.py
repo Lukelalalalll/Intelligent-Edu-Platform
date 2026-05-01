@@ -33,21 +33,89 @@ def _make_clip(
     audio_path: Path,
     out_path: Path,
     srt_path: Optional[Path] = None,
+    slide_is_video: bool = False,
 ) -> None:
-    """Compose one slide image + audio into an MP4 clip.
+    """Compose one slide image (or animated webm) + audio into an MP4 clip.
 
-    Previous implementation used ffmpeg-python's ``zoompan`` filter which
-    processes every frame individually at full 1920x1080 resolution and
-    routinely takes 5-15 minutes for an 8-clip batch, causing the pipeline
-    to appear frozen at 65%.
-
-    This version uses a direct ``subprocess`` call with a lightweight
-    scale+pad+fade filter chain that encodes the same clip in seconds.
+    slide_is_video=True  — img_path is a short animated .webm (Phase 2.1 high).
+      The animation plays once, then the last frame is held for the remainder
+      of the audio duration.
+    slide_is_video=False — img_path is a static PNG (default behaviour).
     """
     duration = _probe_duration(audio_path)
     fade_dur = 0.8
     fade_out_start = max(0.0, duration - fade_dur)
 
+    # Shared audio fade filter
+    af = (
+        f"afade=type=in:start_time=0:duration=0.3,"
+        f"afade=type=out:start_time={max(0.0, duration - 0.6):.3f}:duration=0.5"
+    )
+
+    # ── Animated-video branch (Phase 2.1 high) ───────────────────────────────
+    if slide_is_video:
+        # Probe webm duration so we know how long to freeze the last frame
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error",
+             "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1",
+             str(img_path)],
+            capture_output=True, text=True, timeout=30,
+        )
+        try:
+            webm_dur = float(probe.stdout.strip())
+        except ValueError:
+            webm_dur = 1.4
+
+        hold_dur = max(0.0, duration - webm_dur)
+
+        vf_chain = (
+            f"tpad=stop_mode=clone:stop_duration={hold_dur:.3f},"
+            f"fade=type=out:start_time={fade_out_start:.3f}:duration={fade_dur}"
+        )
+        if srt_path and srt_path.exists():
+            srt_escaped = str(srt_path).replace("'", "\\'").replace(":", "\\:")
+            vf_chain += (
+                f",subtitles='{srt_escaped}':"
+                "force_style='FontSize=28,PrimaryColour=&HFFFFFF&,"
+                "OutlineColour=&H40000000&,BorderStyle=4,"
+                "BackColour=&HB0000000&,Outline=1,"
+                "MarginV=30,Alignment=2'"
+            )
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(img_path),
+            "-i", str(audio_path),
+            "-filter_complex", f"[0:v]{vf_chain}[vout]",
+            "-map", "[vout]",
+            "-map", "1:a",
+            "-af", af,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            "-movflags", "+faststart",
+            "-loglevel", "error",
+            str(out_path),
+        ]
+        logger.debug("Compositing animated clip: %s", out_path.name)
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=_CLIP_TIMEOUT,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"ffmpeg error for {out_path.name} (exit {result.returncode}): "
+                    f"{result.stderr[:800]}"
+                )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"ffmpeg timed out after {_CLIP_TIMEOUT}s compositing {out_path.name}"
+            ) from exc
+        return
+
+    # ── Static-image branch (default) ────────────────────────────────────────
     # Build video filter chain — no zoompan
     vf_parts = [
         # Scale to fill 1920x1080, preserve aspect ratio, black padding
@@ -73,12 +141,6 @@ def _make_clip(
 
     vf = ",".join(vf_parts)
 
-    # Audio filter: fade in + fade out
-    af = (
-        f"afade=type=in:start_time=0:duration=0.3,"
-        f"afade=type=out:start_time={max(0.0, duration - 0.6):.3f}:duration=0.5"
-    )
-
     cmd = [
         "ffmpeg", "-y",
         "-loop", "1", "-framerate", "24",
@@ -88,7 +150,7 @@ def _make_clip(
         "-vf", vf,
         "-af", af,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
         "-pix_fmt", "yuv420p",
         "-shortest",
         "-movflags", "+faststart",

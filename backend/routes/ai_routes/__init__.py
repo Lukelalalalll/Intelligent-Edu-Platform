@@ -11,4 +11,5 @@ from . import session  # noqa: F401
 from . import chat  # noqa: F401
 from . import memory  # noqa: F401
 from . import study_coach  # noqa: F401
+from . import study_stream  # noqa: F401
 from . import index_course  # noqa: F401

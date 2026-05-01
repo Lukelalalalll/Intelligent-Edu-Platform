@@ -4,7 +4,7 @@ import galleryStyles from '../styles/imageGallery.module.css';
 import lightboxStyles from '../styles/imageLightbox.module.css';
 import notifStyles from '../styles/imageNotifications.module.css';
 
-// --- 子组件：画廊图片卡片 ---
+// --- Sub-component: gallery image card ---
 const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
     <div className={`${galleryStyles.imageItem} ${isSelected ? galleryStyles.imageItemSelected : ''}`} onClick={() => onToggleSelect(item)}>
         <img src={item.src} alt={item.caption || "Extracted Image"} loading="lazy" />
@@ -26,7 +26,7 @@ const ImageGalleryItem = ({ item, isSelected, onToggleSelect, onPreview }) => (
     </div>
 );
 
-// --- 子组件：已选图片缩略图 ---
+// --- Sub-component: selected image thumbnail ---
 const SelectedImageItem = ({ item, onRemove, onPreview }) => (
     <div className={galleryStyles.selectedImageItem}>
         <img src={item.src} alt="Selected" onClick={() => onPreview(item.src)} />
@@ -34,7 +34,7 @@ const SelectedImageItem = ({ item, onRemove, onPreview }) => (
     </div>
 );
 
-// --- 主视图组件 ---
+// --- Main view component ---
 export default function ImageExtractor({
     states: {
         isDragging, uploadStatus, currentChapter, activeTab,

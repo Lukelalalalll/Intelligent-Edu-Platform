@@ -9,15 +9,15 @@ interface Props {
 export default function PropertiesPanel({ element }: Props) {
     return (
         <div className={styles.propsPanel}>
-            <div className={styles.propsTitle}>属性</div>
+            <div className={styles.propsTitle}>Properties</div>
 
             {!element ? (
-                <div className={styles.emptyProps}>点击幻灯片元素查看属性</div>
+                <div className={styles.emptyProps}>Click a slide element to view its properties</div>
             ) : (
                 <>
                     <div className={styles.propsRow}>
-                        <span>类型</span>
-                        <span className={styles.propsValue}>{element.type === 'text' ? '文字' : '图片'}</span>
+                        <span>Type</span>
+                        <span className={styles.propsValue}>{element.type === 'text' ? 'Text' : 'Image'}</span>
                     </div>
                     <div className={styles.propsRow}>
                         <span>ID</span>
@@ -27,28 +27,28 @@ export default function PropertiesPanel({ element }: Props) {
                         <>
                             {element.font_size != null && (
                                 <div className={styles.propsRow}>
-                                    <span>字号</span>
+                                    <span>Font Size</span>
                                     <span className={styles.propsValue}>{element.font_size}pt</span>
                                 </div>
                             )}
                             <div className={styles.propsRow}>
-                                <span>加粗</span>
-                                <span className={styles.propsValue}>{element.bold ? '是' : '否'}</span>
+                                <span>Bold</span>
+                                <span className={styles.propsValue}>{element.bold ? 'Yes' : 'No'}</span>
                             </div>
                             <div className={styles.propsRow}>
-                                <span>对齐</span>
+                                <span>Align</span>
                                 <span className={styles.propsValue}>{element.align || 'left'}</span>
                             </div>
                         </>
                     )}
                     <div className={styles.propsRow}>
-                        <span>位置</span>
+                        <span>Position</span>
                         <span className={styles.propsValue}>
                             ({element.bbox.x.toFixed(0)}, {element.bbox.y.toFixed(0)})
                         </span>
                     </div>
                     <div className={styles.propsRow}>
-                        <span>尺寸</span>
+                        <span>Size</span>
                         <span className={styles.propsValue}>
                             {element.bbox.w.toFixed(0)} × {element.bbox.h.toFixed(0)}
                         </span>

@@ -12,11 +12,13 @@ const formatFileSize = (bytes: number): string => {
 interface FileUploadSectionProps {
     file: File | null;
     useLLM: boolean;
+    headerLlmProvider: 'local_ollama' | 'coze';
     isDragging: boolean;
     uploadStatus: string;
     uploadProgress: number;
     fileInputRef: React.RefObject<HTMLInputElement>;
     setUseLLM: (v: boolean) => void;
+    setHeaderLlmProvider: (v: 'local_ollama' | 'coze') => void;
     handleDragOver: (e: React.DragEvent) => void;
     handleDragLeave: () => void;
     handleDrop: (e: React.DragEvent) => void;
@@ -26,8 +28,8 @@ interface FileUploadSectionProps {
 }
 
 export default function FileUploadSection({
-    file, useLLM, isDragging, uploadStatus, uploadProgress,
-    fileInputRef, setUseLLM, handleDragOver, handleDragLeave, handleDrop,
+    file, useLLM, headerLlmProvider, isDragging, uploadStatus, uploadProgress,
+    fileInputRef, setUseLLM, setHeaderLlmProvider, handleDragOver, handleDragLeave, handleDrop,
     onFileChange, clearFile, handleUpload,
 }: FileUploadSectionProps) {
     return (
@@ -102,6 +104,27 @@ export default function FileUploadSection({
                             <i className="fas fa-robot" aria-hidden="true"></i> Fetch enhanced headers using LLM
                         </label>
                     </div>
+                    {useLLM && (
+                        <div className={`mb-4 ${styles.providerSelector}`}>
+                            <span className={styles.providerLabel}>LLM Provider</span>
+                            <div className={styles.providerPills}>
+                                <button
+                                    type="button"
+                                    className={`${styles.providerPill} ${headerLlmProvider === 'local_ollama' ? styles.providerPillActive : ''}`}
+                                    onClick={() => setHeaderLlmProvider('local_ollama')}
+                                >
+                                    <i className="fas fa-server" aria-hidden="true"></i> Local Llama
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${styles.providerPill} ${headerLlmProvider === 'coze' ? styles.providerPillActive : ''}`}
+                                    onClick={() => setHeaderLlmProvider('coze')}
+                                >
+                                    <i className="fas fa-cloud" aria-hidden="true"></i> Coze
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <button
                         type="submit"
                         className={`btn btn-primary ${styles.btn} ${styles.btnPrimary} ${uploadStatus === 'start' ? styles.processing : ''}`}

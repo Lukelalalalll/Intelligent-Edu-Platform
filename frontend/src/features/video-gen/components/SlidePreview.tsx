@@ -7,13 +7,23 @@ interface Props {
   scene: Scene;
   idx: number;
   subtitles: boolean;
+  /**
+   * When true: renders at full 1920x1080 real pixels for Playwright screenshot.
+   * All font sizes, spacing, and container dimensions scale up proportionally.
+   */
+  isFullScreen?: boolean;
 }
 
 const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
 
-const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
+const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles, isFullScreen = false }) => {
   const t = THEMES[scene.themeId] ?? THEMES['dark-ocean'];
   const layout = scene.layoutType || 'title-bullets';
+
+  // Scale factor: full-screen (1920px wide) vs preview thumbnail (≈20px wide)
+  // Approximate ratio: 1920 / 240 = 8x. We use 7.5 for a slightly conservative scale.
+  const fs = isFullScreen ? 7.5 : 1;
+  const px = (n: number) => `${Math.round(n * fs)}px`;
 
   const bgStyle: React.CSSProperties = scene.slideMode === 'image' && scene._imagePreviewUrl
     ? { backgroundImage: `url(${scene._imagePreviewUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -28,16 +38,16 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
     const bodyText = scene.slideBody || '';
     const bullets = bodyText.split('\n').filter(l => l.trim());
     return bullets.length > 0
-      ? bullets.slice(0, 7).map((b, i) => <div key={i} style={{ color: t.body, fontSize: '10px', lineHeight: 1.5 }}>• {b}</div>)
-      : <div style={{ color: t.body, fontSize: '10px', opacity: 0.7 }}>...</div>;
+      ? bullets.slice(0, 7).map((b, i) => <div key={i} style={{ color: t.body, fontSize: px(10), lineHeight: 1.5 }}>• {b}</div>)
+      : <div style={{ color: t.body, fontSize: px(10), opacity: 0.7 }}>...</div>;
   };
 
   const renderTitle = () => (
-    <div style={{ color: t.title, fontSize: '14px', fontWeight: 700, marginBottom: 4, letterSpacing: '0.02em' }}>{titleText}</div>
+    <div style={{ color: t.title, fontSize: px(14), fontWeight: 700, marginBottom: 4, letterSpacing: '0.02em' }}>{titleText}</div>
   );
 
   const renderDivider = () => (
-    <div style={{ height: 1, background: t.accent, margin: '3px 0 5px', opacity: 0.6 }} />
+    <div style={{ height: isFullScreen ? 3 : 1, background: t.accent, margin: isFullScreen ? '8px 0 20px' : '3px 0 5px', opacity: 0.6 }} />
   );
 
   const renderImgPlaceholder = (w: string, h: string) => (
@@ -52,8 +62,8 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
     switch (layout) {
       case 'title-bullets':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '14px 16px', overflow: 'hidden' }}>
-            <div className={s.accentBar} style={{ background: t.accent }} />
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: isFullScreen ? '105px 120px' : '14px 16px', overflow: 'hidden' }}>
+            <div className={s.accentBar} style={{ background: t.accent, width: isFullScreen ? 12 : 4 }} />
             {renderTitle()}
             {renderDivider()}
             <div style={{ flex: 1, overflow: 'hidden' }}>{renderBody()}</div>
@@ -99,11 +109,11 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
       case 'big-quote':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '16px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 24, color: t.accent, marginBottom: 4, opacity: 0.5, fontFamily: 'serif' }}>❝</div>
-            <div style={{ color: t.title, fontSize: 13, fontWeight: 700, lineHeight: 1.6, maxWidth: '90%' }}>
+            <div style={{ fontSize: px(24), color: t.accent, marginBottom: 4, opacity: 0.5, fontFamily: 'serif' }}>❝</div>
+            <div style={{ color: t.title, fontSize: isFullScreen ? 52 : 13, fontWeight: 700, lineHeight: 1.6, maxWidth: '90%' }}>
               {scene.quoteText || titleText}
             </div>
-            <div style={{ marginTop: 8, color: t.body, fontSize: 9, opacity: 0.6 }}>── {titleText} ──</div>
+            <div style={{ marginTop: 8, color: t.body, fontSize: isFullScreen ? 26 : 9, opacity: 0.6 }}>── {titleText} ──</div>
           </div>
         );
 
@@ -116,13 +126,13 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
             {renderDivider()}
             <div style={{ display: 'flex', flex: 1, gap: 10, overflow: 'hidden' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col1Title || 'Left'}</div>
-                {col1.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: 9, lineHeight: 1.5 }}>• {b}</div>)}
+                <div style={{ color: t.accent, fontSize: isFullScreen ? 34 : 10, fontWeight: 700, marginBottom: 3 }}>{scene.col1Title || 'Left'}</div>
+                {col1.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: isFullScreen ? 28 : 9, lineHeight: 1.5 }}>• {b}</div>)}
               </div>
               <div style={{ width: 1, background: t.accent, opacity: 0.3 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, marginBottom: 3 }}>{scene.col2Title || 'Right'}</div>
-                {col2.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: 9, lineHeight: 1.5 }}>• {b}</div>)}
+                <div style={{ color: t.accent, fontSize: isFullScreen ? 34 : 10, fontWeight: 700, marginBottom: 3 }}>{scene.col2Title || 'Right'}</div>
+                {col2.slice(0, 5).map((b, i) => <div key={i} style={{ color: t.body, fontSize: isFullScreen ? 28 : 9, lineHeight: 1.5 }}>• {b}</div>)}
               </div>
             </div>
           </div>
@@ -131,12 +141,35 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles }) => {
     }
   };
 
+  const containerStyle: React.CSSProperties = isFullScreen
+    ? {
+        width: 1920,
+        height: 1080,
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: '"PingFang SC","Noto Sans CJK SC","Segoe UI",Arial,sans-serif',
+        ...bgStyle,
+      }
+    : bgStyle;
+
   return (
-    <div className={s.slidePreview} style={bgStyle}>
+    <div className={isFullScreen ? undefined : s.slidePreview} style={containerStyle}>
       {renderContent()}
-      <div className={s.previewPage} style={{ color: t.body }}>{idx + 1}</div>
+      <div
+        className={s.previewPage}
+        style={{ color: t.body, ...(isFullScreen ? { fontSize: 26, bottom: 28, right: 48 } : {}) }}
+      >
+        {idx + 1}
+      </div>
       {subtitles && scene.script && (
-        <div className={s.subtitleStrip}>{scene.script.slice(0, 80)}</div>
+        <div
+          className={s.subtitleStrip}
+          style={isFullScreen ? { fontSize: 28, padding: '18px 60px', lineHeight: 1.6 } : undefined}
+        >
+          {scene.script.slice(0, isFullScreen ? 150 : 80)}
+        </div>
       )}
     </div>
   );

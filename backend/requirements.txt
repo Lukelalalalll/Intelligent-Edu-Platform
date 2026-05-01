@@ -152,3 +152,8 @@ gunicorn==23.0.0
 pytest-asyncio==1.3.0
 # Optional: Playwright for high-quality HTML slide rendering (requires: playwright install chromium)
 playwright==1.52.0
+json-repair>=0.59.0
+# Handwriting OCR (PaddleOCR PP-OCRv4) — replaces pytesseract for handwritten submissions
+# Install: pip install paddlepaddle paddleocr  (CPU-only; use paddlepaddle-gpu for CUDA)
+paddlepaddle>=2.6.0
+paddleocr>=2.8.0

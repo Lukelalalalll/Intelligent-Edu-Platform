@@ -7,6 +7,13 @@ import s from '../../../styles/history.module.css';
 
 const BASE_URL = 'http://localhost:5009';
 
+/** Normalise an image entry – may be a plain string or {src: '…'} object. */
+const toSrc = (v: unknown): string => {
+    if (typeof v === 'string') return v;
+    if (v && typeof v === 'object' && 'src' in v) return String((v as any).src ?? '');
+    return '';
+};
+
 const fmt = (v: any, fb = '-') => {
     if (v == null) return fb;
     if (Array.isArray(v)) { const f = v.filter(x => String(x ?? '').trim()); return f.length ? f.join(', ') : fb; }
@@ -36,13 +43,23 @@ interface LightboxProps {
 }
 
 function Lightbox({ src, index, total, onClose, onPrev, onNext }: LightboxProps) {
-    const fullSrc = src.startsWith('/') ? `${BASE_URL}${src}` : src;
+    const safeSrc = toSrc(src);
+    const fullSrc = safeSrc.startsWith('/') ? `${BASE_URL}${safeSrc}` : safeSrc;
 
-    const handleDownload = useCallback(() => {
-        const a = document.createElement('a');
-        a.href = fullSrc;
-        a.download = `diagram_${index + 1}.png`;
-        a.click();
+    const handleDownload = useCallback(async () => {
+        try {
+            const resp = await fetch(fullSrc, { mode: 'cors' });
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `diagram_${index + 1}.png`;
+            a.click();
+            URL.revokeObjectURL(blobUrl);
+        } catch {
+            // Fallback: open in new tab
+            window.open(fullSrc, '_blank');
+        }
     }, [fullSrc, index]);
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -165,10 +182,11 @@ function Lightbox({ src, index, total, onClose, onPrev, onNext }: LightboxProps)
 }
 
 /* ── Image grid shown in detail content ─────────────────── */
-function ExtractedImageGrid({ images }: { images: string[] }) {
+function ExtractedImageGrid({ images }: { images: unknown[] }) {
     const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+    const normalised = images.map(toSrc).filter(Boolean);
 
-    if (!images.length) return <div className={s.historyDetailLoading}>No images saved for this entry.</div>;
+    if (!normalised.length) return <div className={s.historyDetailLoading}>No images saved for this entry.</div>;
 
     return (
         <>
@@ -178,7 +196,7 @@ function ExtractedImageGrid({ images }: { images: string[] }) {
                 gap: 12,
                 padding: '4px 0',
             }}>
-                {images.map((url, idx) => {
+                {normalised.map((url, idx) => {
                     const fullUrl = url.startsWith('/') ? `${BASE_URL}${url}` : url;
                     return (
                         <div
@@ -222,12 +240,12 @@ function ExtractedImageGrid({ images }: { images: string[] }) {
             <AnimatePresence>
                 {lightboxIdx !== null && (
                     <Lightbox
-                        src={images[lightboxIdx]}
+                        src={normalised[lightboxIdx]}
                         index={lightboxIdx}
-                        total={images.length}
+                        total={normalised.length}
                         onClose={() => setLightboxIdx(null)}
-                        onPrev={() => setLightboxIdx((lightboxIdx - 1 + images.length) % images.length)}
-                        onNext={() => setLightboxIdx((lightboxIdx + 1) % images.length)}
+                        onPrev={() => setLightboxIdx((lightboxIdx - 1 + normalised.length) % normalised.length)}
+                        onNext={() => setLightboxIdx((lightboxIdx + 1) % normalised.length)}
                     />
                 )}
             </AnimatePresence>

@@ -67,7 +67,7 @@ export default function RelationManagementPanel({
             </div>
 
             <BaseModal open={isCourseModalOpen} onClose={onCloseModal} width={550}>
-                {/* 课程表单 */}
+                {/* Course form */}
                 <form onSubmit={onCourseSubmit} style={{ textAlign: 'left' }}>
                     <h3 style={{ fontSize: '1.25rem', color: '#1a1a1a', marginBottom: '16px', fontWeight: 700, textAlign: 'center' }}>
                         {editingCourseId ? 'Edit Course' : 'Create Course'}

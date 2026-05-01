@@ -47,3 +47,6 @@ export const FileCenterPage = React.lazy(() => import('../features/file-center/p
 // ── Simple pass-through pages (no entry wrapper needed) ──
 export const ChatPage = React.lazy(() => import('../features/chat/pages/ChatPage'));
 export const PublishHomework = React.lazy(() => import('../features/homework/PublishHomework'));
+
+// ── Headless slide renderer (for Playwright only, NOT end users) ──
+export const SlideRendererPage = React.lazy(() => import('../features/video-gen/pages/SlideRendererPage'));

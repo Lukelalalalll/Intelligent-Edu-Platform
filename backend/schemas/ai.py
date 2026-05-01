@@ -19,7 +19,7 @@ class SessionMessageSchema(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     role: Literal['user', 'assistant', 'system']
-    content: str = Field(default="", max_length=12000)
+    content: str = Field(default="", max_length=50000)
     images: List[str] = Field(default_factory=list, max_length=8)
     files: List[SessionAttachmentMetaSchema] = Field(default_factory=list, max_length=20)
 
@@ -28,7 +28,7 @@ class UpdateAiSessionSchema(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     title: Optional[str] = Field(default=None, max_length=200)
-    messages: Optional[List[SessionMessageSchema]] = Field(default=None, max_length=200)
+    messages: Optional[List[SessionMessageSchema]] = Field(default=None, max_length=500)
 
 
 class RagChunkSchema(BaseModel):
@@ -57,12 +57,15 @@ class AiChatSchema(BaseModel):
     messages: List[dict] = Field(..., max_length=100)
     provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     tutor_mode: Literal['tutor', 'hint_only'] = 'tutor'
+    session_id: Optional[str] = Field(default=None, max_length=64)
+    web_search: bool = False
+    search_engine: Literal['auto', 'google', 'bing', 'duckduckgo', 'wikipedia', 'arxiv', 'google_scholar'] = 'auto'
 
 
 class StudyCozeSchema(BaseModel):
     provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
     content: str = Field(..., min_length=1, max_length=5000)
-    mode: Literal['chat', 'hint', 'explain'] = 'chat'
+    mode: Literal['chat', 'hint', 'explain', 'quiz', 'simplify', 'expand'] = 'chat'
     context: Optional[str] = Field(None, max_length=20000)
     messages: Optional[List[ChatMessageSchema]] = Field(None, max_length=20)
 

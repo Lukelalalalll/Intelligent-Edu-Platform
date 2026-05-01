@@ -83,3 +83,43 @@ def compute_mrr(
         if doc_name in expected_docs:
             return 1.0 / rank
     return 0.0
+
+
+def compute_ndcg(
+    retrieved_doc_names: List[str],
+    expected_docs: Set[str],
+    k: int = 5,
+) -> float:
+    """Compute NDCG@k for a single query.
+
+    Uses binary relevance: 1 if doc_name ∈ expected_docs, else 0.
+    """
+    import math
+
+    if not expected_docs:
+        return 0.0
+
+    # DCG@k
+    dcg = 0.0
+    for i, doc_name in enumerate(retrieved_doc_names[:k]):
+        rel = 1.0 if doc_name in expected_docs else 0.0
+        dcg += rel / math.log2(i + 2)  # i+2 because i is 0-indexed
+
+    # Ideal DCG@k: all relevant docs ranked first
+    n_relevant = min(len(expected_docs), k)
+    idcg = sum(1.0 / math.log2(i + 2) for i in range(n_relevant))
+
+    return dcg / idcg if idcg > 0 else 0.0
+
+
+def compute_recall_at_k(
+    retrieved_doc_names: List[str],
+    expected_docs: Set[str],
+    k: int = 10,
+) -> float:
+    """Compute Recall@k: fraction of expected docs found in top-k results."""
+    if not expected_docs:
+        return 0.0
+    retrieved_set = set(retrieved_doc_names[:k])
+    found = len(expected_docs & retrieved_set)
+    return found / len(expected_docs)

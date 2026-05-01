@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import styles from '../styles/videoGen.module.css';
 import { videoApi } from '../api/videoApi';
 import type { Scene } from '../data/themes';
+import VideoPlayerWithChapters from './VideoPlayerWithChapters';
 
 const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+
+interface ClipError {
+    clip_index: number;
+    stage: string;
+    reason: string;
+}
 
 interface Props {
     inputData: { text?: string; file?: File; fileType?: string } | null;
@@ -12,26 +19,70 @@ interface Props {
     provider: string;
     audience: string;
     enableSubtitles: boolean;
+    subtitleMode: 'hard_srt' | 'image_strip' | 'none';
+    brandKit: 'none' | 'default';
+    animationLevel: 'off' | 'basic' | 'high';
+    ttsEngine: 'edge_tts' | 'cosyvoice';
+    avatarMode: 'none' | 'wav2lip' | 'latentsync';
+    avatarImagePath: string;
+    quizEnabled: boolean;
     maxSegments: number;
     onTaskId: (id: string) => void;
     taskId: string | null;
     onBack: () => void;
 }
 
-export default function StepGenerate({ inputData, scenes, lang, provider, audience, enableSubtitles, maxSegments, onTaskId, taskId, onBack }: Props) {
+export default function StepGenerate({
+    inputData,
+    scenes,
+    lang,
+    provider,
+    audience,
+    enableSubtitles,
+    subtitleMode,
+    brandKit,
+    animationLevel,
+    ttsEngine,
+    avatarMode,
+    avatarImagePath,
+    quizEnabled,
+    maxSegments,
+    onTaskId,
+    taskId,
+    onBack,
+}: Props) {
     const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
     const [progress, setProgress] = useState(0);
     const [message, setMessage] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [clipErrors, setClipErrors] = useState<ClipError[]>([]);
+    const [quizUrl, setQuizUrl] = useState<string | undefined>(undefined);
+    const [chaptersUrl, setChaptersUrl] = useState<string | undefined>(undefined);
+    const cleanupRef = useRef<(() => void) | null>(null);
 
     const startGeneration = async () => {
         setStatus('running');
         setMessage('Starting...');
+        setClipErrors([]);
         try {
-            // Strip frontend-only preview fields before sending
             const cleanScenes = scenes.map(({ _imagePreviewUrl, _layoutImagePreviewUrl, ...rest }) => rest);
-            const res = await videoApi.generate(inputData!, cleanScenes, lang, provider, enableSubtitles, maxSegments, audience);
+            const resolvedSubtitleMode = enableSubtitles ? subtitleMode : 'none';
+            const res = await videoApi.generate(
+                inputData!,
+                cleanScenes,
+                lang,
+                provider,
+                enableSubtitles,
+                maxSegments,
+                audience,
+                resolvedSubtitleMode,
+                brandKit,
+                animationLevel,
+                ttsEngine,
+                avatarMode,
+                quizEnabled,
+                avatarImagePath || undefined,
+            );
             onTaskId(res.taskId);
         } catch {
             setStatus('error');
@@ -39,27 +90,31 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
         }
     };
 
+    // Subscribe to SSE (with automatic polling fallback) once taskId is available
     useEffect(() => {
         if (!taskId || status !== 'running') return;
-        pollRef.current = setInterval(async () => {
-            try {
-                const task = await videoApi.status(taskId);
-                setProgress(task.progress || 0);
-                setMessage(task.message || '');
-                if (task.status === 'done') {
-                    clearInterval(pollRef.current!);
-                    setStatus('done');
-                    setVideoUrl(`${apiRoot}/${task.videoPath}`);
-                } else if (task.status === 'error') {
-                    clearInterval(pollRef.current!);
-                    setStatus('error');
-                    setMessage(task.error || 'Unknown error');
-                }
-            } catch {
-                // ignore transient poll failures
-            }
-        }, 2500);
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+
+        const cleanup = videoApi.progressSSE(
+            taskId,
+            (prog, msg) => {
+                setProgress(prog);
+                setMessage(msg);
+            },
+            (videoPath, warnings, meta) => {
+                setStatus('done');
+                setVideoUrl(`${apiRoot}/${videoPath}`);
+                if (warnings.length > 0) setClipErrors(warnings as ClipError[]);
+                if (meta?.quizPath) setQuizUrl(`${apiRoot}/${meta.quizPath}`);
+                if (meta?.chaptersPath) setChaptersUrl(`${apiRoot}/${meta.chaptersPath}`);
+            },
+            (err, details) => {
+                setStatus('error');
+                setMessage(err);
+                if (details && details.length > 0) setClipErrors(details as ClipError[]);
+            },
+        );
+        cleanupRef.current = cleanup;
+        return () => cleanup();
     }, [taskId, status]);
 
     return (
@@ -101,7 +156,24 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
                 <div className={styles.doneArea}>
                     <i className="fas fa-check-circle" style={{ color: '#22c55e', fontSize: 48 }} />
                     <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>Video ready!</p>
-                    <video src={videoUrl} controls width="640" style={{ borderRadius: 12 }} />
+                    {clipErrors.length > 0 && (
+                        <div className={styles.warnBox}>
+                            <i className="fas fa-exclamation-triangle" style={{ marginRight: 6 }} />
+                            {clipErrors.length} clip(s) were skipped due to errors:
+                            <ul style={{ margin: '6px 0 0 16px', fontSize: '0.85rem' }}>
+                                {clipErrors.map(e => (
+                                    <li key={e.clip_index}>
+                                        <strong>Clip {e.clip_index + 1}</strong> [{e.stage}]: {e.reason}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <VideoPlayerWithChapters
+                        videoUrl={videoUrl}
+                        chaptersUrl={chaptersUrl}
+                        quizUrl={quizUrl}
+                    />
                     <a className={styles.primaryBtn} href={videoUrl} download>
                         <i className="fas fa-download" /> Download MP4
                     </a>
@@ -111,7 +183,19 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
             {status === 'error' && (
                 <>
                     <p className={styles.errorTip}><i className="fas fa-exclamation-triangle" /> {message}</p>
-                    <button className={styles.secondaryBtn} onClick={() => { setStatus('idle'); setProgress(0); }}>
+                    {clipErrors.length > 0 && (
+                        <div className={styles.warnBox} style={{ marginTop: 8 }}>
+                            <strong>Clip-level errors:</strong>
+                            <ul style={{ margin: '4px 0 0 16px', fontSize: '0.85rem' }}>
+                                {clipErrors.map(e => (
+                                    <li key={e.clip_index}>
+                                        <strong>Clip {e.clip_index + 1}</strong> [{e.stage}]: {e.reason}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <button className={styles.secondaryBtn} onClick={() => { setStatus('idle'); setProgress(0); setClipErrors([]); }}>
                         <i className="fas fa-redo" /> Retry
                     </button>
                 </>
@@ -119,3 +203,4 @@ export default function StepGenerate({ inputData, scenes, lang, provider, audien
         </div>
     );
 }
+

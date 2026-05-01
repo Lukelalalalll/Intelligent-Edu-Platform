@@ -3,6 +3,13 @@ import styles from '../../styles/KnowledgeBase.module.css';
 import SharedConfirmModal from '../../../../shared/components/ConfirmModal';
 import type { UploadTask } from '../../types';
 
+function phaseLabel(t: UploadTask): string {
+    if (t.status === 'uploading') return `Uploading ${t.progress}%`;
+    if (t.phase === 'extracting') return `Extracting PDF… ${t.progress}%`;
+    if (t.phase === 'indexing') return `Building index… ${t.progress}%`;
+    return `Processing… ${t.progress}%`;
+}
+
 export default function UploadTasksSection({
     uploadTasks,
     onDismissFinished,
@@ -10,7 +17,7 @@ export default function UploadTasksSection({
     uploadTasks: UploadTask[];
     onDismissFinished: () => void;
 }) {
-    const inProgress = uploadTasks.filter(t => t.status === 'uploading');
+    const inProgress = uploadTasks.filter(t => t.status === 'uploading' || t.status === 'indexing');
     const finished = uploadTasks.filter(t => t.status === 'done' || t.status === 'error');
 
     const successCount = finished.filter(t => t.status === 'done').length;
@@ -28,24 +35,26 @@ export default function UploadTasksSection({
 
     return (
         <>
-            {/* In-progress uploads: keep inline progress bar */}
             {inProgress.length > 0 && (
                 <div className={styles['upload-tasks']}>
                     {inProgress.map(t => (
                         <div key={t.taskId} className={styles['upload-task']}>
                             <div className={styles['upload-task-info']}>
-                                <i className="fas fa-file" />
+                                <i className={`fas ${t.status === 'indexing' ? 'fa-cog fa-spin' : 'fa-file-upload'}`} />
                                 <span>{t.file.name}</span>
+                                <span className={styles['upload-task-status']}>{phaseLabel(t)}</span>
                             </div>
                             <div className={styles['progress-bar']}>
-                                <div className={styles['progress-fill']} style={{ width: `${t.progress}%` }} />
+                                <div
+                                    className={styles['progress-fill']}
+                                    style={{ width: `${Math.max(t.progress, 4)}%` }}
+                                />
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Finished uploads: show result modal */}
             <SharedConfirmModal
                 open={finished.length > 0}
                 title={title}

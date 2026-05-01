@@ -19,7 +19,7 @@ export default function useTextHighlighter({
         const container = markdownViewRef.current;
         if (!container.contains(range.commonAncestorContainer)) return;
 
-        // 检查是否与已有高亮重叠
+        // Check whether the selection overlaps any existing highlight
         const existingSpans = container.querySelectorAll('.highlighted');
         for (let i = 0; i < existingSpans.length; i++) {
             if (range.intersectsNode(existingSpans[i])) {
@@ -55,7 +55,7 @@ export default function useTextHighlighter({
             }
             selection.removeAllRanges();
 
-            // 通知 Entry 更新 state
+            // Notify the parent entry to update state
             if (typeof onHighlightCreated === 'function') {
                 onHighlightCreated({ id: highlightId, text: selectedText, sectionTitle: currentSectionTitle });
             }

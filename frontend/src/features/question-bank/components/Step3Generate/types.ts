@@ -1,4 +1,14 @@
 import type { AIProvider } from '../../../../shared/aiProvider';
+import type {
+    GenerationSource,
+    GenerationMode,
+    QuestionOpsSort,
+    SavedScreenshot,
+    QuestionOpsItem,
+    QuestionOpsDedupeResult,
+    QuestionOpsSummary,
+} from '../../types';
+
 // Shared domain types are re-exported from the feature root.
 export type {
     GenerationSource,
@@ -8,7 +18,7 @@ export type {
     QuestionOpsItem,
     QuestionOpsDedupeResult,
     QuestionOpsSummary,
-} from '../../types';
+};
 
 export type GenerationSourceSelectorProps = {
     generationSource: GenerationSource;

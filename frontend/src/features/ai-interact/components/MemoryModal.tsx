@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AIModal.module.css';
 
-interface AIMemoryData {
+export interface AIMemoryData {
     name?: string;
     major?: string;
     year?: string;
@@ -13,7 +13,7 @@ interface MemoryModalProps {
     show?: boolean;
     onClose: () => void;
     memory?: AIMemoryData;
-    onSave: (form: AIMemoryData) => void;
+    onSave: (form: Record<string, unknown>) => void;
     saving?: boolean;
 }
 
@@ -31,7 +31,7 @@ export default function MemoryModal({ show, onClose, memory, onSave, saving }: M
         }
     }, [show, memory]);
 
-    const handleChange = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+    const handleChange = (key: keyof AIMemoryData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(prev => ({ ...prev, [key]: e.target.value }));
 
     const handleSave = () => onSave(form);
 

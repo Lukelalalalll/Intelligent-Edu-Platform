@@ -80,7 +80,9 @@ export default function AssistantPanel({ roomId, provider, visible, onClose, onI
     if (!visible) return null;
 
     return (
-        <div className={styles.assistantPanel}>
+        <>
+            <div className={styles.assistantBackdrop} onClick={onClose} />
+            <div className={styles.assistantPanel}>
             <div className={styles.assistantPanelHeader}>
                 <i className="fas fa-robot" style={{ marginRight: 8 }} />
                 <span>AI Assistant</span>
@@ -174,5 +176,6 @@ export default function AssistantPanel({ roomId, provider, visible, onClose, onI
                 </div>
             </div>
         </div>
+        </>
     );
 }

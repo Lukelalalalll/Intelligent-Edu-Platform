@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ── Submission / PDF infrastructure ──
 
 def _extract_text_from_pdf_job(path_text: str) -> str:
-    return extract_text_from_pdf(Path(path_text))
+    return extract_text_from_pdf(Path(path_text), use_fast=True)
 
 
 def _build_local_rag_context_job(document_text: str, query: str, top_k: int) -> dict[str, Any]:

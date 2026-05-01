@@ -98,12 +98,12 @@ export function useChatRoom(roomId: string) {
         };
     }, [roomId, setMessages, clearUnread, setActiveRoom, navigate]);
 
-    // 自动滚动到底部已被移除
+    // Auto-scroll to bottom has been removed
     useEffect(() => {
         const lastMsg = roomMessages[roomMessages.length - 1];
         if (!lastMsg) return;
         
-        // 只有非自己的消息，且不在底部时，才显示新消息横幅
+        // Only show the new-message banner for messages not sent by the current user when not near the bottom
         if (lastMsg.senderId !== userId && !isNearBottom()) {
             setHasNewMessage(true);
         } else {

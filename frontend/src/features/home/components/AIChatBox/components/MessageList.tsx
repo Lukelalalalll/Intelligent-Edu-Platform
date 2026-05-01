@@ -39,11 +39,16 @@ export default function MessageList({
                 const isEditingUser = msg.sender === 'user' && editingId === msg.id;
 
                 return (
-                    <motion.div key={msg.id} variants={messageVariants} initial="hidden" animate="show" className={messageClass}>
+                    <motion.div key={msg.id} variants={messageVariants} initial="hidden" animate="show" className={messageClass} layout>
                         <div className={styles.avatar}>
                             {msg.sender === 'ai' ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
                         </div>
                         <div className={styles.bubble}>
+                            {msg.sender === 'ai' && msg.modelProvider && (
+                                <div className={`${styles['brand-badge']} ${styles[msg.modelProvider]}`}>
+                                    {msg.modelProvider === 'coze' ? <><i className="fas fa-cloud"></i> Coze Model</> : <><i className="fas fa-microchip"></i> LLaMA Model</>}
+                                </div>
+                            )}
                             {msg.sender === 'ai' && <div className="markdown-body" dangerouslySetInnerHTML={renderMarkdown(msg.text)} />}
 
                             {msg.sender === 'user' && isEditingUser && (

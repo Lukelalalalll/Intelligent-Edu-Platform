@@ -47,6 +47,7 @@ export default function MdProcessor() {
     const pageProps = {
         file: upload.file,
         useLLM: upload.useLLM,
+        headerLlmProvider: upload.headerLlmProvider,
         isDragging: upload.isDragging,
         uploadStatus: upload.uploadStatus,
         uploadProgress: upload.uploadProgress,
@@ -57,6 +58,7 @@ export default function MdProcessor() {
         currentFilename: upload.currentFilename,
         fileInputRef: upload.fileInputRef,
         setUseLLM: upload.setUseLLM,
+        setHeaderLlmProvider: upload.setHeaderLlmProvider,
         handleDragOver: upload.handleDragOver,
         handleDragLeave: upload.handleDragLeave,
         handleDrop: upload.handleDrop,

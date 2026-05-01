@@ -5,6 +5,17 @@ const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
 
 export type AIProvider = 'coze' | 'local_ollama';
 export type AITutorMode = 'tutor' | 'hint_only';
+export type AISearchEngine = 'auto' | 'google' | 'bing' | 'duckduckgo' | 'wikipedia' | 'arxiv' | 'google_scholar';
+
+export const SEARCH_ENGINE_LABELS: Record<AISearchEngine, string> = {
+    auto:           'Auto (best match)',
+    google:         'Google',
+    bing:           'Bing',
+    duckduckgo:     'DuckDuckGo',
+    wikipedia:      'Wikipedia',
+    arxiv:          'arXiv (papers)',
+    google_scholar: 'Google Scholar',
+};
 
 export interface AIProviderHealth {
     provider: AIProvider;
@@ -56,13 +67,23 @@ export function createChatStream(
     messages: ChatMessage[],
     provider: AIProvider,
     tutorMode: AITutorMode,
+    sessionId?: string,
     signal?: AbortSignal,
+    webSearch?: boolean,
+    searchEngine?: AISearchEngine,
 ): Promise<Response> {
     return fetch(`${API_ROOT}/api/ai/chat`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, provider, tutor_mode: tutorMode }),
+        body: JSON.stringify({
+            messages,
+            provider,
+            tutor_mode: tutorMode,
+            session_id: sessionId || undefined,
+            web_search: webSearch ?? false,
+            search_engine: searchEngine ?? 'auto',
+        }),
         signal,
     });
 }

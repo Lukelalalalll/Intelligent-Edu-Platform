@@ -5,6 +5,7 @@ import {
     createChatStream,
     type AIProvider,
     type AITutorMode,
+    type AISearchEngine,
 } from '../../api/aiApi';
 import { networkBus } from '@/shared/hooks/useNetworkStatus';
 import type { AISession, ChatMessage, RagCitation } from '@/types/api';
@@ -12,6 +13,8 @@ import { prepareAttachmentPayload, type AttachmentInput } from './utils/attachme
 import {
     PROVIDER_STORAGE_KEY,
     TUTOR_MODE_STORAGE_KEY,
+    WEB_SEARCH_STORAGE_KEY,
+    SEARCH_ENGINE_STORAGE_KEY,
     buildSession,
     getErrorMessage,
     mergeMessageContent,
@@ -46,6 +49,14 @@ export function useAISessions() {
         if (stored === 'tutor' || stored === 'hint_only') return stored;
         return 'hint_only';
     });
+    const [webSearch, setWebSearch] = useState<boolean>(() => {
+        return localStorage.getItem(WEB_SEARCH_STORAGE_KEY) === 'true';
+    });
+    const [searchEngine, setSearchEngine] = useState<AISearchEngine>(() => {
+        const stored = localStorage.getItem(SEARCH_ENGINE_STORAGE_KEY) as AISearchEngine | null;
+        const valid: AISearchEngine[] = ['auto', 'google', 'bing', 'duckduckgo', 'wikipedia', 'arxiv', 'google_scholar'];
+        return stored && valid.includes(stored) ? stored : 'auto';
+    });
     const [providerHealth, setProviderHealth] = useState<{ ok: boolean; detail: string }>({ ok: true, detail: 'ok' });
 
     const abortRef = useRef<AbortController | null>(null);
@@ -53,16 +64,32 @@ export function useAISessions() {
     const sendingRef = useRef(false);
     const sessionsRef = useRef(sessions);
     sessionsRef.current = sessions;
+    const isTypingRef = useRef(isTyping);
+    isTypingRef.current = isTyping;
+    // Keep latest web-search state accessible in callbacks without stale closures
+    const webSearchRef = useRef(webSearch);
+    webSearchRef.current = webSearch;
+    const searchEngineRef = useRef(searchEngine);
+    searchEngineRef.current = searchEngine;
 
     const applyFetchedSession = useCallback((id: string, data: Partial<AISession>) => {
         setSessions(prev => {
             const list = prev || [];
             return list.map(s => {
                 if (s.id !== id) return s;
-                // If _needFetch was already cleared (e.g. by sendMessage starting a stream),
-                // discard the stale server response to avoid overwriting live streaming data.
-                if (!s._needFetch) return s;
-                return { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false };
+                if (s._needFetch) {
+                    // Normal path: apply fetched data directly
+                    return { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false };
+                }
+                // _needFetch was cleared by sendMessage while fetch was in-flight.
+                // Merge historical messages into the head of the current messages
+                // so we don't lose chat history.
+                const fetchedMsgs = data.messages || [];
+                if (fetchedMsgs.length === 0) return s;
+                const localKeys = new Set(s.messages.map(m => `${m.role}:${(m.content || '').slice(0, 120)}`));
+                const missing = fetchedMsgs.filter(m => !localKeys.has(`${m.role}:${(m.content || '').slice(0, 120)}`));
+                if (missing.length === 0) return s;
+                return { ...s, title: data.title || s.title, messages: [...missing, ...s.messages] };
             });
         });
     }, []);
@@ -74,17 +101,22 @@ export function useAISessions() {
         });
     }, []);
 
-    const applyAssistantSnapshot = useCallback((targetId: string, snapshot: string, citations?: RagCitation[]) => {
-        setSessions(prev => prev.map(s => {
+    const applyAssistantSnapshot = useCallback((targetId: string, snapshot: string, citations?: RagCitation[], isCourseRelevant?: boolean) => {
+        setSessions(prev => (prev || []).map(s => {
             if (s.id !== targetId) return s;
             const msgs = [...s.messages];
             const lastMsg = msgs.at(-1);
-            msgs[msgs.length - 1] = { ...lastMsg, content: snapshot, ...(citations ? { citations } : {}) };
+            msgs[msgs.length - 1] = {
+                ...lastMsg,
+                content: snapshot,
+                ...(citations ? { citations } : {}),
+                ...(isCourseRelevant !== undefined ? { is_course_relevant: isCourseRelevant } : {}),
+            };
             return { ...s, messages: msgs };
         }));
     }, []);
 
-    usePersistAiPreferences(selectedProvider, tutorMode);
+    usePersistAiPreferences(selectedProvider, tutorMode, webSearch, searchEngine);
     useProviderHealthCheck(selectedProvider, setProviderHealth);
     useInitialSessionsLoad(setSessions, setCurrentSessionId);
     useLazyFetchSessionMessages(currentSessionId, sessionsRef, applyFetchedSession, markSessionFetchDone);
@@ -98,13 +130,23 @@ export function useAISessions() {
                 content: mergeMessageContent(msg),
             }));
             await aiSessionApi.update(id, { title: data.title, messages: normalizedMessages });
+        } catch (err: unknown) {
+            // If the payload is too large (422/413), trim oldest messages and retry once
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 422 || status === 413) {
+                try {
+                    const trimmed = (data.messages || []).slice(-150).map((msg) => ({
+                        ...msg,
+                        content: mergeMessageContent(msg),
+                    }));
+                    await aiSessionApi.update(id, { title: data.title, messages: trimmed });
+                } catch { /* give up — local state is source of truth */ }
+            }
         }
-        catch { /* local state is source of truth */ }
     }, []);
 
     // ── Create / switch ──
-    const createNewSession = useCallback(async (switchImmediately = true, forceId: string | null = null) => {
-        if (forceId) { setCurrentSessionId(forceId); return; }
+    const createNewSession = useCallback(async (switchImmediately = true) => {
         try {
             const ns = await aiSessionApi.create();
             setSessions(prev => [buildSession(ns), ...(prev || [])]);
@@ -117,14 +159,10 @@ export function useAISessions() {
     }, []);
 
     // ── Delete ──
-    const promptDelete = useCallback((e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        setModalConfig({ show: true, sessionId: id });
-    }, []);
-
     const confirmDelete = useCallback(async () => {
         const id = modalConfig.sessionId;
         setModalConfig({ show: false, sessionId: null });
+        if (!id) return;
         setDeletingId(id);
         aiSessionApi.remove(id).catch(() => {});
 
@@ -141,12 +179,20 @@ export function useAISessions() {
     }, [modalConfig.sessionId, currentSessionId, createNewSession]);
 
     // ── SSE streaming with rAF batching ──
-    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal) => { // NOSONAR
-        const response = await createChatStream(apiMessages, provider, mode, signal);
+    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal, wsearch: boolean, sengine: AISearchEngine) => { // NOSONAR
+        const response = await createChatStream(apiMessages, provider, mode, targetId, signal, wsearch, sengine);
 
         if (!response.ok) {
-            setSessions(prev => prev.map(s => s.id === targetId
+            setSessions(prev => (prev || []).map(s => s.id === targetId
                 ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: `API Error: ${response.status}` }] }
+                : s));
+            setIsTyping(false);
+            return;
+        }
+
+        if (!response.body) {
+            setSessions(prev => (prev || []).map(s => s.id === targetId
+                ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: 'Error: Empty response body from server.' }] }
                 : s));
             setIsTyping(false);
             return;
@@ -156,7 +202,7 @@ export function useAISessions() {
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
         const buffered = createRafBufferedUpdater(
-            (snapshot, citations?: RagCitation[]) => applyAssistantSnapshot(targetId, snapshot, citations),
+            (snapshot, citations?: RagCitation[], isCourseRelevant?: boolean) => applyAssistantSnapshot(targetId, snapshot, citations, isCourseRelevant),
             rafRef,
         );
 
@@ -178,7 +224,8 @@ export function useAISessions() {
             }
         }
 
-        buffered.finalize();
+        const finalResult = buffered.finalize();
+        return { content: finalResult.snapshot, citations: finalResult.citations, isCourseRelevant: finalResult.isCourseRelevant };
     }, [applyAssistantSnapshot]);
 
     // ── Send message ──
@@ -209,7 +256,7 @@ export function useAISessions() {
 
         // Refuse to stream while offline — show an inline error message
         if (networkBus.isOffline) {
-            setSessions(prev => prev.map(s => s.id !== targetId ? s : {
+            setSessions(prev => (prev || []).map(s => s.id !== targetId ? s : {
                 ...s,
                 messages: [
                     ...s.messages,
@@ -223,7 +270,7 @@ export function useAISessions() {
 
         setIsTyping(true);
 
-        setSessions(prev => prev.map(s => {
+        setSessions(prev => (prev || []).map(s => {
             if (s.id !== targetId) return s;
             let title = s.title;
             // Bug 5 fix: only update title for genuinely new sessions (no prior user messages and not awaiting fetch)
@@ -245,33 +292,36 @@ export function useAISessions() {
             };
         }));
 
+        let streamResult: { content: string; citations?: RagCitation[]; isCourseRelevant?: boolean } | undefined;
         try {
-            // Bug 3 fix: use sessionsRef.current (always latest) instead of the stale `sessions` closure value
             const sess = (sessionsRef.current || []).find(s => s.id === targetId);
-            const apiMsgs: ChatMessage[] = sess
-                ? [...sess.messages, { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined }]
-                : [];
+            if (!sess) {
+                sendingRef.current = false;
+                setIsTyping(false);
+                return;
+            }
+            const apiMsgs: ChatMessage[] = [
+                ...sess.messages,
+                { role: 'user' as const, content: combinedUserContent, attachedText: attachedText, images: images.length ? images : undefined, files: filesMeta.length ? filesMeta : undefined },
+            ];
             
             // Map the messages before sending to API so the backend receives the combined text
             const payloadMsgs = toPayloadMessages(apiMsgs);
 
-            await streamSSE(
+            streamResult = await streamSSE(
                 payloadMsgs,
                 targetId,
                 selectedProvider,
                 tutorMode,
                 abortRef.current.signal,
+                webSearchRef.current,
+                searchEngineRef.current,
             );
         } catch (err: unknown) {
             if (err instanceof Error && err.name === 'AbortError') return;
-            setSessions(prev => prev.map(s => s.id === targetId
+            setSessions(prev => (prev || []).map(s => s.id === targetId
                 ? { ...s, messages: [...s.messages.slice(0, -1), { role: 'assistant', content: `Network Error: ${getErrorMessage(err)}` }] } : s));
         } finally {
-            // Defer setIsTyping(false) by two animation frames so the typewriter
-            // effect has at least one render cycle with isActive=true before snapping.
-            // Without this, React may batch the final snapshot + isTyping=false into
-            // the same render, causing the typewriter to initialise with isActive=false
-            // and snap to full content immediately.
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setIsTyping(false);
@@ -280,17 +330,37 @@ export function useAISessions() {
             abortRef.current = null;
             sendingRef.current = false;
             const final = (sessionsRef.current || []).find(s => s.id === targetId);
-            if (final) syncToServer(targetId, final);
+            if (final) {
+                // Use the definitive stream result instead of the potentially stale sessionsRef
+                if (streamResult?.content) {
+                    const patched: AISession = {
+                        ...final,
+                        messages: final.messages.map((m, i, arr) =>
+                            i === arr.length - 1 && m.role === 'assistant'
+                                ? {
+                                    ...m,
+                                    content: streamResult!.content,
+                                    ...(streamResult!.citations ? { citations: streamResult!.citations } : {}),
+                                    ...(streamResult!.isCourseRelevant !== undefined ? { is_course_relevant: streamResult!.isCourseRelevant } : {}),
+                                  }
+                                : m
+                        ),
+                    };
+                    syncToServer(targetId, patched);
+                } else {
+                    syncToServer(targetId, final);
+                }
+            }
         }
-    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode]);
+    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode, webSearchRef, searchEngineRef]);
 
     const replayExistingHistory = useCallback(async (history: ChatMessage[]) => {
-        const { targetId } = resolveTargetSession(currentSessionId, sessions);
-        if (!targetId) return;
+        const cid = currentSessionId || (sessionsRef.current || [])[0]?.id || null;
+        if (!cid) return;
         await replayFromHistory({
-            isTyping,
+            isTyping: isTypingRef.current,
             history,
-            targetId,
+            targetId: cid,
             abortRef,
             setIsTyping,
             setSessions,
@@ -300,20 +370,24 @@ export function useAISessions() {
             selectedProvider,
             tutorMode,
         });
-    }, [isTyping, currentSessionId, sessions, streamSSE, syncToServer, selectedProvider, tutorMode]);
+    }, [currentSessionId, streamSSE, syncToServer, selectedProvider, tutorMode]);
 
     // ── Regenerate ──
     const regenerate = useCallback(async (msgIndex: number) => {
-        const { targetId, session } = resolveTargetSession(currentSessionId, sessions);
+        const { targetId, session } = resolveTargetSession(
+            currentSessionId, sessionsRef.current,
+        );
         if (!targetId || !session) return;
         const history = session.messages.slice(0, msgIndex);
         await replayExistingHistory(history);
-    }, [currentSessionId, sessions, replayExistingHistory]);
+    }, [currentSessionId, replayExistingHistory]);
 
     // ── Edit user message ──
     const editUserMsg = useCallback(async (msgIndex: number, newVal: string) => {
         if (!newVal?.trim()) return;
-        const { targetId, session } = resolveTargetSession(currentSessionId, sessions);
+        const { targetId, session } = resolveTargetSession(
+            currentSessionId, sessionsRef.current,
+        );
         if (!targetId || !session || session.messages[msgIndex]?.role !== 'user') return;
 
         const history = [
@@ -321,7 +395,7 @@ export function useAISessions() {
             { ...session.messages[msgIndex], content: newVal.trim() },
         ];
         await replayExistingHistory(history);
-    }, [currentSessionId, sessions, replayExistingHistory]);
+    }, [currentSessionId, replayExistingHistory]);
 
     // ── Stop streaming ──
     const stopStream = useCallback(() => {
@@ -333,10 +407,12 @@ export function useAISessions() {
     return {
         sessions, currentSessionId, isTyping, deletingId, modalConfig,
         setCurrentSessionId, setModalConfig,
-        createNewSession, promptDelete, confirmDelete,
+        createNewSession, confirmDelete,
         sendMessage, regenerate, editUserMsg, stopStream,
         selectedProvider, setSelectedProvider, providerHealth,
         tutorMode, setTutorMode,
+        webSearch, setWebSearch,
+        searchEngine, setSearchEngine,
     };
 }
 

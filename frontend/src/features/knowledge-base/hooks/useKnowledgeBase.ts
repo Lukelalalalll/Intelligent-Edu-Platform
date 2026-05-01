@@ -14,6 +14,9 @@ export function useKnowledgeBase() {
     const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
     const [chapters, setChapters] = useState<any[]>([]);
     const [selectedChapterId, setSelectedChapterId] = useState<string>('');
+    const [useFastExtract, setUseFastExtract] = useState(false);
+
+    const onToggleExtractMode = useCallback(() => setUseFastExtract(v => !v), []);
 
     // Load courses + summary on mount
     useEffect(() => {
@@ -44,7 +47,7 @@ export function useKnowledgeBase() {
             const res = await knowledgeBaseApi.listDocs(courseId);
             setDocuments(res.documents ?? []);
         } catch {
-            setDocuments([]);
+            // Keep existing document list on transient errors
         } finally {
             setLoadingDocs(false);
         }
@@ -81,6 +84,7 @@ export function useKnowledgeBase() {
                 (pct) => {
                     setUploadTasks(prev => prev.map(t => t.taskId === taskId ? { ...t, progress: pct } : t));
                 },
+                useFastExtract,
             );
 
             setUploadTasks(prev => prev.map(t =>
@@ -88,7 +92,7 @@ export function useKnowledgeBase() {
             ));
 
             const pollInterval = 1500;
-            const maxPolls = 60;
+            const maxPolls = 120;
             for (let i = 0; i < maxPolls; i++) {
                 await new Promise(r => setTimeout(r, pollInterval));
                 try {
@@ -109,6 +113,14 @@ export function useKnowledgeBase() {
                         ));
                         break;
                     }
+                    // Update progress + phase from backend
+                    if (typeof job.progress === 'number') {
+                        setUploadTasks(prev => prev.map(t =>
+                            t.taskId === taskId
+                                ? { ...t, status: 'indexing', progress: job.progress!, phase: job.phase }
+                                : t,
+                        ));
+                    }
                 } catch { /* continue polling */ }
             }
 
@@ -124,7 +136,7 @@ export function useKnowledgeBase() {
     }, [selectedCourseId, selectedChapterId, loadDocs, refreshSummary]);
 
     const handleDismissUploadTasks = useCallback(() => {
-        setUploadTasks(prev => prev.filter(t => t.status === 'uploading'));
+        setUploadTasks(prev => prev.filter(t => t.status === 'uploading' || t.status === 'indexing'));
     }, []);
 
     const handleDeleteDoc = useCallback(async (docName: string) => {
@@ -168,6 +180,8 @@ export function useKnowledgeBase() {
         onUpdateChapter: handleUpdateChapter,
         onDeleteChapter: handleDeleteChapter,
         onReassignDocChapter: handleReassignDocChapter,
-        uploading: uploadTasks.some(t => t.status === 'uploading'),
+        uploading: uploadTasks.some(t => t.status === 'uploading' || t.status === 'indexing'),
+        useFastExtract,
+        onToggleExtractMode,
     };
 }

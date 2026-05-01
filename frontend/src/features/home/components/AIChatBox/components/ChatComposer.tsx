@@ -5,6 +5,8 @@ export default function ChatComposer({
     input,
     isLoading,
     inputAreaRef,
+    provider,
+    setProvider,
     handleInput,
     handleKeyDown,
     handleSend,
@@ -13,6 +15,8 @@ export default function ChatComposer({
     input: string;
     isLoading: boolean;
     inputAreaRef: React.RefObject<HTMLTextAreaElement>;
+    provider: 'coze' | 'local_ollama';
+    setProvider: (p: 'coze' | 'local_ollama') => void;
     handleInput: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     handleSend: () => void;
@@ -20,6 +24,24 @@ export default function ChatComposer({
 }) {
     return (
         <div className={styles['input-area']}>
+            <div className={styles['provider-selector-container']}>
+                <button 
+                    className={`${styles['provider-btn']} ${provider === 'local_ollama' ? styles['provider-active'] : ''}`}
+                    onClick={() => setProvider('local_ollama')}
+                    disabled={isLoading}
+                    title="Use LLaMA (Local Model)"
+                >
+                    <i className="fas fa-microchip"></i> LLaMA
+                </button>
+                <button 
+                    className={`${styles['provider-btn']} ${provider === 'coze' ? styles['provider-active'] : ''}`}
+                    onClick={() => setProvider('coze')}
+                    disabled={isLoading}
+                    title="Use Coze (Cloud Model)"
+                >
+                    <i className="fas fa-cloud"></i> Coze
+                </button>
+            </div>
             <div className={styles['input-wrapper']}>
                 <textarea
                     id="aiChatBoxInput"

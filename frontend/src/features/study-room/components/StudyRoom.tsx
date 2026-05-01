@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import PdfViewer from './PdfViewer';
 import StudyCoach from './StudyCoach';
 import NotesPanel from './NotesPanel';
+import client from '@/shared/api/client';
 import styles from '../styles/StudyRoom.module.css';
 
 export default function StudyRoom() {
@@ -18,11 +19,37 @@ export default function StudyRoom() {
     useEffect(() => {
         notesLoadedRef.current = false;
         if (!storageKey) { setNotes([]); return; }
+
+        // 1. Load from localStorage immediately for instant render
+        let localNotes: any[] = [];
         try {
             const saved = localStorage.getItem(storageKey);
-            setNotes(saved ? JSON.parse(saved) : []);
-        } catch { setNotes([]); }
+            localNotes = saved ? JSON.parse(saved) : [];
+        } catch { /* ignore */ }
+        setNotes(localNotes);
         notesLoadedRef.current = true;
+
+        // 2. Fetch cloud notes and merge (cloud wins by note_id)
+        client.get('/study-notes/room-notes', { params: { source_doc: storageKey } })
+            .then(res => {
+                const cloudNotes: any[] = (res.data || []).map((n: any) => ({
+                    id: n.note_id,
+                    content: n.content,
+                    color: n.color || 'yellow',
+                    highlightedText: n.highlighted_text || null,
+                    pageNumber: n.page_number || null,
+                    createdAt: n.created_at || new Date().toISOString(),
+                }));
+                if (cloudNotes.length === 0) return;
+                setNotes(prev => {
+                    const mergedMap = new Map(prev.map(n => [n.id, n]));
+                    cloudNotes.forEach(n => mergedMap.set(n.id, n));
+                    return [...mergedMap.values()].sort(
+                        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    );
+                });
+            })
+            .catch(() => { /* cloud unavailable — local notes are fine */ });
     }, [storageKey]);
 
     // Persist notes — only after initial load completes
@@ -64,10 +91,23 @@ export default function StudyRoom() {
             createdAt: new Date().toISOString(),
         };
         setNotes(prev => [note, ...prev]);
-    }, []);
+        // Fire-and-forget cloud sync
+        if (storageKey) {
+            client.post('/study-notes/room-notes', {
+                note_id: note.id,
+                content: note.content,
+                color: note.color,
+                highlighted_text: note.highlightedText,
+                source_doc: storageKey,
+                page_number: note.pageNumber,
+            }).catch(() => {});
+        }
+    }, [storageKey]);
 
     const handleDeleteNote = useCallback((id) => {
         setNotes(prev => prev.filter(n => n.id !== id));
+        // Fire-and-forget cloud delete
+        client.delete(`/study-notes/room-notes/${id}`).catch(() => {});
     }, []);
 
     const handleSaveCoachNote = useCallback((content) => {
@@ -133,6 +173,7 @@ export default function StudyRoom() {
                         onDismissHighlight={handleDismissHighlight}
                         onSaveNote={handleSaveCoachNote}
                         pdfText={pdfText}
+                        storageKey={storageKey}
                     />
                 </div>
             </div>

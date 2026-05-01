@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from backend.core.database import db
-from backend.services.rag_eval_scoring import compute_mrr, score_case
+from backend.services.rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
 
 logger = logging.getLogger(__name__)
 
@@ -134,17 +134,23 @@ async def run_evaluation(
     n = max(len(cases), 1)
 
     # Compute aggregate metrics
-    # MRR: Mean Reciprocal Rank
+    # MRR: Mean Reciprocal Rank; NDCG@5; Recall@10
     mrr_sum = 0.0
+    ndcg_sum = 0.0
+    recall_sum = 0.0
     for res in results:
         expected = set(res["expected_doc_names"])
         mrr_sum += compute_mrr(res["retrieved_doc_names"], expected)
+        ndcg_sum += compute_ndcg(res["retrieved_doc_names"], expected, k=5)
+        recall_sum += compute_recall_at_k(res["retrieved_doc_names"], expected, k=10)
 
     metrics = {
         "case_count": len(cases),
         "hit_rate": round(hits / n, 4),
         "empty_retrieval_rate": round(empty_retrievals / n, 4),
         "mrr": round(mrr_sum / n, 4),
+        "ndcg_at_5": round(ndcg_sum / n, 4),
+        "recall_at_10": round(recall_sum / n, 4),
         "avg_latency_ms": round(total_latency / n, 2),
         "p50_latency_ms": _percentile([r["latency_ms"] for r in results], 50),
         "p95_latency_ms": _percentile([r["latency_ms"] for r in results], 95),
@@ -248,7 +254,7 @@ async def compare_runs(base_run_id: str, target_run_id: str) -> dict:
     target_m = target.get("metrics", {})
 
     diff = {}
-    for key in ("hit_rate", "mrr", "empty_retrieval_rate", "avg_latency_ms", "p50_latency_ms", "p95_latency_ms"):
+    for key in ("hit_rate", "mrr", "ndcg_at_5", "recall_at_10", "empty_retrieval_rate", "avg_latency_ms", "p50_latency_ms", "p95_latency_ms"):
         bv = base_m.get(key, 0)
         tv = target_m.get(key, 0)
         diff[key] = {

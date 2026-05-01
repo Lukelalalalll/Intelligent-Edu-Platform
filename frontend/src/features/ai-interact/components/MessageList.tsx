@@ -1,11 +1,31 @@
 import React from 'react';
 import MessageItem from './MessageItem';
 import styles from '../styles/AIMessage.module.css';
+import type { RagCitation } from '../../../types/api';
+
+interface MessageListProps {
+    currentSession?: {
+        id: string;
+        messages: Array<{
+            role: string;
+            content: string;
+            images?: string[];
+            files?: { file_name: string; mime_type: string }[];
+            citations?: RagCitation[];
+        }>;
+    };
+    isTyping?: boolean;
+    chatMessagesRef?: React.RefObject<HTMLDivElement | null>;
+    handleChatAreaClick?: (e: React.MouseEvent) => void;
+    copyToClipboard?: (text: string, el: HTMLElement | null) => void;
+    handleRegenerate?: (msgId: number) => void;
+    handleEditUserMsg?: (msgId: number, content: string) => void;
+}
 
 export default function MessageList({
     currentSession, isTyping, chatMessagesRef, handleChatAreaClick,
     copyToClipboard, handleRegenerate, handleEditUserMsg
-}) {
+}: MessageListProps) {
     const lastMessage = currentSession?.messages[currentSession.messages.length - 1];
 
     return (
@@ -28,11 +48,12 @@ export default function MessageList({
                     <MessageItem
                         key={`${currentSession.id}-${idx}`}
                         msg={msg}
+                        idx={idx}
                         isUser={isUser}
                         onCopy={copyToClipboard}
                         isLastAssistant={isLastAssistant}
-                        onRegenerate={() => handleRegenerate(idx)}
-                        onEdit={(newVal) => handleEditUserMsg(idx, newVal)}
+                        onRegenerate={handleRegenerate}
+                        onEdit={handleEditUserMsg}
                         isTyping={isTyping}
                     />
                 );
@@ -42,10 +63,10 @@ export default function MessageList({
                 <div className={`${styles.message} ${styles['ai-message']} ${styles['typing-indicator-msg']}`}>
                     <div className={styles.avatar}><i className="fas fa-robot"></i></div>
                     <div className={`${styles.bubble} ${styles['typing-bubble']}`} style={{ padding: '12px 20px' }}>
-                        <div className={styles['typing-dots']} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                            <span style={{ width: '6px', height: '6px', background: '#007B55', borderRadius: '50%', animation: 'bounce 1.4s infinite -0.32s' }}></span>
-                            <span style={{ width: '6px', height: '6px', background: '#007B55', borderRadius: '50%', animation: 'bounce 1.4s infinite -0.16s' }}></span>
-                            <span style={{ width: '6px', height: '6px', background: '#007B55', borderRadius: '50%', animation: 'bounce 1.4s infinite' }}></span>
+                        <div className={styles['typing-dots']}>
+                            <span className={styles['typing-dot']}></span>
+                            <span className={styles['typing-dot']}></span>
+                            <span className={styles['typing-dot']}></span>
                         </div>
                     </div>
                 </div>

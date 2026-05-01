@@ -10,7 +10,8 @@ export interface UploadTask {
     taskId: string;
     file: File;
     progress: number;
-    status: 'uploading' | 'done' | 'error';
+    status: 'uploading' | 'indexing' | 'done' | 'error';
+    phase?: string;
     error?: string;
     chunkCount?: number;
 }
@@ -36,6 +37,8 @@ export interface DocumentManagerProps {
     ) => Promise<void>;
     onDeleteChapter: (chapterId: string) => Promise<void>;
     onReassignDocChapter: (docName: string, chapterId: string) => void;
+    useFastExtract: boolean;
+    onToggleExtractMode: () => void;
 }
 
 export type RetrievalResult = {

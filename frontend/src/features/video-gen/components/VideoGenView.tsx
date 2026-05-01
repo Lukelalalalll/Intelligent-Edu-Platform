@@ -16,6 +16,11 @@ const STEPS = [
 
 export type AIProvider = 'coze' | 'local_ollama';
 export type Audience = 'student' | 'teacher' | 'researcher' | 'general';
+export type SubtitleMode = 'hard_srt' | 'image_strip' | 'none';
+export type BrandKit = 'none' | 'default';
+export type AnimationLevel = 'off' | 'basic' | 'high';
+export type TTSEngine = 'edge_tts' | 'cosyvoice';
+export type AvatarMode = 'none' | 'wav2lip' | 'latentsync';
 
 export default function VideoGenView({ viewSwitchSlot, hideBanner }: { viewSwitchSlot?: React.ReactNode; hideBanner?: boolean } = {}) {
     const [step, setStep] = useState(0);
@@ -23,6 +28,13 @@ export default function VideoGenView({ viewSwitchSlot, hideBanner }: { viewSwitc
     const [provider, setProvider] = useState<AIProvider>('local_ollama');
     const [audience, setAudience] = useState<Audience>('student');
     const [enableSubtitles, setEnableSubtitles] = useState(true);
+    const [subtitleMode, setSubtitleMode] = useState<SubtitleMode>('hard_srt');
+    const [brandKit, setBrandKit] = useState<BrandKit>('none');
+    const [animationLevel, setAnimationLevel] = useState<AnimationLevel>('basic');
+    const [ttsEngine, setTtsEngine] = useState<TTSEngine>('edge_tts');
+    const [avatarMode, setAvatarMode] = useState<AvatarMode>('none');
+    const [avatarImagePath, setAvatarImagePath] = useState<string>('');
+    const [quizEnabled, setQuizEnabled] = useState(false);
     const [maxSegments, setMaxSegments] = useState(8);
     const [inputData, setInputData] = useState<{ text?: string; file?: File; fileType?: string } | null>(null);
     const [scenes, setScenes] = useState<Scene[]>([]);
@@ -75,6 +87,20 @@ export default function VideoGenView({ viewSwitchSlot, hideBanner }: { viewSwitc
                         setAudience={setAudience}
                         enableSubtitles={enableSubtitles}
                         setEnableSubtitles={setEnableSubtitles}
+                        subtitleMode={subtitleMode}
+                        setSubtitleMode={setSubtitleMode}
+                        brandKit={brandKit}
+                        setBrandKit={setBrandKit}
+                        animationLevel={animationLevel}
+                        setAnimationLevel={setAnimationLevel}
+                        ttsEngine={ttsEngine}
+                        setTtsEngine={setTtsEngine}
+                        avatarMode={avatarMode}
+                        setAvatarMode={setAvatarMode}
+                        avatarImagePath={avatarImagePath}
+                        setAvatarImagePath={setAvatarImagePath}
+                        quizEnabled={quizEnabled}
+                        setQuizEnabled={setQuizEnabled}
                         maxSegments={maxSegments}
                         setMaxSegments={setMaxSegments}
                         onNext={(data) => { setInputData(data); setStep(1); }}
@@ -108,6 +134,13 @@ export default function VideoGenView({ viewSwitchSlot, hideBanner }: { viewSwitc
                         provider={provider}
                         audience={audience}
                         enableSubtitles={enableSubtitles}
+                        subtitleMode={subtitleMode}
+                        brandKit={brandKit}
+                        animationLevel={animationLevel}
+                        ttsEngine={ttsEngine}
+                        avatarMode={avatarMode}
+                        avatarImagePath={avatarImagePath}
+                        quizEnabled={quizEnabled}
                         maxSegments={maxSegments}
                         onTaskId={setTaskId}
                         taskId={taskId}

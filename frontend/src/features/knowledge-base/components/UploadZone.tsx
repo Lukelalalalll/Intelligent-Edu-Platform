@@ -7,7 +7,7 @@ interface UploadZoneProps {
     disabled?: boolean;
 }
 
-const ACCEPTED = '.pdf,.txt,.md,.markdown';
+const ACCEPTED = '.pdf,.txt,.md,.markdown,.docx';
 
 export default function UploadZone({ courseId, onUpload, disabled }: UploadZoneProps) {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -25,9 +25,16 @@ export default function UploadZone({ courseId, onUpload, disabled }: UploadZoneP
         handleFiles(e.dataTransfer.files);
     }, [disabled, handleFiles]);
 
+    const zoneClasses = [
+        styles['upload-zone'],
+        dragOver ? styles['upload-zone-drag'] : '',
+        disabled ? styles['upload-zone-disabled'] : '',
+        disabled ? styles['upload-zone-uploading'] : '',
+    ].filter(Boolean).join(' ');
+
     return (
         <div
-            className={`${styles['upload-zone']} ${dragOver ? styles['upload-zone-drag'] : ''} ${disabled ? styles['upload-zone-disabled'] : ''}`}
+            className={zoneClasses}
             onClick={() => !disabled && inputRef.current?.click()}
             onDragOver={e => { e.preventDefault(); if (!disabled) setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -42,11 +49,21 @@ export default function UploadZone({ courseId, onUpload, disabled }: UploadZoneP
                 onChange={e => { handleFiles(e.target.files); if (inputRef.current) inputRef.current.value = ''; }}
                 disabled={disabled}
             />
-            <i className="fas fa-cloud-upload-alt" style={{ fontSize: '2rem', color: '#0d9488', marginBottom: 8 }} />
-            <p className={styles['upload-text']}>
-                Drag &amp; drop PDF, TXT, or Markdown files here
-            </p>
-            <p className={styles['upload-hint']}>or click to browse · max 20 MB per file</p>
+            {disabled ? (
+                <div className={styles['upload-spinner-overlay']}>
+                    <div className={styles['upload-spinner']} />
+                    <p className={styles['upload-spinner-text']}>Processing documents…</p>
+                    <p className={styles['upload-spinner-hint']}>This may take a moment depending on file size</p>
+                </div>
+            ) : (
+                <>
+                    <i className="fas fa-cloud-upload-alt" style={{ fontSize: '2rem', color: '#0d9488', marginBottom: 8 }} />
+                    <p className={styles['upload-text']}>
+                        Drag &amp; drop files here to index
+                    </p>
+                    <p className={styles['upload-hint']}>PDF, DOCX, TXT, Markdown · max 20 MB per file</p>
+                </>
+            )}
         </div>
     );
 }

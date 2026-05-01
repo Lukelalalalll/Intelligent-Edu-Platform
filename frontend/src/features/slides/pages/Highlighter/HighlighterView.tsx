@@ -18,14 +18,14 @@ export default function Highlighter({
     categoryFilter, setCategoryFilter,
     removeByCategoryOrConfidence
 }) {
-    // 用 ref 追踪最新 highlights，避免 useEffect 依赖 highlights 导致无限重渲染
+    // Track the latest highlights in a ref to avoid infinite re-renders from useEffect dependencies
     const highlightsRef = useRef(highlights);
     useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
 
     const textLength = htmlContent ? htmlContent.replace(/<[^>]+>/g, '').length : 0;
     const readTime = Math.max(1, Math.ceil(textLength / 250));
 
-    // 核心：用数据驱动方式注入高亮后再设置 innerHTML
+    // Core: inject highlights data-driven before setting innerHTML
     useEffect(() => {
         if (!loading && isRenderedView && markdownViewRef.current) {
             const currentHighlights = (highlightsRef.current || []).filter(
@@ -36,7 +36,7 @@ export default function Highlighter({
         }
     }, [htmlContent, isRenderedView, loading, markdownViewRef, currentSectionTitle]);
 
-    // 当 highlights 数组变化时（新增/删除），重新注入当前 Section 的高亮
+    // Re-inject highlights for the current section whenever the array changes (add/remove)
     useEffect(() => {
         if (!loading && isRenderedView && markdownViewRef.current && htmlContent) {
             const currentHighlights = (highlights || []).filter(
@@ -55,20 +55,20 @@ export default function Highlighter({
         };
     }, []);
 
-    // ======== 统一高亮删除（只更新 state，DOM 由 useEffect 自动重渲染） ========
+    // ======== Unified highlight removal — state only; DOM is re-rendered by useEffect ========
     const handleLocalRemoveHighlight = useCallback((id) => {
-        // 先播放淡出动画
+        // Trigger the fade-out animation first
         if (markdownViewRef.current) {
             const els = markdownViewRef.current.querySelectorAll(`span.highlighted[data-id="${id}"]`);
             els.forEach(el => el.classList.add('un-highlighting'));
         }
-        // 400ms 后从 state 移除（触发 useEffect 重渲染 DOM）
+        // Remove from state after 400 ms to trigger the useEffect DOM re-render
         setTimeout(() => {
             removeHighlight(id);
         }, 400);
     }, [removeHighlight, markdownViewRef]);
 
-    // ======== 统一的高亮创建逻辑 ========
+    // ======== Unified highlight creation logic ========
     const handleMouseUp = useTextHighlighter({
         isRenderedView,
         markdownViewRef,
@@ -76,7 +76,7 @@ export default function Highlighter({
         onHighlightCreated
     });
 
-    // ======== 增强工具函数 ========
+    // ======== Utility helpers ========
     const scrollToHighlight = useCallback((id) => {
         if (!markdownViewRef.current || !isRenderedView) return;
         const el = markdownViewRef.current.querySelector(`span.highlighted[data-id="${id}"]`);

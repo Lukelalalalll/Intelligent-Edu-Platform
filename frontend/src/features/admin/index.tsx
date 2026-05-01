@@ -18,7 +18,7 @@ export default function AdminBoardPage(props) {
     const openConfirm = (title, text, onConfirm) => setConfirmConfig({ isOpen: true, title, text, onConfirm });
     const closeConfirm = () => setConfirmConfig({ ...confirmConfig, isOpen: false });
 
-    // 拦截原有的删除方法，触发全局 ConfirmModal
+    // Intercept delete methods to trigger the global ConfirmModal
     const interceptedProps = {
         ...props,
         deleteUser: (uid, uname) => openConfirm('Delete User', `Are you sure you want to delete "${uname}"? This action cannot be undone.`, () => props.deleteUser(uid, uname)),
@@ -26,7 +26,7 @@ export default function AdminBoardPage(props) {
         handleDeleteAssignment: (cid, aId) => openConfirm('Delete Assignment', `Delete assignment ${aId}?`, () => props.handleDeleteAssignment(cid, aId))
     };
 
-    // 顶部统计
+    // Top statistics
     const stats = useMemo(() => ({
         total: users.length,
         admins: users.filter(u => u.role === 'admin').length,
@@ -39,7 +39,7 @@ export default function AdminBoardPage(props) {
             <div className={styles.bgOrb}></div>
             <div className={styles.adminContainer}>
                 
-                {/* 顶部四张数据卡片 */}
+                {/* Top four statistics cards */}
                 <div className={styles.statsGrid}>
                     <div className={`${styles.statCard} ${styles.cardTotal}`}><div className={styles.statInfo}><h3>Total Users</h3><div className={styles.count}>{stats.total}</div></div><div className={styles.statIcon}><i className="fas fa-users"></i></div></div>
                     <div className={`${styles.statCard} ${styles.cardAdmin}`}><div className={styles.statInfo}><h3>Administrators</h3><div className={styles.count}>{stats.admins}</div></div><div className={styles.statIcon}><i className="fas fa-user-shield"></i></div></div>
@@ -47,7 +47,7 @@ export default function AdminBoardPage(props) {
                     <div className={`${styles.statCard} ${styles.cardStudent}`}><div className={styles.statInfo}><h3>Students</h3><div className={styles.count}>{stats.students}</div></div><div className={styles.statIcon}><i className="fas fa-user-graduate"></i></div></div>
                 </div>
 
-                {/* 核心工作区 */}
+                {/* Main workspace */}
                 <div className={styles.adminWorkspace}>
                     <ModeSidebar activeMode={activeMode} setActiveMode={setActiveMode} />
                     
@@ -62,7 +62,7 @@ export default function AdminBoardPage(props) {
                 </div>
             </div>
 
-            {/* 挂载全局确认弹窗 */}
+            {/* Global confirmation modal */}
             <ConfirmModal confirmConfig={confirmConfig} closeConfirm={closeConfirm} />
         </div>
     );

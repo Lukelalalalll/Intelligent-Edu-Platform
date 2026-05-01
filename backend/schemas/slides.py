@@ -7,6 +7,7 @@ class CombineSchema(BaseModel):
     filename: str
     selected_indices: List[int]
     use_llm: bool = False
+    header_llm_provider: Optional[Literal['local_ollama', 'coze']] = 'local_ollama'
 
 class SaveHighlightsSchema(BaseModel):
     filename: str

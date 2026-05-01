@@ -28,16 +28,16 @@ export default function SlideEditorPage() {
                 asset_url: `${API_ROOT}${url}`,
                 asset_id,
             });
-            toast.success('图片已上传');
+            toast.success('Image uploaded');
         } catch {
-            toast.error('图片上传失败');
+            toast.error('Image upload failed');
         }
     }, [dispatch, activeSlide, API_ROOT]);
 
     const handleExport = useCallback(async () => {
         if (!session) return;
         setExporting(true);
-        const toastId = toast.loading('正在导出 PPTX...');
+        const toastId = toast.loading('Exporting PPTX...');
         try {
             const blob = await slidesEditorApi.exportPptx({
                 session_id: session.session_id,
@@ -53,9 +53,9 @@ export default function SlideEditorPage() {
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
-            toast.success('PPTX 已导出');
+            toast.success('PPTX exported');
         } catch {
-            toast.error('导出失败');
+            toast.error('Export failed');
         } finally {
             toast.dismiss(toastId);
             setExporting(false);

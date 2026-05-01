@@ -134,9 +134,7 @@ export default function Login({
                                 id="password"
                                 placeholder=" "
                                 required
-                                autoComplete="off"
-                                readOnly
-                                onFocus={(e) => e.target.removeAttribute('readonly')}
+                                autoComplete="new-password"
                                 value={password}
                                 onChange={handleInputChange(setPassword)}
                             />

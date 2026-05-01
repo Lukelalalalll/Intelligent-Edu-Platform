@@ -362,6 +362,26 @@
     white-space: nowrap;
 }
 
+/* 6-action 2×3 grid tip (replaces selTipBar) */
+.selTipGrid {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 2px;
+    padding: 5px 6px;
+    background: #1a1a2e;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.06);
+    z-index: 9999;
+}
+
+.selBtnNote {
+    color: rgba(255, 220, 100, 0.9) !important;
+}
+.selBtnNote:hover {
+    background: rgba(255, 220, 100, 0.18) !important;
+    color: #ffd060 !important;
+}
+
 /* PDF text layer selection color */
 .pdfHighlighterWrap :global(.textLayer) ::selection {
     background: rgba(255, 230, 0, 0.45);

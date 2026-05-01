@@ -38,6 +38,19 @@ def sanitize_rewrite_output(original_query: str, rewritten: str, max_chars: int 
     return first_line or base
 
 
+def _clip_to_sentence_boundary(text: str, max_chars: int) -> str:
+    """Clip text to max_chars at the nearest sentence boundary."""
+    if len(text) <= max_chars:
+        return text
+    candidate = text[:max_chars]
+    _SENTENCE_ENDS = frozenset('.。!！?？\n；;')
+    scan_start = max(0, max_chars - 120)
+    for i in range(max_chars - 1, scan_start - 1, -1):
+        if candidate[i] in _SENTENCE_ENDS:
+            return candidate[:i + 1].rstrip()
+    return candidate.rstrip()
+
+
 def pack_evidence(
     retrieved: list[dict[str, Any]],
     *,
@@ -61,27 +74,57 @@ def pack_evidence(
         seen.add(key)
         deduped.append(item)
 
+    # ── P1-4: Greedy fill with leftover backfill ──────────────────
+    budget = max(120, int(max_total_chars))
+    per_chunk = max(32, int(max_chars_per_chunk))
+    remaining = budget
+
+    # Pass 1: pack each chunk up to per_chunk limit
     packed: list[dict[str, Any]] = []
-    total_chars = 0
+    original_texts: list[str] = []  # keep originals for backfill pass
     for idx, item in enumerate(deduped, start=1):
         if len(packed) >= max(1, int(answer_top_k)):
             break
         text = str(item.get("text", "")).strip()
         if not text:
             continue
-        clipped = text[:max(32, int(max_chars_per_chunk))]
-        if total_chars + len(clipped) > max(120, int(max_total_chars)):
+        limit = min(per_chunk, remaining)
+        if limit < 32:
             break
-        packed.append(
-            {
-                "index": idx,
-                "course_id": item.get("course_id", ""),
-                "doc_name": item.get("doc_name", ""),
-                "score": float(item.get("score", 0.0)),
-                "text": clipped,
-            }
-        )
-        total_chars += len(clipped)
+        clipped = _clip_to_sentence_boundary(text, limit)
+        if not clipped:
+            continue
+        entry: dict[str, Any] = {
+            "index": idx,
+            "course_id": item.get("course_id", ""),
+            "doc_name": item.get("doc_name", ""),
+            "score": float(item.get("score", 0.0)),
+            "text": clipped,
+        }
+        # Preserve raw cosine similarity so the relevance-threshold check in
+        # rag_orchestrator can use it (RRF normalises `score` to ~0.016 which
+        # would always fall below the 0.60 threshold).
+        if item.get("raw_vector_score") is not None:
+            entry["raw_vector_score"] = float(item["raw_vector_score"])
+        packed.append(entry)
+        original_texts.append(text)
+        remaining -= len(clipped)
+
+    # Pass 2: backfill truncated chunks with leftover budget
+    if remaining > 100:
+        for i in range(len(packed)):
+            if remaining <= 100:
+                break
+            orig_len = len(original_texts[i])
+            cur_len = len(packed[i]["text"])
+            if orig_len <= cur_len:
+                continue
+            extra_budget = min(remaining, orig_len - cur_len)
+            new_text = _clip_to_sentence_boundary(original_texts[i], cur_len + extra_budget)
+            gained = len(new_text) - cur_len
+            if gained > 0:
+                packed[i]["text"] = new_text
+                remaining -= gained
 
     return packed
 
@@ -108,11 +151,14 @@ def postcheck_and_downgrade(answer: str, evidence_cards: list[dict[str, Any]]) -
     if not evidence_cards:
         return content, 0
 
+    from backend.config import Config
+
     evidence_text = "\n".join(str(c.get("text", "")) for c in evidence_cards)
     evidence_tokens = _tokenize(evidence_text)
     if not evidence_tokens:
         return content, 0
 
+    threshold = getattr(Config, "RAG_POSTCHECK_OVERLAP_THRESHOLD", 0.18)
     downgraded_count = 0
     sentences = _split_sentences(content)
     rewritten: list[str] = []
@@ -127,7 +173,7 @@ def postcheck_and_downgrade(answer: str, evidence_cards: list[dict[str, Any]]) -
 
         sent_tokens = _tokenize(s)
         overlap = len(sent_tokens & evidence_tokens) / max(1, len(sent_tokens))
-        if overlap >= 0.28:
+        if overlap >= threshold:
             rewritten.append(s)
             continue
 

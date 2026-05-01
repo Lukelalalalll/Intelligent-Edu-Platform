@@ -3,6 +3,8 @@ import type { AISession, ChatMessage } from '@/types/api';
 export const SYSTEM_MSG: ChatMessage = { role: 'system', content: 'You are a helpful academic AI assistant for HKU.' };
 export const PROVIDER_STORAGE_KEY = 'ai_provider';
 export const TUTOR_MODE_STORAGE_KEY = 'ai_tutor_mode';
+export const WEB_SEARCH_STORAGE_KEY = 'ai_web_search';
+export const SEARCH_ENGINE_STORAGE_KEY = 'ai_search_engine';
 
 export function getErrorMessage(err: unknown): string {
     if (err instanceof Error) return err.message;
@@ -11,7 +13,7 @@ export function getErrorMessage(err: unknown): string {
 
 export function buildSession(raw: Partial<AISession>): AISession {
     return {
-        id: raw.id!,
+        id: raw.id || `local_${Date.now()}`,
         title: raw.title || 'New Conversation',
         messages: raw.messages || [SYSTEM_MSG],
     };

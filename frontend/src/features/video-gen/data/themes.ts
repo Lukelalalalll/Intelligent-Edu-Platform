@@ -1,3 +1,6 @@
+// ── Single source of truth: shared with backend via data/slide_themes.json ──
+import slideThemesJson from '../../../../../data/slide_themes.json';
+
 export type ThemeId =
   | 'dark-ocean'
   | 'forest'
@@ -16,7 +19,10 @@ export type LayoutType =
   | 'image-right'
   | 'image-top'
   | 'big-quote'
-  | 'two-column';
+  | 'two-column'
+  | 'bar-chart'
+  | 'flowchart'
+  | 'code';
 
 export type ToneMode = 'lecture' | 'inspire' | 'poetry';
 
@@ -33,6 +39,9 @@ export const LAYOUT_OPTIONS: LayoutOption[] = [
   { id: 'image-top',     label: 'Image Top',   icon: 'fa-window-maximize' },
   { id: 'big-quote',     label: 'Quote',   icon: 'fa-quote-left' },
   { id: 'two-column',    label: 'Two Columns',   icon: 'fa-th-large' },
+  { id: 'bar-chart',     label: 'Bar Chart',   icon: 'fa-chart-bar' },
+  { id: 'flowchart',     label: 'Flowchart',   icon: 'fa-project-diagram' },
+  { id: 'code',          label: 'Code',   icon: 'fa-code' },
 ];
 
 export const TONE_OPTIONS: { id: ToneMode; label: string; desc: string }[] = [
@@ -49,18 +58,18 @@ export interface ThemeDef {
   label: string;
 }
 
-export const THEMES: Record<ThemeId, ThemeDef> = {
-  'dark-ocean':    { bg: '#0f2744', title: '#60a5fa', body: '#e2e8f0', accent: '#1e40af', label: 'Deep Ocean Blue' },
-  'forest':        { bg: '#0d2b1e', title: '#4ade80', body: '#d1fae5', accent: '#166534', label: 'Forest Green' },
-  'midnight':      { bg: '#1a0533', title: '#c084fc', body: '#f3e8ff', accent: '#7c3aed', label: 'Midnight Purple' },
-  'sunset':        { bg: '#4a1515', title: '#fb923c', body: '#fde8d8', accent: '#c2410c', label: 'Sunset Orange' },
-  'minimal-white': { bg: '#ffffff', title: '#1e293b', body: '#475569', accent: '#e2e8f0', label: 'Minimal White' },
-  'corp-blue':     { bg: '#1e3a5f', title: '#ffffff', body: '#bfdbfe', accent: '#1d4ed8', label: 'Corporate Blue' },
-  'chalkboard':    { bg: '#1a3028', title: '#fef08a', body: '#f0fdf4', accent: '#15803d', label: 'Chalkboard Green' },
-  'tech-noir':     { bg: '#111827', title: '#22d3ee', body: '#94a3b8', accent: '#0e7490', label: 'Tech Noir' },
-  'rose-gold':     { bg: '#3d1525', title: '#fda4af', body: '#fce7f3', accent: '#be185d', label: 'Rose Gold' },
-  'lunar':         { bg: '#1c1c2e', title: '#e2e8f0', body: '#94a3b8', accent: '#334155', label: 'Lunar Gray' },
-};
+export const THEMES: Record<ThemeId, ThemeDef> = Object.fromEntries(
+  slideThemesJson.themes.map(t => [
+    t.id,
+    {
+      bg: t.colors.bg,
+      title: t.colors.title,
+      body: t.colors.body,
+      accent: t.colors.accent,
+      label: t.label,
+    }
+  ])
+) as Record<ThemeId, ThemeDef>;
 
 export const THEME_IDS = Object.keys(THEMES) as ThemeId[];
 
@@ -88,6 +97,13 @@ export interface Scene {
   col1Bullets?: string[];
   col2Title?: string;
   col2Bullets?: string[];
+  /** bar-chart layout fields */
+  chartData?: Array<{ label: string; value: number }>;
+  /** flowchart layout fields */
+  flowSteps?: string[];
+  /** code layout fields */
+  codeSnippet?: string;
+  codeLanguage?: string;
 }
 
 export function createScene(script: string = '', idx: number = 0): Scene {

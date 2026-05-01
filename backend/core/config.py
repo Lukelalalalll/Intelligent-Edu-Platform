@@ -87,14 +87,61 @@ class Settings(BaseSettings):
 
     # ── RAG ───────────────────────────────────────────────────────────
     RAG_VECTORSTORE_DIR: str = ""
-    RAG_EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    RAG_EMBEDDING_MODEL: str = "BAAI/bge-m3"
     RAG_TWO_STAGE_CHAT_ENABLED: bool = True
     RAG_EMPTY_RETRY_ENABLED: bool = True
     RAG_POSTCHECK_ENABLED: bool = True
-    RAG_RETRIEVE_TOP_N: int = 10
-    RAG_ANSWER_TOP_K: int = 4
-    RAG_EVIDENCE_MAX_CHARS: int = 1600
-    RAG_EVIDENCE_MAX_CHARS_PER_CHUNK: int = 420
+    RAG_RETRIEVE_TOP_N: int = 15
+    RAG_ANSWER_TOP_K: int = 6
+    RAG_EVIDENCE_MAX_CHARS: int = 4000
+    RAG_EVIDENCE_MAX_CHARS_PER_CHUNK: int = 800
+    RAG_CHUNK_SIZE: int = 1200
+    RAG_CHUNK_OVERLAP: int = 200
+    RAG_NEURAL_RERANK_ENABLED: bool = True
+    RAG_NEURAL_RERANK_CANDIDATES: int = 20
+    # ── RAG Advanced Optimizations ────────────────────────────────
+    # Contextual Retrieval (Anthropic, Sep 2024): prepend LLM-generated
+    # per-chunk context before embedding.  Disabled by default because
+    # enabling it requires re-indexing all existing documents.
+    RAG_CONTEXTUAL_RETRIEVAL_ENABLED: bool = False
+    # Override Ollama model used for context generation (default: OLLAMA_MODEL)
+    RAG_CONTEXTUAL_RETRIEVAL_MODEL: str = ""
+    # Multi-Query: generate N query variants and RRF-merge their results
+    RAG_MULTI_QUERY_ENABLED: bool = True
+    RAG_MULTI_QUERY_VARIANTS: int = 2
+    # HyDE: generate a hypothetical answer and use it as an extra retrieval query
+    RAG_HYDE_ENABLED: bool = False
+    # Parent-window expansion: after retrieval, expand each child chunk to
+    # include its neighbouring chunks for richer LLM context
+    RAG_PARENT_EXPANSION_ENABLED: bool = True
+    RAG_PARENT_EXPANSION_WINDOW: int = 1
+    # Self-Query: heuristic chapter/doc filter extraction from the query string
+    RAG_SELF_QUERY_ENABLED: bool = True
+    # Lost-in-the-Middle: reorder retrieved chunks to U-shape for LLM context
+    RAG_LOST_IN_MIDDLE_REORDER: bool = True
+    # ── RAG Dynamic Budget ─────────────────────────────────────────
+    RAG_CHARS_PER_TOKEN: float = 2.5
+    RAG_GENERATION_RESERVE_TOKENS: int = 1500
+    RAG_SYSTEM_OVERHEAD_TOKENS: int = 600
+    RAG_PROVIDER_CONTEXT_WINDOWS: dict = Field(
+        default={
+            "gemini":       1_000_000,
+            "deepseek":        64_000,
+            "zhipu":          128_000,
+            "coze":            16_000,
+            "local_ollama":     8_192,
+        }
+    )
+    # ── RAG Cache ────────────────────────────────────────────────
+    RAG_CACHE_TTL_SECONDS: int = 1800
+    RAG_CACHE_MAX_ENTRIES: int = 2000
+    RAG_SEMANTIC_CACHE_ENABLED: bool = True
+    RAG_SEMANTIC_CACHE_THRESHOLD: float = 0.92
+    RAG_SEMANTIC_CACHE_MAX_ENTRIES: int = 200
+    RAG_VECTOR_SIMILARITY_THRESHOLD: float = 0.35
+    RAG_POSTCHECK_OVERLAP_THRESHOLD: float = 0.18
+    RAG_PDF_MAX_PAGES: int = 200
+    RAG_OCR_DPI: int = 300
 
     # ── Upload / folder paths ─────────────────────────────────────────
     UPLOAD_FOLDER: str = ""
@@ -122,12 +169,26 @@ class Settings(BaseSettings):
     TEXTIN_SECRET_CODE: str | None = None
     TESSERACT_CMD: str | None = None
 
+    # ── Handwriting OCR (PaddleOCR) ───────────────────────────────────
+    HANDWRITING_OCR_ENABLED: bool = True       # set False to skip PaddleOCR entirely
+    HANDWRITING_OCR_DPI: int = 200             # render resolution (200 suits handwriting)
+    HANDWRITING_OCR_CONFIDENCE: float = 0.5   # discard PaddleOCR results below this
+    HANDWRITING_OCR_MAX_PAGES: int = 30        # cap pages processed per submission
+
     # ── Chat / transfer ───────────────────────────────────────────────
     CHAT_AI_ENABLED: bool = True
     CHAT_TRANSFER_ENABLED: bool = True
     CHAT_TRANSFER_TICKET_TTL_HOURS: int = 24
     CHAT_AI_CONTEXT_WINDOW: int = 50
     CHAT_FILE_MAX_MB: int = 20
+
+    # ── Web Search (SearXNG — self-hosted, no API key needed) ─────────
+    SEARXNG_ENABLED: bool = False
+    SEARXNG_BASE_URL: str = "http://localhost:8080"
+    SEARXNG_MAX_RESULTS: int = 5
+    SEARXNG_TIMEOUT_SECONDS: float = 6.0
+    SEARXNG_FETCH_CONTENT: bool = False        # True → scrape full page text
+    SEARXNG_CONTENT_MAX_CHARS: int = 1200      # chars kept per web result
 
     # ── Misc ──────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]

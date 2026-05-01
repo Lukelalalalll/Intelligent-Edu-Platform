@@ -107,6 +107,37 @@ def _extract_pdf_text_with_fitz(pdf_path, page_numbers):
     return text
 
 
+def _extract_pdf_text_with_paddle(pdf_path, page_numbers):
+    """PaddleOCR extractor for image-only / handwritten PDFs.
+
+    Called when both OpenDataLoader and PyMuPDF return empty text, which is the
+    typical scenario for scanned or handwritten question sheets.
+    """
+    from pathlib import Path
+    from backend.utils.handwriting_ocr import extract_handwriting_from_pdf
+
+    selected_pages = sorted({int(p) for p in (page_numbers or []) if int(p) >= 0})
+    path = Path(pdf_path)
+
+    # extract_handwriting_from_pdf processes the whole file; filter pages afterwards
+    # if a page selection was requested.
+    full_text = extract_handwriting_from_pdf(path)
+    if not full_text.strip():
+        raise Exception("PaddleOCR returned empty text for " + path.name)
+
+    if not selected_pages:
+        return full_text
+
+    # full_text pages are separated by \f — pick only the requested ones
+    all_pages = full_text.split("\f")
+    chunks = [
+        all_pages[i] for i in selected_pages if i < len(all_pages) and all_pages[i].strip()
+    ]
+    if not chunks:
+        raise Exception("Selected pages yielded no text after PaddleOCR")
+    return "\n".join(chunks)
+
+
 def extract_pdf_text_with_loader(pdf_path, page_numbers):
     """Use OpenDataLoader to quickly extract selected PDF pages as markdown text."""
     page_spec = _page_numbers_to_spec(page_numbers)
@@ -139,10 +170,30 @@ def extract_pdf_text_with_loader(pdf_path, page_numbers):
                 return f.read()
     except FileNotFoundError as exc:
         logger.warning("OpenDataLoader unavailable (likely Java missing), using PyMuPDF fallback: %s", exc)
-        return _extract_pdf_text_with_fitz(pdf_path, page_numbers)
+        return _fitz_then_paddle(pdf_path, page_numbers)
     except Exception as exc:
         logger.warning("OpenDataLoader failed, using PyMuPDF fallback: %s", exc)
-        return _extract_pdf_text_with_fitz(pdf_path, page_numbers)
+        return _fitz_then_paddle(pdf_path, page_numbers)
+
+
+def _fitz_then_paddle(pdf_path, page_numbers):
+    """Try PyMuPDF first; if it returns empty text, fall through to PaddleOCR.
+
+    This is the standard two-stage OCR fallback for the question generator.
+    """
+    try:
+        text = _extract_pdf_text_with_fitz(pdf_path, page_numbers)
+        if text.strip():
+            return text
+        logger.info("PyMuPDF returned empty text for %s, trying PaddleOCR", pdf_path)
+    except Exception as exc:
+        logger.warning("PyMuPDF extraction failed for %s: %s", pdf_path, exc)
+
+    try:
+        return _extract_pdf_text_with_paddle(pdf_path, page_numbers)
+    except Exception as exc:
+        logger.warning("PaddleOCR also failed for %s: %s", pdf_path, exc)
+        raise Exception(f"All PDF extractors failed for {pdf_path}") from exc
 
 
 async def extract_text_from_image(file_path, extract_prompt="exercise", provider="local_ollama"):
@@ -260,7 +311,30 @@ Markdown to process:
 
     clean_json = match.group(1)
     clean_json = re.sub(r'\\(?![\\"/bfnrtu])', r'\\\\', clean_json)
-    parsed = json.loads(clean_json, strict=False)
+
+    # First attempt: direct parse
+    parsed = None
+    try:
+        parsed = json.loads(clean_json, strict=False)
+    except json.JSONDecodeError:
+        pass
+
+    # Second attempt: json_repair — purpose-built for fixing malformed LLM JSON
+    if parsed is None:
+        import json_repair
+        try:
+            parsed = json_repair.loads(clean_json)
+        except Exception:
+            pass
+
+    # Third attempt: repair on the full raw text (in case regex extraction mangled it)
+    if parsed is None:
+        import json_repair
+        try:
+            parsed = json_repair.loads(raw_text)
+        except Exception:
+            logger.error("All JSON parse attempts failed. Raw output (first 2000 chars):\n%s", raw_text[:2000])
+            raise Exception("Could not parse LLM output as JSON after all repair attempts")
 
     if not isinstance(parsed, dict) or 'exercises' not in parsed:
         raise Exception("Layout output missing exercises field")

@@ -93,10 +93,12 @@ export interface FeedbackPayload {
 
 export interface RagCitation {
   index: number;
-  course_id: string;
+  course_id?: string;
   doc_name: string;
   score: number;
   text: string;
+  source_type?: 'local' | 'web';
+  url?: string;
 }
 
 export interface ChatMessage {
@@ -105,6 +107,7 @@ export interface ChatMessage {
   attachedText?: string;
   files?: { file_name: string; mime_type: string }[];
   citations?: RagCitation[];
+  is_course_relevant?: boolean;
   images?: string[];
 }
 

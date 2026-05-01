@@ -219,7 +219,7 @@ export default function QuickProcess({
                                     ))}
                                 </div>
 
-                                {/* 🌟 移植自 Specify 的脚本卡片 */}
+                                {/* 🌟 Script card ported from SpecifyView */}
                                 {talkingScriptResult?.word_document?.available && (
                                     <div className={styles.talkingScriptElegant}>
                                         <div className={styles.scriptInfo}>

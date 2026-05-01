@@ -13,7 +13,7 @@ export default function ImageExtractorPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [activeView, setActiveView] = useState<'workflow' | 'history'>('workflow');
 
-    // --- 状态管理 ---
+    // --- State management ---
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
     const [imagesByChapter, setImagesByChapter] = useState({});
@@ -31,7 +31,7 @@ export default function ImageExtractorPage() {
     const [lightboxImage, setLightboxImage] = useState(null);
     const [notifications, setNotifications] = useState([]);
 
-    // --- 辅助方法 ---
+    // --- Helper methods ---
     const notify = useCallback((message, type = 'info') => {
         const id = Date.now() + Math.random();
         setNotifications(prev => [...prev, { id, message, type }]);
@@ -93,7 +93,7 @@ export default function ImageExtractorPage() {
         })();
     }, [searchParams, setSearchParams]);
 
-    // --- 交互处理 ---
+    // --- Interaction handlers ---
     const handleDragOver = e => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = () => setIsDragging(false);
     const handleDrop = e => { e.preventDefault(); setIsDragging(false); processUpload(e.dataTransfer.files[0]); };

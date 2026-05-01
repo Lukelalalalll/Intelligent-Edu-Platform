@@ -27,6 +27,8 @@ interface KnowledgeBaseViewProps {
     onUpdateChapter: (chapterId: string, payload: any) => Promise<void>;
     onDeleteChapter: (chapterId: string) => Promise<void>;
     onReassignDocChapter: (docName: string, chapterId: string) => void;
+    useFastExtract: boolean;
+    onToggleExtractMode: () => void;
 }
 
 export default function KnowledgeBaseView({
@@ -35,6 +37,7 @@ export default function KnowledgeBaseView({
     uploadTasks, deletingDoc, onUploadFile, onDeleteDoc, onDismissUploadTasks, uploading,
     chapters, selectedChapterId, onSelectChapter, onCreateChapter,
     onUpdateChapter, onDeleteChapter, onReassignDocChapter,
+    useFastExtract, onToggleExtractMode,
 }: KnowledgeBaseViewProps) {
     const selectedCourse = courses.find(c => c.courseId === selectedCourseId);
 
@@ -83,6 +86,8 @@ export default function KnowledgeBaseView({
                             onUpdateChapter={onUpdateChapter}
                             onDeleteChapter={onDeleteChapter}
                             onReassignDocChapter={onReassignDocChapter}
+                            useFastExtract={useFastExtract}
+                            onToggleExtractMode={onToggleExtractMode}
                         />
                     )}
                 </div>

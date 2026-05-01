@@ -4,12 +4,12 @@ import AdminDashboard from '../index';
 import { log } from '@/shared/utils/logger'; 
 
 export default function AdminDashboardPage() {
-    // === 1. 全局状态 ===
+    // === 1. Global state ===
     const [activeMode, setActiveMode] = useState('users');
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const currentUserId = currentUser.id;
 
-    // === 2. 用户管理状态 (User Management) ===
+    // === 2. User management state ===
     const [users, setUsers] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [modalState, setModalState] = useState({ isOpen: false, isEditMode: false });
@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
 
-    // === 3. 课程关系管理状态 (Relation Management) ===
+    // === 3. Course–relation management state ===
     const [relationSearch, setRelationSearch] = useState('');
     const [relationLoading, setRelationLoading] = useState(false);
     const [relationError, setRelationError] = useState('');
@@ -38,7 +38,7 @@ export default function AdminDashboardPage() {
     const [assignmentSaving, setAssignmentSaving] = useState(false);
     const [assignmentCourseId, setAssignmentCourseId] = useState('');
 
-    // --- 数据获取 (Fetching) ---
+    // --- Data fetching ---
     const fetchUsers = async () => {
         try {
             const response = await client.get('/admin/users');
@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
         fetchRelations();
     }, []);
 
-    // --- 用户管理操作 (User Operations) ---
+    // --- User management operations ---
     const openAddModal = () => { setFormData({ id: '', username: '', email: '', password: '', role: 'teacher' }); setModalState({ isOpen: true, isEditMode: false }); };
     const openEditModal = (user) => { setFormData({ id: user.id, username: user.username, email: user.email, password: '', role: user.role || 'student' }); setModalState({ isOpen: true, isEditMode: true }); };
     const closeModal = () => setModalState({ isOpen: false, isEditMode: false });
@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
         }
     };
 
-    // --- 课程与作业管理操作 (Course & Assignment Operations) ---
+    // --- Course and assignment management operations ---
     const resetCourseForm = () => {
         setCourseForm({ courseId: '', name: '', teacherId: '', degreeLevel: 'bachelor', semester: '', studentIds: [] });
         setEditingCourseId(null);

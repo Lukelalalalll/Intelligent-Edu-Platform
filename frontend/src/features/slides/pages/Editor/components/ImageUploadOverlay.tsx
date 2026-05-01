@@ -35,7 +35,7 @@ export default function ImageUploadOverlay({ element, bbox, currentAssetUrl, isS
             ) : (
                 <div className={styles.imgPlaceholder}>
                     <i className="fas fa-image" style={{ fontSize: 22 }} />
-                    <span>点击上传</span>
+                    <span>Click to upload</span>
                 </div>
             )}
             <input

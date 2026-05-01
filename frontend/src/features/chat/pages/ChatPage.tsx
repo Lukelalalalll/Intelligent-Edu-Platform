@@ -26,7 +26,12 @@ export type LeftPaneTab = 'chats' | 'contacts';
 export default function ChatPage() {
     const { roomId } = useParams<{ roomId?: string }>();
     const navigate = useNavigate();
-    const { activeRoomId, setActiveRoom, setContacts, setPendingRequests } = useChatStore();
+    // Fine-grained selectors: ChatPage only re-renders when activeRoomId changes,
+    // not on every incoming WebSocket message (appendMessage / incrementUnread / etc.)
+    const activeRoomId = useChatStore((s) => s.activeRoomId);
+    const setActiveRoom = useChatStore((s) => s.setActiveRoom);
+    const setContacts = useChatStore((s) => s.setContacts);
+    const setPendingRequests = useChatStore((s) => s.setPendingRequests);
 
     const [showAddFriend, setShowAddFriend] = useState(false);
     const [showCreateGroup, setShowCreateGroup] = useState(false);

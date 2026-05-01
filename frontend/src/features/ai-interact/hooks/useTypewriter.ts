@@ -15,7 +15,7 @@ import { useState, useEffect, useRef } from 'react';
 export function useTypewriter(
     target: string,
     isActive: boolean,
-    charsPerFrame = 3,
+    charsPerFrame = 1,
 ): string {
     const [displayed, setDisplayed] = useState(() => (isActive ? '' : target));
     const posRef = useRef(isActive ? 0 : target.length);
@@ -51,9 +51,9 @@ export function useTypewriter(
                 }
                 // Accelerated speed for finish-up: at least 5x base speed
                 const behind = t.length - posRef.current;
-                const speed = behind > 300 ? charsPerFrame * 8
-                    : behind > 100 ? charsPerFrame * 6
-                    : Math.max(charsPerFrame * 4, 12);
+                const speed = behind > 300 ? charsPerFrame * 16
+                    : behind > 100 ? charsPerFrame * 8
+                    : Math.max(charsPerFrame * 5, 12);
                 posRef.current = Math.min(posRef.current + speed, t.length);
                 setDisplayed(t.slice(0, posRef.current));
                 rafRef.current = requestAnimationFrame(finishStep);
@@ -87,8 +87,8 @@ export function useTypewriter(
                 // falling too far behind a fast model, keep slow when buffer is
                 // small so the typing cadence is visible.
                 const behind = t.length - posRef.current;
-                const speed = behind > 300 ? charsPerFrame * 5
-                    : behind > 150 ? charsPerFrame * 3
+                const speed = behind > 300 ? charsPerFrame * 8
+                    : behind > 150 ? charsPerFrame * 4
                     : behind > 60  ? charsPerFrame * 2
                     : charsPerFrame;
                 posRef.current = Math.min(posRef.current + speed, t.length);

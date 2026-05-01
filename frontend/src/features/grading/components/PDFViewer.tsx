@@ -78,7 +78,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const handleSaveTag = async () => {
         if (!activeAnnotation || !onSaveAnnotation) return;
         if (!activeAnnotation.comment?.trim()) {
-            setLocalError('请填写标签内容（例如老师评语）后再保存。');
+            setLocalError('Please enter label content (e.g., a teacher comment) before saving.');
             return;
         }
 

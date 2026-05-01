@@ -1,7 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import styles from './styles/AIInteract.module.css';
-import type { AIRoleInfo, AIProvider, AITutorMode } from './api/aiApi';
-import { useResizableSidebar } from './hooks/useResizableSidebar';
+import type { AIRoleInfo, AIProvider, AITutorMode, AISearchEngine } from './api/aiApi';
+import {
+    useResizableSidebar,
+    SIDEBAR_MIN_WIDTH,
+    SIDEBAR_MAX_WIDTH,
+    SIDEBAR_DEFAULT_WIDTH,
+} from './hooks/useResizableSidebar';
 
 import Sidebar from './components/Sidebar';
 import ChatHeader from './components/ChatHeader';
@@ -10,17 +15,13 @@ import ChatInput from './components/ChatInput';
 import ConfirmModal from './components/ConfirmModal';
 import MemoryModal from './components/MemoryModal';
 
-// ── Sidebar dimension constants ───────────────────────────────────────────────
-const SIDEBAR_MIN_WIDTH = 180;
-const SIDEBAR_MAX_WIDTH = 520;
-const SIDEBAR_DEFAULT_WIDTH = 300;
-
 // ── Prop types grouped by domain ──────────────────────────────────────────────
 
 interface SessionProps {
-    sessions?: Array<{ id: string; title?: string; messages?: Array<{ role: string; content: string }> }>;
+    sessions?: Array<{ id: string; title?: string; messages: Array<{ role: string; content: string }> }>;
     currentSessionId?: string;
     createNewSession?: () => void;
+    switchSession?: (id: string) => void;
     deleteSession?: (id: string) => void;
     confirmDelete?: () => void;
     deletingId?: string;
@@ -30,7 +31,7 @@ interface ChatProps {
     inputText?: string;
     isTyping?: boolean;
     toastVisible?: boolean;
-    chatMessagesRef?: React.RefObject<HTMLElement | null>;
+    chatMessagesRef?: React.RefObject<HTMLDivElement | null>;
     inputRef?: React.RefObject<HTMLTextAreaElement | null>;
     handleInput?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     handleKeyDown?: (e: React.KeyboardEvent) => void;
@@ -38,12 +39,12 @@ interface ChatProps {
     handleStop?: () => void;
     copyToClipboard?: (text: string) => void;
     handleChatAreaClick?: (e?: React.MouseEvent) => void;
-    handleRegenerate?: (msgId: string) => void;
-    handleEditUserMsg?: (msgId: string, content: string) => void;
+    handleRegenerate?: (msgId: number) => void;
+    handleEditUserMsg?: (msgId: number, content: string) => void;
 }
 
 interface AttachmentProps {
-    attachedFiles?: File[];
+    attachedFiles?: Array<{ file: File; file_name: string; mime_type: string }>;
     isUploadingFile?: boolean;
     fileInputRef?: React.RefObject<HTMLInputElement | null>;
     handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -70,13 +71,17 @@ interface ProviderProps {
     tutorMode?: AITutorMode;
     setTutorMode?: (mode: AITutorMode) => void;
     roleInfo?: AIRoleInfo | null;
+    webSearch?: boolean;
+    setWebSearch?: (v: boolean) => void;
+    searchEngine?: AISearchEngine;
+    setSearchEngine?: (e: AISearchEngine) => void;
 }
 
 export type AIInteractPageProps = SessionProps & ChatProps & AttachmentProps & MemoryProps & ModalProps & ProviderProps;
 
 export default function AIInteractPage({
     // Session
-    sessions, currentSessionId, createNewSession, deleteSession, confirmDelete, deletingId,
+    sessions, currentSessionId, createNewSession, switchSession, deleteSession, confirmDelete, deletingId,
     // Chat
     inputText, isTyping, toastVisible, chatMessagesRef, inputRef,
     handleInput, handleKeyDown, handleSend, handleStop,
@@ -89,10 +94,12 @@ export default function AIInteractPage({
     modalConfig, setModalConfig,
     // Provider / role
     selectedProvider, setSelectedProvider, providerHealth, tutorMode, setTutorMode, roleInfo,
+    webSearch, setWebSearch, searchEngine, setSearchEngine,
 }: AIInteractPageProps) {
-    const currentSession = currentSessionId
-        ? (sessions ?? []).find(s => s.id === currentSessionId)
-        : undefined;
+    const currentSession = useMemo(
+        () => currentSessionId ? (sessions ?? []).find(s => s.id === currentSessionId) : undefined,
+        [sessions, currentSessionId],
+    );
 
     // ── Resizable sidebar ──
     const containerRef = useRef<HTMLDivElement>(null);
@@ -119,6 +126,7 @@ export default function AIInteractPage({
                             currentSessionId={currentSessionId}
                             deletingId={deletingId}
                             createNewSession={createNewSession}
+                            switchSession={switchSession}
                             deleteSession={deleteSession}
                             selectedProvider={selectedProvider}
                             setSelectedProvider={setSelectedProvider}
@@ -163,6 +171,10 @@ export default function AIInteractPage({
                             handleFileChange={handleFileChange}
                             removeAttachedFile={removeAttachedFile}
                             handleStop={handleStop}
+                            webSearch={webSearch}
+                            setWebSearch={setWebSearch}
+                            searchEngine={searchEngine}
+                            setSearchEngine={setSearchEngine}
                         />
                     </main>
                 </div>

@@ -10,8 +10,10 @@ from fastapi.responses import StreamingResponse
 
 from backend.core.database import db, compute_history_expires_at
 from backend.core.security import get_current_user
+from backend.schemas.slide_schema import SceneModel, SceneAssets, RenderOptions, parse_scene_body
 from backend.services.video_service import (
     BACKEND_ROOT,
+    _tasks,
     extract_text_from_md_txt,
     extract_text_from_pdf,
     generate_scripts,
@@ -57,8 +59,15 @@ async def generate_video(
     lang: str = Form("zh"),
     provider: str = Form("local_ollama"),
     subtitles: bool = Form(True),
+    subtitle_mode: str = Form("hard_srt"),
     max_segments: int = Form(8),
     audience: str = Form("student"),
+    brand_kit: str = Form("none"),
+    animation_level: str = Form("basic"),
+    tts_engine: str = Form("edge_tts"),
+    avatar_mode: str = Form("none"),
+    avatar_img_path: str = Form(""),
+    quiz_enabled: bool = Form(False),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -102,28 +111,79 @@ async def generate_video(
         except (json.JSONDecodeError, TypeError):
             scenes_list = None
 
-    # Handle per-scene image uploads
+    # ── Validate and enrich scene data via Pydantic ──
+    validated_scenes: list[dict] | None = None
     if scenes_list:
-        for sc in scenes_list:
-            # Validate customImagePath (background)
-            img_path = sc.get("customImagePath")
-            if img_path:
-                full = UPLOAD_TMP / Path(img_path).name
-                if full.exists():
-                    sc["customImagePath"] = str(full)
-                else:
-                    sc["customImagePath"] = None
-            # Validate layoutImagePath (embedded layout image)
-            layout_path = sc.get("layoutImagePath")
-            if layout_path:
-                full = UPLOAD_TMP / Path(layout_path).name
-                if full.exists():
-                    sc["layoutImagePath"] = str(full)
-                else:
-                    sc["layoutImagePath"] = None
+        validated_scenes = []
+        for raw_sc in scenes_list:
+            custom_img = None
+            if raw_sc.get("customImagePath"):
+                p = UPLOAD_TMP / Path(raw_sc["customImagePath"]).name
+                custom_img = str(p) if p.exists() else None
+
+            layout_img = None
+            if raw_sc.get("layoutImagePath"):
+                p = UPLOAD_TMP / Path(raw_sc["layoutImagePath"]).name
+                layout_img = str(p) if p.exists() else None
+
+            parsed_content = parse_scene_body(raw_sc)
+
+            try:
+                scene_model = SceneModel(
+                    id=raw_sc.get("id", ""),
+                    layoutType=raw_sc.get("layoutType", "title-bullets"),
+                    themeId=raw_sc.get("themeId", "dark-ocean"),
+                    slideMode=raw_sc.get("slideMode", "theme"),
+                    slideTitle=raw_sc.get("slideTitle", "")[:100],
+                    slideBody=raw_sc.get("slideBody", ""),
+                    parsedContent=parsed_content,
+                    assets=SceneAssets(customImagePath=custom_img, layoutImagePath=layout_img),
+                    renderOptions=RenderOptions(
+                        animationLevel=animation_level,
+                        subtitleMode=subtitle_mode if subtitles else "none",
+                        toneMode=raw_sc.get("toneMode", "lecture"),
+                    ),
+                    script=raw_sc.get("script", ""),
+                    toneMode=raw_sc.get("toneMode", "lecture"),
+                )
+                sc_dict = scene_model.model_dump()
+                # Flatten for pipeline/render.py compat (they still use plain dicts)
+                sc_dict["customImagePath"] = scene_model.assets.customImagePath
+                sc_dict["layoutImagePath"] = scene_model.assets.layoutImagePath
+                sc_dict.update(scene_model.parsedContent.model_dump())
+                validated_scenes.append(sc_dict)
+            except Exception as e:
+                logger.warning("Scene validation failed id=%s: %s — using raw", raw_sc.get("id"), e)
+                validated_scenes.append(raw_sc)
+
+    # Validate avatar image path (must come from /uploads/video_tmp)
+    avatar_image_full_path = None
+    if avatar_img_path:
+        candidate = UPLOAD_TMP / Path(avatar_img_path).name
+        if candidate.exists() and candidate.suffix.lower() in ALLOWED_IMG_EXT:
+            avatar_image_full_path = str(candidate)
 
     # Schedule background coroutine
     user_id = current_user.get("id", "")
+
+    # Validate subtitle_mode; reject unknown values
+    _VALID_SUBTITLE_MODES = {"hard_srt", "image_strip", "none"}
+    if subtitle_mode not in _VALID_SUBTITLE_MODES:
+        subtitle_mode = "hard_srt"
+
+    # Validate brand_kit and animation_level
+    _VALID_BRAND_KITS = {"none", "default"}
+    if brand_kit not in _VALID_BRAND_KITS:
+        brand_kit = "none"
+    _VALID_ANIMATION_LEVELS = {"off", "basic", "high"}
+    if animation_level not in _VALID_ANIMATION_LEVELS:
+        animation_level = "basic"
+    _VALID_TTS_ENGINES = {"edge_tts", "cosyvoice"}
+    if tts_engine not in _VALID_TTS_ENGINES:
+        tts_engine = "edge_tts"
+    _VALID_AVATAR_MODES = {"none", "wav2lip", "latentsync"}
+    if avatar_mode not in _VALID_AVATAR_MODES:
+        avatar_mode = "none"
 
     async def _run():
         await run_video_pipeline(
@@ -134,10 +194,17 @@ async def generate_video(
             uploaded_file_path=file_path,
             file_type=file_type,
             scripts_override=scripts_list,
-            scenes=scenes_list,
+            scenes=validated_scenes,
             subtitles=subtitles,
+            subtitle_mode=subtitle_mode,
             max_segments=max_segments,
             audience=audience,
+            brand_kit=brand_kit,
+            animation_level=animation_level,
+            tts_engine=tts_engine,
+            avatar_mode=avatar_mode,
+            avatar_img_path=avatar_image_full_path,
+            quiz_enabled=quiz_enabled,
         )
         # ── save history when pipeline finishes successfully ──
         task = get_task(task_id)
@@ -339,6 +406,84 @@ async def script_progress_sse(job_id: str):
             await asyncio.sleep(1)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+
+# ───────────────────────── Video Progress SSE ──────────────────────────
+
+@router.get("/progress/{task_id}")
+async def video_progress_sse(task_id: str):
+    """SSE endpoint: streams real-time progress events for a video generation task.
+
+    Event types emitted in the `type` field:
+      "progress" — periodic update while running
+      "warn"     — task completed but some clips failed (partial output)
+      "done"     — task finished successfully
+      "error"    — task failed
+
+    Auth is intentionally omitted: task_id is a UUID4 hex (128-bit entropy),
+    practically unguessable. EventSource cannot send HttpOnly cookies cross-origin.
+    The existing /status/{task_id} endpoint remains as a polling fallback.
+    """
+    if task_id not in _tasks:
+        raise HTTPException(404, "Task not found")
+
+    async def _stream():
+        last_progress = -1
+        while True:
+            task = _tasks.get(task_id)
+            if not task:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Task evicted'})}\n\n"
+                break
+
+            status = task.get("status", "pending")
+            progress = task.get("progress", 0)
+            clip_errors = task.get("errors", [])
+
+            payload: dict = {
+                "type": "progress",
+                "status": status,
+                "progress": progress,
+                "message": task.get("message", ""),
+            }
+
+            if status == "done":
+                payload["type"] = "warn" if clip_errors else "done"
+                payload["videoPath"] = task.get("videoPath", "")
+                if task.get("thumbnailPath"):
+                    payload["thumbnailPath"] = task["thumbnailPath"]
+                if task.get("chaptersPath"):
+                    payload["chaptersPath"] = task["chaptersPath"]
+                if task.get("quizPath"):
+                    payload["quizPath"] = task["quizPath"]
+                if clip_errors:
+                    payload["errors"] = clip_errors
+                yield f"data: {json.dumps(payload)}\n\n"
+                break
+            elif status == "error":
+                payload["type"] = "error"
+                payload["error"] = task.get("error", "Unknown error")
+                if clip_errors:
+                    payload["errors"] = clip_errors
+                yield f"data: {json.dumps(payload)}\n\n"
+                break
+
+            # Only push when something actually changed (saves bandwidth)
+            if progress != last_progress:
+                yield f"data: {json.dumps(payload)}\n\n"
+                last_progress = progress
+
+            await asyncio.sleep(0.4)
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # tell nginx not to buffer SSE
+            "Connection": "keep-alive",
+        },
+    )
 
 
 # ───────────────────────── Generation History ──────────────────────────

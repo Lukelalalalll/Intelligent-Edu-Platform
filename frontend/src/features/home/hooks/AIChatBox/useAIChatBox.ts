@@ -12,6 +12,7 @@ function getApiRoot(): string {
 export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElement>) {
     const [messages, setMessages] = useState<ChatMsg[]>([WELCOME_MESSAGE]);
     const [input, setInput] = useState('');
+    const [provider, setProvider] = useState<'coze' | 'local_ollama'>('local_ollama');
     const [isLoading, setIsLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingVal, setEditingVal] = useState('');
@@ -96,6 +97,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         await streamChatCompletion({
             apiRoot: getApiRoot(),
             messages: historyForApi,
+            provider,
             signal: abortControllerRef.current?.signal as AbortSignal,
             onTextDelta: (delta) => {
                 fullText += delta;
@@ -113,7 +115,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
             streamRafRef.current = null;
         }
         flushRafUpdate(targetAssistantId, fullText);
-    }, [flushRafUpdate, scheduleRafUpdate]);
+    }, [flushRafUpdate, scheduleRafUpdate, provider]);
 
     const streamFromHistory = useCallback(async (history: ChatMsg[]) => {
         if (!history.length) return;
@@ -122,7 +124,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         abortControllerRef.current = new AbortController();
 
         const targetAssistantId = crypto.randomUUID();
-        setMessages(() => [...history, { id: targetAssistantId, sender: 'ai', role: 'assistant', text: '' }]);
+        setMessages(() => [...history, { id: targetAssistantId, sender: 'ai', role: 'assistant', text: '', modelProvider: provider }]);
         setIsLoading(true);
 
         try {
@@ -148,7 +150,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
 
         const userMsg: ChatMsg = { id: crypto.randomUUID(), sender: 'user', role: 'user', text: userText };
         const aiPlaceholderId = crypto.randomUUID();
-        const aiMsg: ChatMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '' };
+        const aiMsg: ChatMsg = { id: aiPlaceholderId, sender: 'ai', role: 'assistant', text: '', modelProvider: provider };
 
         setMessages((prev) => [...prev, userMsg, aiMsg]);
         setIsLoading(true);
@@ -195,10 +197,12 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
     return {
         messages,
         input,
+        provider,
         isLoading,
         editingId,
         editingVal,
         inputAreaRef,
+        setProvider,
         setEditingId,
         setEditingVal,
         handleInput,

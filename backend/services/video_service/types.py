@@ -30,6 +30,10 @@ def new_task(task_id: str) -> dict:
         "progress": 0,
         "message": "",
         "videoPath": None,
+        "thumbnailPath": None,
+        "chaptersPath": None,
+        "quizPath": None,
         "error": None,
+        "errors": [],   # list of {clip_index, stage, reason} for partial failures
     }
     return _tasks[task_id]

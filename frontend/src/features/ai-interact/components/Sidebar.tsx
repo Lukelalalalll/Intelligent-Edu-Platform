@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AISidebar.module.css';
 import type { AIProvider } from '../api/aiApi';
@@ -14,7 +14,6 @@ function SidebarSkeleton() {
                     animation: 'shimmer 1.5s ease-in-out infinite',
                 }} />
             ))}
-            <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
         </div>
     );
 }
@@ -23,18 +22,20 @@ interface SidebarProps {
     sessions: Array<{ id: string; title?: string }> | null;
     currentSessionId: string | null;
     deletingId: string | null;
-    createNewSession: (switchImmediately?: boolean, forceId?: string | null) => void;
+    createNewSession: (switchImmediately?: boolean) => void;
+    switchSession: (id: string) => void;
     deleteSession: (id: string) => void;
     selectedProvider?: AIProvider;
     setSelectedProvider?: (provider: AIProvider) => void;
     providerHealth?: { ok: boolean; detail: string };
 }
 
-export default function Sidebar({
+export default memo(function Sidebar({
     sessions,
     currentSessionId,
     deletingId,
     createNewSession,
+    switchSession,
     deleteSession,
     selectedProvider = 'local_ollama',
     setSelectedProvider,
@@ -60,14 +61,13 @@ export default function Sidebar({
                         {(sessions || []).map((session, idx) => (
                             <motion.div 
                                 key={session.id || `sess-${idx}`}
-                                initial={{ opacity: 0, x: -20, height: 0 }}
-                                animate={{ opacity: 1, x: 0, height: 'auto' }}
-                                exit={{ opacity: 0, x: -20, height: 0 }}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.25, ease: "easeInOut" }}
-                                style={{ overflow: 'hidden' }}
                             >
-                                <div className={`${styles['history-item']} ${session.id === currentSessionId ? styles.active : ''} ${session.id === deletingId ? styles.deleting : ''}`}>
-                                    <div className={styles['history-item-content']} onClick={() => createNewSession(false, session.id)}>
+                                <div className={`${styles['history-item']} ${session.id === currentSessionId ? styles.active : ''} ${session.id === deletingId ? styles.deleting : ''}`} onClick={() => switchSession(session.id)}>
+                                    <div className={styles['history-item-content']}>
                                         <i className="far fa-comment-alt"></i>
                                         <span className={styles['history-text']}>{session.title}</span>
                                     </div>
@@ -109,4 +109,15 @@ export default function Sidebar({
             </div>
         </aside>
     );
-}
+}, (prev, next) => {
+    // Only re-render when sidebar-relevant data changes, not on every
+    // streaming frame that updates session messages.
+    if (prev.currentSessionId !== next.currentSessionId) return false;
+    if (prev.deletingId !== next.deletingId) return false;
+    if (prev.selectedProvider !== next.selectedProvider) return false;
+    if (prev.providerHealth !== next.providerHealth) return false;
+    const ps = prev.sessions, ns = next.sessions;
+    if (ps === ns) return true;
+    if (!ps || !ns || ps.length !== ns.length) return false;
+    return ps.every((s, i) => s.id === ns[i].id && s.title === ns[i].title);
+});

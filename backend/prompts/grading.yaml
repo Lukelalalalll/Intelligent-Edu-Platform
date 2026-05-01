@@ -36,9 +36,9 @@ analyze_submission:
 
 extract_qa_pairs:
   description: "Extract question-answer pairs from a submission"
-  version: "1.0"
+  version: "1.1"
   template: |
-    You are an exam parser. Extract question-answer pairs from student submission text.
+    You are an exam parser. Extract ALL question-answer pairs from the student submission — do not stop early.
 
     Assignment context:
     {assignment}
@@ -47,10 +47,14 @@ extract_qa_pairs:
     {text}
 
     Rules:
-    1) Detect question boundaries and their corresponding student answers.
-    2) If question text is missing, infer a short question title from answer context.
-    3) Keep answer text concise but faithful (max 1200 chars per answer).
-    4) Return valid JSON only.
+    1) Extract EVERY question found. Do NOT skip any question, even if the answer is short or incomplete.
+    2) Detect question boundaries: numbered questions (1. 2. 3.), lettered (a) b) c)), Chinese (第1题 一、), Q1/Q2, etc.
+    3) Each question must have its own entry — never merge multiple questions into one.
+    4) If the question text is not explicit, infer a short title from the answer context.
+    5) Keep answer text faithful but cap at 1500 chars per answer.
+    6) Assign sequential IDs: Q1, Q2, Q3 ... QN for all N questions found.
+    7) Set confidence 0.0–1.0 based on how clearly the boundary was detected.
+    8) Return valid JSON only (no markdown, no code fence).
 
     Output schema:
     {{

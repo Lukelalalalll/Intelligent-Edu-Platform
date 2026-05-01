@@ -9,9 +9,9 @@ import { useChatWebSocket } from '../features/chat/hooks/useChatWebSocket';
 import { useChatRooms } from '../features/chat/hooks/useChatRooms';
 import NetworkBanner from './NetworkBanner';
 
-// 1. 引入全局样式
+// 1. Import global styles
 import '../styles/base.css';
-// 2. 引入 Module 样式
+// 2. Import module styles
 import styles from './Layout.module.css';
 
 interface NavLink {

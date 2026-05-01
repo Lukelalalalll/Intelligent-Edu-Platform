@@ -6,6 +6,7 @@ pipeline can consume.  Kept separate from AIGatewayService so they can
 be unit-tested without any network or database setup.
 """
 import json
+import re
 from typing import Any
 
 
@@ -64,18 +65,62 @@ def _normalize_question_pairs(parsed: dict[str, Any]) -> list[dict[str, Any]]:
     return normalized
 
 
+# Common question-number boundary patterns (handles Arabic, Chinese, letter prefixes)
+_QUESTION_BOUNDARY_RE = re.compile(
+    r"(?m)"
+    r"(?="
+    r"^\s*"
+    r"(?:"
+    r"\d{1,3}\s*[.、．:：）)>]\s"          # 1. / 1、/ 1) / 1> …
+    r"|[IVXivx]{1,6}\s*[.、．:：）)>]\s"  # I. II. III. …
+    r"|[a-zA-Z]\s*[.、．:：）)>]\s"       # a. / A. / a) …
+    r"|(?:第\s*)?[一二三四五六七八九十百]+\s*[、。．题问]\s" # 第一题 / 一、
+    r"|[Qq](?:uestion)?\s*\.?\s*\d+\s*[.、:：）)\s]" # Q1 / Question 1
+    r")"
+    r")"
+)
+
+
 def _fallback_question_pairs(text: str) -> list[dict[str, Any]]:
+    """Split submission text into question blocks using common numbering patterns.
+
+    Falls back to a single Q1 entry only when no question boundaries are found.
+    """
     content = str(text or "").strip()
     if not content:
         return []
-    return [
-        {
-            "question_id": "Q1",
-            "question_text": "Submission (auto fallback)",
-            "student_answer": content[:3000],
-            "confidence": 0.2,
-        }
-    ]
+
+    parts = _QUESTION_BOUNDARY_RE.split(content)
+    parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 15]
+
+    if len(parts) <= 1:
+        # No detectable structure — treat whole submission as a single question
+        return [
+            {
+                "question_id": "Q1",
+                "question_text": "Submission (auto fallback — no question boundaries detected)",
+                "student_answer": content[:3000],
+                "confidence": 0.2,
+            }
+        ]
+
+    result: list[dict[str, Any]] = []
+    for idx, part in enumerate(parts[:30], start=1):
+        # First line of the block is usually the question text/number
+        lines = part.splitlines()
+        q_text = lines[0].strip() if lines else f"Question {idx}"
+        answer = "\n".join(lines[1:]).strip() if len(lines) > 1 else part
+        if not answer:
+            answer = part  # treat whole block as answer if no split
+        result.append(
+            {
+                "question_id": f"Q{idx}",
+                "question_text": q_text[:300],
+                "student_answer": answer[:1500],
+                "confidence": 0.35,
+            }
+        )
+    return result
 
 
 def _normalize_answer_key(

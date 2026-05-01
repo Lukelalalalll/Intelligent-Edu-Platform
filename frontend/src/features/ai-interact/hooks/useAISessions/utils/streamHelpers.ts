@@ -1,17 +1,19 @@
+import type React from 'react';
 import type { RagCitation } from '@/types/api';
 
 export function createRafBufferedUpdater(
-    applySnapshot: (snapshot: string, citations?: RagCitation[]) => void,
+    applySnapshot: (snapshot: string, citations?: RagCitation[], isCourseRelevant?: boolean) => void,
     rafRef: React.MutableRefObject<number | null>,
 ) {
     let full = '';
     let citations: RagCitation[] | undefined;
+    let isCourseRelevant = false;
     let providerNotice = '';
 
     const flush = () => {
         rafRef.current = null;
         const snapshot = providerNotice ? `${providerNotice}\n\n${full}` : full;
-        applySnapshot(snapshot, citations);
+        applySnapshot(snapshot, citations, isCourseRelevant);
     };
 
     const schedule = () => {
@@ -23,6 +25,9 @@ export function createRafBufferedUpdater(
     const consumeSseObject = (obj: any) => {
         if (obj.meta?.citations) {
             citations = obj.meta.citations;
+        }
+        if (obj.meta?.is_course_relevant !== undefined) {
+            isCourseRelevant = Boolean(obj.meta.is_course_relevant);
         }
         if (obj.meta?.fallback_from && obj.meta?.fallback_to) {
             providerNotice = `Provider switched: ${obj.meta.fallback_from} -> ${obj.meta.fallback_to}`;
@@ -49,12 +54,20 @@ export function createRafBufferedUpdater(
         }
     };
 
+    // Strip residual evidence/citation markers the LLM may have emitted,
+    // e.g. "(Evidence 2)", "[Doc 1]", "[Web 3]", "[E1]"
+    const stripCitationMarkers = (text: string) =>
+        text.replace(/\s*[\(\[](?:Evidence|Doc|Web|E)\s*\d+[\)\]]/gi, '');
+
     const finalize = () => {
         if (rafRef.current != null) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
         }
+        full = stripCitationMarkers(full);
         flush();
+        const snapshot = providerNotice ? `${providerNotice}\n\n${full}` : full;
+        return { snapshot, citations, isCourseRelevant };
     };
 
     return { consumeSseObject, finalize };

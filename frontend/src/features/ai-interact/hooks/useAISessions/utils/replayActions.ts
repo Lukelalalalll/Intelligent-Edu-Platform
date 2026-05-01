@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { AIProvider, AITutorMode } from '../../../api/aiApi';
 import type { AISession, ChatMessage } from '@/types/api';
 import { getErrorMessage, toPayloadMessages } from './sessionHelpers';
@@ -20,7 +21,7 @@ export async function replayFromHistory(params: {
     setIsTyping: (value: boolean) => void;
     setSessions: React.Dispatch<React.SetStateAction<(AISession & { _needFetch?: boolean })[] | null>>;
     sessionsRef: React.MutableRefObject<(AISession & { _needFetch?: boolean })[] | null>;
-    streamSSE: (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal) => Promise<void>;
+    streamSSE: (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal) => Promise<{ content: string } | void>;
     syncToServer: (id: string, data: AISession) => Promise<void>;
     selectedProvider: AIProvider;
     tutorMode: AITutorMode;
@@ -47,9 +48,10 @@ export async function replayFromHistory(params: {
     // Bug 1 fix: clear _needFetch so lazy-fetch cannot overwrite messages restored from history
     setSessions((prev) => prev?.map((s) => (s.id === targetId ? { ...s, _needFetch: false, messages: [...history, { role: 'assistant', content: '' }] } : s)) || prev);
 
+    let streamResult: { content: string } | void;
     try {
         const payloadMsgs = toPayloadMessages(history);
-        await streamSSE(payloadMsgs, targetId, selectedProvider, tutorMode, abortRef.current.signal);
+        streamResult = await streamSSE(payloadMsgs, targetId, selectedProvider, tutorMode, abortRef.current.signal);
     } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return;
         setSessions((prev) => prev?.map((s) => (
@@ -58,7 +60,6 @@ export async function replayFromHistory(params: {
                 : s
         )) || prev);
     } finally {
-        // Defer setIsTyping(false) by two frames — same reason as sendMessage.
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 setIsTyping(false);
@@ -66,6 +67,20 @@ export async function replayFromHistory(params: {
         });
         abortRef.current = null;
         const final = (sessionsRef.current || []).find((s) => s.id === targetId);
-        if (final) await syncToServer(targetId, final);
+        if (final) {
+            if (streamResult?.content) {
+                const patched: AISession = {
+                    ...final,
+                    messages: final.messages.map((m, i, arr) =>
+                        i === arr.length - 1 && m.role === 'assistant'
+                            ? { ...m, content: streamResult!.content }
+                            : m
+                    ),
+                };
+                await syncToServer(targetId, patched);
+            } else {
+                await syncToServer(targetId, final);
+            }
+        }
     }
 }
