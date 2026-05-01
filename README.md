@@ -92,22 +92,34 @@ If you prefer to run the entire stack (Frontend, Backend, and MongoDB) via Docke
 3. The application is now served behind an Nginx proxy. You can access the main frontend UI locally by navigating to: `http://localhost`
 
 ## 5. Notes on the Video & Slide Generation Module
-The application automatically generates educational videos out of slides by leveraging Playwright to take screenshots of the rendered React components.
-- In local development mode, this relies on the frontend application (`npm run dev`) currently running, pointing Playwright to `http://127.0.0.1:5173/slide-renderer`.
-- If the browser interface is not reachable, the backend will automatically and safely fallback to generating static images via Pillow.
+The application automatically generates educational videos out of slides by leveraging Playwright to take screenshots of the rendered React components, ensuring the final video visually matches the browser preview exactly.
 
-**正式環境：**
-在後端設定 `SLIDE_RENDERER_URL` 環境變數，指向已建置的前端服務：
+**Local Development:**
+Before triggering a video generation, ensure the frontend is running (`npm run dev`). Playwright will connect to:
+`http://127.0.0.1:5173/slide-renderer`
+
+**Production Environment:**
+Configure the `SLIDE_RENDERER_URL` environment variable on the backend to point to the built frontend service:
 ```env
 SLIDE_RENDERER_URL=http://frontend:4173/slide-renderer
 ```
-Docker Compose 部署時由 `frontend` 服務執行 `vite preview` 自動處理。
+When deploying using Docker Compose, the `frontend` service runs `vite preview` and this is handled automatically.
 
-**自動降級：**
-若前端無法連線，後端會自動切換至 Pillow 圖像渲染作為備援。
+**Automatic Fallback:**
+If the frontend service is unreachable, the backend will automatically fallback to Pillow-based static image rendering.
 
-### 常見問題
-- 前端打不到後端：先檢查 `frontend/.env` 的 `VITE_API_ROOT`。
-- 後端連不上資料庫：檢查 `MONGO_URI` 與 MongoDB 狀態。
-- AI 功能失敗：檢查 `.env` 內各 provider 的 key/token 是否正確。
-- 生成的影片投影片與預覽不一致：確認前端正在執行，且後端可連線至 `SLIDE_RENDERER_URL`。
+---
+
+## 6. Troubleshooting FAQs
+
+- **Frontend cannot connect to the backend:**
+  Verify the value of `VITE_API_ROOT` in the `frontend/.env` file. It should match your backend server address.
+
+- **Backend cannot connect to the database:**
+  Verify the `MONGO_URI` in the `.env` file and ensure your MongoDB instance or Docker container is running properly.
+
+- **AI functionalities are failing:**
+  Double-check the `.env` file to ensure API keys and tokens for all AI providers are correctly configured.
+
+- **Generated video slides look different from the browser preview:**
+  Ensure the frontend service is actively running and the backend can successfully reach the `SLIDE_RENDERER_URL`.
