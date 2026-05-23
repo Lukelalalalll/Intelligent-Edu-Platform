@@ -40,13 +40,13 @@ export default function QuestionBankHistoryPanel({ onReplay }: { onReplay?: (ite
             renderCard={(item) => (
                 <>
                     <div className={styles.historyItemTopRow}>
-                        <div className={styles.historyItemSubject}>{item.params.subject}</div>
-                        <div className={styles.historyItemDate} title={new Date(item.created_at).toLocaleString()}>{new Date(item.created_at).toLocaleDateString()}</div>
+                        <div className={styles.historyItemSubject}>{item.params?.subject}</div>
+                        <div className={styles.historyItemDate} title={new Date(item.created_at ?? Date.now()).toLocaleString()}>{new Date(item.created_at ?? Date.now()).toLocaleDateString()}</div>
                     </div>
                     <div className={styles.historyItemChips}>
-                        <span className={styles.historyChipPrimary}>{item.params.question_type}</span>
-                        <span className={styles.historyChip}>{item.params.num_questions} qs</span>
-                        <span className={styles.historyChip}>Lv {item.params.difficulty}</span>
+                        <span className={styles.historyChipPrimary}>{item.params?.question_type}</span>
+                        <span className={styles.historyChip}>{item.params?.num_questions} qs</span>
+                        <span className={styles.historyChip}>Lv {item.params?.difficulty}</span>
                     </div>
                     <div className={styles.historyPreview}>{item.preview}</div>
                 </>
@@ -54,12 +54,12 @@ export default function QuestionBankHistoryPanel({ onReplay }: { onReplay?: (ite
             renderDetailMeta={(cur) => (
                 <div>
                     <div className={styles.historyDetailMetaPrimary}>
-                        <strong>{cur.params.subject}</strong>
-                        {' · '}{cur.params.question_type}
-                        {' · '}{cur.params.num_questions} questions
-                        {' · Difficulty '}{cur.params.difficulty}
+                        <strong>{cur.params?.subject}</strong>
+                        {' · '}{cur.params?.question_type}
+                        {' · '}{cur.params?.num_questions} questions
+                        {' · Difficulty '}{cur.params?.difficulty}
                     </div>
-                    <div className={styles.historyDetailMetaTime}>{new Date(cur.created_at).toLocaleString()}</div>
+                    <div className={styles.historyDetailMetaTime}>{new Date(cur.created_at ?? Date.now()).toLocaleString()}</div>
                 </div>
             )}
             renderDetailActions={(cur, detail) => (

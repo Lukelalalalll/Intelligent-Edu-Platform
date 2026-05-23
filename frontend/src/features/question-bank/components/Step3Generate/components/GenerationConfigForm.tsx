@@ -62,6 +62,7 @@ export default function GenerationConfigForm({
                     <select className={styles.formControl} value={provider || 'local_ollama'} onChange={(e) => setProvider(e.target.value as typeof provider)}>
                         <option value="coze">Coze</option>
                         <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                     </select>
                 </div>
             </div>

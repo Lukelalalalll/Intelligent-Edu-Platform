@@ -43,11 +43,17 @@ export default memo(function Sidebar({
 }: SidebarProps) {
     const isLoading = sessions === null;
     const isLocal = selectedProvider === 'local_ollama';
-    const localReady = !!providerHealth?.ok;
+    const isDeepseek = selectedProvider === 'deepseek';
+    const providerReady = !!providerHealth?.ok;
 
-    const statusText = isLocal
-        ? (localReady ? 'llama3.2 Ready' : 'llama3.2 Offline')
-        : 'HKU Coze AI Ready';
+    const getProviderDisplayName = () => {
+        if (isLocal) return 'llama3.2';
+        if (isDeepseek) return 'DeepSeek';
+        return 'HKU Coze AI';
+    };
+    const statusText = providerReady
+        ? `${getProviderDisplayName()} Ready`
+        : `${getProviderDisplayName()} Offline`;
 
     return (
         <aside className={styles['chat-sidebar']}>
@@ -84,10 +90,17 @@ export default memo(function Sidebar({
                 <div className={styles['provider-switch-wrap']}>
                     <button
                         type="button"
-                        className={`${styles['provider-chip']} ${!isLocal ? styles['provider-chip-active'] : ''}`}
+                        className={`${styles['provider-chip']} ${selectedProvider === 'coze' ? styles['provider-chip-active'] : ''}`}
                         onClick={() => setSelectedProvider?.('coze')}
                     >
                         Coze
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles['provider-chip']} ${isDeepseek ? styles['provider-chip-active'] : ''}`}
+                        onClick={() => setSelectedProvider?.('deepseek')}
+                    >
+                        DeepSeek
                     </button>
                     <button
                         type="button"
@@ -98,10 +111,10 @@ export default memo(function Sidebar({
                     </button>
                 </div>
                 <div className={styles['user-status']}>
-                    <div className={`${styles['status-dot']} ${isLocal && !localReady ? styles['status-dot-offline'] : ''}`}></div>
+                    <div className={`${styles['status-dot']} ${!providerReady ? styles['status-dot-offline'] : ''}`}></div>
                     <span>{statusText}</span>
                 </div>
-                {isLocal && !localReady && providerHealth?.detail && (
+                {!providerReady && providerHealth?.detail && (
                     <div className={styles['provider-detail']} title={providerHealth.detail}>
                         {providerHealth.detail}
                     </div>

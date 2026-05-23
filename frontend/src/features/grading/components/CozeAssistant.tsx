@@ -35,15 +35,21 @@ interface CozeAssistantProps {
     setProvider?: (provider: AIProvider) => void;
 }
 
+interface RagInfo {
+    enabled?: boolean;
+    retrieved_count?: number;
+}
+
 export default function CozeAssistant({ submissionId, assignment, rubric, onAnalysis, className, provider = 'local_ollama', setProvider }: CozeAssistantProps) {
     const {
         messages, input, setInput,
         loading, analyzeLoading, regradeLoading, localError, streamError,
-        lastRagInfo, lastLatencyMs, lastFailedQuestion,
+        lastRagInfo: _lastRagInfo, lastLatencyMs, lastFailedQuestion,
         lowConfidenceCount,
         chatAreaRef,
         handleAsk, handleStop, handleAnalyze, handleRegradeLowConfidence, handleInputKeyDown,
     } = useCozeAssistant({ submissionId, assignment, rubric, onAnalysis, provider });
+    const lastRagInfo = _lastRagInfo as RagInfo | null;
 
     return (
         <div className={className?.cozeCard || ''} style={className ? undefined : { display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -60,6 +66,7 @@ export default function CozeAssistant({ submissionId, assignment, rubric, onAnal
                             >
                                 <option value="coze">Coze</option>
                                 <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                             </select>
                         </div>
                     )}

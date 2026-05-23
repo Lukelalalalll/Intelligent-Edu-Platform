@@ -54,7 +54,7 @@ export interface SlidesArtifactResponse<T = unknown> {
 // ── Generation Types ──
 
 export type SlidesGenerateV2Payload = {
-    provider?: 'coze' | 'local_ollama';
+    provider?: 'coze' | 'local_ollama' | 'deepseek';
     content?: string;
     chapterData?: Array<{ sectionTitle?: string; text?: string }>;
     total_pages: number;
@@ -95,7 +95,7 @@ export type SlidesGenerateV2TaskStatusResponse = {
             slides: Array<Record<string, unknown>>;
             metadata?: Record<string, unknown>;
         };
-        provider: 'coze' | 'local_ollama';
+        provider: 'coze' | 'local_ollama' | 'deepseek';
         total_scripts?: number;
         estimated_total_duration?: string;
         word_document?: {
@@ -142,7 +142,7 @@ export const slidesGenerationApi = {
         const res = await client.get(`/slides/tasks/${taskId}`);
         return res.data;
     },
-    async checkProviderHealth(provider?: 'coze' | 'local_ollama') {
+    async checkProviderHealth(provider?: 'coze' | 'local_ollama' | 'deepseek') {
         const res = await client.get('/slides/provider-health', {
             params: provider ? { provider } : undefined,
         });

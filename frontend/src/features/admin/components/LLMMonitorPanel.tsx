@@ -6,6 +6,38 @@ import MiniBarChart from './llm-monitor/MiniBarChart';
 import BreakdownTable from './llm-monitor/BreakdownTable';
 import ErrorLogTable from './llm-monitor/ErrorLogTable';
 
+interface ProviderStat {
+    total_calls?: number;
+    failed_calls?: number;
+    avg_latency_ms?: number;
+    success_rate_pct?: number;
+    p50_latency_ms?: number;
+    p95_latency_ms?: number;
+    total_tokens?: number;
+    total_cost?: number;
+    [key: string]: unknown;
+}
+
+interface TimeseriesPoint {
+    timestamp?: string;
+    calls?: number | null;
+    avg_latency?: number | null;
+    errors?: number | null;
+    [key: string]: unknown;
+}
+
+interface TelemetryStats {
+    providers?: Record<string, ProviderStat>;
+}
+
+interface TelemetryCost {
+    total_cost?: number;
+}
+
+interface TelemetryError {
+    [key: string]: unknown;
+}
+
 const PERIOD_OPTIONS = [
     { label: '1h', hours: 1 },
     { label: '6h', hours: 6 },
@@ -19,14 +51,14 @@ export default function LLMMonitorPanel() {
     const [groupBy, setGroupBy] = useState('provider');
     const [tab, setTab] = useState('overview'); // overview | breakdown | errors
 
-    const [stats, setStats] = useState(null);
-    const [timeseries, setTimeseries] = useState([]);
-    const [breakdown, setBreakdown] = useState([]);
-    const [costData, setCostData] = useState(null);
-    const [errors, setErrors] = useState([]);
+    const [stats, setStats] = useState<TelemetryStats | null>(null);
+    const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([]);
+    const [breakdown, setBreakdown] = useState<Record<string, unknown>[]>([]);
+    const [costData, setCostData] = useState<TelemetryCost | null>(null);
+    const [errors, setErrors] = useState<TelemetryError[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const autoRefreshRef = useRef(null);
+    const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [autoRefresh, setAutoRefresh] = useState(false);
 
     const getBucket = () => {
@@ -45,11 +77,11 @@ export default function LLMMonitorPanel() {
                 client.get('/admin/telemetry/cost', { params: { hours } }),
                 client.get('/admin/telemetry/errors', { params: { limit: 30 } }),
             ]);
-            setStats(statsRes.data);
-            setTimeseries(tsRes.data?.timeseries || []);
-            setBreakdown(bdRes.data?.breakdown || []);
-            setCostData(costRes.data);
-            setErrors(errRes.data?.errors || []);
+            setStats(statsRes.data as TelemetryStats);
+            setTimeseries((tsRes.data as { timeseries?: TimeseriesPoint[] })?.timeseries || []);
+            setBreakdown((bdRes.data as { breakdown?: Record<string, unknown>[] })?.breakdown || []);
+            setCostData(costRes.data as TelemetryCost);
+            setErrors((errRes.data as { errors?: TelemetryError[] })?.errors || []);
         } catch (err) {
             console.error('Telemetry fetch error', err);
         } finally {
@@ -67,17 +99,6 @@ export default function LLMMonitorPanel() {
     }, [autoRefresh, fetchAll]);
 
     // KPI totals
-    interface ProviderStat {
-        total_calls?: number;
-        failed_calls?: number;
-        avg_latency_ms?: number;
-        success_rate_pct?: number;
-        p50_latency_ms?: number;
-        p95_latency_ms?: number;
-        total_tokens?: number;
-        total_cost?: number;
-        [key: string]: unknown;
-    }
     const providers: Record<string, ProviderStat> = stats?.providers || {};
     const totalCalls = Object.values(providers).reduce((s, p) => s + (p.total_calls || 0), 0);
     const totalErrors = Object.values(providers).reduce((s, p) => s + (p.failed_calls || 0), 0);
@@ -163,10 +184,10 @@ export default function LLMMonitorPanel() {
                                 <div className={styles.providerStats}>
                                     <span>Calls: <strong>{p.total_calls}</strong></span>
                                     <span>Success: <strong>{p.success_rate_pct}%</strong></span>
-                                    <span>P50: <strong>{formatMs(p.p50_latency_ms)}</strong></span>
-                                    <span>P95: <strong>{formatMs(p.p95_latency_ms)}</strong></span>
-                                    <span>Tokens: <strong>{formatNumber(p.total_tokens)}</strong></span>
-                                    <span>Cost: <strong>{formatCost(p.total_cost)}</strong></span>
+                                    <span>P50: <strong>{formatMs(p.p50_latency_ms ?? 0)}</strong></span>
+                                    <span>P95: <strong>{formatMs(p.p95_latency_ms ?? 0)}</strong></span>
+                                    <span>Tokens: <strong>{formatNumber(p.total_tokens ?? 0)}</strong></span>
+                                    <span>Cost: <strong>{formatCost(p.total_cost ?? 0)}</strong></span>
                                 </div>
                             </div>
                         ))}

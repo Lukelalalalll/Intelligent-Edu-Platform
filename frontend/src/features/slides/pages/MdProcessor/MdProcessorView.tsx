@@ -163,14 +163,14 @@ export default function MdProcessor({
 
                         {headers.length > 0 && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/slides/highlighter')}>
+                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/slides/ai-theme-config')}>
                                     <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
                                 </button>
-                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/slides/highlighter')}>
-                                    <i className="fas fa-highlighter" aria-hidden="true"></i> Highlight & Proceed
+                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/slides/ai-theme-config')}>
+                                    <i className="fas fa-magic" aria-hidden="true"></i> AI Theme & Generate
                                 </button>
                                 <button id="quickProceedBtn" className="btn btn-secondary"
-                                    onClick={() => combineSections('/slides/quick-process')}>
+                                    onClick={() => combineSections('/slides/ai-theme-config')}>
                                     <i className="fas fa-bolt"></i> Quick Proceed
                                 </button>
                             </div>
@@ -178,11 +178,11 @@ export default function MdProcessor({
 
                         {headers.length === 0 && currentFilename && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => proceedWithFullDoc('/slides/highlighter')}>
-                                    <i className="fas fa-highlighter" aria-hidden="true"></i> Proceed with Full Document
+                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
+                                    <i className="fas fa-magic" aria-hidden="true"></i> AI Theme & Generate
                                 </button>
                                 <button className="btn btn-secondary"
-                                    onClick={() => proceedWithFullDoc('/slides/quick-process')}>
+                                    onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
                                     <i className="fas fa-bolt"></i> Quick Proceed
                                 </button>
                             </div>

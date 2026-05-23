@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../api/ragEvalApi';
-import type { DatasetSummary, EvalResult, EvalRun } from '../../api/ragEvalApi';
+import * as api from '@/api/ragEvalApi';
+import type { DatasetSummary, EvalResult, EvalRun } from '@/api/ragEvalApi';
 import { TOP_K_OPTIONS } from './constants';
 import MetricsCards from './MetricsCards';
 
@@ -44,7 +45,7 @@ export default function RunsTab() {
             fetchAll();
         } catch (e: unknown) {
             const message = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-            alert(message || 'Run failed');
+            toast.error(message || 'Run failed');
         } finally {
             setRunning(false);
         }
@@ -62,7 +63,7 @@ export default function RunsTab() {
     const handleSetBaseline = async (run: EvalRun) => {
         if (!confirm(`Set this run as baseline for course ${run.course_id}?`)) return;
         await api.setBaseline(run.run_id, run.course_id);
-        alert('Baseline set');
+        toast.success('Baseline set');
     };
 
     return (

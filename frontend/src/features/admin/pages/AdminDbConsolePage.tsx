@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import client from '@/shared/api/client';
+import { useAuthStore } from '@/shared/store/useAuthStore';
 import AdminDbConsole from './AdminDbConsole';
 
 export default function AdminDbConsolePage() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const isAdmin = user?.role === 'admin';
+    const storeUser = useAuthStore((s) => s.user);
+    const isAdmin = storeUser?.role === 'admin';
 
     const [collections, setCollections] = useState([]);
     const [collectionLoading, setCollectionLoading] = useState(false);

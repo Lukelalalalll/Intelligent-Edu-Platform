@@ -33,7 +33,7 @@ export default function SlidesHistoryPanel({ onReplay }: { onReplay?: (item: any
                 <>
                     <div className={s.historyItemTopRow}>
                         <div className={s.historyItemSubject}>{fmt(item.params?.tool, 'Slides')}</div>
-                        <div className={s.historyItemDate} title={new Date(item.created_at).toLocaleString()}>{new Date(item.created_at).toLocaleDateString()}</div>
+                        <div className={s.historyItemDate} title={new Date(item.created_at ?? Date.now()).toLocaleString()}>{new Date(item.created_at ?? Date.now()).toLocaleDateString()}</div>
                     </div>
                     <div className={s.historyItemChips}>
                         {item.params?.provider && <span className={s.historyChipPrimary}>{item.params.provider}</span>}
@@ -49,7 +49,7 @@ export default function SlidesHistoryPanel({ onReplay }: { onReplay?: (item: any
                         {cur.params?.keywords && <>{' · '}{fmt(cur.params.keywords)}</>}
                         {cur.params?.provider && <>{' · '}{fmt(cur.params.provider)}</>}
                     </div>
-                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at).toLocaleString()}</div>
+                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at ?? Date.now()).toLocaleString()}</div>
                 </div>
             )}
             renderDetailActions={(cur, detail) => (

@@ -144,23 +144,23 @@ function collectEditableTextNodes(doc: Document) {
 
 export function useDiagramExtractSearch() {
     // Extract
-    const [extractFile, setExtractFile] = useState(null);
+    const [extractFile, setExtractFile] = useState<File | null>(null);
     const [isExtractDragging, setIsExtractDragging] = useState(false);
     const [extractLoading, setExtractLoading] = useState(false);
-    const [extractData, setExtractData] = useState(null);
+    const [extractData, setExtractData] = useState<unknown>(null);
     const [extractError, setExtractError] = useState('');
 
     // Search
     const [searchQuery, setSearchQuery] = useState('');
     const [searchLoading, setSearchLoading] = useState(false);
-    const [searchResults, setSearchResults] = useState(null);
+    const [searchResults, setSearchResults] = useState<unknown>(null);
     const [searchError, setSearchError] = useState('');
 
     // Editor
     const [isEditorVisible, setIsEditorVisible] = useState(false);
     const [editorLoading, setEditorLoading] = useState(false);
     const [editorError, setEditorError] = useState('');
-    const [editorFields, setEditorFields] = useState([]);
+    const [editorFields, setEditorFields] = useState<any[]>([]);
     const [previewHtml, setPreviewHtml] = useState('');
 
     const svgDocRef = useRef<Document | null>(null);

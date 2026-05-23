@@ -1,21 +1,4 @@
-import client from '@/shared/api/client';
-
-// ── Shared file utilities ──
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
-
-const resolveApiRoot = (): string => {
-    const raw = String(import.meta.env.VITE_API_ROOT || 'http://localhost:5009').trim();
-    try {
-        const parsed = new URL(raw);
-        const browserHost = window.location.hostname;
-        if (LOOPBACK_HOSTS.has(parsed.hostname) && LOOPBACK_HOSTS.has(browserHost) && parsed.hostname !== browserHost) {
-            parsed.hostname = browserHost;
-        }
-        return parsed.toString().replace(/\/$/, '');
-    } catch {
-        return raw.replace(/\/$/, '');
-    }
-};
+import client, { resolveApiRoot, LOOPBACK_HOSTS } from '@/shared/api/client';
 
 export const toAbsoluteFileUrl = (fileUrl: string): string => {
     if (!fileUrl) return '';

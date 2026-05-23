@@ -11,7 +11,7 @@ interface ChatHeaderProps {
     setTutorMode?: (mode: AITutorMode) => void;
 }
 
-export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'hint_only', setTutorMode }: ChatHeaderProps) {
+const ChatHeader = React.memo(function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'hint_only', setTutorMode }: ChatHeaderProps) {
     const isSocratic = roleInfo?.mode === 'socratic';
 
     return (
@@ -59,5 +59,7 @@ export default function ChatHeader({ onOpenMemory, roleInfo, tutorMode = 'hint_o
             </div>
         </header>
     );
-}
+});
+
+export default ChatHeader;
 

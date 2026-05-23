@@ -4,7 +4,7 @@ export default function RubricPanel({ rubric = {}, existingScores, onSave }: { r
     const [scores, setScores] = useState<Record<string, number | string>>(existingScores?.rubricScores || {});
     const [total, setTotal] = useState(existingScores?.totalScore || '');
     const [note, setNote] = useState(existingScores?.overallFeedback || '');
-    const [customRows, setCustomRows] = useState([]);
+    const [customRows, setCustomRows] = useState<Array<{ id: string; question: string; score: string }>>([]);
 
     useEffect(() => {
         const nextScores = existingScores?.rubricScores || {};

@@ -1,6 +1,7 @@
 // frontend/src/features/chat/components/MessageBubble.tsx
 
 import React, { useState, useCallback, useRef } from 'react';
+import toast from 'react-hot-toast';
 import type { ChatMessage } from '../types';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';
@@ -219,7 +220,7 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                 a.click();
                 document.body.removeChild(a);
             } catch {
-                window.alert('Download failed. Please try again and verify your login session.');
+                toast.error('Download failed. Please try again and verify your login session.');
             }
         }
     };
@@ -354,7 +355,7 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                             {canTransfer && (
                                 <button
                                     className={styles.transferBtn}
-                                    onClick={(e) => { e.stopPropagation(); onTransfer(message); }}
+                                    onClick={(e) => { e.stopPropagation(); onTransfer?.(message); }}
                                     title="Send to module"
                                 >
                                     <i className="fas fa-exchange-alt" style={{ marginRight: 4 }} />

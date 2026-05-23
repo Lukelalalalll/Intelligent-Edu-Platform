@@ -8,7 +8,7 @@ interface UseStep2ExtractOptions {
     taskId: string | null;
     selectedPages: number[];
     setGenerationSource: (source: GenerationSource) => void;
-    showToast: (msg: string, type: string) => void;
+    showToast: (msg: string, type?: string) => void;
 }
 
 export function useStep2Extract({ taskId, selectedPages, setGenerationSource, showToast }: UseStep2ExtractOptions) {
@@ -32,7 +32,7 @@ export function useStep2Extract({ taskId, selectedPages, setGenerationSource, sh
         setRawExtractText('');
         try {
             const data = await sub2Api.extractQuestions({
-                task_id: taskId,
+                task_id: taskId ?? '',
                 page_numbers: selectedPages,
                 prompt: extractPrompt,
             });
@@ -47,7 +47,7 @@ export function useStep2Extract({ taskId, selectedPages, setGenerationSource, sh
                     setRawExtractText(data.text);
                 }
             } else {
-                showToast(data.error, 'error');
+                showToast(data.error ?? 'Error', 'error');
             }
         } catch (error: any) {
             showToast('Extraction failed: ' + error.message, 'error');

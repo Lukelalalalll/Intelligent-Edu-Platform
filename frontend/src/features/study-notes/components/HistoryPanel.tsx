@@ -33,7 +33,7 @@ export default function StudyNotesHistoryPanel({ onReplay }: { onReplay?: (item:
                 <>
                     <div className={s.historyItemTopRow}>
                         <div className={s.historyItemSubject}>{fmt(item.params?.tool, 'Study Notes')}</div>
-                        <div className={s.historyItemDate} title={new Date(item.created_at).toLocaleString()}>{new Date(item.created_at).toLocaleDateString()}</div>
+                        <div className={s.historyItemDate} title={new Date(item.created_at ?? Date.now()).toLocaleString()}>{new Date(item.created_at ?? Date.now()).toLocaleDateString()}</div>
                     </div>
                     <div className={s.historyItemChips}>
                         <span className={s.historyChipPrimary}>{fmt(item.params?.tool)}</span>
@@ -50,7 +50,7 @@ export default function StudyNotesHistoryPanel({ onReplay }: { onReplay?: (item:
                         {cur.params?.style && <>{' · '}{fmt(cur.params.style)}</>}
                         {cur.params?.provider && <>{' · '}{fmt(cur.params.provider)}</>}
                     </div>
-                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at).toLocaleString()}</div>
+                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at ?? Date.now()).toLocaleString()}</div>
                 </div>
             )}
             renderDetailActions={(cur, detail) => (

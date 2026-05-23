@@ -8,7 +8,7 @@ interface UseStep3GenerateOptions {
     generationSource: GenerationSource;
     selectedPages: number[];
     savedScreenshots: SavedScreenshot[];
-    showToast: (msg: string, type: string) => void;
+    showToast: (msg: string, type?: string) => void;
 }
 
 export function useStep3Generate({
@@ -53,7 +53,7 @@ export function useStep3Generate({
 
         const payload = {
             provider,
-            task_id: taskId,
+            task_id: taskId ?? '',
             question_type: String(questionType || 'Multiple choice').trim() || 'Multiple choice',
             num_questions: safeNumQuestions,
             difficulty: safeDifficulty,
@@ -71,9 +71,9 @@ export function useStep3Generate({
         try {
             const data = await sub2Api.generateQuestions(payload);
             if (data.success) {
-                setGeneratedQuestions(data.questions);
+                setGeneratedQuestions(String(data.questions ?? ''));
             } else {
-                showToast(data.error, 'error');
+                showToast(data.error ?? 'Error', 'error');
             }
         } catch (err: any) {
             const detail = err?.response?.data?.detail;

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useAuthStore } from '@/shared/store/useAuthStore';
 
 export interface CurrentUser {
     id: string;
@@ -7,12 +8,13 @@ export interface CurrentUser {
 }
 
 export function useCurrentUser(): CurrentUser | null {
+    const storeUser = useAuthStore((s) => s.user);
     return useMemo(() => {
-        try {
-            const raw = localStorage.getItem('user');
-            return raw ? JSON.parse(raw) : null;
-        } catch {
-            return null;
-        }
-    }, []);
+        if (!storeUser) return null;
+        return {
+            ...storeUser,
+            id: String(storeUser.id ?? ''),
+            username: storeUser.username,
+        } as CurrentUser;
+    }, [storeUser]);
 }

@@ -299,7 +299,7 @@ export default function DiagramHistoryPanel({ onReplay }: { onReplay?: (item: an
                 <>
                     <div className={s.historyItemTopRow}>
                         <div className={s.historyItemSubject}>{toolLabel(item)}</div>
-                        <div className={s.historyItemDate} title={new Date(item.created_at).toLocaleString()}>{new Date(item.created_at).toLocaleDateString()}</div>
+                        <div className={s.historyItemDate} title={new Date(item.created_at ?? Date.now()).toLocaleString()}>{new Date(item.created_at ?? Date.now()).toLocaleDateString()}</div>
                     </div>
                     <div className={s.historyItemChips}>
                         <span className={s.historyChipPrimary}>{toolLabel(item)}</span>
@@ -316,7 +316,7 @@ export default function DiagramHistoryPanel({ onReplay }: { onReplay?: (item: an
                         <strong>{toolLabel(cur)}</strong>
                         {cur.params?.provider && <>{' · '}{cur.params.provider}</>}
                     </div>
-                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at).toLocaleString()}</div>
+                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at ?? Date.now()).toLocaleString()}</div>
                 </div>
             )}
             renderDetailParams={(cur) => (

@@ -62,6 +62,7 @@ export default function ChatHeader({ room, typingUser, provider, onProviderChang
                 >
                     <option value="coze">Coze</option>
                     <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                 </select>
                 {onToggleAssistant && (
                     <button

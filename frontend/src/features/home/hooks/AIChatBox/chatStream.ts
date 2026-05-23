@@ -3,10 +3,11 @@ import type { StreamMessage } from './types';
 type StreamParams = {
     apiRoot: string;
     messages: StreamMessage[];
-    provider?: 'coze' | 'local_ollama';
+    provider?: 'coze' | 'local_ollama' | 'deepseek';
     signal: AbortSignal;
     onTextDelta: (text: string) => void;
     onErrorText?: (text: string) => void;
+    onUiElement?: (element: any) => void;
     parseErrorLogLabel: string;
 };
 
@@ -17,6 +18,7 @@ export async function streamChatCompletion({
     signal,
     onTextDelta,
     onErrorText,
+    onUiElement,
     parseErrorLogLabel,
 }: StreamParams): Promise<void> {
     const response = await fetch(`${apiRoot}/api/ai/chat`, {
@@ -57,6 +59,10 @@ export async function streamChatCompletion({
                 const obj = JSON.parse(dataStr);
                 if (obj.error && onErrorText) {
                     onErrorText(String(obj.error));
+                    continue;
+                }
+                if (obj.ui_element && onUiElement) {
+                    onUiElement(obj.ui_element);
                     continue;
                 }
                 const delta = obj.choices?.[0]?.delta?.content;

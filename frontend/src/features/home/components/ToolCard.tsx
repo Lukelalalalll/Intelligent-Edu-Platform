@@ -2,26 +2,29 @@ import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from '../styles/home.module.css';
 
-const ToolCard = ({ title, desc, icon, url }) => {
-    const cardRef = useRef(null);
-    const sheenRef = useRef(null);
-    const rectRef = useRef(null);
-    const rafRef = useRef(null);
+const ToolCard = ({ title, desc, icon, url }: { title: string; desc: string; icon: string; url: string }) => {
+    const cardRef = useRef<HTMLDivElement | null>(null);
+    const sheenRef = useRef<HTMLDivElement | null>(null);
+    const rectRef = useRef<DOMRect | null>(null);
+    const rafRef = useRef<number | null>(null);
 
     const handleMouseEnter = () => {
-        if (cardRef.current) {
-            cardRef.current.style.transition = 'transform 0.2s ease-out';
-            rectRef.current = cardRef.current.getBoundingClientRect();
+        const card = cardRef.current;
+        if (card) {
+            card.style.transition = 'transform 0.2s ease-out';
+            rectRef.current = card.getBoundingClientRect();
         }
     };
 
-    const handleMouseMove = (e) => {
-        if (!cardRef.current || !sheenRef.current || !rectRef.current) return;
+    const handleMouseMove = (e: React.MouseEvent) => {
+        const card = cardRef.current;
+        const sheen = sheenRef.current;
+        const rect = rectRef.current;
+        if (!card || !sheen || !rect) return;
         const { clientX, clientY } = e;
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
         rafRef.current = requestAnimationFrame(() => {
-            const rect = rectRef.current;
             const x = clientX - rect.left;
             const y = clientY - rect.top;
             const centerX = rect.width / 2;
@@ -30,20 +33,22 @@ const ToolCard = ({ title, desc, icon, url }) => {
             const rotateX = ((y - centerY) / centerY) * -8;
             const rotateY = ((x - centerX) / centerX) * 8;
 
-            cardRef.current.style.transform = `perspective(1000px) translateY(-15px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-            sheenRef.current.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.3), transparent 50%)`;
-            sheenRef.current.style.opacity = '1';
+            card.style.transform = `perspective(1000px) translateY(-15px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            sheen.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.3), transparent 50%)`;
+            sheen.style.opacity = '1';
         });
     };
 
     const handleMouseLeave = () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rectRef.current = null;
-        if (cardRef.current) {
-            cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
-            cardRef.current.style.transform = '';
+        const card = cardRef.current;
+        if (card) {
+            card.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+            card.style.transform = '';
         }
-        if (sheenRef.current) sheenRef.current.style.opacity = '0';
+        const sheen = sheenRef.current;
+        if (sheen) sheen.style.opacity = '0';
     };
 
     useEffect(() => {

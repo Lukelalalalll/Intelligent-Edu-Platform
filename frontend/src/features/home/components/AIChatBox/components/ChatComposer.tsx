@@ -15,8 +15,8 @@ export default function ChatComposer({
     input: string;
     isLoading: boolean;
     inputAreaRef: React.RefObject<HTMLTextAreaElement>;
-    provider: 'coze' | 'local_ollama';
-    setProvider: (p: 'coze' | 'local_ollama') => void;
+    provider: 'coze' | 'local_ollama' | 'deepseek';
+    setProvider: (p: 'coze' | 'local_ollama' | 'deepseek') => void;
     handleInput: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     handleSend: () => void;
@@ -40,6 +40,14 @@ export default function ChatComposer({
                     title="Use Coze (Cloud Model)"
                 >
                     <i className="fas fa-cloud"></i> Coze
+                </button>
+                <button 
+                    className={`${styles['provider-btn']} ${provider === 'deepseek' ? styles['provider-active'] : ''}`}
+                    onClick={() => setProvider('deepseek')}
+                    disabled={isLoading}
+                    title="Use DeepSeek (Cloud Model)"
+                >
+                    <i className="fas fa-brain"></i> DeepSeek
                 </button>
             </div>
             <div className={styles['input-wrapper']}>

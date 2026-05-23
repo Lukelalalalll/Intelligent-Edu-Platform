@@ -9,12 +9,12 @@ export function useDiagramImageExtract() {
     const [imgActiveTab, setImgActiveTab] = useState('uploaded');
     const [imgAiPrompt, setImgAiPrompt] = useState('');
     const [imgAiNum, setImgAiNum] = useState(4);
-    const [imgAiImages, setImgAiImages] = useState([]);
-    const [imgSelectedImages, setImgSelectedImages] = useState([]);
+    const [imgAiImages, setImgAiImages] = useState<any[]>([]);
+    const [imgSelectedImages, setImgSelectedImages] = useState<any[]>([]);
     const [imgLoading, setImgLoading] = useState(false);
     const [imgLoadingText, setImgLoadingText] = useState('Processing...');
-    const [imgLightboxImage, setImgLightboxImage] = useState(null);
-    const [imgNotifications, setImgNotifications] = useState([]);
+    const [imgLightboxImage, setImgLightboxImage] = useState<any>(null);
+    const [imgNotifications, setImgNotifications] = useState<Array<{id: number; message: string; type: string}>>([]);
 
     const imgNotify = useCallback((message: string, type = 'info') => {
         const id = Date.now() + Math.random();

@@ -1,0 +1,1 @@
+export { default as ImageExtractorPage } from './pages/ImageExtractorPage';

@@ -9,6 +9,9 @@ import { useQuestionOps } from './useQuestionOps';
 
 export function useQuestionGenerator() {
     const { toasts, showToast, removeToast } = useToast();
+    
+    // Adapt showToast to match the expected signature for sub-hooks
+    const adaptedShowToast = (msg: string, type?: string) => showToast(msg, type as any);
 
     const [currentStep, setCurrentStep] = useState(() => {
         const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sub2_current_step') : null;
@@ -17,25 +20,25 @@ export function useQuestionGenerator() {
     });
 
     // ── Sub-hooks ──────────────────────────────────────────────────────────────
-    const step1 = useStep1Upload({ showToast });
+    const step1 = useStep1Upload({ showToast: adaptedShowToast });
     const step2 = useStep2Extract({
         taskId: step1.taskId,
         selectedPages: step1.selectedPages,
         setGenerationSource: step1.setGenerationSource,
-        showToast,
+        showToast: adaptedShowToast,
     });
     const step3 = useStep3Generate({
         taskId: step1.taskId,
         generationSource: step1.generationSource,
         selectedPages: step1.selectedPages,
         savedScreenshots: step2.savedScreenshots,
-        showToast,
+        showToast: adaptedShowToast,
     });
     const qOps = useQuestionOps({
         taskId: step1.taskId,
         generatedQuestions: step3.generatedQuestions,
         rawExtractText: step2.rawExtractText,
-        showToast,
+        showToast: adaptedShowToast,
     });
 
     // ── Derived ────────────────────────────────────────────────────────────────

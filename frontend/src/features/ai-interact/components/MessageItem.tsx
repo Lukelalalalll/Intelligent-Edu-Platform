@@ -150,8 +150,9 @@ function renderContent(content: string): { __html: string } {
 }
 
 /* ── AI message bubble with typewriter animation ── */
-function AIMessageBubble({ content, citations, isCourseRelevant, isTyping, isLastAssistant, onCopy, onRegenerate }: {
+function AIMessageBubble({ content, reasoning, citations, isCourseRelevant, isTyping, isLastAssistant, onCopy, onRegenerate }: {
     content: string;
+    reasoning?: string;
     citations?: RagCitation[];
     isCourseRelevant?: boolean;
     isTyping: boolean;
@@ -174,25 +175,33 @@ function AIMessageBubble({ content, citations, isCourseRelevant, isTyping, isLas
     const latestDisplayedRef = useRef(displayed);
     latestDisplayedRef.current = displayed;
     const renderScheduledRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastRenderedLenRef = useRef(0);
 
     useEffect(() => {
         if (!isStreaming) {
-            // Streaming ended — cancel throttle timer and render immediately.
+            // Streaming ended — cancel throttle timer and render immediately
             if (renderScheduledRef.current != null) {
                 clearTimeout(renderScheduledRef.current);
                 renderScheduledRef.current = null;
             }
             setRenderedHtml(renderContent(displayed));
+            lastRenderedLenRef.current = displayed.length;
             return;
         }
-        // Streaming — schedule a render only if one isn't already pending.
-        // The timer fires with the *latest* displayed text, so intermediate
-        // frames are skipped entirely (no stale/partial renders).
+        // Adaptive throttle: fewer renders as content grows
+        // <500 chars → 80ms, <2000 → 150ms, else → 300ms
+        const len = displayed.length;
+        const interval = len < 500 ? 80 : len < 2000 ? 150 : 300;
+
         if (renderScheduledRef.current == null) {
             renderScheduledRef.current = setTimeout(() => {
                 renderScheduledRef.current = null;
-                setRenderedHtml(renderContent(latestDisplayedRef.current));
-            }, 50);
+                const current = latestDisplayedRef.current;
+                // Skip render if only a few chars arrived (except very short content)
+                if (current.length - lastRenderedLenRef.current < 50 && current.length >= 100) return;
+                setRenderedHtml(renderContent(current));
+                lastRenderedLenRef.current = current.length;
+            }, interval);
         }
     }, [displayed, isStreaming]);
 
@@ -201,10 +210,46 @@ function AIMessageBubble({ content, citations, isCourseRelevant, isTyping, isLas
         if (renderScheduledRef.current != null) clearTimeout(renderScheduledRef.current);
     }, []);
 
+    const hasReasoning = reasoning && reasoning.length > 0;
+    const [reasoningCollapsed, setReasoningCollapsed] = useState(false);
+
     return (
         <div className={`${styles.bubble} markdown-body`} style={{ minHeight: '20px' }}>
+            {/* ── Reasoning / Think box ── */}
+            {hasReasoning && (
+                <div className={`${styles['reasoning-box']} ${(content && !isStreaming) ? styles['reasoning-done'] : ''} ${reasoningCollapsed ? styles['reasoning-collapsed'] : ''}`}>
+                    <button
+                        className={styles['reasoning-toggle']}
+                        onClick={() => setReasoningCollapsed(v => !v)}
+                    >
+                        <span className={styles['reasoning-toggle-icon']}>
+                            {isStreaming && !content ? (
+                                <span className={styles['thinking-spinner']}>
+                                    <span className={styles.dot}></span>
+                                    <span className={styles.dot}></span>
+                                    <span className={styles.dot}></span>
+                                </span>
+                            ) : (
+                                <i className="fas fa-brain" />
+                            )}
+                        </span>
+                        <span className={styles['reasoning-toggle-label']}>
+                            {isStreaming && !content ? '深度思考中...' : '已完成深度思考'}
+                        </span>
+                        <i className={`fas fa-chevron-${reasoningCollapsed ? 'down' : 'up'}`} style={{ marginLeft: 'auto', fontSize: '0.65rem', opacity: 0.6 }} />
+                    </button>
+                    {!reasoningCollapsed && (
+                        <div className={styles['reasoning-content']}>
+                            <span className={styles['reasoning-text']}>
+                                {reasoning}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {displayed === '' ? (
-                <div style={{ color: '#999', fontStyle: 'italic' }}></div>
+                hasReasoning ? null : <div style={{ color: '#999', fontStyle: 'italic' }}></div>
             ) : (
                 <>
                     <div dangerouslySetInnerHTML={renderedHtml} />
@@ -235,6 +280,7 @@ interface MessageItemProps {
     msg: {
         role: string;
         content: string;
+        reasoning?: string;
         images?: string[];
         files?: { file_name: string; mime_type: string }[];
         citations?: RagCitation[];
@@ -337,8 +383,9 @@ const MessageItem = memo(({ msg, idx, isUser, onCopy, isLastAssistant, onRegener
             ) : (
                 <AIMessageBubble
                     content={msg.content}
+                    reasoning={(msg as any).reasoning}
                     citations={msg.citations}
-                    isCourseRelevant={msg.is_course_relevant}
+                    isCourseRelevant={(msg as any).is_course_relevant}
                     isTyping={isTyping}
                     isLastAssistant={isLastAssistant}
                     onCopy={onCopy}
@@ -348,13 +395,16 @@ const MessageItem = memo(({ msg, idx, isUser, onCopy, isLastAssistant, onRegener
         </div>
     );
 }, (prevProps: MessageItemProps, nextProps: MessageItemProps) => {
-    return prevProps.msg.content === nextProps.msg.content &&
-        prevProps.msg.role === nextProps.msg.role &&
-        prevProps.isTyping === nextProps.isTyping &&
-        prevProps.isLastAssistant === nextProps.isLastAssistant &&
-        JSON.stringify(prevProps.msg.images) === JSON.stringify(nextProps.msg.images) &&
-        JSON.stringify(prevProps.msg.files) === JSON.stringify(nextProps.msg.files) &&
-        JSON.stringify(prevProps.msg.citations) === JSON.stringify(nextProps.msg.citations);
+    if (prevProps.msg.content !== nextProps.msg.content) return false;
+    if (prevProps.msg.role !== nextProps.msg.role) return false;
+    if ((prevProps.msg as any).reasoning !== (nextProps.msg as any).reasoning) return false;
+    if (prevProps.isTyping !== nextProps.isTyping) return false;
+    if (prevProps.isLastAssistant !== nextProps.isLastAssistant) return false;
+    // Shallow reference checks — arrays are set once per message and never mutated
+    if (prevProps.msg.images !== nextProps.msg.images) return false;
+    if (prevProps.msg.files !== nextProps.msg.files) return false;
+    if (prevProps.msg.citations !== nextProps.msg.citations) return false;
+    return true;
 });
 
 export default MessageItem;

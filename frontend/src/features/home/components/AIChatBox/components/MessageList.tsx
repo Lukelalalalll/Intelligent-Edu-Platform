@@ -18,6 +18,7 @@ export default function MessageList({
     setEditingVal,
     handleEditUserMsg,
     handleRegenerate,
+    handleSendChoice,
 }: {
     messages: ChatMsg[];
     isLoading: boolean;
@@ -27,13 +28,14 @@ export default function MessageList({
     setEditingVal: (value: string) => void;
     handleEditUserMsg: (idx: number, newVal: string) => void;
     handleRegenerate: (idx: number) => void;
+    handleSendChoice?: (choice: string) => void;
 }) {
     const lastMessage = messages.at(-1);
 
     return (
         <AnimatePresence>
             {messages.map((msg, idx) => {
-                if (msg.sender === 'ai' && !msg.text) return null;
+                if (msg.sender === 'ai' && !msg.text && (!msg.uiElements || msg.uiElements.length === 0)) return null;
                 const senderClassKey = `${msg.sender}-message`;
                 const messageClass = `${styles.message} ${styles[senderClassKey]}`;
                 const isEditingUser = msg.sender === 'user' && editingId === msg.id;
@@ -49,7 +51,41 @@ export default function MessageList({
                                     {msg.modelProvider === 'coze' ? <><i className="fas fa-cloud"></i> Coze Model</> : <><i className="fas fa-microchip"></i> LLaMA Model</>}
                                 </div>
                             )}
-                            {msg.sender === 'ai' && <div className="markdown-body" dangerouslySetInnerHTML={renderMarkdown(msg.text)} />}
+                            {msg.sender === 'ai' && msg.text && <div className="markdown-body" dangerouslySetInnerHTML={renderMarkdown(msg.text)} />}
+
+                            {msg.sender === 'ai' && msg.uiElements && msg.uiElements.length > 0 && (
+                                <div className={styles['ui-elements-container']} style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {msg.uiElements.map((elem, i) => (
+                                        <div key={i} className={styles['ui-element']}>
+                                            {elem.type === 'image' && (
+                                                <img src={elem.url} alt={elem.alt || 'extracted image'} style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                                            )}
+                                            {elem.type === 'file' && (
+                                                <a href={elem.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '10px 15px', background: '#e0f2fe', color: '#0369a1', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold' }}>
+                                                    <i className="fas fa-file-download" style={{ marginRight: '8px' }}></i> Download Result
+                                                </a>
+                                            )}
+                                            {elem.type === 'choice' && (
+                                                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                                    <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#334155' }}>{elem.message}</p>
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {elem.options?.map((opt: string, j: number) => (
+                                                            <button 
+                                                                key={j} 
+                                                                onClick={() => handleSendChoice && handleSendChoice(opt)}
+                                                                disabled={isLoading}
+                                                                style={{ padding: '6px 12px', background: isLoading ? '#f1f5f9' : '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: isLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+                                                            >
+                                                                {opt}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {msg.sender === 'user' && isEditingUser && (
                                 <div className={styles['edit-box']}>

@@ -5,7 +5,7 @@ import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../..
 export function useStudyNotesGenerate(file: File | null) {
     const [style, setStyle] = useState('detailed');
     const [notes, setNotes] = useState('');
-    const [flashcards, setFlashcards] = useState<unknown[]>([]);
+    const [flashcards, setFlashcards] = useState<{ question?: string; answer?: string; }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('');
     const [error, setError] = useState('');

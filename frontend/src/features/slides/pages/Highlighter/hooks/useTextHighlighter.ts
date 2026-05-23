@@ -39,7 +39,7 @@ export default function useTextHighlighter({
             } else {
                 const fragment = range.extractContents();
                 const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT, null);
-                const textNodes = [];
+                const textNodes: Node[] = [];
                 let node;
                 while ((node = walker.nextNode())) {
                     if (node.nodeValue.trim().length > 0) textNodes.push(node);

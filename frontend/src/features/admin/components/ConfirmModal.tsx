@@ -1,15 +1,15 @@
 import React from 'react';
 import SharedConfirmModal from '../../../shared/components/ConfirmModal';
 
-interface AdminConfirmConfig {
+interface ConfirmModalConfig {
     isOpen: boolean;
-    title?: string;
-    text?: string;
-    onConfirm?: () => void;
+    title: string;
+    text: string;
+    onConfirm: (() => void) | null;
 }
 
 interface Props {
-    confirmConfig: AdminConfirmConfig;
+    confirmConfig: ConfirmModalConfig;
     closeConfirm: () => void;
 }
 

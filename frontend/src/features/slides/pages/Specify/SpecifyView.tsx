@@ -139,7 +139,7 @@ export default function Specify({
                                         {Object.keys(tablesBySection).length === 0 ? (
                                             <p style={{ color: 'var(--text-sub)' }}>No tables found in selected sections.</p>
                                         ) : (
-                                            Object.entries(tablesBySection).map(([title, tables]: [string, any[]]) => (
+                                            (Object.entries(tablesBySection) as [string, any[]][]).map(([title, tables]) => (
                                                 <div key={title} style={{ marginBottom: '1rem' }}>
                                                     <h6 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{title}</h6>
                                                     {tables.map(table => (

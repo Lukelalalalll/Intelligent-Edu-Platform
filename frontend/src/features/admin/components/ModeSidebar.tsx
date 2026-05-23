@@ -1,7 +1,13 @@
 import React from 'react';
 import styles from '../styles/AdminDashboard.module.css';
+import type { AdminMode } from '../types';
 
-export default function ModeSidebar({ activeMode, setActiveMode }) {
+interface ModeSidebarProps {
+  activeMode: AdminMode;
+  setActiveMode: (mode: AdminMode) => void;
+}
+
+export default function ModeSidebar({ activeMode, setActiveMode }: ModeSidebarProps) {
     return (
         <aside className={styles.modeSidebar}>
             <button
@@ -23,7 +29,7 @@ export default function ModeSidebar({ activeMode, setActiveMode }) {
                 onClick={() => setActiveMode('llm-monitor')}
             >
                 <i className="fas fa-chart-line"></i>
-                LLM Monitor
+                LLM Cost Monitor
             </button>
             <button
                 className={`${styles.modeBtn} ${activeMode === 'api-keys' ? styles.modeBtnActive : ''}`}
@@ -36,15 +42,15 @@ export default function ModeSidebar({ activeMode, setActiveMode }) {
                 className={`${styles.modeBtn} ${activeMode === 'staff-codes' ? styles.modeBtnActive : ''}`}
                 onClick={() => setActiveMode('staff-codes')}
             >
-                <i className="fas fa-id-badge"></i>
+                <i className="fas fa-id-card"></i>
                 Staff Codes
             </button>
             <button
                 className={`${styles.modeBtn} ${activeMode === 'rag-eval' ? styles.modeBtnActive : ''}`}
                 onClick={() => setActiveMode('rag-eval')}
             >
-                <i className="fas fa-flask"></i>
-                RAG Eval
+                <i className="fas fa-balance-scale"></i>
+                RAG Evaluation
             </button>
         </aside>
     );

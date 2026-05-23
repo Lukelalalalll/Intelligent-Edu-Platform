@@ -161,6 +161,7 @@ export default function StudyNotesPage() {
                                 <select value={provider} onChange={(e) => setProvider(e.target.value as Parameters<typeof setProvider>[0])}>
                                     <option value="coze">Coze</option>
                                     <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                                 </select>
                                 {['detailed', 'concise', 'exam'].map((s) => (
                                     <button

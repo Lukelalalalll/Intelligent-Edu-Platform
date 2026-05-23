@@ -5,6 +5,7 @@ export const PROVIDER_STORAGE_KEY = 'ai_provider';
 export const TUTOR_MODE_STORAGE_KEY = 'ai_tutor_mode';
 export const WEB_SEARCH_STORAGE_KEY = 'ai_web_search';
 export const SEARCH_ENGINE_STORAGE_KEY = 'ai_search_engine';
+export const ENABLE_THINKING_STORAGE_KEY = 'ai_enable_thinking';
 
 export function getErrorMessage(err: unknown): string {
     if (err instanceof Error) return err.message;

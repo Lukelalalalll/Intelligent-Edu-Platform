@@ -3,7 +3,7 @@ import * as sub2Api from '../api/questionBankApi';
 import type { GenerationMode, GenerationSource } from '../types';
 
 interface UseStep1UploadOptions {
-    showToast: (msg: string, type: string) => void;
+    showToast: (msg: string, type?: string) => void;
 }
 
 export function useStep1Upload({ showToast }: UseStep1UploadOptions) {
@@ -31,11 +31,11 @@ export function useStep1Upload({ showToast }: UseStep1UploadOptions) {
                 setFileType(data.file_type);
                 setTaskId(data.task_id);
                 if (data.file_type === 'pdf') {
-                    setTotalPages(data.total_pages);
+                    setTotalPages(data.total_pages ?? 0);
                     setSelectedPages([]);
                 }
             } else {
-                showToast(data.error, 'error');
+                showToast(data.error ?? 'Error', 'error');
             }
         } catch (err: any) {
             showToast('Upload failed: ' + err.message, 'error');

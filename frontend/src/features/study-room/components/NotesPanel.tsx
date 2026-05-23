@@ -18,7 +18,7 @@ interface NoteItem {
 
 interface NotesPanelProps {
     notes: NoteItem[];
-    onAdd?: (note: { content: string; color: string }) => void;
+    onAdd?: (note: { content: string; color: string; highlightedText?: string }) => void;
     onDelete?: (id: string | number) => void;
     onClickNote?: (note: NoteItem) => void;
 }
@@ -31,7 +31,7 @@ export default function NotesPanel({ notes, onAdd, onDelete, onClickNote }: Note
     const handleAdd = () => {
         const trimmed = text.trim();
         if (!trimmed) return;
-        onAdd({ content: trimmed, color });
+        onAdd?.({ content: trimmed, color });
         setText('');
     };
 
@@ -114,10 +114,10 @@ export default function NotesPanel({ notes, onAdd, onDelete, onClickNote }: Note
                                         <div className={styles.noteMeta}>
                                             <span>Page {note.pageNumber || '—'}</span>
                                             <span>·</span>
-                                            <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span>{new Date(note.createdAt ?? Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             <button
                                                 className={styles.noteDeleteBtn}
-                                                onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}
+                                                onClick={(e) => { e.stopPropagation(); onDelete?.(note.id); }}
                                             >
                                                 <i className="fas fa-trash-alt"></i>
                                             </button>

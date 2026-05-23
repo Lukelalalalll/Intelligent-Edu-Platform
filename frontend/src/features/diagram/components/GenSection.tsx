@@ -57,6 +57,7 @@ export default function GenSection({ genState, genHandlers }) {
                     <select value={provider || 'local_ollama'} onChange={(e) => genHandlers.setProvider?.(e.target.value)}>
                         <option value="coze">Coze</option>
                         <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                     </select>
                 </div>
 

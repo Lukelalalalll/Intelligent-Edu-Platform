@@ -16,10 +16,10 @@ interface ChatInputProps {
     handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
     handleSend: () => void;
     isTyping: boolean;
-    inputRef: React.RefObject<HTMLTextAreaElement | null>;
+    inputRef: React.RefObject<HTMLTextAreaElement>;
     attachedFiles: AttachedFileObject[];
     isUploadingFile: boolean;
-    fileInputRef: React.RefObject<HTMLInputElement | null>;
+    fileInputRef: React.RefObject<HTMLInputElement>;
     handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     removeAttachedFile: (index: number) => void;
     handleStop: () => void;
@@ -28,12 +28,17 @@ interface ChatInputProps {
     setWebSearch?: (v: boolean) => void;
     searchEngine?: AISearchEngine;
     setSearchEngine?: (e: AISearchEngine) => void;
+    // Deep Think
+    selectedProvider?: import('../api/aiApi').AIProvider;
+    enableThinking?: boolean;
+    setEnableThinking?: (v: boolean) => void;
 }
 
 function ChatInput({
     inputText, handleInput, handleKeyDown, handleSend, isTyping, inputRef,
     attachedFiles, isUploadingFile, fileInputRef, handleFileChange, removeAttachedFile, handleStop,
     webSearch = false, setWebSearch, searchEngine = 'auto', setSearchEngine,
+    selectedProvider, enableThinking = false, setEnableThinking,
 }: ChatInputProps) {
     const [engineOpen, setEngineOpen] = useState(false);
     const engineMenuRef = useRef<HTMLDivElement>(null);
@@ -55,6 +60,8 @@ function ChatInput({
         setSearchEngine?.(e);
         setEngineOpen(false);
     };
+    const showThinkingToggle = selectedProvider === 'deepseek';
+    const handleToggleThinking = () => setEnableThinking?.(!enableThinking);
 
     return (
         <div className={aiStyles['input-area']}>
@@ -99,6 +106,19 @@ function ChatInput({
                     <i className={`fas fa-globe`}></i>
                     <span>{webSearch ? 'Web On' : 'Web'}</span>
                 </button>
+
+                {/* Deep Think toggle — only visible when DeepSeek is selected */}
+                {showThinkingToggle && (
+                    <button
+                        type="button"
+                        className={`${styles.webToggleBtn} ${enableThinking ? styles.thinkingToggleActive : ''}`}
+                        onClick={handleToggleThinking}
+                        title={enableThinking ? 'Disable Deep Think (R1)' : 'Enable Deep Think (R1)'}
+                    >
+                        <i className="fas fa-brain"></i>
+                        <span>{enableThinking ? 'Deep Think' : 'Think'}</span>
+                    </button>
+                )}
 
                 {/* Engine selector — only visible when web search is on */}
                 {webSearch && (

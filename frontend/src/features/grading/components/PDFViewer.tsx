@@ -15,10 +15,10 @@ interface PDFViewerProps {
 }
 
 export default function PDFViewer({ file, annotations = [], onSaveAnnotation, onDeleteAnnotation }: PDFViewerProps) {
-    const [numPages, setNumPages] = useState(null);
+    const [numPages, setNumPages] = useState<number | null>(null);
     const [pageNumber, setPageNumber] = useState(1);
     const [scale, setScale] = useState(1);
-    const [activeAnnotation, setActiveAnnotation] = useState(null);
+    const [activeAnnotation, setActiveAnnotation] = useState<AnnotationData | null>(null);
     const [isPlacingLabel, setIsPlacingLabel] = useState(false);
     const [saving, setSaving] = useState(false);
     const [localError, setLocalError] = useState('');
@@ -26,7 +26,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [loadRetry, setLoadRetry] = useState(0);
     const MAX_AUTO_RETRIES = 3;
     const [containerWidth, setContainerWidth] = useState(0);
-    const containerRef = useRef(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Measure container width for auto-fit
     const measureWidth = useCallback(() => {
@@ -191,7 +191,9 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                                 annotation={activeAnnotation}
                                 saving={saving}
                                 localError={localError}
-                                onChangeAnnotation={setActiveAnnotation}
+                                onChangeAnnotation={(fn: (prev: AnnotationData) => AnnotationData) => {
+                                    setActiveAnnotation((prev) => (prev === null ? null : fn(prev)));
+                                }}
                                 onSave={handleSaveTag}
                                 onDelete={handleDeleteTag}
                                 onClose={() => {

@@ -173,6 +173,7 @@ export default function StepDataset({ courseId, selectedDocs, dataset, onChange 
                                 onChange={e => handleProviderChange(e.target.value as AIProvider)}
                             >
                                 <option value="local_ollama">Llama (Local)</option>
+                        <option value="deepseek">DeepSeek</option>
                                 <option value="coze">Coze</option>
                             </select>
                         </div>

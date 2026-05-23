@@ -21,7 +21,7 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
     const [analyzeLoading, setAnalyzeLoading] = useState(false);
     const [regradeLoading, setRegradeLoading] = useState(false);
     const [localError, setLocalError] = useState('');
-    const [lastRagInfo, setLastRagInfo] = useState(null);
+    const [lastRagInfo, setLastRagInfo] = useState<{enabled: boolean; retrieved_count: number} | null>(null);
     const [lastStructuredReport, setLastStructuredReport] = useState<Record<string, any> | null>(null);
     const {
         loading,
@@ -157,7 +157,7 @@ export function useCozeAssistant({ submissionId, assignment, rubric, onAnalysis,
             await startStream({
                 question,
                 payload: {
-                    submissionId, selectedText: question,
+                    submissionId: submissionId ?? '', selectedText: question,
                     assignment: assignment?.description, rubric,
                     messages: streamInputMessages, useRag: true, ragTopK: 4, provider,
                 },

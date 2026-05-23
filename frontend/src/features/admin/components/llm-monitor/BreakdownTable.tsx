@@ -34,11 +34,11 @@ export default function BreakdownTable({ data, groupBy }: BreakdownTableProps) {
                 {data.map((row, i) => (
                     <tr key={i}>
                         <td><strong>{row.name || '(empty)'}</strong></td>
-                        <td>{formatNumber(row.calls)}</td>
-                        <td className={row.errors > 0 ? styles.errorText : ''}>{row.errors}</td>
-                        <td>{formatMs(row.avg_latency)}</td>
-                        <td>{formatNumber(row.total_tokens)}</td>
-                        <td>{formatCost(row.total_cost)}</td>
+                        <td>{formatNumber(row.calls ?? 0)}</td>
+                        <td className={(row.errors ?? 0) > 0 ? styles.errorText : ''}>{row.errors ?? 0}</td>
+                        <td>{formatMs(row.avg_latency ?? 0)}</td>
+                        <td>{formatNumber(row.total_tokens ?? 0)}</td>
+                        <td>{formatCost(row.total_cost ?? 0)}</td>
                     </tr>
                 ))}
             </tbody>

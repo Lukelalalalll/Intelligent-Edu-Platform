@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import type { HistoryItem } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
 import styles from '../styles/fileCenter.module.css';

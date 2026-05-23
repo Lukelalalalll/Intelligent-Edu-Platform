@@ -1,0 +1,1 @@
+export { default as AdminFileCenterPage } from './pages/AdminFileCenterPage';

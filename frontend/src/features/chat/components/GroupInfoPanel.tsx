@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { chatApi } from '../api';
 import { useChatStore } from '../store/chatStore';
+import { useAuthStore } from '@/shared/store/useAuthStore';
 import type { ChatContact, ChatRoom } from '../types';
 import globalStyles from '../styles/globals.module.css';
 import layoutStyles from '../styles/components/ChatLayout.module.css';
@@ -60,9 +61,7 @@ export default function GroupInfoPanel({ roomId, visible, onClose, onLeaveOrDele
     const panelRef = useRef<HTMLDivElement>(null);
 
     const contacts = useChatStore((s) => s.contacts);
-    const currentUserId = (() => {
-        try { return JSON.parse(localStorage.getItem('user') || '{}').id || ''; } catch { return ''; }
-    })();
+    const currentUserId = useAuthStore((s) => s.user)?.id ? String(useAuthStore((s) => s.user)?.id) : '';
 
     const loadRoomInfo = useCallback(async () => {
         setLoading(true);

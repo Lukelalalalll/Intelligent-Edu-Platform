@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useChatStore } from '../store/chatStore';
+import { useAuthStore } from '@/shared/store/useAuthStore';
 import type { ChatMessage } from '../types';
 
 const WS_BASE = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009')
@@ -32,24 +33,16 @@ export function useChatWebSocket(enabled = true) {
         }
 
         const currentUser = (() => {
-            try {
-                const u = localStorage.getItem('user');
-                return u ? JSON.parse(u) : null;
-            } catch {
-                return null;
-            }
+            const u = useAuthStore.getState().user;
+            return u ?? null;
         })();
 
         if (!currentUser) return;
 
         // Helper to read current user id dynamically (avoids stale closure)
         const getCurrentUserId = (): string => {
-            try {
-                const u = localStorage.getItem('user');
-                return u ? JSON.parse(u).id : '';
-            } catch {
-                return '';
-            }
+            const u = useAuthStore.getState().user;
+            return u?.id ? String(u.id) : '';
         };
 
         const connect = () => {

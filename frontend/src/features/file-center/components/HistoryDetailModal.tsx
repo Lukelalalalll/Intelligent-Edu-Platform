@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import client from '@/shared/api/client';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
@@ -141,7 +141,7 @@ export default function HistoryDetailModal({ item, tool, onClose, onDelete }: Pr
         let parsed: any = null;
         try { parsed = isString ? JSON.parse(detail?.result as string) : detail?.result; } catch {}
 
-        let primaryDl = null;
+        let primaryDl: React.ReactNode | null = null;
         if (parsed && typeof parsed.videoPath === 'string') {
             primaryDl = <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => handleDownload(getFileUrl(parsed.videoPath), `video_${item.id}.mp4`)}><i className="fas fa-video" /> Download Video</button>;
         } else if (parsed?.slides_url || parsed?.download_url) {

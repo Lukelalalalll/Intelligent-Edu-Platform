@@ -14,7 +14,7 @@ const STEPS = [
     { label: 'Generate', icon: 'fa-video' },
 ];
 
-export type AIProvider = 'coze' | 'local_ollama';
+export type AIProvider = 'coze' | 'local_ollama' | 'deepseek';
 export type Audience = 'student' | 'teacher' | 'researcher' | 'general';
 export type SubtitleMode = 'hard_srt' | 'image_strip' | 'none';
 export type BrandKit = 'none' | 'default';

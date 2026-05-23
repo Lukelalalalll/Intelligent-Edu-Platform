@@ -8,19 +8,20 @@ import {
     type AISearchEngine,
 } from '../../api/aiApi';
 import { networkBus } from '@/shared/hooks/useNetworkStatus';
-import type { AISession, ChatMessage, RagCitation } from '@/types/api';
+import type { AISession, ChatMessage, RagCitation, UIElement, ToolProgress } from '@/types/api';
 import { prepareAttachmentPayload, type AttachmentInput } from './utils/attachmentHelpers';
 import {
     PROVIDER_STORAGE_KEY,
     TUTOR_MODE_STORAGE_KEY,
     WEB_SEARCH_STORAGE_KEY,
     SEARCH_ENGINE_STORAGE_KEY,
+    ENABLE_THINKING_STORAGE_KEY,
     buildSession,
     getErrorMessage,
     mergeMessageContent,
     toPayloadMessages,
 } from './utils/sessionHelpers';
-import { createRafBufferedUpdater } from './utils/streamHelpers';
+import { createRafBufferedUpdater, type UIElementHandler, type ToolProgressHandler } from './utils/streamHelpers';
 import {
     useInitialSessionsLoad,
     useLazyFetchSessionMessages,
@@ -42,7 +43,9 @@ export function useAISessions() {
     const [modalConfig, setModalConfig] = useState<ModalConfig>({ show: false, sessionId: null });
     const [selectedProvider, setSelectedProvider] = useState<AIProvider>(() => {
         const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
-        return stored === 'coze' ? 'coze' : 'local_ollama';
+        if (stored === 'coze') return 'coze';
+        if (stored === 'deepseek') return 'deepseek';
+        return 'local_ollama';
     });
     const [tutorMode, setTutorMode] = useState<AITutorMode>(() => {
         const stored = localStorage.getItem(TUTOR_MODE_STORAGE_KEY);
@@ -56,6 +59,9 @@ export function useAISessions() {
         const stored = localStorage.getItem(SEARCH_ENGINE_STORAGE_KEY) as AISearchEngine | null;
         const valid: AISearchEngine[] = ['auto', 'google', 'bing', 'duckduckgo', 'wikipedia', 'arxiv', 'google_scholar'];
         return stored && valid.includes(stored) ? stored : 'auto';
+    });
+    const [enableThinking, setEnableThinking] = useState<boolean>(() => {
+        return localStorage.getItem(ENABLE_THINKING_STORAGE_KEY) === 'true';
     });
     const [providerHealth, setProviderHealth] = useState<{ ok: boolean; detail: string }>({ ok: true, detail: 'ok' });
 
@@ -71,6 +77,8 @@ export function useAISessions() {
     webSearchRef.current = webSearch;
     const searchEngineRef = useRef(searchEngine);
     searchEngineRef.current = searchEngine;
+    const enableThinkingRef = useRef(enableThinking);
+    enableThinkingRef.current = enableThinking;
 
     const applyFetchedSession = useCallback((id: string, data: Partial<AISession>) => {
         setSessions(prev => {
@@ -101,22 +109,24 @@ export function useAISessions() {
         });
     }, []);
 
-    const applyAssistantSnapshot = useCallback((targetId: string, snapshot: string, citations?: RagCitation[], isCourseRelevant?: boolean) => {
+    const applyAssistantSnapshot = useCallback((targetId: string, snapshot: string, citations?: RagCitation[], isCourseRelevant?: boolean, reasoning?: string) => {
         setSessions(prev => (prev || []).map(s => {
             if (s.id !== targetId) return s;
             const msgs = [...s.messages];
             const lastMsg = msgs.at(-1);
+            if (!lastMsg || lastMsg.role !== 'assistant') return s;
             msgs[msgs.length - 1] = {
                 ...lastMsg,
                 content: snapshot,
                 ...(citations ? { citations } : {}),
                 ...(isCourseRelevant !== undefined ? { is_course_relevant: isCourseRelevant } : {}),
+                ...(reasoning ? { reasoning } : {}),
             };
             return { ...s, messages: msgs };
         }));
     }, []);
 
-    usePersistAiPreferences(selectedProvider, tutorMode, webSearch, searchEngine);
+    usePersistAiPreferences(selectedProvider, tutorMode, webSearch, searchEngine, enableThinking);
     useProviderHealthCheck(selectedProvider, setProviderHealth);
     useInitialSessionsLoad(setSessions, setCurrentSessionId);
     useLazyFetchSessionMessages(currentSessionId, sessionsRef, applyFetchedSession, markSessionFetchDone);
@@ -152,7 +162,7 @@ export function useAISessions() {
             setSessions(prev => [buildSession(ns), ...(prev || [])]);
             if (switchImmediately) setCurrentSessionId(ns.id);
         } catch {
-            const local = { id: 'local_' + Date.now(), ...buildSession({}) };
+            const local = { ...buildSession({}), id: 'local_' + Date.now() };
             setSessions(prev => [local, ...(prev || [])]);
             if (switchImmediately) setCurrentSessionId(local.id);
         }
@@ -179,8 +189,8 @@ export function useAISessions() {
     }, [modalConfig.sessionId, currentSessionId, createNewSession]);
 
     // ── SSE streaming with rAF batching ──
-    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal, wsearch: boolean, sengine: AISearchEngine) => { // NOSONAR
-        const response = await createChatStream(apiMessages, provider, mode, targetId, signal, wsearch, sengine);
+    const streamSSE = useCallback(async (apiMessages: ChatMessage[], targetId: string, provider: AIProvider, mode: AITutorMode, signal: AbortSignal, wsearch?: boolean, sengine?: AISearchEngine, think?: boolean) => { // NOSONAR
+        const response = await createChatStream(apiMessages, provider, mode, targetId, signal, wsearch, sengine, think);
 
         if (!response.ok) {
             setSessions(prev => (prev || []).map(s => s.id === targetId
@@ -198,12 +208,31 @@ export function useAISessions() {
             return;
         }
 
+        // Collect ui_elements and tool_progresses during this stream
+        const uiElements: UIElement[] = [];
+        const toolProgresses: ToolProgress[] = [];
+
+        const onUIElement: UIElementHandler = (el) => { uiElements.push(el); };
+        const onToolProgress: ToolProgressHandler = (tp) => {
+            // Replace or append — same-name running replaces previous running entry
+            const existingIdx = toolProgresses.findIndex(p => p.name === tp.name && p.status === 'running');
+            if (existingIdx >= 0 && tp.status === 'running') {
+                toolProgresses[existingIdx] = tp;
+            } else if (existingIdx >= 0) {
+                toolProgresses[existingIdx] = tp;
+            } else {
+                toolProgresses.push(tp);
+            }
+        };
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
         const buffered = createRafBufferedUpdater(
-            (snapshot, citations?: RagCitation[], isCourseRelevant?: boolean) => applyAssistantSnapshot(targetId, snapshot, citations, isCourseRelevant),
+            (snapshot, citations?: RagCitation[], isCourseRelevant?: boolean, reasoning?: string) => applyAssistantSnapshot(targetId, snapshot, citations, isCourseRelevant, reasoning),
             rafRef,
+            onUIElement,
+            onToolProgress,
         );
 
         while (true) {
@@ -211,7 +240,7 @@ export function useAISessions() {
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
-            buffer = lines.pop();
+            buffer = lines.pop() || '';
             for (const line of lines) {
                 const trimmed = line.trim();
                 if (!trimmed?.startsWith('data: ')) continue;
@@ -225,7 +254,22 @@ export function useAISessions() {
         }
 
         const finalResult = buffered.finalize();
-        return { content: finalResult.snapshot, citations: finalResult.citations, isCourseRelevant: finalResult.isCourseRelevant };
+
+        // Stash collected ui_elements / tool_progresses onto the last assistant message
+        if (uiElements.length > 0 || toolProgresses.length > 0) {
+            setSessions(prev => (prev || []).map(s => {
+                if (s.id !== targetId) return s;
+                const msgs = [...s.messages];
+                const lastMsg = msgs.at(-1);
+                const patch: Partial<ChatMessage> = {};
+                if (uiElements.length > 0) patch.ui_elements = [...uiElements];
+                if (toolProgresses.length > 0) patch.tool_progresses = [...toolProgresses];
+                msgs[msgs.length - 1] = { ...lastMsg, ...patch } as ChatMessage;
+                return { ...s, messages: msgs };
+            }));
+        }
+
+        return { content: finalResult.snapshot, citations: finalResult.citations, isCourseRelevant: finalResult.isCourseRelevant, reasoning: finalResult.reasoning };
     }, [applyAssistantSnapshot]);
 
     // ── Send message ──
@@ -292,7 +336,7 @@ export function useAISessions() {
             };
         }));
 
-        let streamResult: { content: string; citations?: RagCitation[]; isCourseRelevant?: boolean } | undefined;
+        let streamResult: { content: string; citations?: RagCitation[]; isCourseRelevant?: boolean; reasoning?: string } | undefined;
         try {
             const sess = (sessionsRef.current || []).find(s => s.id === targetId);
             if (!sess) {
@@ -316,6 +360,7 @@ export function useAISessions() {
                 abortRef.current.signal,
                 webSearchRef.current,
                 searchEngineRef.current,
+                enableThinkingRef.current,
             );
         } catch (err: unknown) {
             if (err instanceof Error && err.name === 'AbortError') return;
@@ -342,6 +387,7 @@ export function useAISessions() {
                                     content: streamResult!.content,
                                     ...(streamResult!.citations ? { citations: streamResult!.citations } : {}),
                                     ...(streamResult!.isCourseRelevant !== undefined ? { is_course_relevant: streamResult!.isCourseRelevant } : {}),
+                                    ...(streamResult!.reasoning ? { reasoning: streamResult!.reasoning } : {}),
                                   }
                                 : m
                         ),
@@ -369,6 +415,7 @@ export function useAISessions() {
             syncToServer,
             selectedProvider,
             tutorMode,
+            enableThinking: enableThinkingRef.current,
         });
     }, [currentSessionId, streamSSE, syncToServer, selectedProvider, tutorMode]);
 
@@ -413,11 +460,12 @@ export function useAISessions() {
         tutorMode, setTutorMode,
         webSearch, setWebSearch,
         searchEngine, setSearchEngine,
+        enableThinking, setEnableThinking,
     };
 }
 
 export function useAIMemory() {
-    const [memory, setMemory] = useState<Record<string, unknown>>({});
+    const [memory, setMemory] = useState<any>({});
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import styles from './styles/pptTemplate.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import { slidesEditorApi } from '../../api/slidesApi';

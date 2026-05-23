@@ -40,7 +40,7 @@ export async function generateQuestions(
     docNames: string[],
     nQuestions: number,
     topicHint?: string,
-    provider: 'coze' | 'local_ollama' = 'local_ollama',
+    provider: 'coze' | 'local_ollama' | 'deepseek' = 'local_ollama',
 ): Promise<GeneratedQuestion[]> {
     const { data } = await client.post('/admin/rag-eval/generate-questions', {
         course_id: courseId,

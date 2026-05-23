@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../api/ragEvalApi';
-import type { CaseTestResult } from '../../api/ragEvalApi';
+import * as api from '@/api/ragEvalApi';
+import type { CaseTestResult } from '@/api/ragEvalApi';
 import { TOP_K_OPTIONS } from './constants';
 
 export default function CaseTestTab() {
@@ -20,7 +21,7 @@ export default function CaseTestTab() {
             setResult(response);
         } catch (e: unknown) {
             const message = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-            alert(message || 'Test failed');
+            toast.error(message || 'Test failed');
         } finally {
             setTesting(false);
         }

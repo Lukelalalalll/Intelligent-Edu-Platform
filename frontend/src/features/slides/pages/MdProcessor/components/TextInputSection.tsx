@@ -13,7 +13,7 @@ interface TextInputSectionProps {
     cozeError: string;
     textProcessing: boolean;
     provider?: string;
-    setProvider?: (v: 'coze' | 'local_ollama') => void;
+    setProvider?: (v: 'coze' | 'local_ollama' | 'deepseek') => void;
     handleCozeGenerate: () => void;
     handleProcessText: (path: string) => void;
 }
@@ -38,11 +38,12 @@ export default function TextInputSection({
                 <div className={textStyles.cozeRow}>
                     <select
                         value={provider || 'local_ollama'}
-                        onChange={(e) => setProvider?.(e.target.value as 'coze' | 'local_ollama')}
+                        onChange={(e) => setProvider?.(e.target.value as 'coze' | 'local_ollama' | 'deepseek')}
                         style={{ borderRadius: 8, padding: '6px 10px' }}
                     >
                         <option value="coze">Coze</option>
                         <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                     </select>
                     <button
                         className={textStyles.cozeBtn}
@@ -108,21 +109,21 @@ export default function TextInputSection({
                 <div className={textStyles.textActionRow}>
                     <button
                         className={`${styles.btn} ${styles.btnPrimary} ${textStyles.textProceedBtn}`}
-                        onClick={() => handleProcessText('/slides/highlighter')}
+                        onClick={() => handleProcessText('/slides/ai-theme-config')}
                         disabled={!textContent.trim() || textProcessing}
                     >
                         {textProcessing ? (
                             <><i className="fas fa-spinner fa-spin"></i> Processing...</>
                         ) : (
-                            <><i className="fas fa-highlighter"></i> Next Step</>
+                            <><i className="fas fa-magic"></i> AI Theme & Generate</>
                         )}
                     </button>
                     <button
                         className={`btn btn-secondary ${textStyles.textProceedBtn}`}
-                        onClick={() => handleProcessText('/slides/quick-process')}
+                        onClick={() => handleProcessText('/slides/ai-theme-config')}
                         disabled={!textContent.trim() || textProcessing}
                     >
-                        <i className="fas fa-bolt"></i> Quick Process
+                        <i className="fas fa-bolt"></i> Quick Generate
                     </button>
                 </div>
             </div>

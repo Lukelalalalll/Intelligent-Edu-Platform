@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import AIInteract from '../index';
+import AIInteract from '../components/AIInteractDashboard';
 import { usePretextMeasure } from '@/shared/hooks/usePretextMeasure';
 import { useAISessions, useAIMemory } from '../hooks/useAISessions/useAISessions';
 import { getRoleInfo, type AIRoleInfo } from '../api/aiApi';
@@ -31,9 +31,16 @@ export default function AIInteractPage() {
         debounceMs: 60,
     });
 
+    // Scroll on new messages only — NOT on every streaming token update
+    const prevMsgCountRef = useRef(-1);
     useEffect(() => {
-        scrollToBottom(true);
-    }, [ai.sessions, scrollToBottom, ai.isTyping]);
+        const currentSession = ai.sessions?.find(s => s.id === ai.currentSessionId);
+        const count = currentSession?.messages.length ?? 0;
+        if (count !== prevMsgCountRef.current) {
+            prevMsgCountRef.current = count;
+            scrollToBottom(true);
+        }
+    }, [ai.sessions, ai.currentSessionId, scrollToBottom]);
 
     // Input handling
     const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -42,13 +49,21 @@ export default function AIInteractPage() {
         e.target.style.height = e.target.scrollHeight + 'px';
     }, []);
 
+    // Stable refs to avoid breaking memo on every keystroke
+    const inputTextRef = useRef(inputText);
+    inputTextRef.current = inputText;
+    const attachedFilesRef = useRef(attachedFiles);
+    attachedFilesRef.current = attachedFiles;
+
     const handleSend = useCallback(() => {
-        if (!inputText.trim() && attachedFiles.length === 0) return;
-        ai.sendMessage(inputText, attachedFiles);
+        const text = inputTextRef.current;
+        const files = attachedFilesRef.current;
+        if (!text.trim() && files.length === 0) return;
+        ai.sendMessage(text, files);
         setInputText('');
         setAttachedFiles([]);
         if (inputRef.current) inputRef.current.style.height = 'auto';
-    }, [inputText, attachedFiles, ai.sendMessage]);
+    }, [ai.sendMessage]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -57,7 +72,7 @@ export default function AIInteractPage() {
     // Clipboard
     const showToast = useCallback(() => { setToastVisible(true); setTimeout(() => setToastVisible(false), 2500); }, []);
 
-    const copyToClipboard = useCallback(async (text, buttonEl = null) => {
+    const copyToClipboard = useCallback(async (text: string, buttonEl: HTMLElement | null = null) => {
         try {
             await navigator.clipboard.writeText(text);
             showToast();
@@ -147,6 +162,8 @@ export default function AIInteractPage() {
             setWebSearch={ai.setWebSearch}
             searchEngine={ai.searchEngine}
             setSearchEngine={ai.setSearchEngine}
+            enableThinking={ai.enableThinking}
+            setEnableThinking={ai.setEnableThinking}
         />
     );
 }

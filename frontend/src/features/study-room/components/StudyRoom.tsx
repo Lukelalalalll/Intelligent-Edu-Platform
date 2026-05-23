@@ -6,10 +6,10 @@ import client from '@/shared/api/client';
 import styles from '../styles/StudyRoom.module.css';
 
 export default function StudyRoom() {
-    const [file, setFile] = useState(null);
-    const [fileType, setFileType] = useState(null); // 'pdf' | 'md'
-    const [pendingHighlight, setPendingHighlight] = useState(null);
-    const [notes, setNotes] = useState([]);
+    const [file, setFile] = useState<File | null>(null);
+    const [fileType, setFileType] = useState<'pdf' | 'md' | null>(null); // 'pdf' | 'md'
+    const [pendingHighlight, setPendingHighlight] = useState<string | { text?: string; mode?: string } | null>(null);
+    const [notes, setNotes] = useState<any[]>([]);
     const [pdfText, setPdfText] = useState('');
 
     // Load notes from localStorage — use ref to prevent save-before-load race
@@ -58,7 +58,7 @@ export default function StudyRoom() {
         localStorage.setItem(storageKey, JSON.stringify(notes));
     }, [notes, storageKey]);
 
-    const handleFileSelect = (e, type) => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'md') => {
         const f = e.target.files?.[0];
         if (!f) return;
         setFile(f);
@@ -73,7 +73,7 @@ export default function StudyRoom() {
         setPdfText('');
     };
 
-    const handleHighlight = useCallback((text, mode) => {
+    const handleHighlight = useCallback((text: string, mode: string) => {
         setPendingHighlight({ text, mode: mode || 'explain' });
     }, []);
 
@@ -81,7 +81,7 @@ export default function StudyRoom() {
         setPendingHighlight(null);
     }, []);
 
-    const handleAddNote = useCallback(({ content, color, highlightedText }) => {
+    const handleAddNote = useCallback(({ content, color, highlightedText }: { content: string; color: string; highlightedText?: string }) => {
         const note = {
             id: 'note-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
             content,
@@ -104,14 +104,18 @@ export default function StudyRoom() {
         }
     }, [storageKey]);
 
-    const handleDeleteNote = useCallback((id) => {
+    const handleDeleteNote = useCallback((id: string | number) => {
         setNotes(prev => prev.filter(n => n.id !== id));
         // Fire-and-forget cloud delete
         client.delete(`/study-notes/room-notes/${id}`).catch(() => {});
     }, []);
 
-    const handleSaveCoachNote = useCallback((content) => {
-        const hlText = pendingHighlight?.text || (typeof pendingHighlight === 'string' ? pendingHighlight : null);
+    const handleSaveCoachNote = useCallback((content: string) => {
+        const hlText = pendingHighlight && typeof pendingHighlight === 'object'
+            ? pendingHighlight.text
+            : typeof pendingHighlight === 'string'
+                ? pendingHighlight
+                : undefined;
         handleAddNote({ content, color: 'blue', highlightedText: hlText });
     }, [handleAddNote, pendingHighlight]);
 
@@ -128,10 +132,10 @@ export default function StudyRoom() {
                         Upload a PDF or Markdown file to start reading, highlighting, and getting AI-powered study help.
                     </div>
                     <div className={styles.uploadBtns}>
-                        <button className={styles.uploadBtn} onClick={() => document.getElementById('sr-pdf-input').click()}>
+                        <button className={styles.uploadBtn} onClick={() => document.getElementById('sr-pdf-input')?.click()}>
                             <i className="fas fa-file-pdf"></i> Upload PDF
                         </button>
-                        <button className={styles.uploadBtn} onClick={() => document.getElementById('sr-md-input').click()}>
+                        <button className={styles.uploadBtn} onClick={() => document.getElementById('sr-md-input')?.click()}>
                             <i className="fas fa-file-alt"></i> Upload MD
                         </button>
                     </div>
@@ -152,7 +156,7 @@ export default function StudyRoom() {
                 <div className={styles.leftPanel}>
                     <PdfViewer
                         file={file}
-                        fileType={fileType}
+                        fileType={fileType ?? undefined}
                         onHighlight={handleHighlight}
                         onClose={handleClose}
                         onAddNote={handleAddNote}
@@ -162,18 +166,18 @@ export default function StudyRoom() {
                         notes={notes}
                         onAdd={handleAddNote}
                         onDelete={handleDeleteNote}
-                        onClickNote={null}
+                        onClickNote={undefined}
                     />
                 </div>
 
                 {/* Right: AI Study Coach */}
                 <div className={styles.rightPanel}>
                     <StudyCoach
-                        pendingHighlight={pendingHighlight}
+                        pendingHighlight={pendingHighlight ?? undefined}
                         onDismissHighlight={handleDismissHighlight}
                         onSaveNote={handleSaveCoachNote}
                         pdfText={pdfText}
-                        storageKey={storageKey}
+                        storageKey={storageKey ?? undefined}
                     />
                 </div>
             </div>

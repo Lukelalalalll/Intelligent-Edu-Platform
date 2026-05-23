@@ -2,12 +2,30 @@ import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AdminDashboard.module.css';
+import type { User, FormData, ModalState } from '../types';
+
+interface UserManagementPanelProps {
+    users: User[];
+    currentUserId: string;
+    searchQuery: string;
+    setSearchQuery: (val: string) => void;
+    modalState: ModalState;
+    formData: FormData;
+    setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    isSaving: boolean;
+    deletingId: string | null;
+    openAddModal: () => void;
+    openEditModal: (user: User) => void;
+    closeModal: () => void;
+    handleFormSubmit: (e: React.FormEvent) => void;
+    deleteUser: (id: string, username: string) => void;
+}
 
 export default function UserManagementPanel({
     users, currentUserId, searchQuery, setSearchQuery,
     modalState, formData, setFormData, isSaving, deletingId,
     openAddModal, openEditModal, closeModal, handleFormSubmit, deleteUser
-}) {
+}: UserManagementPanelProps) {
     const [showPassword, setShowPassword] = useState(false);
 
     const filteredUsers = useMemo(() => {

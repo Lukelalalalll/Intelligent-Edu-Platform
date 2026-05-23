@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import type React from 'react';
 import { aiSessionApi, getProviderHealth, type AIProvider } from '../../../api/aiApi';
 import type { AISession } from '@/types/api';
-import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY, WEB_SEARCH_STORAGE_KEY, SEARCH_ENGINE_STORAGE_KEY } from './sessionHelpers';
+import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY, WEB_SEARCH_STORAGE_KEY, SEARCH_ENGINE_STORAGE_KEY, ENABLE_THINKING_STORAGE_KEY } from './sessionHelpers';
 
-export function usePersistAiPreferences(selectedProvider: string, tutorMode: string, webSearch: boolean, searchEngine: string): void {
+export function usePersistAiPreferences(selectedProvider: string, tutorMode: string, webSearch: boolean, searchEngine: string, enableThinking?: boolean): void {
     useEffect(() => {
         localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
     }, [selectedProvider]);
@@ -20,6 +20,12 @@ export function usePersistAiPreferences(selectedProvider: string, tutorMode: str
     useEffect(() => {
         localStorage.setItem(SEARCH_ENGINE_STORAGE_KEY, searchEngine);
     }, [searchEngine]);
+
+    useEffect(() => {
+        if (enableThinking !== undefined) {
+            localStorage.setItem(ENABLE_THINKING_STORAGE_KEY, String(enableThinking));
+        }
+    }, [enableThinking]);
 }
 
 export function useProviderHealthCheck(
@@ -71,7 +77,7 @@ export function useInitialSessionsLoad(
                 }
             } catch {
                 if (cancelled) return;
-                const fallback = { id: `local_${Date.now()}`, ...buildSession({}) };
+                const fallback = { ...buildSession({}), id: `local_${Date.now()}` };
                 setSessions([fallback]);
                 setCurrentSessionId(fallback.id);
             }

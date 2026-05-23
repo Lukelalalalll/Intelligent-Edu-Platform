@@ -1,0 +1,1 @@
+export { default as VideoGenPage } from './pages/VideoGenPage';

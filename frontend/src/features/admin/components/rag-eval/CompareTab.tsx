@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import styles from '../../styles/RagEvalPanel.module.css';
-import * as api from '../../api/ragEvalApi';
-import type { CompareResult, EvalRun } from '../../api/ragEvalApi';
+import * as api from '@/api/ragEvalApi';
+import type { CompareResult, EvalRun } from '@/api/ragEvalApi';
 
 export default function CompareTab() {
     const [runs, setRuns] = useState<EvalRun[]>([]);
@@ -21,7 +22,7 @@ export default function CompareTab() {
             setResult(await api.compareRuns(baseId, targetId));
         } catch (e: unknown) {
             const message = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-            alert(message || 'Compare failed');
+            toast.error(message || 'Compare failed');
         } finally {
             setLoading(false);
         }

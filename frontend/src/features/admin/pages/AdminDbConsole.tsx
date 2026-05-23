@@ -89,6 +89,36 @@ function RelationGraph({ doc }) {
     );
 }
 
+interface AdminDbConsoleProps {
+    collections: Array<{ name: string; [key: string]: unknown }>;
+    collectionLoading: boolean;
+    activeCollection: string;
+    setActiveCollection: (val: string) => void;
+    documents: Array<{ _id?: string; [key: string]: unknown }>;
+    docLoading: boolean;
+    selectedDocId: string;
+    selectDocument: (doc: Record<string, unknown>) => void;
+    editorText: string;
+    setEditorText: (text: string) => void;
+    total: number;
+    skip: number;
+    limit: number;
+    setLimit: (limit: number) => void;
+    searchText: string;
+    setSearchText: (text: string) => void;
+    goPrev: () => void;
+    goNext: () => void;
+    canPrev: boolean;
+    canNext: boolean;
+    createDocument: () => Promise<void>;
+    updateDocument: () => Promise<void>;
+    deleteDocument: () => Promise<void>;
+    isSaving: boolean;
+    errorMsg: string;
+    selectedDoc: Record<string, unknown> | null;
+    relationReadOnly: boolean;
+}
+
 export default function AdminDbConsole({
     collections,
     collectionLoading,
@@ -117,7 +147,7 @@ export default function AdminDbConsole({
     errorMsg,
     selectedDoc,
     relationReadOnly,
-}) {
+}: AdminDbConsoleProps) {
     const readOnlyMode = relationReadOnly;
     const isUserCollection = /user/i.test(activeCollection || '');
     const isCourseCollection = /course/i.test(activeCollection || '');
@@ -152,7 +182,7 @@ export default function AdminDbConsole({
                                     onClick={() => setActiveCollection(c.name)}
                                 >
                                     <span>{c.name}</span>
-                                    <span className={styles.countPill}>{c.count}</span>
+                                    <span className={styles.countPill}>{String(c.count ?? '')}</span>
                                 </button>
                             ))}
                         </div>

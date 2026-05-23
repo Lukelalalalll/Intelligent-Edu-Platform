@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '../../styles/RagEvalPanel.module.css';
-import type { EvalMetrics } from '../../api/ragEvalApi';
+import type { EvalMetrics } from '@/api/ragEvalApi';
 
 interface MetricsCardsProps {
     metrics: EvalMetrics;

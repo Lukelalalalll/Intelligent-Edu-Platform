@@ -9,7 +9,7 @@ import {
 
 interface UseSpacedReviewParams {
     notes: string;
-    flashcards: unknown[];
+    flashcards: Array<{ question?: string; answer?: string }>;
     file: File | null;
     setError: (msg: string) => void;
     setIsLoading: (loading: boolean) => void;

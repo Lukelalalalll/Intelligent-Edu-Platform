@@ -23,7 +23,7 @@ export default function ImageHistoryPanel({ onReplay }: { onReplay?: (item: any)
                 <>
                     <div className={s.historyItemTopRow}>
                         <div className={s.historyItemSubject}>{fmt(item.tool, 'Image Extractor')}</div>
-                        <div className={s.historyItemDate} title={new Date(item.created_at).toLocaleString()}>{new Date(item.created_at).toLocaleDateString()}</div>
+                        <div className={s.historyItemDate} title={new Date(item.created_at ?? Date.now()).toLocaleString()}>{new Date(item.created_at ?? Date.now()).toLocaleDateString()}</div>
                     </div>
                     <div className={s.historyItemChips}>
                         <span className={s.historyChipPrimary}>{fmt(item.tool)}</span>
@@ -38,7 +38,7 @@ export default function ImageHistoryPanel({ onReplay }: { onReplay?: (item: any)
                         <strong>{fmt(cur.tool)}</strong>
                         {cur.params?.prompt && <>{' · '}{cur.params.prompt.slice(0, 60)}</>}
                     </div>
-                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at).toLocaleString()}</div>
+                    <div className={s.historyDetailMetaTime}>{new Date(cur.created_at ?? Date.now()).toLocaleString()}</div>
                 </div>
             )}
             renderDetailParams={(cur) => (

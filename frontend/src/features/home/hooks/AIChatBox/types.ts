@@ -3,7 +3,8 @@ export interface ChatMsg {
     sender: 'user' | 'ai';
     role: 'user' | 'assistant';
     text: string;
-    modelProvider?: 'coze' | 'local_ollama';
+    modelProvider?: 'coze' | 'local_ollama' | 'deepseek';
+    uiElements?: any[];
 }
 
 export interface StreamMessage {

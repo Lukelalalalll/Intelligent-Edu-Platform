@@ -4,6 +4,12 @@ import client from '@/shared/api/client';
 import styles from '../styles/StudyRoom.module.css';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
+interface ChatMessage {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+}
+
 interface StudyCoachProps {
     pendingHighlight?: string | { text?: string; mode?: string };
     onDismissHighlight?: () => void;
@@ -15,14 +21,14 @@ interface StudyCoachProps {
 const MAX_HISTORY_STORED = 50;
 
 export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSaveNote, pdfText, storageKey }: StudyCoachProps) {
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [streaming, setStreaming] = useState(false);
     const [savedMsgIds, setSavedMsgIds] = useState(new Set());
     const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
     const [citationsMap, setCitationsMap] = useState<Record<string, any[]>>({});
     const [expandedCitations, setExpandedCitations] = useState<Record<string, boolean>>({});
-    const messagesRef = useRef(null);
+    const messagesRef = useRef<HTMLDivElement>(null);
     const abortRef = useRef<AbortController | null>(null);
 
     // Derive localStorage key from storageKey (doc identity)
@@ -84,7 +90,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     const askStudyStream = useCallback(async (content: string, mode: string, history: any[]) => {
         setStreaming(true);
         const msgId = 'msg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-        setMessages(prev => [...prev, { role: 'assistant', content: '', id: msgId }]);
+        setMessages(prev => [...prev, { role: 'assistant' as const, content: '', id: msgId }]);
 
         abortRef.current?.abort();
         const controller = new AbortController();
@@ -163,7 +169,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         const hlText = typeof pendingHighlight === 'object' ? pendingHighlight?.text : pendingHighlight;
         if (!hlText || streaming) return;
         const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
-        const userMsg = {
+        const userMsg: ChatMessage = {
             role: 'user',
             content: `[${modeLabel}] ${hlText}`,
             id: 'msg-' + Date.now(),
@@ -189,7 +195,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
     const handleSend = useCallback(() => {
         const trimmed = input.trim();
         if (!trimmed || streaming) return;
-        const userMsg = { role: 'user', content: trimmed, id: 'msg-' + Date.now() };
+        const userMsg: ChatMessage = { role: 'user', content: trimmed, id: 'msg-' + Date.now() };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
 
@@ -204,7 +210,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
         }
     };
 
-    const handleSaveAsNote = (msg: any) => {
+    const handleSaveAsNote = (msg: ChatMessage) => {
         if (!onSaveNote || savedMsgIds.has(msg.id)) return;
         onSaveNote(msg.content);
         setSavedMsgIds(prev => new Set(prev).add(msg.id));
@@ -228,6 +234,7 @@ export default function StudyCoach({ pendingHighlight, onDismissHighlight, onSav
                         >
                             <option value="coze">Coze</option>
                             <option value="local_ollama">llama3.2</option>
+                        <option value="deepseek">DeepSeek</option>
                         </select>
                     </div>
                 </div>

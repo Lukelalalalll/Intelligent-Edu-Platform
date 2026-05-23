@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 
-import { fileCenterApi, type FileAsset } from '../../admin-file-center/api/fileCenterApi';
+import { fileCenterApi, type FileAsset } from '@/api/fileCenterApi';
 import styles from '../styles/AdminDashboard.module.css';
 
 type Filters = {
@@ -118,7 +119,7 @@ export default function FileCenterPanel() {
             }
             await Promise.all([fetchAssets(), fetchStats(), fetchAudit()]);
         } catch (e: any) {
-            alert(e?.response?.data?.detail || 'Operation failed');
+            toast.error(e?.response?.data?.detail || 'Operation failed');
         }
     };
 

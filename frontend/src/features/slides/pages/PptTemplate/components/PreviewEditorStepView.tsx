@@ -1,5 +1,4 @@
 import type React from 'react';
-import type { RefObject } from 'react';
 import styles from '../styles/pptTemplate.module.css';
 import type { EditorSession } from '../../../api/slidesApi';
 import type { FloatingImage } from '../types';
@@ -27,7 +26,7 @@ type Props = {
     isSaving: boolean;
     isExporting: boolean;
     slideCallbacks: SlideCallbacks[];
-    freeImageInputRef: RefObject<HTMLInputElement | null>;
+    freeImageInputRef: React.RefObject<HTMLInputElement>;
     onBack: () => void;
     onSave: () => void;
     onExport: () => void;

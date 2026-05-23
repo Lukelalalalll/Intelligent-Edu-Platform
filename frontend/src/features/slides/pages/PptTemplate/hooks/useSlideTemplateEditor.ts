@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import client from '@/shared/api/client';
 import { type DeliveryArtifactType } from '../../../api/slidesApi';
 import { createSlideTemplateHandlers } from './slideTemplateEditor/handlerFactory';

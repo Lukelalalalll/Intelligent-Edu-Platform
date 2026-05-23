@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ChatRoomAssetSummary } from '../api/fileCenterApi';
+import type { ChatRoomAssetSummary } from '@/api/fileCenterApi';
 import styles from '../styles/AdminFileCenter.module.css';
 
 type Props = {

@@ -5,7 +5,7 @@ import {
     type AIUserSummary,
     type ChatRoomAssetSummary,
     type FileAsset,
-} from './api/fileCenterApi';
+} from '@/api/fileCenterApi';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import BaseModal from '../../shared/BaseModal';
 import '../../styles/base.css';

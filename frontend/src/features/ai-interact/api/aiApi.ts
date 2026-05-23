@@ -3,7 +3,7 @@ import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '..
 
 const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
 
-export type AIProvider = 'coze' | 'local_ollama';
+export type AIProvider = 'coze' | 'local_ollama' | 'deepseek';
 export type AITutorMode = 'tutor' | 'hint_only';
 export type AISearchEngine = 'auto' | 'google' | 'bing' | 'duckduckgo' | 'wikipedia' | 'arxiv' | 'google_scholar';
 
@@ -71,6 +71,7 @@ export function createChatStream(
     signal?: AbortSignal,
     webSearch?: boolean,
     searchEngine?: AISearchEngine,
+    enableThinking?: boolean,
 ): Promise<Response> {
     return fetch(`${API_ROOT}/api/ai/chat`, {
         method: 'POST',
@@ -83,6 +84,7 @@ export function createChatStream(
             session_id: sessionId || undefined,
             web_search: webSearch ?? false,
             search_engine: searchEngine ?? 'auto',
+            enable_thinking: enableThinking ?? false,
         }),
         signal,
     });

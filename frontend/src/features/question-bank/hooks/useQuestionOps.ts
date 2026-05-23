@@ -6,7 +6,7 @@ interface UseQuestionOpsOptions {
     taskId: string | null;
     generatedQuestions: string | null;
     rawExtractText: string;
-    showToast: (msg: string, type: string) => void;
+    showToast: (msg: string, type?: string) => void;
 }
 
 export function useQuestionOps({ taskId, generatedQuestions, rawExtractText, showToast }: UseQuestionOpsOptions) {
@@ -40,10 +40,10 @@ export function useQuestionOps({ taskId, generatedQuestions, rawExtractText, sho
             });
             const runId = run.run_id;
             setQuestionOpsRunId(runId);
-            setQuestionOpsSummary(run.summary || null);
+            setQuestionOpsSummary((run.summary || null) as any);
 
             const itemRes = await questionOpsApi.getItems(runId);
-            setQuestionOpsItems(itemRes.items || []);
+            setQuestionOpsItems((itemRes.items || []) as any);
             showToast('QuestionOps analysis completed.', 'success');
         } catch (err: any) {
             const detail = err?.response?.data?.detail;
@@ -78,8 +78,8 @@ export function useQuestionOps({ taskId, generatedQuestions, rawExtractText, sho
                 questionOpsApi.getRun(questionOpsRunId),
                 questionOpsApi.getItems(questionOpsRunId),
             ]);
-            setQuestionOpsSummary(runRes.run?.summary || null);
-            setQuestionOpsItems(itemRes.items || []);
+            setQuestionOpsSummary((runRes.run?.summary || null) as any);
+            setQuestionOpsItems((itemRes.items || []) as any);
             showToast(`Dedupe complete. Kept ${dedupeRes.kept}, removed ${dedupeRes.removed}.`, 'success');
         } catch (err: any) {
             const detail = err?.response?.data?.detail;

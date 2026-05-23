@@ -50,7 +50,7 @@ export default function ImageExtractor({
     viewSwitchSlot,
     hideBanner,
 }) {
-    const fileInputRef = useRef(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     return (
         <div className={styles.container}>

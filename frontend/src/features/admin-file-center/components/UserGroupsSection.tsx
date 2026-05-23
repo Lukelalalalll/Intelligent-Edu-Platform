@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AIFileGroup, FileAsset } from '../api/fileCenterApi';
+import type { AIFileGroup, FileAsset } from '@/api/fileCenterApi';
 import styles from '../styles/AdminFileCenter.module.css';
 import { formatBytes, statusClass } from './fileCenterHelpers';
 

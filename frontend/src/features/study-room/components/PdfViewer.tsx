@@ -17,8 +17,8 @@ const WORKER_URL = '/pdf.worker.2.16.105.min.js';
 // Stable references so PdfHighlighter (PureComponent) never re-renders unnecessarily
 const AREA_SEL_OFF = () => false;
 const NOOP = () => {};
-const NULL_TRANSFORM = () => null;
-const EMPTY_HIGHLIGHTS = [];
+const NULL_TRANSFORM = () => null as any;
+const EMPTY_HIGHLIGHTS: any[] = [];
 
 /**
  * Tiny bridge component: receives pdfDocument from PdfLoader's render-prop
@@ -50,8 +50,8 @@ const PdfDocBridge = React.memo(function PdfDocBridge({ pdfDocument, onLoad, ren
  */
 const MAX_EXTRACT_PAGES = 30;
 
-async function extractAllText(pdfDocument) {
-    const pages = [];
+async function extractAllText(pdfDocument: any) {
+    const pages: string[] = [];
     const limit = Math.min(pdfDocument.numPages, MAX_EXTRACT_PAGES);
     for (let i = 1; i <= limit; i++) {
         const page = await pdfDocument.getPage(i);
@@ -59,7 +59,7 @@ async function extractAllText(pdfDocument) {
         // Detect line breaks by comparing y-coordinates of consecutive items.
         // tc.items[].transform = [scaleX, skewX, skewY, scaleY, x, y]
         let lastY = null;
-        const parts = [];
+        const parts: string[] = [];
         for (const item of tc.items) {
             if (!item.str) continue;
             const y = item.transform?.[5];
@@ -86,16 +86,16 @@ interface PdfViewerProps {
 }
 
 export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddNote, onTextExtracted }: PdfViewerProps) {
-    const [popover, setPopover] = useState(null); // for MD mode
-    const mdRef = useRef(null);
-    const viewerBodyRef = useRef(null);
+    const [popover, setPopover] = useState<{ text: string; x: number; y: number } | null>(null); // for MD mode
+    const mdRef = useRef<HTMLDivElement>(null);
+    const viewerBodyRef = useRef<HTMLDivElement>(null);
     const textExtractedRef = useRef(false);
-    const pdfDocRef = useRef(null); // stable ref to avoid render-fn side effects
+    const pdfDocRef = useRef<any>(null); // stable ref to avoid render-fn side effects
     const [currentPage, setCurrentPage] = useState(1);
     const currentPageRef = useRef(1);
     const [totalPages, setTotalPages] = useState(0);
-    const pdfWrapRef = useRef(null);
-    const observerRef = useRef(null);
+    const pdfWrapRef = useRef<HTMLDivElement>(null);
+    const observerRef = useRef<IntersectionObserver | null>(null);
 
     // Reset extraction flag when file changes so new documents get extracted
     useEffect(() => {
@@ -124,7 +124,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                     for (const entry of entries) {
                         if (entry.intersectionRatio > bestRatio) {
                             bestRatio = entry.intersectionRatio;
-                            const num = Number.parseInt((entry.target as HTMLElement).dataset.pageNumber, 10);
+                            const num = Number.parseInt((entry.target as HTMLElement).dataset.pageNumber ?? '', 10);
                             if (num) bestPage = num;
                         }
                     }
@@ -135,7 +135,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                 },
                 { root: wrap.querySelector('.PdfHighlighter') || wrap, threshold: [0, 0.25, 0.5, 0.75] }
             );
-            pages.forEach(p => observerRef.current.observe(p));
+            pages.forEach(p => observerRef.current?.observe(p));
         }, 500);
 
         return () => {
@@ -145,7 +145,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
     }, [fileType, totalPages]);
 
     // Create object URL for PDF (useState+useEffect instead of useMemo to survive StrictMode double-mount)
-    const [pdfUrl, setPdfUrl] = useState(null);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     useEffect(() => {
         if (fileType === 'pdf' && file) {
             const url = URL.createObjectURL(file);
@@ -212,7 +212,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
         if (mode === 'note') {
             onAddNote?.({ content: text, color: 'yellow', highlightedText: text });
         } else {
-            onHighlight(text, mode);
+            onHighlight?.(text, mode);
         }
     }, [popover, onHighlight, onAddNote]);
 
@@ -243,7 +243,7 @@ export default function PdfViewer({ file, fileType, onHighlight, onClose, onAddN
                 if (mode === 'note') {
                     onAddNote?.({ content: text, color: 'yellow', highlightedText: text });
                 } else {
-                    onHighlight(text, mode);
+                    onHighlight?.(text, mode);
                 }
             };
             return (

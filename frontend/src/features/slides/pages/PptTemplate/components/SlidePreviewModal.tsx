@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { slidesEditorApi } from '../../../api/slidesApi';
 import type { EditorSession } from '../../../api/slidesApi';
 import type { SlideEdits } from '../../Editor/hooks/useEditorSession';

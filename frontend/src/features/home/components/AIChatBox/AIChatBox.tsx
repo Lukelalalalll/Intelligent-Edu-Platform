@@ -40,7 +40,13 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
         handleRegenerate,
         handleEditUserMsg,
         handleKeyDown,
+        setInput,
     } = useAIChatBox(messagesContainerRef);
+
+    const handleSendChoice = (choice: string) => {
+        setInput(choice);
+        setTimeout(() => handleSend(), 0);
+    };
 
     return (
         <motion.section variants={itemVariants} className={styles['ai-interaction-section']}>
@@ -48,7 +54,7 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
                 <div className={styles['chat-header']}>
                     <div className={styles['ai-badge']}>
                         <i className="fas fa-sparkles"></i>
-                        <Link to={aiInteractUrl} className={styles['powered-by-link']}>
+                        <Link to={aiInteractUrl ?? ''} className={styles['powered-by-link']}>
                             <span>AI Workspace</span>
                         </Link>
                     </div>
@@ -67,6 +73,7 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
                         setEditingVal={setEditingVal}
                         handleEditUserMsg={handleEditUserMsg}
                         handleRegenerate={handleRegenerate}
+                        handleSendChoice={handleSendChoice}
                     />
                 </div>
 

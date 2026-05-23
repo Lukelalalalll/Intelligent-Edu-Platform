@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import { useAuthStore } from '@/shared/store/useAuthStore';
 import { useMailboxData } from '../hooks/useMailboxData';
 import { useMailboxFilters } from '../hooks/useMailboxFilters';
 import MailboxStepper from '../components/MailboxStepper';
@@ -11,7 +12,7 @@ import type { MailboxSelections } from '../types';
 import styles from '../styles/mailbox.module.css';
 
 export default function MailboxPage() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const storeUser = useAuthStore((s) => s.user);
 
     const [currentStep, setCurrentStep] = useState(1);
     const [selections, setSelections] = useState<MailboxSelections>({ degree: '', course: '', assignment: '' });
@@ -40,7 +41,7 @@ export default function MailboxPage() {
             <WelcomeBanner
                 className={styles.mailboxBanner}
                 title={<><i className="fas fa-inbox"></i> Grading Mailbox</>}
-                subtitle={<>Welcome to the intelligent grading workspace, <strong>{user.username || 'Professor'}</strong>.</>}
+                subtitle={<>Welcome to the intelligent grading workspace, <strong>{storeUser?.username || 'Professor'}</strong>.</>}
             />
 
             <div className={styles.mailboxContainer}>

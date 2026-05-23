@@ -66,8 +66,18 @@ export default function MdProcessor() {
         clearFile: upload.clearFile,
         handleUpload: upload.handleUpload,
         handleCheckboxChange: upload.handleCheckboxChange,
-        combineSections: (redirectUrl: string) => upload.combineSections(redirectUrl, navigate),
-        proceedWithFullDoc: (redirectUrl: string) => upload.proceedWithFullDoc(redirectUrl, navigate),
+        combineSections: async (redirectUrl: string) => {
+            if (textInput.textContent) {
+                localStorage.setItem('slidesContentMD', textInput.textContent);
+            }
+            upload.combineSections(redirectUrl, navigate);
+        },
+        proceedWithFullDoc: async (redirectUrl: string) => {
+            if (textInput.textContent) {
+                localStorage.setItem('slidesContentMD', textInput.textContent);
+            }
+            upload.proceedWithFullDoc(redirectUrl, navigate);
+        },
         inputMode: textInput.inputMode,
         setInputMode: textInput.setInputMode,
         textContent: textInput.textContent,
@@ -82,8 +92,10 @@ export default function MdProcessor() {
         provider: textInput.provider,
         setProvider: textInput.setProvider,
         handleCozeGenerate: textInput.handleCozeGenerate,
-        handleProcessText: (redirectUrl: string) =>
-            textInput.handleProcessText(redirectUrl, navigate, upload.setErrorMsg),
+        handleProcessText: async (redirectUrl: string) => {
+            localStorage.setItem('slidesContentMD', textInput.textContent);
+            textInput.handleProcessText(redirectUrl, navigate, upload.setErrorMsg);
+        },
     };
 
     const viewSwitchJSX = (

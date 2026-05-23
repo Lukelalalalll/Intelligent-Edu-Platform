@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { slidesEditorApi } from '../../api/slidesApi';
 import { useEditorSession } from './hooks/useEditorSession';
 import SlideEditorView from './SlideEditorView';

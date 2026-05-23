@@ -3,15 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/ApiKeyPanel.module.css';
 import client from '@/shared/api/client';
 
+interface ApiKeyEntry {
+  alias: string;
+  value: string;
+  provider?: string;
+}
+
+interface PasswordModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onVerified: (password: string) => void;
+  hint: string;
+}
+
 /* ── Password verification modal (reused for unlock & edit) ── */
-function PasswordModal({ isOpen, onClose, onVerified, hint }) {
+function PasswordModal({ isOpen, onClose, onVerified, hint }: PasswordModalProps) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => { if (isOpen) { setPassword(''); setError(''); } }, [isOpen]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!password) return;
         setLoading(true);
@@ -20,8 +33,9 @@ function PasswordModal({ isOpen, onClose, onVerified, hint }) {
             await client.post('/admin/verify-password', { password });
             onVerified(password);
             setPassword('');
-        } catch (err) {
-            setError(err.response?.data?.detail || 'Verification failed');
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { detail?: string } } };
+            setError(axiosErr.response?.data?.detail || 'Verification failed');
         } finally {
             setLoading(false);
         }
@@ -75,11 +89,11 @@ function PasswordModal({ isOpen, onClose, onVerified, hint }) {
 export default function ApiKeyPanel() {
     const [verified, setVerified] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [keys, setKeys] = useState([]);
-    const [revealed, setRevealed] = useState({});
+    const [keys, setKeys] = useState<ApiKeyEntry[]>([]);
+    const [revealed, setRevealed] = useState<Record<string, boolean>>({});
 
     // Edit state
-    const [editingAlias, setEditingAlias] = useState(null);
+    const [editingAlias, setEditingAlias] = useState<string | null>(null);
     const [editValue, setEditValue] = useState('');
     const [editPasswordModal, setEditPasswordModal] = useState(false);
     const [editSaving, setEditSaving] = useState(false);
@@ -88,7 +102,7 @@ export default function ApiKeyPanel() {
     const fetchKeys = useCallback(async () => {
         try {
             const res = await client.get('/admin/api-keys');
-            setKeys(res.data?.keys || []);
+            setKeys((res.data as { keys?: ApiKeyEntry[] })?.keys || []);
         } catch (err) {
             console.error('Failed to fetch API keys', err);
         }
@@ -103,12 +117,12 @@ export default function ApiKeyPanel() {
         setShowPasswordModal(false);
     };
 
-    const toggleReveal = (alias) => {
+    const toggleReveal = (alias: string) => {
         setRevealed(prev => ({ ...prev, [alias]: !prev[alias] }));
     };
 
     // ── Edit flow ──
-    const startEdit = (alias) => {
+    const startEdit = (alias: string) => {
         setEditingAlias(alias);
         setEditValue('');
         setEditError('');
@@ -122,14 +136,15 @@ export default function ApiKeyPanel() {
         setEditPasswordModal(false);
     };
 
-    const handleEditPasswordVerified = (password) => {
+    const handleEditPasswordVerified = (password: string) => {
         // Password verified — store it temporarily and show the edit input
         setEditPasswordModal(false);
         // stash password for the save call
         setEditValue('');
         setEditError('');
         // We store the verified password in a ref-like closure via the save handler
-        window.__apiKeyEditPwd = password;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__apiKeyEditPwd = password;
     };
 
     const saveEdit = async () => {
@@ -143,17 +158,20 @@ export default function ApiKeyPanel() {
             const res = await client.put('/admin/api-keys', {
                 alias: editingAlias,
                 value: editValue.trim(),
-                password: window.__apiKeyEditPwd || '',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                password: (window as any).__apiKeyEditPwd || '',
             });
             // Update the local key list with the new masked value
             setKeys(prev => prev.map(k =>
-                k.alias === editingAlias ? { ...k, value: res.data?.value || k.value } : k
+                k.alias === editingAlias ? { ...k, value: (res.data as { value?: string })?.value || k.value } : k
             ));
             setEditingAlias(null);
             setEditValue('');
-            delete window.__apiKeyEditPwd;
-        } catch (err) {
-            setEditError(err.response?.data?.detail || 'Update failed');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (window as any).__apiKeyEditPwd;
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { data?: { detail?: string } } };
+            setEditError(axiosErr.response?.data?.detail || 'Update failed');
         } finally {
             setEditSaving(false);
         }

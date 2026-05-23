@@ -98,6 +98,7 @@ export default function LayoutAssignmentStepView({
                                 onChange={(e) => onAiProviderChange(e.target.value as AIProvider)}
                             >
                                 <option value="local_ollama">Local Ollama</option>
+                        <option value="deepseek">DeepSeek</option>
                                 <option value="coze">Coze</option>
                             </select>
                         </label>

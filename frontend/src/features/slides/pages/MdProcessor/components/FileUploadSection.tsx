@@ -12,13 +12,13 @@ const formatFileSize = (bytes: number): string => {
 interface FileUploadSectionProps {
     file: File | null;
     useLLM: boolean;
-    headerLlmProvider: 'local_ollama' | 'coze';
+    headerLlmProvider: 'local_ollama' | 'coze' | 'deepseek';
     isDragging: boolean;
     uploadStatus: string;
     uploadProgress: number;
     fileInputRef: React.RefObject<HTMLInputElement>;
     setUseLLM: (v: boolean) => void;
-    setHeaderLlmProvider: (v: 'local_ollama' | 'coze') => void;
+    setHeaderLlmProvider: (v: 'local_ollama' | 'coze' | 'deepseek') => void;
     handleDragOver: (e: React.DragEvent) => void;
     handleDragLeave: () => void;
     handleDrop: (e: React.DragEvent) => void;
@@ -121,6 +121,13 @@ export default function FileUploadSection({
                                     onClick={() => setHeaderLlmProvider('coze')}
                                 >
                                     <i className="fas fa-cloud" aria-hidden="true"></i> Coze
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${styles.providerPill} ${headerLlmProvider === 'deepseek' ? styles.providerPillActive : ''}`}
+                                    onClick={() => setHeaderLlmProvider('deepseek')}
+                                >
+                                    <i className="fas fa-brain" aria-hidden="true"></i> DeepSeek
                                 </button>
                             </div>
                         </div>

@@ -9,7 +9,7 @@ export default function Step2Extract({ states, handlers }) {
     const { file, fileName, fileType, selectedPages, extractPrompt, extractLoading, exercises, selectedExercises, rawExtractText, savedScreenshots, generationMode } = states;
     const { setExtractPrompt, extractContent, toggleExercise, toggleAllExercises, clearExerciseSelection, updateExerciseText, deleteExercise, takeSingleScreenshot, takeBatchScreenshots, removeScreenshot, goToStep1, goToStep3 } = handlers;
 
-    const [editingIndex, setEditingIndex] = useState(null);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editBuffer, setEditBuffer] = useState('');
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [galleryClosing, setGalleryClosing] = useState(false);

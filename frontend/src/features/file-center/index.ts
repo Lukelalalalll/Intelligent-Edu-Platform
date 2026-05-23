@@ -1,0 +1,1 @@
+export { default as FileCenterPage } from './pages/FileCenterPage';

@@ -1,0 +1,1 @@
+export { default as HomeStudentPage } from './pages/HomeStudentPage';

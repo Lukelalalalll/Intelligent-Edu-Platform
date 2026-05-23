@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import styles from '../styles/videoGen.module.css';
 import { videoApi } from '../api/videoApi';
 import type {
@@ -77,7 +78,7 @@ export default function StepUpload({
             const res = await videoApi.uploadSceneImage(f);
             setAvatarImagePath(res.path || '');
         } catch {
-            alert('Failed to upload avatar image.');
+            toast.error('Failed to upload avatar image.');
         } finally {
             setAvatarUploading(false);
         }
@@ -85,15 +86,15 @@ export default function StepUpload({
 
     const handleNext = () => {
         if (mode === 'text' && text.trim().length < 50) {
-            alert('Please enter at least 50 characters.');
+            toast.error('Please enter at least 50 characters.');
             return;
         }
         if (mode === 'file' && !file) {
-            alert('Please upload a file.');
+            toast.error('Please upload a file.');
             return;
         }
         if (avatarMode !== 'none' && !avatarImagePath) {
-            alert('Please upload an avatar image when avatar mode is enabled.');
+            toast.error('Please upload an avatar image when avatar mode is enabled.');
             return;
         }
         onNext(
@@ -126,6 +127,7 @@ export default function StepUpload({
                     <select value={provider} onChange={(e) => setProvider(e.target.value as AIProvider)}>
                         <option value="local_ollama">Local Llama (Ollama)</option>
                         <option value="coze">Coze API</option>
+                        <option value="deepseek">DeepSeek</option>
                     </select>
                 </div>
 

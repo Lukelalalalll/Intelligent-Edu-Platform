@@ -1,4 +1,4 @@
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import client from '@/shared/api/client';
 import { slidesDeliveryApi, type DeliveryArtifactType } from '../../../../api/slidesApi';
 import { persistSchema, sanitizeBullets, updateSchemaSlide } from './schemaUtils';

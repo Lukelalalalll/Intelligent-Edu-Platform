@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { slidesEditorApi, type EditorSession } from '../../../api/slidesApi';
 import type { AIProvider } from '../../../../../shared/aiProvider';
 
@@ -87,7 +87,7 @@ export function useGenerationFlow({ selectedTheme, pptSchema, onBeforeGenerate, 
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Generation failed';
             if (message === 'Generation cancelled') {
-                toast.info('Generation cancelled');
+                toast('Generation cancelled');
             } else {
                 toast.error(message);
             }

@@ -124,7 +124,9 @@ export const videoApi = {
         }
 
         // ── Polling fallback ──
+        const MAX_POLL_RETRIES = 120;
         let alive = true;
+        let retryCount = 0;
         const poll = async () => {
             while (alive) {
                 try {
@@ -141,7 +143,12 @@ export const videoApi = {
                         return;
                     }
                 } catch {
-                    // ignore transient failures
+                    retryCount++;
+                    if (retryCount >= MAX_POLL_RETRIES) {
+                        alive = false;
+                        onError('Polling timed out after max retries. Check server status.');
+                        return;
+                    }
                 }
                 await new Promise(r => setTimeout(r, 2500));
             }

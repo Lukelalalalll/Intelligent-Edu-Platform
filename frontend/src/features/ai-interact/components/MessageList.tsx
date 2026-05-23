@@ -15,14 +15,14 @@ interface MessageListProps {
         }>;
     };
     isTyping?: boolean;
-    chatMessagesRef?: React.RefObject<HTMLDivElement | null>;
+    chatMessagesRef?: React.RefObject<HTMLDivElement>;
     handleChatAreaClick?: (e: React.MouseEvent) => void;
     copyToClipboard?: (text: string, el: HTMLElement | null) => void;
     handleRegenerate?: (msgId: number) => void;
     handleEditUserMsg?: (msgId: number, content: string) => void;
 }
 
-export default function MessageList({
+const MessageList = React.memo(function MessageList({
     currentSession, isTyping, chatMessagesRef, handleChatAreaClick,
     copyToClipboard, handleRegenerate, handleEditUserMsg
 }: MessageListProps) {
@@ -50,11 +50,11 @@ export default function MessageList({
                         msg={msg}
                         idx={idx}
                         isUser={isUser}
-                        onCopy={copyToClipboard}
+                        onCopy={copyToClipboard!}
                         isLastAssistant={isLastAssistant}
-                        onRegenerate={handleRegenerate}
-                        onEdit={handleEditUserMsg}
-                        isTyping={isTyping}
+                        onRegenerate={handleRegenerate!}
+                        onEdit={handleEditUserMsg!}
+                        isTyping={isTyping ?? false}
                     />
                 );
             })}
@@ -73,4 +73,6 @@ export default function MessageList({
             )}
         </div>
     );
-}
+});
+
+export default MessageList;

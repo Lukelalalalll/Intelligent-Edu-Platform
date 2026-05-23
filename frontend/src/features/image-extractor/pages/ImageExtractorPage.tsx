@@ -22,14 +22,14 @@ export default function ImageExtractorPage() {
     const [activeTab, setActiveTab] = useState('uploaded');
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiNum, setAiNum] = useState(4);
-    const [aiImages, setAiImages] = useState([]);
+    const [aiImages, setAiImages] = useState<any[]>([]);
 
-    const [selectedImages, setSelectedImages] = useState([]);
+    const [selectedImages, setSelectedImages] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('Processing...');
-    const [lightboxImage, setLightboxImage] = useState(null);
-    const [notifications, setNotifications] = useState([]);
+    const [lightboxImage, setLightboxImage] = useState<any>(null);
+    const [notifications, setNotifications] = useState<any[]>([]);
 
     // --- Helper methods ---
     const notify = useCallback((message, type = 'info') => {

@@ -52,7 +52,7 @@ export default function Step1Upload({ states, handlers }) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => document.getElementById('fileInput').click()}
+                onClick={() => document.getElementById('fileInput')?.click()}
             >
                 <div className={styles.uploadIcon}><i className="fas fa-file-upload"></i></div>
                 <h3>Drag and drop files here or click to select</h3>
@@ -65,7 +65,7 @@ export default function Step1Upload({ states, handlers }) {
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
                 />
-                <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: '15px' }} onClick={(e) => { e.stopPropagation(); document.getElementById('fileInput').click(); }}>
+                <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: '15px' }} onClick={(e) => { e.stopPropagation(); document.getElementById('fileInput')?.click(); }}>
                     <i className="fas fa-folder-open"></i> Choose File
                 </button>
             </div>

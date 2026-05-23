@@ -12,7 +12,7 @@ function getApiRoot(): string {
 export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElement>) {
     const [messages, setMessages] = useState<ChatMsg[]>([WELCOME_MESSAGE]);
     const [input, setInput] = useState('');
-    const [provider, setProvider] = useState<'coze' | 'local_ollama'>('local_ollama');
+    const [provider, setProvider] = useState<'coze' | 'local_ollama' | 'deepseek'>('local_ollama');
     const [isLoading, setIsLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingVal, setEditingVal] = useState('');
@@ -31,14 +31,17 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         scrollToBottom(!isLoading);
     }, [messages, isLoading, scrollToBottom]);
 
-    const flushRafUpdate = useCallback((targetId: string, text: string) => {
+    const flushRafUpdate = useCallback((targetId: string, text: string, uiElements?: any[]) => {
         streamRafRef.current = null;
-        setMessages((prev) => replaceMessageText(prev, targetId, text));
+        setMessages((prev) => prev.map((m) => {
+            if (m.id !== targetId) return m;
+            return { ...m, text, uiElements: uiElements ? [...(m.uiElements || []), ...uiElements] : m.uiElements };
+        }));
     }, []);
 
-    const scheduleRafUpdate = useCallback((targetId: string, text: string) => {
+    const scheduleRafUpdate = useCallback((targetId: string, text: string, uiElements?: any[]) => {
         if (streamRafRef.current != null) return;
-        streamRafRef.current = requestAnimationFrame(() => flushRafUpdate(targetId, text));
+        streamRafRef.current = requestAnimationFrame(() => flushRafUpdate(targetId, text, uiElements));
     }, [flushRafUpdate]);
 
     const cancelStreaming = useCallback(() => {
@@ -93,6 +96,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
 
     const streamAssistantReply = useCallback(async (historyForApi: StreamMessage[], targetAssistantId: string, parseErrorLabel: string) => {
         let fullText = '';
+        let uiElementsAccumulator: any[] = [];
 
         await streamChatCompletion({
             apiRoot: getApiRoot(),
@@ -101,11 +105,15 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
             signal: abortControllerRef.current?.signal as AbortSignal,
             onTextDelta: (delta) => {
                 fullText += delta;
-                scheduleRafUpdate(targetAssistantId, fullText);
+                scheduleRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
+            },
+            onUiElement: (elem) => {
+                uiElementsAccumulator.push(elem);
+                scheduleRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
             },
             onErrorText: (errorText) => {
                 fullText += `\n\n**[Error]**: ${errorText}`;
-                scheduleRafUpdate(targetAssistantId, fullText);
+                scheduleRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
             },
             parseErrorLogLabel: parseErrorLabel,
         });
@@ -114,7 +122,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
             cancelAnimationFrame(streamRafRef.current);
             streamRafRef.current = null;
         }
-        flushRafUpdate(targetAssistantId, fullText);
+        flushRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
     }, [flushRafUpdate, scheduleRafUpdate, provider]);
 
     const streamFromHistory = useCallback(async (history: ChatMsg[]) => {
@@ -203,12 +211,13 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         editingVal,
         inputAreaRef,
         setProvider,
+        setInput,
         setEditingId,
         setEditingVal,
         handleInput,
         handleSend,
-        handleStop: cancelStreaming,
         handleRegenerate,
+        handleStop: cancelStreaming,
         handleEditUserMsg,
         handleKeyDown,
     };

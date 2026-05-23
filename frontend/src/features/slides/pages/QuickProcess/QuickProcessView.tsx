@@ -116,6 +116,7 @@ export default function QuickProcess({
                                             >
                                                 <option value="local_ollama">local_ollama (llama)</option>
                                                 <option value="coze">coze (from env)</option>
+                                                <option value="deepseek">deepseek (from env)</option>
                                             </select>
                                             <button
                                                 type="button"

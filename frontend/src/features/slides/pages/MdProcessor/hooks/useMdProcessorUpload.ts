@@ -4,7 +4,7 @@ import client from '@/shared/api/client';
 export function useMdProcessorUpload() {
     const [file, setFile] = useState<File | null>(null);
     const [useLLM, setUseLLM] = useState(false);
-    const [headerLlmProvider, setHeaderLlmProvider] = useState<'local_ollama' | 'coze'>('local_ollama');
+    const [headerLlmProvider, setHeaderLlmProvider] = useState<'local_ollama' | 'coze' | 'deepseek'>('local_ollama');
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'start' | 'success' | 'error'>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
