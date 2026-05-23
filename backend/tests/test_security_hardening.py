@@ -2,7 +2,7 @@ import pytest
 
 from backend.config import Config
 from backend.core.config import Settings
-from backend.services.ai_session_service import sanitize_session_update_payload
+from backend.services.llm_service.ai_session_service import sanitize_session_update_payload
 from backend.schemas.ai import UpdateAiSessionSchema
 
 

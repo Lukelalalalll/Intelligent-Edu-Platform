@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from backend.core.database import db
-from backend.services.rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
+from .rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ async def run_evaluation(
         expected_keywords = [str(k) for k in case.get("expected_keywords", []) if k]
 
         t0 = time.perf_counter()
-        retrieved = course_rag_service.retrieve_for_student(
+        retrieved = await course_rag_service.retrieve_for_student(
             student_id="eval_runner",
             query=query,
             top_k=top_k,
@@ -189,7 +189,7 @@ async def case_test(
     from backend.services.course_rag_service import course_rag_service
 
     t0 = time.perf_counter()
-    retrieved = course_rag_service.retrieve_for_student(
+    retrieved = await course_rag_service.retrieve_for_student(
         student_id="case_test",
         query=query,
         top_k=top_k,

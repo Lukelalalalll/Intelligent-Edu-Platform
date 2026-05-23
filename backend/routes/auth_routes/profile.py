@@ -1,59 +1,26 @@
 """Profile endpoints: courses, preferences, history settings."""
 from __future__ import annotations
 
+import copy
+
 from fastapi import Depends, HTTPException
 
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.schemas import TeacherPreferencesSchema
-from backend.services.grading_service import load_courses
-from .router import (
-    auth_router, _current_semester_label, _course_summary,
-    _teacher_owns_course, _student_enrolled_in_course,
-)
+from backend.services.enrollment_service import get_user_course_profile
+from .router import auth_router
 
 
 @auth_router.get("/profile/courses")
 async def get_profile_courses(current_user: dict = Depends(get_current_user)):
-    all_courses = (await load_courses()).get("courses", [])
-    role = current_user.get("role", "student")
-
-    if role == "admin":
-        return {
-            "role": role,
-            "semester": _current_semester_label(),
-            "courses": [_course_summary(c) for c in all_courses],
-        }
-
-    if role == "teacher":
-        semester = _current_semester_label()
-        teaching_courses = [c for c in all_courses if _teacher_owns_course(current_user, c)]
-        current_semester_courses = [c for c in teaching_courses if str(c.get("semester") or "") == semester]
-        selected = current_semester_courses if current_semester_courses else teaching_courses
-        return {
-            "role": role,
-            "semester": semester,
-            "courses": [_course_summary(c) for c in selected],
-        }
-
-    if role == "student":
-        enrolled = [c for c in all_courses if _student_enrolled_in_course(current_user, c)]
-        return {
-            "role": role,
-            "semester": _current_semester_label(),
-            "courses": [_course_summary(c) for c in enrolled],
-        }
-
-    return {
-        "role": role,
-        "semester": _current_semester_label(),
-        "courses": [],
-    }
+    """Return the user's course profile — delegated to the shared service."""
+    return await get_user_course_profile(current_user)
 
 
 # ─── Teacher Preferences ──────────────────────────────────────────────
 
-DEFAULT_TEACHER_PREFERENCES = {
+_DEFAULT_PREFS = {
     "feedback_style": "concise",
     "feedback_language": "English",
     "auto_rag": True,
@@ -63,12 +30,16 @@ DEFAULT_TEACHER_PREFERENCES = {
 }
 
 
+def _get_default_preferences() -> dict:
+    return copy.deepcopy(_DEFAULT_PREFS)
+
+
 @auth_router.get("/profile/preferences")
 async def get_preferences(current_user: dict = Depends(get_current_user)):
     """Get teacher AI preferences."""
     user_doc = await db.users.find_one({"_id": current_user["_id"]})
-    prefs = (user_doc or {}).get("preferences", DEFAULT_TEACHER_PREFERENCES)
-    return {"preferences": {**DEFAULT_TEACHER_PREFERENCES, **prefs}}
+    prefs = (user_doc or {}).get("preferences", _get_default_preferences())
+    return {"preferences": {**_get_default_preferences(), **prefs}}
 
 
 @auth_router.post("/profile/preferences")

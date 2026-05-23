@@ -1,3 +1,3 @@
-from backend.routes.study_notes_routes.router import study_notes_router
+from .router import study_notes_router  # noqa: F401
 
 __all__ = ["study_notes_router"]

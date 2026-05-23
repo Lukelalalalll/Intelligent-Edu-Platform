@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,7 @@ def _contains_any_keyword(text: str, keywords: list[str]) -> bool:
     return any(str(k or "").strip().lower() in content for k in keywords if str(k or "").strip())
 
 
-def evaluate(dataset: list[dict[str, Any]], top_k: int, use_hybrid: bool) -> dict[str, Any]:
+async def _evaluate_async(dataset: list[dict[str, Any]], top_k: int, use_hybrid: bool) -> dict[str, Any]:
     total = len(dataset)
     empty_count = 0
     hit_count = 0
@@ -46,7 +47,7 @@ def evaluate(dataset: list[dict[str, Any]], top_k: int, use_hybrid: bool) -> dic
         expected_docs = {str(d).strip() for d in row.get("expected_doc_names", []) if str(d).strip()}
         expected_keywords = [str(k).strip() for k in row.get("expected_keywords", []) if str(k).strip()]
 
-        retrieved = course_rag_service.retrieve_for_student(
+        retrieved = await course_rag_service.retrieve_for_student(
             student_id="rag_eval",
             query=query,
             top_k=top_k,
@@ -120,6 +121,11 @@ def evaluate(dataset: list[dict[str, Any]], top_k: int, use_hybrid: bool) -> dic
         },
         "details": details,
     }
+
+
+def evaluate(dataset: list[dict[str, Any]], top_k: int, use_hybrid: bool) -> dict[str, Any]:
+    """Synchronous wrapper — uses a single event loop for all cases."""
+    return asyncio.run(_evaluate_async(dataset, top_k, use_hybrid))
 
 
 def main() -> None:

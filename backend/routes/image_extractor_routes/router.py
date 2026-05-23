@@ -1,10 +1,8 @@
 import logging
 from fastapi import APIRouter
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from backend.routes.auth_routes.router import limiter
 
 image_extractor_router = APIRouter(prefix="/image-extractor", tags=["Image Extractor"])
-limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 # Import sub-modules to register their route handlers.

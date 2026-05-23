@@ -7,7 +7,7 @@ from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.core.utils import safe_object_id
 from backend.schemas import ChatFriendRequestSchema
-from backend.services.chat_search_service import sanitize_user_search_query
+from backend.services.chat_service.chat_search_service import sanitize_user_search_query
 
 from .router import chat_router, _utcnow, _ws_send_to_user
 

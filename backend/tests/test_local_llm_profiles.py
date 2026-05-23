@@ -1,4 +1,4 @@
-from backend.services.local_llm_service import LocalLLMService
+from backend.services.llm_service.local_llm_service import LocalLLMService
 
 
 def test_local_llm_has_light_and_heavy_profiles():

@@ -156,3 +156,38 @@ def extract_images_with_info(data: bytes):
     except Exception as e:
         print(f"[Error] PDF processing: {e}")
         return []
+
+
+def extract_images_from_pdf(abs_path: str) -> dict:
+    """Read a PDF from disk and extract images. Returns {totalImages, imagesByChapter}.
+
+    This is the service-level entry point used by both the HTTP route handler
+    and the transfer-dispatch pipeline (sub3).
+    """
+    import base64
+
+    with open(abs_path, "rb") as f:
+        data = f.read()
+    images = extract_images_with_info(data)
+    if not images:
+        return {"totalImages": 0, "imagesByChapter": {}}
+
+    images_by_chapter: dict = {}
+    for img in images:
+        chapter = img["chapter"]
+        if chapter not in images_by_chapter:
+            images_by_chapter[chapter] = []
+
+        img_base64 = base64.b64encode(img["bytes"]).decode("utf-8")
+        images_by_chapter[chapter].append({
+            "src": f"data:image/{img['ext']};base64,{img_base64}",
+            "index": img["index"],
+            "chapter": img["chapter"],
+            "summary": img["summary"],
+            "caption": img["caption"],
+        })
+
+    return {
+        "totalImages": len(images),
+        "imagesByChapter": images_by_chapter,
+    }

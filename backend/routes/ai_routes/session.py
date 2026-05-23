@@ -7,10 +7,10 @@ from fastapi import Depends, HTTPException, Request
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.schemas import UpdateAiSessionSchema
-from backend.services.ai_session_service import sanitize_session_update_payload
+from backend.services.llm_service.ai_session_service import sanitize_session_update_payload
 from backend.services.file_asset_service import ensure_ai_session_image_assets
 from backend.services.security_audit import log_security_event
-from backend.services.session_bucket_service import (
+from backend.services.chat_service.session_bucket_service import (
     delete_session_buckets,
     load_all_messages,
     save_messages_bucketed,
@@ -135,10 +135,16 @@ async def update_session(
         update_fields["messages"] = bucket_result["inline_messages"]
         update_fields["bucketCount"] = bucket_result["bucket_count"]
 
-    await db.ai_chat_sessions.update_one(
-        {"_id": ObjectId(session_id)},
+    # ── Optimistic concurrency: increment revision on each write ──
+    current_revision = existing.get("revision", 0)
+    update_fields["revision"] = current_revision + 1
+
+    result = await db.ai_chat_sessions.update_one(
+        {"_id": ObjectId(session_id), "revision": current_revision},
         {"$set": update_fields},
     )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=409, detail="Session modified concurrently — please reload and try again")
     if "messages" in update_fields:
         try:
             await ensure_ai_session_image_assets(str(user.get("_id") or user.get("id") or ""))

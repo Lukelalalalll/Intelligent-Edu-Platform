@@ -5,6 +5,7 @@ import httpx
 
 from backend.config import Config
 from backend.infrastructure import TelemetryTimer
+from backend.services.llm_service.message_builder import build_llm_messages
 
 logger = logging.getLogger(__name__)
 
@@ -30,36 +31,7 @@ class LocalLLMService:
         return f"{self.base_url}/api/tags"
 
     def _build_messages(self, message: str, context: Optional[Dict[str, Any]] = None) -> list[dict[str, Any]]:
-        messages: list[dict[str, Any]] = []
-
-        system_override = str((context or {}).get("system_override", "") or "").strip()
-        if system_override:
-            messages.append({"role": "system", "content": system_override})
-
-        system_memory = str((context or {}).get("system_memory", "") or "").strip()
-        if system_memory:
-            messages.append({"role": "system", "content": f"Student profile: {system_memory}"})
-
-        history = (context or {}).get("chat_history") or []
-        for item in history[-12:]:
-            if not isinstance(item, dict):
-                continue
-            role = str(item.get("role", "")).strip().lower()
-            content = str(item.get("content", "")).strip()
-            images = item.get("images", [])
-            
-            if role in {"user", "assistant"} and (content or images):
-                msg: dict[str, Any] = {"role": role, "content": content[:4000]}
-                if images:
-                    msg["images"] = images
-                messages.append(msg)
-
-        current_msg: dict[str, Any] = {"role": "user", "content": str(message or "")[:6000]}
-        if context and context.get("images"):
-            current_msg["images"] = context["images"]
-        messages.append(current_msg)
-
-        return messages
+        return build_llm_messages(message, context)
 
     @staticmethod
     def _build_options(task_profile: str = "heavy") -> dict[str, float | int]:
@@ -132,6 +104,41 @@ class LocalLLMService:
             completion_tokens=est_completion_tokens,
         )
         return content
+
+    async def chat_with_tools(self, message: str, tools: list[dict] = None, context: Optional[Dict[str, Any]] = None, raw_messages: list[dict] = None) -> dict:
+        """
+        Chat with tool calling support.
+        Returns: {
+            "content": str | None,
+            "tool_calls": list[dict] | None
+        }
+        """
+        task_profile = str((context or {}).get("task_profile", "heavy") or "heavy")
+        
+        messages_payload = raw_messages if raw_messages is not None else self._build_messages(message=message, context=context)
+        
+        payload = {
+            "model": self.model,
+            "messages": messages_payload,
+            "stream": False,
+            "options": self._build_options(task_profile=task_profile),
+        }
+        if tools:
+            payload["tools"] = tools
+            
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                resp = await client.post(self._chat_url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+        except Exception as exc:
+            raise LocalLLMUnavailableError(str(exc)) from exc
+            
+        message_data = data.get("message", {})
+        return {
+            "content": message_data.get("content", ""),
+            "tool_calls": message_data.get("tool_calls")
+        }
 
     async def chat_stream(self, message: str, context: Optional[Dict[str, Any]] = None):
         import json

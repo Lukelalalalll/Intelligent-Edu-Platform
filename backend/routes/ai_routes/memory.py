@@ -1,5 +1,6 @@
 """AI Memory endpoints and auxiliary info routes (role-info, provider-health, extract-pdf-text)."""
 
+import asyncio
 import logging
 
 from fastapi import Depends, File, HTTPException, UploadFile
@@ -32,7 +33,8 @@ async def extract_pdf_text(file: UploadFile = File(...), user: dict = Depends(ge
     if not data:
         raise HTTPException(status_code=400, detail="Empty PDF file")
 
-    text = _extract_text_from_pdf_bytes(data, max_chars=_PDF_EXTRACT_MAX_CHARS)
+    loop = asyncio.get_event_loop()
+    text = await loop.run_in_executor(None, _extract_text_from_pdf_bytes, data, _PDF_EXTRACT_MAX_CHARS)
     return {
         "filename": filename or "attachment.pdf",
         "text": text,

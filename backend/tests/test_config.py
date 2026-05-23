@@ -82,3 +82,101 @@ def test_sensitive_envs_constant():
     assert "production" in SENSITIVE_ENVS
     assert "staging" in SENSITIVE_ENVS
     assert "development" not in SENSITIVE_ENVS
+
+
+# ── Auto-generated keys ──────────────────────────────────────────────
+
+def test_auto_generates_secret_key_when_empty(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    cfg = Settings()
+    assert cfg.SECRET_KEY != ""
+    assert len(cfg.SECRET_KEY) >= 32
+
+
+def test_auto_generates_jwt_secret_key_when_empty(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "")
+    cfg = Settings()
+    assert cfg.JWT_SECRET_KEY != ""
+    assert len(cfg.JWT_SECRET_KEY) >= 32
+
+
+def test_preserves_explicitly_set_keys(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "explicit-secret-key-abc-123")
+    monkeypatch.setenv("JWT_SECRET_KEY", "explicit-jwt-key-xyz-789")
+    cfg = Settings()
+    assert cfg.SECRET_KEY == "explicit-secret-key-abc-123"
+    assert cfg.JWT_SECRET_KEY == "explicit-jwt-key-xyz-789"
+
+
+# ── Coze OCR gating ──────────────────────────────────────────────────
+
+def test_coze_ocr_disabled_by_default(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.delenv("COZE_OCR_ENABLED", raising=False)
+    cfg = Settings()
+    assert cfg.COZE_OCR_ENABLED is False
+
+
+def test_coze_ocr_enabled_when_set(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("COZE_OCR_ENABLED", "true")
+    cfg = Settings()
+    assert cfg.COZE_OCR_ENABLED is True
+
+
+# ── Coze timeout bounds ──────────────────────────────────────────────
+
+def test_coze_timeout_min_clamp(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("COZE_REQUEST_TIMEOUT_SECONDS", "1")
+    cfg = Settings()
+    assert cfg.COZE_REQUEST_TIMEOUT_SECONDS == 5.0  # clamped to min
+
+
+def test_coze_timeout_max_clamp(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("COZE_REQUEST_TIMEOUT_SECONDS", "999")
+    cfg = Settings()
+    assert cfg.COZE_REQUEST_TIMEOUT_SECONDS == 300.0  # clamped to max
+
+
+def test_coze_poll_interval_min_clamp(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("COZE_POLL_INTERVAL_SECONDS", "0.1")
+    cfg = Settings()
+    assert cfg.COZE_POLL_INTERVAL_SECONDS == 0.5  # clamped to min
+
+
+# ── RAG query language config ────────────────────────────────────────
+
+def test_rag_query_language_defaults_to_auto(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.delenv("RAG_QUERY_LANGUAGE", raising=False)
+    cfg = Settings()
+    assert cfg.RAG_QUERY_LANGUAGE == "auto"
+
+
+def test_rag_query_language_explicit(monkeypatch):
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("JWT_SECRET_KEY", "strong-enough-key-for-test-12345")
+    monkeypatch.setenv("RAG_QUERY_LANGUAGE", "en")
+    cfg = Settings()
+    assert cfg.RAG_QUERY_LANGUAGE == "en"

@@ -1,6 +1,7 @@
 """Business logic for RAG eval wizard endpoints: courses, generate-questions, A/B eval."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -12,7 +13,7 @@ from typing import Any, Dict, List, Optional, Set
 from fastapi import HTTPException
 
 from backend.core.database import db
-from backend.services.rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
+from .rag_eval_scoring import compute_mrr, compute_ndcg, compute_recall_at_k, score_case
 
 logger = logging.getLogger(__name__)
 
@@ -234,13 +235,13 @@ def _parse_ai_questions(raw_response: str) -> Optional[list]:
 # ---------------------------------------------------------------------------
 
 
-def _run_one_ab_mode(
+async def _run_one_ab_mode(
     cases: list[dict],
     use_hybrid: bool,
     top_k: int,
     selected_docs: Optional[List[str]] = None,
 ) -> dict:
-    """Run evaluation for one retrieval mode (sync, CPU-bound).
+    """Run evaluation for one retrieval mode.
 
     When *selected_docs* is non-empty, retrieved chunks whose doc_name
     is not in the set are filtered out before scoring (mirroring the
@@ -295,7 +296,7 @@ def _run_one_ab_mode(
             evaluable_total += 1
 
         t0 = time.perf_counter()
-        retrieved = course_rag_service.retrieve_for_student(
+        retrieved = await course_rag_service.retrieve_for_student(
             student_id="__evaluator__",
             query=query,
             top_k=top_k,
@@ -378,7 +379,7 @@ def _run_one_ab_mode(
     }
 
 
-def run_ab_evaluation(
+async def run_ab_evaluation(
     *,
     dataset: list[dict],
     top_k: int,
@@ -389,12 +390,12 @@ def run_ab_evaluation(
     results: Dict[str, Any] = {}
 
     if mode in ("hybrid", "comparison"):
-        results["hybrid"] = _run_one_ab_mode(
+        results["hybrid"] = await _run_one_ab_mode(
             dataset, use_hybrid=True, top_k=top_k, selected_docs=selected_docs,
         )
 
     if mode in ("vector", "comparison"):
-        results["vector"] = _run_one_ab_mode(
+        results["vector"] = await _run_one_ab_mode(
             dataset, use_hybrid=False, top_k=top_k, selected_docs=selected_docs,
         )
 

@@ -13,7 +13,7 @@ try:
 except ModuleNotFoundError:
     opendataloader_pdf = None  # type: ignore[assignment]
 from backend.services.ai_gateway_service import AIGatewayService
-from backend.services.local_llm_service import LocalLLMService
+from backend.services.llm_service.local_llm_service import LocalLLMService
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +230,15 @@ async def extract_text_from_image(file_path, extract_prompt="exercise", provider
             )
         else:
             # Use Coze API (text-only; send base64 inline in the prompt)
+            if not Config.COZE_OCR_ENABLED:
+                raise Exception(
+                    "Coze OCR is disabled. Set COZE_OCR_ENABLED=true to enable sending image "
+                    "data to the third-party Coze API."
+                )
+            logger.warning(
+                "Sending student PDF image data to Coze API for OCR. "
+                "Ensure this is documented in your data-processing notice."
+            )
             ai_service = AIGatewayService()
             image_hint = f"\n[Base64 Image attached — first 200 chars]: {img_base[:200]}..."
             raw_text = await ai_service.chat_with_provider(

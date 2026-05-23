@@ -17,7 +17,7 @@ from backend.config import Config
 from backend.prompts import prompt_registry
 from backend.schemas import ChatMessageSchema, GradingContextSchema, RagContextSchema
 from backend.services.grading_service import find_submission_v2, get_document
-from backend.services.tfidf_rag_service import LocalRagService
+from backend.services.rag_service.tfidf_rag_service import LocalRagService
 from backend.utils.pdf_extractor import extract_text_from_pdf
 from .router import (
     DEFAULT_RAG_TOP_K,

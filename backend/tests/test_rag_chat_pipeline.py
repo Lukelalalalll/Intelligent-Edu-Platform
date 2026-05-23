@@ -1,4 +1,4 @@
-from backend.services.rag_chat_pipeline import (
+from backend.services.rag_service.rag_chat_pipeline import (
     build_rewrite_prompt,
     pack_evidence,
     postcheck_and_downgrade,

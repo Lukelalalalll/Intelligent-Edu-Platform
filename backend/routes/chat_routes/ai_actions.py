@@ -40,7 +40,7 @@ async def ai_summary(
     await _verify_room_member(room_id, uid)
     resolved_provider = resolve_provider(body.provider, feature="chat.summary", user=user)
 
-    from backend.services.chat_ai_service import run_summary
+    from backend.services.llm_service.chat_ai_service import run_summary
     try:
         result = await run_summary(
             room_id=room_id,
@@ -67,7 +67,7 @@ async def ai_reply_suggestions(
     await _verify_room_member(room_id, uid)
     resolved_provider = resolve_provider(body.provider, feature="chat.reply_suggestions", user=user)
 
-    from backend.services.chat_ai_service import run_reply_suggestions
+    from backend.services.llm_service.chat_ai_service import run_reply_suggestions
     try:
         result = await run_reply_suggestions(
             room_id=room_id,
@@ -93,7 +93,7 @@ async def ai_rewrite(
     await _verify_room_member(room_id, uid)
     resolved_provider = resolve_provider(body.provider, feature="chat.rewrite", user=user)
 
-    from backend.services.chat_ai_service import run_rewrite
+    from backend.services.llm_service.chat_ai_service import run_rewrite
     try:
         result = await run_rewrite(
             room_id=room_id,
@@ -119,7 +119,7 @@ async def ai_assistant(
     await _verify_room_member(room_id, uid)
     resolved_provider = resolve_provider(body.provider, feature="chat.assistant", user=user)
 
-    from backend.services.chat_ai_service import run_assistant
+    from backend.services.llm_service.chat_ai_service import run_assistant
     try:
         result = await run_assistant(
             room_id=room_id,
@@ -145,7 +145,7 @@ async def transfer_start(
     uid = str(user["id"])
     await _verify_room_member(body.room_id, uid)
 
-    from backend.services.transfer_dispatch_service import create_transfer
+    from backend.services.chat_service.transfer_dispatch_service import create_transfer
     try:
         result = await create_transfer(
             room_id=body.room_id,
@@ -168,7 +168,7 @@ async def transfer_get(
 ):
     """Get the current status of a transfer ticket."""
     uid = str(user["id"])
-    from backend.services.transfer_dispatch_service import get_transfer
+    from backend.services.chat_service.transfer_dispatch_service import get_transfer
     result = await get_transfer(transfer_id, uid)
     if not result:
         raise HTTPException(status_code=404, detail="Transfer not found")
@@ -187,7 +187,7 @@ async def transfer_consume(
 ):
     """Consume a transfer ticket — dispatch the file to the target module."""
     uid = str(user["id"])
-    from backend.services.transfer_dispatch_service import consume_transfer
+    from backend.services.chat_service.transfer_dispatch_service import consume_transfer
     try:
         result = await consume_transfer(transfer_id, uid)
         return {"ok": True, **result}
@@ -207,7 +207,7 @@ async def transfer_retry(
 ):
     """Retry a failed transfer."""
     uid = str(user["id"])
-    from backend.services.transfer_dispatch_service import retry_transfer
+    from backend.services.chat_service.transfer_dispatch_service import retry_transfer
     try:
         result = await retry_transfer(transfer_id, uid)
         return {"ok": True, **result}

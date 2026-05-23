@@ -358,9 +358,9 @@ async def _dispatch_sub2(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub3 (image-extractor): extract-pdf-images logic."""
-    from backend.routes.image_extractor_routes import _extract_images_from_pdf
+    from backend.routes.image_extractor_routes import extract_images_from_pdf
 
-    result = await _extract_images_from_pdf(abs_path)
+    result = extract_images_from_pdf(abs_path)
     return {
         "totalImages": result.get("totalImages", 0),
         "imagesByChapter": result.get("imagesByChapter", {}),
@@ -369,12 +369,12 @@ async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub4(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub4 (diagram): upload_document logic."""
-    from backend.routes.diagram_routes import _extract_diagrams_from_file
+    from backend.routes.diagram_routes import extract_diagrams_from_file
 
-    result = _extract_diagrams_from_file(abs_path, file_name)
+    result = extract_diagrams_from_file(abs_path, file_name)
     return {
         "extracted": result.get("extracted", []),
-        "extracted_count": result.get("file", {}).get("extracted_count", 0),
+        "extracted_count": result.get("extracted_count", 0),
     }
 
 

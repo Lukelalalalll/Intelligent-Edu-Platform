@@ -38,7 +38,7 @@ async def create_job(
     indexed, returns a fast "duplicate" response without re-indexing.
     """
     content_hash = hashlib.sha256(content_bytes).hexdigest()
-    print(f"[DEBUG create_job] course={course_id} file={filename} hash={content_hash[:12]}")
+    logger.debug("create_job: course=%s file=%s hash=%s", course_id, filename, content_hash[:12])
 
     # Check for duplicate: same course, filename, content hash, already done
     existing = await db[COLLECTION].find_one({
@@ -58,7 +58,7 @@ async def create_job(
             for d in course_rag_service.list_indexed_documents(course_id)
         }
         if filename in indexed_names:
-            print(f"[DEBUG create_job] DUPLICATE confirmed in meta, returning existing job_id={existing['job_id']}")
+            logger.debug("create_job: duplicate confirmed in meta, returning existing job_id=%s", existing['job_id'])
             logger.info("Skipping duplicate index: course=%s file=%s hash=%s", course_id, filename, content_hash[:12])
             return {
                 "job_id": existing["job_id"],
@@ -69,7 +69,7 @@ async def create_job(
             }
         else:
             # MongoDB says done but meta.json disagrees — invalidate the stale record
-            print(f"[DEBUG create_job] STALE duplicate: meta.json missing '{filename}', invalidating old job and re-indexing")
+            logger.debug("create_job: stale duplicate - meta.json missing '%s', invalidating old job and re-indexing", filename)
             await db[COLLECTION].update_one(
                 {"_id": existing["_id"]},
                 {"$set": {"status": "stale", "updated_at": datetime.now(timezone.utc)}},
@@ -172,19 +172,19 @@ async def _process_job(
     try:
         await _update_status(job_id, "processing")
         await _update_progress(job_id, 5, "extracting")
-        print(f"\n[DEBUG _process_job] START job={job_id} course={course_id} file={filename} fast={use_fast_extract}")
+        logger.debug("_process_job: START job=%s course=%s file=%s fast=%s", job_id, course_id, filename, use_fast_extract)
 
         source_path = Path(Config.BASE_DIR) / "uploads" / "knowledge_base" / course_id / f"{job_id}_{filename}"
-        print(f"[DEBUG _process_job] source_path={source_path} exists={source_path.exists()}")
+        logger.debug("_process_job: source_path=%s exists=%s", source_path, source_path.exists())
 
         # Extract text (run blocking I/O in executor)
         text = await asyncio.get_event_loop().run_in_executor(
             None, _extract_text_from_path, source_path, use_fast_extract
         )
 
-        print(f"[DEBUG _process_job] extracted text length={len(text) if text else 0}")
+        logger.debug("_process_job: extracted text length=%d", len(text) if text else 0)
         if not text or not text.strip():
-            print(f"[DEBUG _process_job] EMPTY TEXT - marking failed")
+            logger.debug("_process_job: EMPTY TEXT - marking failed")
             await _update_status(job_id, "failed", error="Could not extract any text from the file")
             return
 
@@ -199,11 +199,11 @@ async def _process_job(
             asyncio.run_coroutine_threadsafe(_update_progress(job_id, mapped, "indexing"), loop)
 
         from backend.services.course_rag_service import course_rag_service
-        print(f"[DEBUG _process_job] calling index_document course={course_id} doc={filename}")
+        logger.debug("_process_job: calling index_document course=%s doc=%s", course_id, filename)
         result = await asyncio.get_event_loop().run_in_executor(
             None, course_rag_service.index_document, course_id, filename, text, chapter_id, _progress_cb
         )
-        print(f"[DEBUG _process_job] index_document returned: {result}")
+        logger.debug("_process_job: index_document returned: %s", result)
 
         vectorstore_path = Path(Config.RAG_VECTORSTORE_DIR) / "courses" / course_id
         try:
@@ -227,12 +227,12 @@ async def _process_job(
             logger.exception("Failed to register vectorstore asset")
 
         await _update_status(job_id, "done", result=result)
-        print(f"[DEBUG _process_job] DONE job={job_id}")
+        logger.debug("_process_job: DONE job=%s", job_id)
         logger.info("Indexing job %s completed: %s", job_id, result)
 
     except Exception as exc:
-        print(f"[DEBUG _process_job] EXCEPTION job={job_id}: {exc}")
-        import traceback; traceback.print_exc()
+        logger.debug("_process_job: EXCEPTION job=%s: %s", job_id, exc)
+        logger.exception("Indexing job %s failed", job_id)
         logger.exception("Indexing job %s failed", job_id)
         await _update_status(job_id, "failed", error="Internal indexing error")
 

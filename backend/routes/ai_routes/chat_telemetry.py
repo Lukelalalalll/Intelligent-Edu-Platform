@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from backend.infrastructure.rag_telemetry import rag_telemetry
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,8 +30,6 @@ async def record_chat_telemetry(
 ) -> None:
     """Fire-and-forget telemetry recording; never raises."""
     try:
-        from backend.infrastructure.rag_telemetry import rag_telemetry
-
         metadata: dict[str, Any] = {
             "retry_used": rag_retry_used,
             "retry_success": rag_retry_success,

@@ -14,8 +14,8 @@ services:
     restart: unless-stopped
     volumes:
       - mongo_data:/data/db
-    expose:
-      - "27017"
+    ports:
+      - "27017:27017"
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep 1"]
       interval: 15s
