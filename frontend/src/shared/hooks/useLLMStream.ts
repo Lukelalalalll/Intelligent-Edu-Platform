@@ -24,6 +24,7 @@ export function useLLMStream() {
     const textBufferRef = useRef('');
     const rafIdRef = useRef<number | null>(null);
     const onDeltaRef = useRef<((fullText: string) => void) | undefined>(undefined);
+    const generationRef = useRef(0);
 
     const flushFrame = useCallback(() => {
         rafIdRef.current = null;
@@ -59,6 +60,9 @@ export function useLLMStream() {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
+
+        generationRef.current += 1;
+        const capturedGen = generationRef.current;
 
         const controller = new AbortController();
         abortControllerRef.current = controller;
@@ -96,6 +100,7 @@ export function useLLMStream() {
             let buffer = '';
 
             while (true) {
+                if (generationRef.current !== capturedGen) break;
                 const { done, value } = await reader.read();
                 if (done) break;
 
@@ -104,6 +109,8 @@ export function useLLMStream() {
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
+                    if (generationRef.current !== capturedGen) break;
+
                     const trimmed = line.trim();
                     if (!trimmed || !trimmed.startsWith('data: ')) continue;
 

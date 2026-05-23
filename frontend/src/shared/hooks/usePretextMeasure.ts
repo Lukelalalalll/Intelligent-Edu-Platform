@@ -46,7 +46,7 @@ function cachedMeasure(text: string, font: string, maxWidth: number, lineHeight:
     if (heightCache.size >= CACHE_MAX) {
       // Evict oldest entry
       const first = heightCache.keys().next().value;
-      heightCache.delete(first);
+      heightCache.delete(first!);
     }
     heightCache.set(key, result);
     return result;

@@ -41,7 +41,7 @@
 
 /* ─── Top Navbar ─── */
 .navbar {
-    background-color: rgba(255, 255, 255, 0.85);
+    background-color: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     height: var(--nav-height);
@@ -75,20 +75,20 @@
     height: 34px;
     border: 1px solid rgba(0, 123, 85, 0.2);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--bg-card);
     display: inline-flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     transition: all 0.25s ease;
-    color: #0f6a4b;
+    color: var(--primary-dark);
     font-size: 16px;
     box-shadow: 0 4px 10px rgba(0, 123, 85, 0.08);
 }
 
 .sidebarToggle:hover {
     border-color: rgba(0, 123, 85, 0.45);
-    background: #f7fcf9;
+    background: var(--primary-light);
     transform: translateY(-1px);
     box-shadow: 0 8px 14px rgba(0, 123, 85, 0.14);
 }
@@ -147,10 +147,10 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--bg-card);
     padding: 6px 8px 6px 12px;
     border-radius: var(--radius-pill);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
 }
 
 .btnAdmin {
@@ -165,7 +165,7 @@
 
 .btnDatabase {
     background: rgba(0, 0, 0, 0.06);
-    color: #2d3748; /* NOSONAR */
+    color: var(--text-main);
     padding: 6px 14px;
     border-radius: var(--radius-pill);
     font-weight: 700;
@@ -213,7 +213,7 @@
 .btnLogout {
     font-size: 0.85rem;
     padding: 6px 16px;
-    background: #f1f3f5;
+    background: var(--bg-input);
     color: var(--text-sub);
     border-radius: var(--radius-pill);
     border: none;
@@ -226,7 +226,7 @@
 }
 
 .footer {
-    background-color: #fff;
+    background-color: var(--bg-card);
     padding: 2rem 0;
     margin-top: auto;
     border-top: 1px solid var(--border-color);
@@ -245,7 +245,7 @@
     position: sticky;
     top: var(--nav-height);
     height: calc(100dvh - var(--nav-height));
-    background: linear-gradient(180deg, rgba(252, 255, 253, 0.98) 0%, rgba(246, 253, 249, 0.96) 100%);
+    background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-right: 1px solid rgba(0, 123, 85, 0.12);
@@ -288,7 +288,7 @@
     margin-bottom: 4px;
     padding: 6px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-card);
     border: 1px solid rgba(0, 123, 85, 0.06);
 }
 
@@ -311,7 +311,7 @@
 
 .sidebarLink {
     text-decoration: none;
-    color: #1f2937;
+    color: var(--text-main);
     font-weight: 600;
     font-size: 0.88rem;
     display: flex;
@@ -337,25 +337,25 @@
     text-align: center;
     flex-shrink: 0;
     font-size: 1rem;
-    color: #64748b;
+    color: var(--text-sub);
     transition: color 0.2s ease;
 }
 
 .sidebarLink:hover {
     background: linear-gradient(180deg, rgba(0, 123, 85, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%);
     border-color: rgba(0, 123, 85, 0.2);
-    color: #0f6a4b; /* NOSONAR */
+    color: var(--primary-dark);
     transform: translateX(2px);
     box-shadow: 0 8px 14px rgba(0, 123, 85, 0.1);
 }
 
 .sidebarLink:hover i {
-    color: #0f6a4b; /* NOSONAR */
+    color: var(--primary-dark);
 }
 
 .sidebarLinkActive {
     background: linear-gradient(180deg, rgba(0, 123, 85, 0.16) 0%, rgba(16, 185, 129, 0.16) 100%);
-    color: #0f6a4b; /* NOSONAR */
+    color: var(--primary-dark);
     border-left: 3px solid var(--primary-color);
     border-color: rgba(0, 123, 85, 0.24);
     box-shadow: inset 0 0 0 1px rgba(0, 123, 85, 0.08), 0 8px 14px rgba(0, 123, 85, 0.08);
@@ -376,11 +376,11 @@
 
 .sidebarLinkToneDatabase {
     background: rgba(71, 85, 105, 0.12);
-    color: #334155; /* NOSONAR */
+    color: var(--text-main);
 }
 
 .sidebarLinkToneDatabase i {
-    color: #334155;
+    color: var(--text-sub);
 }
 
 .sidebarLinkToneTeacher {
@@ -394,11 +394,11 @@
 
 .sidebarLinkToneStudent {
     background: rgba(0, 123, 85, 0.12);
-    color: #0f6a4b; /* NOSONAR */
+    color: var(--primary-dark);
 }
 
 .sidebarLinkToneStudent i {
-    color: #0f6a4b;
+    color: var(--primary-dark);
 }
 
 .sidebarCollapsed .sidebarLink {

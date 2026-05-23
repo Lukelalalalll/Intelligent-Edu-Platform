@@ -1,12 +1,11 @@
+import type { ChatMessage } from './api';
+
 export type ChatRole = 'user' | 'assistant' | 'system';
 
-export interface ChatMessage {
-    role: ChatRole;
-    content: string;
-}
+export type { ChatMessage };
 
 export interface FeedbackRequestPayload {
-    provider?: 'coze' | 'local_ollama';
+    provider?: 'coze' | 'local_ollama' | 'deepseek';
     submissionId: string;
     selectedText: string;
     assignment?: string;

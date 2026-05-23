@@ -1,0 +1,22 @@
+.toggle {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-sub);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.toggle:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: rotate(15deg);
+  box-shadow: 0 4px 12px rgba(0, 123, 85, 0.15);
+}

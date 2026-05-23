@@ -24,7 +24,7 @@ type HistoryParams = NonNullable<
 >;
 
 export interface GeneratePayload {
-    provider?: 'coze' | 'local_ollama';
+    provider?: 'coze' | 'local_ollama' | 'deepseek';
     task_id: string;
     question_type: string;
     num_questions: number;
@@ -41,7 +41,7 @@ export interface GeneratePayload {
 }
 
 export interface SuggestConstraintsPayload {
-    provider?: 'coze' | 'local_ollama';
+    provider?: 'coze' | 'local_ollama' | 'deepseek';
     task_id: string;
     source_type: 'pdf' | 'screenshot_set';
     page_numbers?: number[];

@@ -1,58 +1,58 @@
-import React, { type ReactNode } from 'react';
+import React, { Component, ErrorInfo } from 'react';
+import { log } from '@/shared/utils/logger';
+import { getErrorMessage } from '@/shared/utils/typeGuards';
+import styles from './ErrorBoundary.module.css';
 
 interface ErrorBoundaryProps {
-    children: ReactNode;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface ErrorBoundaryState {
-    hasError: boolean;
-    error: Error | null;
+  hasError: boolean;
+  error: Error | null;
 }
 
-export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    constructor(props: ErrorBoundaryProps) {
-        super(props);
-        this.state = { hasError: false, error: null };
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    log.error('ErrorBoundary', 'Component crashed', {
+      error: getErrorMessage(error),
+      componentStack: errorInfo.componentStack,
+    });
+    this.props.onError?.(error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+
+      return (
+        <div role="alert" className={styles.container}>
+          <h2 className={styles.title}>Something went wrong</h2>
+          <p className={styles.message}>{getErrorMessage(this.state.error)}</p>
+          <button onClick={this.handleReset} className={styles.retryBtn}>
+            Try again
+          </button>
+        </div>
+      );
     }
 
-    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-        return { hasError: true, error };
-    }
-
-    componentDidCatch(error: Error, info: React.ErrorInfo) {
-        console.error('ErrorBoundary caught:', error, info);
-    }
-
-    handleReset = () => {
-        this.setState({ hasError: false, error: null });
-    };
-
-    render() {
-        if (this.state.hasError) {
-            return (
-                <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-                    <h2 style={{ color: '#d32f2f', marginBottom: '16px' }}>Something went wrong</h2>
-                    <p style={{ color: '#666', marginBottom: '24px' }}>
-                        {this.state.error?.message || 'An unexpected error occurred.'}
-                    </p>
-                    <button
-                        onClick={this.handleReset}
-                        style={{
-                            padding: '10px 24px',
-                            background: '#007B55',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                        }}
-                    >
-                        Try Again
-                    </button>
-                </div>
-            );
-        }
-        return this.props.children;
-    }
+    return this.props.children;
+  }
 }
 
+export default ErrorBoundary;

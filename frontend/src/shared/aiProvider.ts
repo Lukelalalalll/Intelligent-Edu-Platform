@@ -1,11 +1,13 @@
-export type AIProvider = 'coze' | 'local_ollama';
+export type AIProvider = 'coze' | 'local_ollama' | 'deepseek';
 
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider';
 
 export function getStoredAIProvider(): AIProvider {
     if (typeof window === 'undefined') return 'local_ollama';
     const raw = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
-    return raw === 'coze' ? 'coze' : 'local_ollama';
+    if (raw === 'coze') return 'coze';
+    if (raw === 'deepseek') return 'deepseek';
+    return 'local_ollama';
 }
 
 export function setStoredAIProvider(provider: AIProvider): void {

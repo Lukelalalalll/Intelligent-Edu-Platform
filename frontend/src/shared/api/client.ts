@@ -1,11 +1,13 @@
 // frontend/src/api/client.ts
 import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
+import toast from 'react-hot-toast';
 import { log } from '../utils/logger';
+import { useAuthStore } from '../store/useAuthStore';
 import { networkBus } from '../hooks/useNetworkStatus';
 
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
+export const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
 
-const resolveApiRoot = (): string => {
+export const resolveApiRoot = (): string => {
   const raw = String(import.meta.env.VITE_API_ROOT || 'http://localhost:5009').trim();
   try {
     const parsed = new URL(raw);
@@ -38,6 +40,11 @@ const buildLoginRedirect = (): string => {
 
 client.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (!navigator.onLine) {
+      networkBus.reportNetworkError();
+      toast.error('No internet connection. Please check your network and try again.');
+      return Promise.reject(new Error('No internet connection.'));
+    }
     const method = String(config?.method || 'GET').toUpperCase();
     const url = String(config?.url || '');
     log.info('api', 'Request started', { method, url });
@@ -72,13 +79,8 @@ client.interceptors.response.use(
       message: error?.message,
     });
 
-    // Detect network-level failure (no HTTP response at all)
-    if (!error.response && (error.message?.includes('Network Error') || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')) {
-      networkBus.reportNetworkError();
-    }
-
     if (status === 401 && !isLoginRequest) {
-      localStorage.removeItem('user');
+      useAuthStore.getState().logout();
       if (window.location.pathname !== LOGIN_PATH) {
         window.location.replace(buildLoginRedirect());
       }

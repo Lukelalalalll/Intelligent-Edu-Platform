@@ -12,3 +12,7 @@ export { default as ConfirmModal } from './components/ConfirmModal';
 export { default as WelcomeBanner } from './components/WelcomeBanner';
 export { default as HistoryPanel } from './components/HistoryPanel/HistoryPanel';
 export type { HistoryApi, HistoryPanelProps } from './components/HistoryPanel/HistoryPanel';
+export { Spinner } from './components/Spinner/Spinner';
+export { Input } from './components/Input/Input';
+export { Skeleton } from './components/Skeleton/Skeleton';
+export { Icon } from './components/Icon/Icon';

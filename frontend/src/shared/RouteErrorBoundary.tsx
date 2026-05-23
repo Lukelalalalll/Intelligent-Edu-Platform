@@ -1,5 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { log } from './utils/logger';
+import styles from './ErrorBoundary.module.css';
 
 interface Props {
   children: ReactNode;
@@ -24,34 +26,25 @@ class RouteErrorBoundaryInner extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[RouteErrorBoundary]', error, info);
+    log.error('RouteErrorBoundary', 'componentDidCatch', { error: error.message, componentStack: info.componentStack });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-          <h2 style={{ color: '#d32f2f', marginBottom: '16px' }}>This page encountered an error</h2>
-          <p style={{ color: '#666', marginBottom: '24px' }}>
+        <div className={styles.container}>
+          <h2 className={styles.title}>This page encountered an error</h2>
+          <p className={styles.message}>
             {this.state.error?.message || 'An unexpected error occurred.'}
           </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div className={styles.actions}>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
-              style={{
-                padding: '10px 24px', background: '#007B55', color: '#fff',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px',
-              }}
+              className={styles.retryBtn}
             >
               Retry
             </button>
-            <button
-              onClick={this.props.onGoHome}
-              style={{
-                padding: '10px 24px', background: '#555', color: '#fff',
-                border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px',
-              }}
-            >
+            <button onClick={this.props.onGoHome} className={styles.homeBtn}>
               Back to Home
             </button>
           </div>

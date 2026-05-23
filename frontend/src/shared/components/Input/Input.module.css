@@ -1,0 +1,36 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main, #212B36);
+}
+
+.input {
+  padding: 10px 14px;
+  border: 1px solid var(--border-color, #E0E0E0);
+  border-radius: var(--radius-sm, 14px);
+  background: var(--bg-input, #F1F5F9);
+  color: var(--text-main, #212B36);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: var(--primary-color, #007B55);
+}
+
+.inputError {
+  border-color: var(--error-color, #e03131);
+}
+
+.error {
+  font-size: 0.8rem;
+  color: var(--error-color, #e03131);
+}

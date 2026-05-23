@@ -105,7 +105,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-lg);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--card-border);
     box-shadow: var(--shadow-sm);
     padding: 2.5rem;
     margin-bottom: 2.5rem;
@@ -142,7 +142,7 @@
 .export-section:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-hover);
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: var(--card-bg);
 }
 
 /* 4. Shared circular icon and card title */
@@ -243,7 +243,7 @@ input[type="text"]:focus,
 .dropdown:focus,
 .prompt-input:focus {
     outline: none;
-    background-color: #fff;
+    background-color: var(--card-bg);
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
 }
@@ -283,7 +283,7 @@ input[type="text"]:focus,
 .btn:disabled,
 .g-btn-primary:disabled,
 .generate-btn:disabled {
-    background: #ccc;
+    background: var(--border-color);
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
@@ -317,20 +317,20 @@ select {
 }
 
 select:hover:not(:disabled) {
-    background-color: #fff;
+    background-color: var(--card-bg);
     border-color: rgba(0, 123, 85, 0.3);
     box-shadow: var(--shadow-sm);
 }
 
 select:focus {
     outline: none;
-    background-color: #fff;
+    background-color: var(--card-bg);
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
 }
 
 select:disabled {
-    background-color: #e9ecef;
+    background-color: var(--bg-input);
     color: var(--text-sub);
     cursor: not-allowed;
     opacity: 0.7;
@@ -340,7 +340,7 @@ select:disabled {
 select option {
     font-weight: 500;
     color: var(--text-main);
-    background-color: #fff;
+    background-color: var(--card-bg);
     padding: 12px;
 }
 
@@ -372,12 +372,12 @@ select.hku-select {
 }
 
 .custom-select-wrapper:hover .custom-select-trigger {
-    background-color: #fff;
+    background-color: var(--card-bg);
     border-color: rgba(0, 123, 85, 0.3);
 }
 
 .custom-select-wrapper.open .custom-select-trigger {
-    background-color: #fff;
+    background-color: var(--card-bg);
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
 }
@@ -402,7 +402,7 @@ select.hku-select {
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(0, 0, 0, 0.05);

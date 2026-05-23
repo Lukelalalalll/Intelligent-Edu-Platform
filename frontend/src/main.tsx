@@ -1,9 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './styles/base.css'
 import './styles/utilities.css'
 import App from './App'
 import { log } from './shared/utils/logger'
+
+// Apply theme before first paint to prevent flash of wrong theme
+const storedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const theme = storedTheme || (prefersDark ? 'dark' : 'light');
+document.documentElement.setAttribute('data-theme', theme);
 
 log.info('frontend', 'Application bootstrapping')
 
@@ -22,7 +29,7 @@ window.addEventListener('unhandledrejection', (event) => {
   })
 })
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,

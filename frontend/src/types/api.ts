@@ -5,7 +5,6 @@ export interface User {
   username: string;
   email: string;
   role: 'admin' | 'teacher' | 'student';
-  [key: string]: unknown;
 }
 
 export interface SessionResponse {
@@ -19,13 +18,11 @@ export interface Course {
   id?: string;
   course_id?: string;
   name: string;
-  [key: string]: unknown;
 }
 
 export interface Assignment {
   id: string;
   title: string;
-  [key: string]: unknown;
 }
 
 export interface Submission {
@@ -33,7 +30,6 @@ export interface Submission {
   assignmentId: string;
   studentId: string;
   status?: string;
-  [key: string]: unknown;
 }
 
 export interface SubmissionDetail extends Submission {
@@ -46,7 +42,6 @@ export interface Annotation {
   id: string;
   content: string;
   position: { x: number; y: number; width: number; height: number; pageNumber: number };
-  [key: string]: unknown;
 }
 
 /* ── Grading ───────────────────────────────────────────── */
@@ -70,9 +65,7 @@ export interface ScorePayload {
 
 /* ── AI / RAG ──────────────────────────────────────────── */
 
-export interface AIAnalyzeResponse {
-  [key: string]: unknown;
-}
+export interface AIAnalyzeResponse {}
 
 export interface RAGDebugPayload {
   submissionId: string;
@@ -101,14 +94,33 @@ export interface RagCitation {
   url?: string;
 }
 
+export interface UIElement {
+  type: 'image' | 'file' | 'choice' | 'diagram';
+  url?: string;
+  alt?: string;
+  options?: string[];
+  message?: string;
+  file_name?: string;
+}
+
+export interface ToolProgress {
+  name: string;
+  status: 'running' | 'done' | 'error';
+  message?: string;
+  result?: unknown;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  reasoning?: string;
   attachedText?: string;
   files?: { file_name: string; mime_type: string }[];
   citations?: RagCitation[];
   is_course_relevant?: boolean;
   images?: string[];
+  ui_elements?: UIElement[];
+  tool_progresses?: ToolProgress[];
 }
 
 /* ── AI Session ────────────────────────────────────────── */
@@ -124,9 +136,7 @@ export interface AISessionListResponse {
   sessions: AISession[];
 }
 
-export interface AIMemory {
-  [key: string]: unknown;
-}
+export interface AIMemory {}
 
 /* ── Gmail / Email ─────────────────────────────────────── */
 
@@ -136,7 +146,6 @@ export interface EmailSummary {
   subject: string;
   snippet: string;
   date: string;
-  [key: string]: unknown;
 }
 
 export interface EmailDetail extends EmailSummary {
@@ -151,9 +160,7 @@ export interface EmailListResponse {
   nextPageToken?: string | null;
 }
 
-export interface EmailClassification {
-  [key: string]: unknown;
-}
+export interface EmailClassification {}
 
 /* ── Sub2 / Question Generator ─────────────────────────── */
 
@@ -175,7 +182,6 @@ export interface Sub2ExtractPayload {
 export interface Exercise {
   text: string;
   formattedText?: string;
-  [key: string]: unknown;
 }
 
 export interface Sub2ExtractResponse {
@@ -212,17 +218,21 @@ export interface Sub2GenerateResponse {
 
 export interface GenerationHistoryItem {
   id: string;
-  [key: string]: unknown;
+  tool?: string;
+  created_at?: string;
+  preview?: string;
+  params?: Record<string, any>;
+  result?: any;
 }
 
 /* ── Sub4 / Diagram Tool ───────────────────────────────── */
 
 export interface Sub4ExtractState {
   file: File | null;
-  isDragging: boolean;
   loading: boolean;
   data: unknown;
   error: string;
+  isDragging: boolean;
 }
 
 export interface Sub4SearchState {

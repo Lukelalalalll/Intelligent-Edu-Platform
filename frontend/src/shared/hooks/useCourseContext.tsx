@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import client from '../api/client';
+import { useAuthStore } from '../store/useAuthStore';
 import type { Course } from '@/types/api';
 
 interface CourseContextValue {
@@ -46,8 +47,8 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     ) || null;
 
     useEffect(() => {
-        const user = localStorage.getItem('user');
-        if (user) fetchCourses();
+        const storeUser = useAuthStore.getState().user;
+        if (storeUser) fetchCourses();
     }, [fetchCourses]);
 
     return (
