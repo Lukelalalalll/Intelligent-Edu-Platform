@@ -16,17 +16,18 @@ class DiagramGenerator:
     Supports generating LaTeX TikZ diagrams and Mermaid diagrams through DeepSeek API
     """
 
-    def __init__(self, deepseek_api_key: str = "sk-f2b923f129634f49ac37c3d675595acf",
+    def __init__(self, deepseek_api_key: Optional[str] = None,
                  serp_api_key: Optional[str] = None):
         """
         Initialize diagram generator
 
         Args:
-            deepseek_api_key: DeepSeek API key
+            deepseek_api_key: DeepSeek API key (defaults to Config.DEEPSEEK_API_KEY)
             serp_api_key: SerpAPI key (optional, for search fallback)
         """
-        self.deepseek_api_key = deepseek_api_key
-        self.serp_api_key = serp_api_key
+        from backend.config import Config
+        self.deepseek_api_key = deepseek_api_key or Config.DEEPSEEK_API_KEY
+        self.serp_api_key = serp_api_key or Config.SERP_API_KEY
 
         # Create request session
         self.session = requests.Session()
@@ -524,7 +525,7 @@ class DiagramGenerator:
 
 
 # Create global diagram generator instance
-diagram_generator = DiagramGenerator(serp_api_key="044337361b95bae23c4338e45310aa83698d577782d660d6d6b278e7e291512f")
+diagram_generator = DiagramGenerator()
 
 
 # Convenience function for compatibility with image_generator

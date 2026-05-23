@@ -9,7 +9,7 @@ legacy_sub1_router = APIRouter(prefix="/sub1", tags=["SlidesLegacy"])
 
 
 class SlidesDeliveryJobSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[Literal['coze', 'local_ollama', 'deepseek']] = 'local_ollama'
     title: str = "Lesson Delivery Pack"
     ppt_schema: dict
     script_style: str = "classroom"

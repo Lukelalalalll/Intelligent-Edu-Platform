@@ -5,6 +5,7 @@ import os
 import shutil
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 from fastapi import UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
@@ -22,6 +23,8 @@ from backend.schemas import (
     SummarizeChaptersSchema,
     PptProcessSchema,
     ClassifyHighlightsSchema,
+    GenerateRenderRequest,
+    ThemeListResponse,
 )
 from backend.services.slides import (
     TaskTracker,
@@ -41,6 +44,16 @@ from backend.services.slides_pipeline_service import (
     process_text_to_md as _svc_process_text,
     generate_script as _svc_generate_script,
 )
+
+
+def _safe_resolve(filename: str, base_dir: str) -> Path:
+    """Resolve *filename* safely inside *base_dir*; raise 404 on traversal."""
+    base = Path(base_dir).resolve()
+    safe_name = os.path.basename(filename)
+    resolved = (base / safe_name).resolve()
+    if not str(resolved).startswith(str(base) + os.sep):
+        raise HTTPException(status_code=404, detail="File not found")
+    return resolved
 
 
 # ── PPT creation ──
@@ -67,7 +80,7 @@ async def process_ppt(req: PptProcessSchema, request: Request):
         await CheckpointManager.save(
             task_id=tracker.request_id,
             step="ppt_generate",
-            output={"filename": filename, "download_url": f"/sub1/download_ppt/{filename}"},
+            output={"filename": filename, "download_url": f"/api/sub1/download_ppt/{filename}"},
             input_data=req.ppt_schema if isinstance(req.ppt_schema, dict) else None,
         )
         await tracker.save()
@@ -75,7 +88,7 @@ async def process_ppt(req: PptProcessSchema, request: Request):
         return {
             "status": "success",
             "filename": filename,
-            "download_url": f"/slides/download_ppt/{filename}",
+            "download_url": f"/api/slides/download_ppt/{filename}",
             "request_id": tracker.request_id,
         }
     except ValueError as e:
@@ -89,17 +102,17 @@ async def process_ppt(req: PptProcessSchema, request: Request):
 
 @slides_router.get("/download_ppt/{filename}")
 def download_ppt(filename: str):
-    search_paths = [
-        os.path.join(Config.PPT_RESULTS_FOLDER, filename),
-        os.path.join(Config.PPT_RESULTS_FOLDER, 'sub1', filename),
-    ]
-    for path in search_paths:
-        if os.path.exists(path):
-            return FileResponse(
-                path,
-                media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                filename=filename,
-            )
+    for folder in [Config.PPT_RESULTS_FOLDER, os.path.join(Config.PPT_RESULTS_FOLDER, 'sub1')]:
+        try:
+            path = _safe_resolve(filename, folder)
+            if path.exists():
+                return FileResponse(
+                    str(path),
+                    media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    filename=filename,
+                )
+        except HTTPException:
+            continue
     raise HTTPException(status_code=404, detail="File not found")
 
 
@@ -234,9 +247,12 @@ async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depend
 @slides_router.get("/download/{filename}")
 def download_combined(filename: str, user: dict = Depends(get_current_user)):
     for folder in [Config.SUB1_MD_FOLDER, Config.MARKDOWN_FOLDER]:
-        path = os.path.join(folder, filename)
-        if os.path.exists(path):
-            return FileResponse(path)
+        try:
+            path = _safe_resolve(filename, folder)
+            if path.exists():
+                return FileResponse(str(path))
+        except HTTPException:
+            continue
     raise HTTPException(status_code=404, detail="File not found")
 
 
@@ -293,7 +309,7 @@ async def coze_generate_outline(req: CozeOutlineRequest, user: dict = Depends(ge
                 _doc["expires_at"] = _exp
             await db.sub1_generation_history.insert_one(_doc)
         except Exception:
-            pass
+            logger.warning("history_insert_failed tool=coze_generate_outline", exc_info=True)
 
         return {"text": text}
     except HTTPException:
@@ -336,7 +352,7 @@ async def process_text(req: ProcessTextRequest, user: dict = Depends(get_current
             _doc["expires_at"] = _exp
         await db.sub1_generation_history.insert_one(_doc)
     except Exception:
-        pass
+        logger.warning("history_insert_failed tool=process_text", exc_info=True)
 
     return {"filename": filename, "sections": sections_count}
 
@@ -455,7 +471,7 @@ async def summarize_highlights(
                 _doc["expires_at"] = _exp
             await db.sub1_generation_history.insert_one(_doc)
         except Exception:
-            pass
+            logger.warning("history_insert_failed slide_generation", exc_info=True)
 
         return response
 
@@ -521,7 +537,7 @@ async def generate_talking_script(
             response_data['word_document'] = {
                 'available': True,
                 'filename': filename,
-                'download_url': f"/slides/download_script/{filename}",
+                'download_url': f"/api/slides/download_script/{filename}",
             }
         return response_data
 
@@ -533,14 +549,166 @@ async def generate_talking_script(
 
 @slides_router.get("/download_script/{filename}")
 def download_script(filename: str, user: dict = Depends(get_current_user)):
-    path = os.path.join(Config.SCRIPT_RESULTS_FOLDER, filename)
-    if not os.path.exists(path):
+    path = _safe_resolve(filename, Config.SCRIPT_RESULTS_FOLDER)
+    if not path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(
-        path,
+        str(path),
         media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         filename=filename,
     )
+
+
+# ══════════════════════════════════════════════════════════════════
+#  NEW: Unified HTML-based slide generation pipeline  (Task 6)
+# ══════════════════════════════════════════════════════════════════
+
+THEME_NAMES = {
+    "minimalist": "Minimalist (Academic)",
+    "neon_tech": "Neon Tech",
+    "corporate": "Corporate Blue",
+}
+
+
+@slides_router.get("/themes")
+async def list_themes():
+    """Return available base themes with preview descriptions."""
+    return {
+        "themes": [
+            {
+                "id": "minimalist",
+                "name": THEME_NAMES["minimalist"],
+                "description": "Clean, academic style with serif fonts and warm accent colors.",
+                "preview_colors": ["#ffffff", "#333333", "#2d6a4f"],
+            },
+            {
+                "id": "neon_tech",
+                "name": THEME_NAMES["neon_tech"],
+                "description": "Dark tech aesthetic with neon glow effects and monospace fonts.",
+                "preview_colors": ["#0a0a1a", "#00ff88", "#ff00aa"],
+            },
+            {
+                "id": "corporate",
+                "name": THEME_NAMES["corporate"],
+                "description": "Professional blue-gray palette, modern sans-serif layout.",
+                "preview_colors": ["#f8f9fa", "#1a365d", "#2b6cb0"],
+            },
+        ]
+    }
+
+
+@slides_router.post("/generate-render")
+async def generate_render(
+    req: GenerateRenderRequest,
+    user: dict = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Unified slide generation using HTML/CSS rendering pipeline.
+
+    Steps:
+      1. Load base CSS theme.
+      2. (Optional) Customize CSS via LLM using user's natural language prompt.
+      3. Render Markdown + customized CSS into HTML; screenshot via Playwright.
+      4. Pack screenshots into a PPTX file and return download + preview URLs.
+    """
+    from backend.services.slides.dynamic_theme_service import DynamicThemeService
+    from backend.services.slides.html_renderer import SlidesHtmlRenderer
+
+    request_id = (request.headers.get("X-Request-ID") if request else None)
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="generate_render")
+
+    try:
+        md_content = req.md_content.strip()
+        if not md_content:
+            raise HTTPException(status_code=400, detail="md_content must not be empty")
+
+        base_style = req.base_style
+        if base_style not in THEME_NAMES:
+            raise HTTPException(status_code=400, detail=f"Unknown base_style '{base_style}'. Supported: {list(THEME_NAMES.keys())}")
+
+        # 1. Load base CSS
+        theme_service = DynamicThemeService()
+        base_css = theme_service.load_base_css(base_style)
+
+        # 2. Optionally customize CSS via LLM
+        custom_css = base_css
+        if req.custom_style_prompt.strip():
+            logger.info("[%s] Customizing theme with prompt: %s", tracker.request_id, req.custom_style_prompt[:100])
+            with tracker.step("customize_theme", base_style=base_style):
+                custom_css = await theme_service.customize_theme(
+                    base_css_content=base_css,
+                    user_custom_theme_prompt=req.custom_style_prompt,
+                    provider=req.provider or "local_ollama",
+                )
+        else:
+            logger.info("[%s] Using base theme '%s' without customization", tracker.request_id, base_style)
+
+        # 3. Render Markdown → HTML → PPTX
+        renderer = SlidesHtmlRenderer()
+        output_dir = Config.PPT_RESULTS_FOLDER
+        os.makedirs(output_dir, exist_ok=True)
+
+        with tracker.step("render", base_style=base_style):
+            result = await renderer.render_and_export(
+                md_content=md_content,
+                css_content=custom_css,
+                output_dir=output_dir,
+                title=req.title,
+            )
+
+        tracker.finish(StepStatus.SUCCESS)
+        tracker.result_metadata["page_count"] = result["page_count"]
+        tracker.result_metadata["base_style"] = base_style
+        await tracker.save()
+
+        response_data = {
+            "status": "success",
+            "pptx_download_url": result["pptx_download_url"],
+            "html_preview_url": result.get("html_preview_url", ""),
+            "page_count": result["page_count"],
+            "custom_css": custom_css,
+            "request_id": tracker.request_id,
+        }
+
+        try:
+            _exp = await compute_history_expires_at(user.get("id", ""))
+            _doc = {
+                "user_id": user.get("id", ""),
+                "params": {
+                    "tool": "generate_render",
+                    "base_style": base_style,
+                    "provider": req.provider,
+                    "has_custom_prompt": bool(req.custom_style_prompt.strip()),
+                },
+                "source": {"title": req.title},
+                "result_preview": f"Generated {result['page_count']} slides with '{THEME_NAMES.get(base_style, base_style)}' theme",
+                "result_full": json.dumps(result, ensure_ascii=False),
+                "created_at": datetime.now(timezone.utc),
+            }
+            if _exp is not None:
+                _doc["expires_at"] = _exp
+            await db.sub1_generation_history.insert_one(_doc)
+        except Exception:
+            logger.warning("history_insert_failed slide_generation", exc_info=True)
+
+        return response_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        tracker.finish(StepStatus.FAILED)
+        logger.exception("[%s] Generate-render failed", tracker.request_id)
+        raise HTTPException(status_code=500, detail=f"Slide generation failed: {str(e)}")
+
+
+@slides_router.get("/download_html/{filename}")
+def download_html(filename: str):
+    """Serve generated HTML preview files."""
+    path = _safe_resolve(filename, Config.PPT_RESULTS_FOLDER)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(path), media_type='text/html', filename=filename)
 
 
 # ── Legacy routes ──

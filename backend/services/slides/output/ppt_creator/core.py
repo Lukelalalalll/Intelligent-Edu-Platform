@@ -1,23 +1,21 @@
 import os
 import asyncio
-import pandas as pd
 from pptx import Presentation
-from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
 from pptx.util import Inches, Pt
-from PIL import Image
-from ..generation.img_chart_processor import ImageChartProcessor
-from ..business.table_handler import BusinessTableHandler
-from ..generation.latex_generator import process_slide_latex
-from .theme_catalog import resolve_base_theme
-from .text_layout_engine import (
+from ...generation.img_chart_processor import ImageChartProcessor
+from ...business.table_handler import BusinessTableHandler
+from ..theme_catalog import resolve_base_theme
+from ..text_layout_engine import (
     fit_font_size,
     clean_bullets,
     shape_dimensions_pt,
     log_slide_layout_audit,
 )
-from .batch_context import BatchContext
-from . import ppt_utils
+from ..batch_context import BatchContext
+from .. import ppt_utils
+from .styles import TableBuilder
+from .charts import LatexRenderer
 
 
 class PPTCreator:
@@ -278,17 +276,17 @@ class PPTCreator:
         # Explicit import map — avoids unreliable string-based reflection (P0 fix)
         _CREATOR_IMPORT_MAP: dict[str, type] = {}
         try:
-            from .business_ppt_creator import BusinessPPTCreator  # lazy, avoids circular at module level
+            from ..business_ppt_creator import BusinessPPTCreator  # lazy, avoids circular at module level
             _CREATOR_IMPORT_MAP['BusinessPPTCreator'] = BusinessPPTCreator
         except ImportError as ie:
             print(f"⚠️ [CreatorImport] Could not import BusinessPPTCreator: {ie}")
         try:
-            from .light_ppt_creator import LightPPTCreator  # lazy import
+            from ..light_ppt_creator import LightPPTCreator  # lazy import
             _CREATOR_IMPORT_MAP['LightPPTCreator'] = LightPPTCreator
         except ImportError as ie:
             print(f"⚠️ [CreatorImport] Could not import LightPPTCreator: {ie}")
         try:
-            from .dark_ppt_creator import DarkPPTCreator  # lazy import
+            from ..dark_ppt_creator import DarkPPTCreator  # lazy import
             _CREATOR_IMPORT_MAP['DarkPPTCreator'] = DarkPPTCreator
         except ImportError as ie:
             print(f"⚠️ [CreatorImport] Could not import DarkPPTCreator: {ie}")
@@ -304,138 +302,13 @@ class PPTCreator:
         return creator_instance
     
     def _read_table_csv(self, table_index, presentation_title):
-        """读取表格CSV文件
-        
-        Args:
-            table_index (int): 表格索引
-            presentation_title (str): 演示文稿标题
-            
-        Returns:
-            dict: 包含表头和行数据的字典
-        """
-        csv_path = f"md/csv/{presentation_title}_tables_{table_index}.csv"
-        if not os.path.exists(csv_path):
-            return None
-            
-        try:
-            df = pd.read_csv(csv_path)
-            
-            # 清理表头：将 'Unnamed: index' 替换为空字符串
-            headers = []
-            for col in df.columns:
-                if 'Unnamed:' in str(col):
-                    headers.append('')
-                else:
-                    headers.append(str(col))
-            
-            # 清理数据：将 NaN 替换为空字符串
-            rows = []
-            for _, row in df.iterrows():
-                cleaned_row = []
-                for value in row:
-                    if pd.isna(value) or str(value).lower() == 'nan':
-                        cleaned_row.append('')
-                    else:
-                        cleaned_row.append(str(value))
-                rows.append(cleaned_row)
-            
-            return {
-                "header": headers,
-                "rows": rows
-            }
-        except Exception as e:
-            print(f"Error reading table CSV: {e}")
-            return None
+        return TableBuilder.read_table_csv(table_index, presentation_title)
 
     def _create_table(self, slide, table_data, left, top, width, height):
-        """在幻灯片上创建表格
-        
-        Args:
-            slide: 幻灯片对象
-            table_data (dict): 表格数据
-            left: 左边距
-            top: 上边距
-            width: 表格宽度
-            height: 表格高度
-        """
-        rows = len(table_data["rows"]) + 1  # +1 for header
-        cols = len(table_data["header"])
-        
-        # 创建表格
-        table = slide.shapes.add_table(rows, cols, left, top, width, height).table
-        
-        # Seaborn风格的配色方案
-        # 表头背景色 - seaborn的深蓝色
-        header_bg_color = RGBColor(31, 119, 180)  # #1f77b4
-        # 交替行背景色 - seaborn的浅灰色
-        even_row_bg_color = RGBColor(248, 248, 248)  # #f8f8f8
-        odd_row_bg_color = RGBColor(255, 255, 255)   # #ffffff
-        # 表头文字颜色 - 白色
-        header_text_color = RGBColor(255, 255, 255)
-        # 数据文字颜色 - 深灰色
-        data_text_color = RGBColor(51, 51, 51)  # #333333
-        
-        # 设置表头
-        for col_idx, header in enumerate(table_data["header"]):
-            cell = table.cell(0, col_idx)
-            self._set_cell_content_with_linebreaks(cell, str(header))
-            
-            # 设置表头背景色
-            cell.fill.solid()
-            cell.fill.fore_color.rgb = header_bg_color
-            
-            # 设置表头样式
-            for paragraph in cell.text_frame.paragraphs:
-                paragraph.font.bold = True
-                paragraph.font.size = Pt(14)
-                paragraph.font.color.rgb = header_text_color
-        
-        # 填充数据
-        for row_idx, row_data in enumerate(table_data["rows"]):
-            for col_idx, cell_data in enumerate(row_data):
-                cell = table.cell(row_idx + 1, col_idx)
-                self._set_cell_content_with_linebreaks(cell, str(cell_data))
-                
-                # 设置交替行背景色
-                if row_idx % 2 == 0:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = even_row_bg_color
-                else:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = odd_row_bg_color
-                
-                # 设置单元格样式
-                for paragraph in cell.text_frame.paragraphs:
-                    paragraph.font.size = Pt(12)
-                    paragraph.font.color.rgb = data_text_color
+        TableBuilder.create_table(slide, table_data, left, top, width, height)
 
     def _set_cell_content_with_linebreaks(self, cell, content):
-        """设置单元格内容，正确处理<br>标签为换行
-        
-        Args:
-            cell: 表格单元格对象
-            content (str): 单元格内容
-        """
-        # 处理<br>标签
-        if '<br>' in content:
-            # 分割内容为多行
-            lines = content.split('<br>')
-            
-            # 清空单元格内容
-            cell.text_frame.clear()
-            
-            # 添加第一行
-            if lines:
-                first_paragraph = cell.text_frame.paragraphs[0]
-                first_paragraph.text = lines[0].strip()
-                
-                # 添加后续行
-                for line in lines[1:]:
-                    new_paragraph = cell.text_frame.add_paragraph()
-                    new_paragraph.text = line.strip()
-        else:
-            # 没有<br>标签，直接设置文本
-            cell.text = content
+        TableBuilder._set_cell_content_with_linebreaks(cell, content)
     
     def _determine_content_font_size(self, bullet_count, avg_words_per_bullet):
         """根据bullet points数量和平均词数确定字体大小"""
@@ -753,96 +626,19 @@ class PPTCreator:
         ppt_utils.apply_speaker_notes(slide, slide_data)
 
     def _process_latex_formulas(self, slide, slide_data):
-        """处理LaTeX公式
-        
-        Args:
-            slide: 幻灯片对象
-            slide_data (dict): 幻灯片数据
-        """
-        # 检查是否有latex字段且包含公式
-        latex_formulas = slide_data.get('latex', [])
-        
-        if not latex_formulas or not any(formula.strip() for formula in latex_formulas):
-            return  # 没有LaTeX公式，直接返回
-        
-        # 生成幻灯片ID
         slide_id = f"slide_{slide_data.get('slide_number', 'unknown')}"
-        
-        # 处理LaTeX公式，生成图像
-        formula_images = process_slide_latex(slide_data, slide_id)
-        
-        if not formula_images:
-            print(f"⚠️ Slide {slide_id} LaTeX formulas processing failed")
-            return
-            
-        print(f"✅ Slide {slide_id} successfully processed {len(formula_images)} formulas")
-        
-        # 寻找合适的占位符来插入公式图片
-        self._insert_latex_images(slide, formula_images)
-    
+        formula_images = LatexRenderer.process_slide_latex(slide_data, slide_id)
+        if formula_images:
+            self._insert_latex_images(slide, formula_images)
+
     def _insert_latex_images(self, slide, formula_images):
-        """将LaTeX公式图像插入到幻灯片中，参考business/latex_processor逻辑
-        
-        Args:
-            slide: 幻灯片对象
-            formula_images (dict): 公式到图像路径的映射
-        """
-        # 收集其他类型的占位符信息（参考business模板处理逻辑）
-        other_placeholders = self._collect_other_placeholders(slide)
-        
-        # 为每个公式图像分配一个占位符
-        for i, (formula, image_path) in enumerate(formula_images.items()):
-            if i < len(other_placeholders):
-                placeholder_info = other_placeholders[i]
-                try:
-                    # 使用改进的图片插入方法，自动计算高度
-                    self._insert_picture_with_aspect_ratio(
-                        slide, 
-                        placeholder_info['shape'], 
-                        image_path,
-                        placeholder_info['left'],
-                        placeholder_info['top'],
-                        placeholder_info['width'],
-                        placeholder_info['height']
-                    )
-                    print(f"✅ Formula image inserted into the slide: {formula[:50]}...")
-                except Exception as e:
-                    print(f"❌ Formula image failed to insert into the slide: {e}")
-            else:
-                print(f"⚠️ No enough placeholders to insert formula: {formula[:50]}...")
-    
+        LatexRenderer.insert_latex_images(
+            slide, formula_images,
+            insert_picture_fn=self._insert_picture_with_aspect_ratio,
+        )
+
     def _collect_other_placeholders(self, slide):
-        """收集其他类型的占位符信息，排除常见占位符类型
-        
-        Args:
-            slide: 幻灯片对象
-            
-        Returns:
-            list: 其他占位符的位置信息列表
-        """
-        other_placeholders = []
-        excluded_types = {1, 2, 3, 4, 13}  # 排除标题、内容、页码等常见占位符
-        
-        for shape in slide.shapes:
-            if not shape.is_placeholder:
-                continue
-                
-            placeholder_type = shape.placeholder_format.type
-            
-            if placeholder_type not in excluded_types:
-                other_placeholders.append({
-                    'left': shape.left,
-                    'top': shape.top,
-                    'width': shape.width,
-                    'height': shape.height,
-                    'type': placeholder_type,
-                    'shape': shape
-                })
-        
-        # 按位置排序（从上到下，从左到右）
-        other_placeholders.sort(key=lambda x: (x['top'], x['left']))
-        
-        return other_placeholders
+        return LatexRenderer._collect_other_placeholders(slide)
     
     def _insert_picture_with_aspect_ratio(self, slide, placeholder_shape, image_path, left, top, width, height):
         """将图片插入到占位符中，根据原始宽高比计算高度"""

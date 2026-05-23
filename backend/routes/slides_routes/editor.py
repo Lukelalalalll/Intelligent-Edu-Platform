@@ -1,324 +1,401 @@
-"""Editor routes — LLM layout assignment, session creation, export, image upload."""
+"""
+Slides Editor Routes – Session management, preview rendering, and PPTX export.
+
+Provides endpoints for:
+- POST   /api/slides/editor/render-editor-session   – create session & render PNGs
+- GET    /api/slides/editor/get-slide-png            – fetch a single slide PNG
+- GET    /api/slides/editor/export-pptx              – download the PPTX file
+- GET    /api/slides/editor/get-editor-session       – retrieve session metadata
+- GET    /api/slides/editor/session-health           – lightweight session health check
+- POST   /api/slides/editor/auto-assign-layouts      – AI-powered layout assignment
+- POST   /api/slides/editor/convert-to-pptx          – convert JSON payload to PPTX
+- POST   /api/slides/editor/edit-text                – in-place text editing
+"""
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
 import re
-import uuid
-import hashlib
-from typing import Literal, Optional
+import tempfile
+import traceback
+from typing import Any, Dict, List, Optional
 
-from fastapi import HTTPException, Query, UploadFile, File
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from pptx import Presentation
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse, Response
+from pydantic import BaseModel, Field
 
-from backend.config import Config
-from backend.core.ai_provider import resolve_provider
-from backend.services.ai_gateway_service import AIGatewayService
-from backend.services.slides.output.editor_session import (
-    create_session,
-    get_session_meta,
-    get_slide_png_path,
-    export_pptx,
-    re_render_session,
-    SESSION_DIR,
-)
-from backend.services.slides.output.list_placeholders import PPTTemplateManager
-from .router import slides_router, public_slides_router
+from backend.core.config import Config
+from backend.core.security import get_current_user
+from backend.services.slides.output.editor_session import EditorSession
 
 logger = logging.getLogger(__name__)
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+router = APIRouter(prefix="/editor", tags=["slides-editor"])
 
 
-class AutoAssignLayoutsRequest(BaseModel):
-    provider: Optional[Literal["coze", "local_ollama"]] = "local_ollama"
-    theme: str
-    ppt_schema: dict
+def _extract_json_from_markdown(text: str) -> str:
+    """Extract JSON content from a markdown code fence, handling various formats."""
+    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
+
+# ---------------------------------------------------------------------------
+# Request / Response models
+# ---------------------------------------------------------------------------
 
 
 class RenderEditorSessionRequest(BaseModel):
-    theme: str
-    ppt_schema: dict
-
-
-class ExportPptxRequest(BaseModel):
-    session_id: str
-    theme: str
-    ppt_schema: dict
-    edits: list[dict] = []
-    slide_images: list[dict] = []
-
-
-class ReRenderSessionRequest(BaseModel):
-    session_id: str
-    edits: list[dict] = []
-    slide_images: list[dict] = []
-
-
-# ── LLM Layout Assignment ────────────────────────────────────────────────────
-
-_LAYOUT_SYSTEM_PROMPT = """\
-You are a PPT design expert. Given the information for each slide and the available theme layouts, select the most suitable layout for each slide.
-
-Rules:
-- The first slide (and only the first) should typically use a "Title Slide" or the theme's cover/Title layout
-- Section separator slides should use a Section-type layout
-- **Important**: When bullet_count >= 1, you MUST choose a content layout that includes a body area (e.g. "Title and Content", "B1-P1-H", "Single Picture", etc.). Never use "Title Slide" or a title-only layout — content will be lost
-- Use standard content layouts for 3-5 bullet points
-- Use an Ending layout for the last slide (if available)
-- Return a strict JSON array, no extra text"""
-
-
-def _build_assignment_prompt(theme: str, layout_names: list[str], slides: list[dict]) -> str:
-    slides_summary = []
-    for s in slides:
-        slides_summary.append({
-            "index": s.get("index", 0),
-            "title": s.get("title", ""),
-            "bullet_count": len(s.get("content", [])),
-        })
-    return (
-        f"Theme: {theme}\n"
-        f"Available layouts: {json.dumps(layout_names, ensure_ascii=False)}\n\n"
-        f"Slide information:\n{json.dumps(slides_summary, ensure_ascii=False, indent=2)}\n\n"
-        '[Return format (JSON array)]:\n[{ "index": 0, "layout": "layout name" }, ...]'
+    """Request to create a new editor session with PPTX rendering."""
+    pptx_base64: str = Field(..., description="Base64-encoded PPTX bytes")
+    theme_id: str = Field(..., description="Theme identifier for template merging")
+    slide_lookup_table: Dict[int, str] = Field(
+        default_factory=dict,
+        description="Mapping from slide index to layout type (e.g. 'title_slide')",
     )
 
 
-def _parse_llm_assignments(raw: str) -> list[dict]:
-    """Extract JSON array from LLM response (may be wrapped in markdown fences)."""
-    # Strip markdown code fences if present
-    cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`")
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        # Try to find the first JSON array in the response
-        match = re.search(r"\[.*\]", cleaned, re.DOTALL)
-        if match:
-            return json.loads(match.group(0))
-        raise ValueError(f"Could not parse LLM response as JSON: {raw[:300]}")
-
-
-@slides_router.post("/auto-assign-layouts")
-async def auto_assign_layouts(req: AutoAssignLayoutsRequest):
-    """Use LLM to auto-assign the best layout for each slide."""
-    provider = resolve_provider(req.provider, feature="layout-assignment")
-
-    # Get available layouts for the theme
-    manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
-    try:
-        placeholders = manager.get_placeholders(req.theme)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    layout_names = [p["name"] for p in placeholders]
-
-    slides = req.ppt_schema.get("slides", [])
-    # Add index if missing
-    for i, s in enumerate(slides):
-        s.setdefault("index", i)
-
-    user_prompt = _build_assignment_prompt(req.theme, layout_names, slides)
-
-    ai_service = AIGatewayService()
-    try:
-        raw_response = await ai_service.chat_with_provider(
-            message=user_prompt,
-            context={"system_override": _LAYOUT_SYSTEM_PROMPT},
-            provider=provider,
-        )
-        assignments = _parse_llm_assignments(raw_response)
-    except Exception as e:
-        logger.error("[auto-assign] LLM failed: %s", e)
-        raise HTTPException(status_code=502, detail=f"LLM layout assignment failed: {e}")
-
-    # Apply assignments to schema
-    assign_map = {a["index"]: a.get("layout", "") for a in assignments}
-    for slide in slides:
-        idx = slide.get("index", 0)
-        if idx in assign_map:
-            assigned = assign_map[idx]
-            # Validate it's a real layout name
-            if assigned in layout_names:
-                slide["layout"] = assigned
-            else:
-                # Fallback: pick first content-style layout
-                slide["layout"] = layout_names[0] if layout_names else ""
-
-    updated_schema = {**req.ppt_schema, "slides": slides}
-
-    # Ensure presentation has a title — generate one from AI if missing
-    pres_title = updated_schema.get("presentation_title", "").strip()
-    if not pres_title and slides:
-        # Build a quick title from slide titles
-        slide_titles = [s.get("title", "") for s in slides[:5] if s.get("title")]
-        if slide_titles:
-            pres_title = slide_titles[0]
-        else:
-            # Ask AI for a title based on content
-            try:
-                content_summary = "; ".join(
-                    s.get("title", "") or (s.get("content", [""])[0] if s.get("content") else "")
-                    for s in slides[:5]
-                )
-                title_response = await ai_service.chat_with_provider(
-                    message=f"Based on the following presentation content, generate a concise title (output only the title, no extra text):\n{content_summary}",
-                    context={"system_override": "You are a title generation assistant. Output only one concise title, no extra explanation."},
-                    provider=provider,
-                )
-                pres_title = title_response.strip().strip('"\'')
-            except Exception:
-                pres_title = "Presentation"
-        updated_schema["presentation_title"] = pres_title
-
-    # Also ensure first slide has title text
-    if slides and not slides[0].get("title"):
-        slides[0]["title"] = pres_title
-
-    return {"ppt_schema": updated_schema}
-
-
-# ── Editor Session ────────────────────────────────────────────────────────────
-
-
-@slides_router.post("/render-editor-session")
-def render_editor_session(req: RenderEditorSessionRequest):
-    """Generate PPTX, render every slide to PNG, and return element tree."""
-    try:
-        session = create_session(req.theme, req.ppt_schema)
-        return session
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except RuntimeError as e:
-        logger.error("[editor-session] %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@slides_router.get("/editor-img/{session_id}/{page}.png")
-def get_editor_slide_image(session_id: str, page: int):
-    """Serve a rendered slide PNG for the editor canvas."""
-    try:
-        png_path = get_slide_png_path(session_id, page)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Slide image not found")
-    return FileResponse(png_path, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
-
-
-@slides_router.post("/re-render-session")
-def re_render_session_endpoint(req: ReRenderSessionRequest):
-    """Apply text edits to a session's PPTX, re-render PNGs, return fresh meta."""
-    try:
-        meta = re_render_session(req.session_id, req.edits, req.slide_images)
-        return meta
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except RuntimeError as e:
-        logger.error("[re-render-session] %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ── Export ────────────────────────────────────────────────────────────────────
-
-
-@slides_router.post("/export-pptx")
-def export_pptx_endpoint(req: ExportPptxRequest):
-    """Apply edits and return final .pptx for download."""
-    try:
-        out_path = export_pptx(req.session_id, req.theme, req.ppt_schema, req.edits, req.slide_images)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    expected_slide_count = -1
-    try:
-        meta = get_session_meta(req.session_id)
-        expected_slide_count = len(meta.get("slides", []) or [])
-    except Exception:
-        expected_slide_count = -1
-
-    file_size = os.path.getsize(out_path)
-    file_md5 = hashlib.md5(open(out_path, "rb").read()).hexdigest()
-    try:
-        slide_count = len(Presentation(out_path).slides)
-    except Exception:
-        slide_count = -1
-
-    if expected_slide_count >= 0 and slide_count >= 0 and slide_count != expected_slide_count:
-        logger.error(
-            "[export-pptx] slide-count mismatch: session_id=%s expected=%d actual=%d file=%s req_theme=%s",
-            req.session_id,
-            expected_slide_count,
-            slide_count,
-            os.path.basename(out_path),
-            req.theme,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Export slide count mismatch "
-                f"(expected={expected_slide_count}, actual={slide_count}). "
-                "Please regenerate this session and retry."
-            ),
-        )
-
-    logger.info(
-        "[export-pptx] session_id=%s req_theme=%s file=%s size=%d md5=%s slides=%d edits=%d images=%d",
-        req.session_id,
-        req.theme,
-        os.path.basename(out_path),
-        file_size,
-        file_md5,
-        slide_count,
-        len(req.edits or []),
-        len(req.slide_images or []),
-    )
-
-    filename = f"{req.ppt_schema.get('presentation_title', 'presentation')}.pptx"
-    return FileResponse(
-        out_path,
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        filename=filename,
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "Pragma": "no-cache",
-            "Expires": "0",
-        },
+class AutoAssignLayoutsRequest(BaseModel):
+    """Request body for AI-powered layout assignment."""
+    slides_md: List[Dict[str, Any]] = Field(
+        ..., description="Array of slide objects with md_content and slide_number"
     )
 
 
-# ── Image upload ──────────────────────────────────────────────────────────────
+class ConvertToPptxRequest(BaseModel):
+    """Request body to convert a JSON structure into a PPTX."""
+    payload: Dict[str, Any] = Field(
+        ..., description="JSON payload describing slides and their elements"
+    )
+    theme_id: str = Field(..., description="Theme ID to apply")
 
 
-@slides_router.post("/upload-image")
-async def upload_slide_image(file: UploadFile = File(...)):
-    """Upload an image for use in the slide editor."""
-    assets_dir = os.path.join(SESSION_DIR, "assets")
-    os.makedirs(assets_dir, exist_ok=True)
+class EditTextRequest(BaseModel):
+    """In-place text editing request."""
+    session_id: str = Field(..., description="Editor session ID")
+    slide_index: int = Field(..., ge=1, description="1-based slide index")
+    element_index: int = Field(..., ge=0, description="0-based element index on the slide")
+    new_text: str = Field(..., min_length=1, description="New text content")
 
-    asset_id = uuid.uuid4().hex[:12]
-    ext = os.path.splitext(file.filename or "img.png")[1] or ".png"
-    save_path = os.path.join(assets_dir, f"{asset_id}{ext}")
 
-    content = await file.read()
-    if len(content) > 10 * 1024 * 1024:  # 10 MB limit
-        raise HTTPException(status_code=413, detail="File too large (max 10 MB)")
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
 
-    with open(save_path, "wb") as f:
-        f.write(content)
+def _prep_auto_markdown(slides_md: list) -> str:
+    """
+    Turn a list of slide objects (each with 'md_content' and 'slide_number')
+    into a single Markdown string with numbered slide separators.
+    """
+    parts: list[str] = []
+    for s in slides_md:
+        num = s.get("slide_number", s.get("index", "?"))
+        md = s.get("md_content", "")
+        parts.append(f"--- Slide {num} ---\n{md}")
+    return "\n\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/render-editor-session")
+async def render_editor_session(
+    body: RenderEditorSessionRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Create an editor session from a base64-encoded PPTX and render slide PNGs.
+
+    Returns session metadata including base64-encoded PNG previews for each
+    slide so the frontend can display them in an <img> tag.
+
+    If LibreOffice is unavailable, falls back to simplified Pillow-based
+    placeholder previews – the session is always created.
+    """
+    try:
+        import base64 as _b64
+
+        # Decode base64 PPTX
+        try:
+            pptx_bytes = _b64.b64decode(body.pptx_base64)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 PPTX data")
+
+        # Template loading is optional – the PPTX is self-contained;
+        # template merging only enhances visual fidelity when the theme exists.
+        # create_session handles the missing-LibreOffice case with Pillow fallback.
+        try:
+            _ = EditorSession._load_template_bytes(body.theme_id)
+        except FileNotFoundError:
+            logger.warning(
+                "Template not found for theme '%s'; session will use fallback rendering",
+                body.theme_id,
+            )
+
+        # Create session (this also renders PNGs via LibreOffice or Pillow fallback)
+        session = EditorSession.create_session(
+            pptx_bytes=pptx_bytes,
+            theme_id=body.theme_id,
+            slide_lookup_table=body.slide_lookup_table,
+        )
+
+        return session.get_pptx_payload()
+
+    except HTTPException:
+        raise
+    except RuntimeError as exc:
+        logger.error("Editor session creation failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception as exc:
+        logger.error("Unexpected error in render_editor_session: %s\n%s", exc, traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Internal server error while creating editor session")
+
+
+@router.get("/get-slide-png")
+async def get_slide_png(
+    session_id: str = Query(..., description="Editor session ID"),
+    slide_index: int = Query(..., ge=1, description="1-based slide index"),
+):
+    """Return a single slide rendered as PNG (for on-demand loading)."""
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    png = session.get_slide_png(slide_index)
+    if png is None:
+        raise HTTPException(status_code=404, detail="Slide PNG not available")
+
+    return Response(content=png, media_type="image/png")
+
+
+@router.get("/export-pptx")
+async def export_pptx(
+    session_id: str = Query(..., description="Editor session ID"),
+):
+    """
+    Download the final PPTX file for the given editor session.
+    Returns the PPTX bytes directly with proper Content-Disposition header
+    so the browser downloads with the correct filename.
+    """
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    try:
+        pptx_bytes = session.get_pptx_bytes()
+        download_name = f"presentation_{session.session_id[:8]}.pptx"
+
+        return Response(
+            content=pptx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_name}"',
+                "Content-Length": str(len(pptx_bytes)),
+            },
+        )
+    except Exception as exc:
+        logger.error("PPTX export failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to export PPTX")
+
+
+@router.get("/get-editor-session")
+async def get_editor_session(
+    session_id: str = Query(..., description="Editor session ID"),
+):
+    """Retrieve session metadata (slide count, theme, status)."""
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
 
     return {
-        "asset_id": asset_id,
-        "url": f"/api/slides/asset/{asset_id}{ext}",
+        "session_id": session.session_id,
+        "theme_id": session.theme_id,
+        "total_slides": session.slide_count or len(session._slide_pngs),
+        "status": "ready",
     }
 
 
-@slides_router.get("/asset/{filename}")
-def serve_asset(filename: str):
-    """Serve an uploaded image asset."""
-    assets_dir = os.path.join(SESSION_DIR, "assets")
-    file_path = os.path.join(assets_dir, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return FileResponse(file_path, headers={"Cache-Control": "public, max-age=86400"})
+@router.get("/session-health")
+async def session_health(
+    session_id: str = Query(..., description="Editor session ID"),
+):
+    """
+    Lightweight health check for an editor session.
+    Returns whether the session exists, its render mode, and slide count.
+    Useful for frontend polling after session creation.
+    """
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    soffice_available = EditorSession._find_soffice() is not None
+
+    return {
+        "session_id": session.session_id,
+        "exists": True,
+        "total_slides": session.slide_count or len(session._slide_pngs),
+        "slides_rendered": len(session._slide_pngs),
+        "render_mode": "libreoffice" if soffice_available else "fallback",
+        "libreoffice_available": soffice_available,
+    }
+
+
+@router.post("/auto-assign-layouts")
+async def auto_assign_layouts(
+    body: AutoAssignLayoutsRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Use the AI gateway (DeepSeek / Ollama / OpenAI) to assign layout types
+    to each slide based on its Markdown content.
+    Returns a JSON array of {slide_number, layout_type}.
+
+    If the primary AI service is unreachable (e.g. Ollama instance not on
+    the same Tailscale network), returns a 503 with a clear error message
+    so the frontend can fall back to manual layout assignment.
+    """
+    try:
+        from backend.services.ai_gateway_service import get_default_service
+
+        # Build combined Markdown
+        combined_md = _prep_auto_markdown(body.slides_md)
+        if not combined_md.strip():
+            raise HTTPException(status_code=400, detail="No slide content provided")
+
+        # Load prompt template
+        import json
+        from pathlib import Path
+        prompt_template_path = (
+            Path(__file__).resolve().parents[2] / "prompts" / "layout_assignment.yaml"
+        )
+        if prompt_template_path.is_file():
+            import yaml
+            system_text = yaml.safe_load(prompt_template_path.read_text(encoding="utf-8"))
+            if isinstance(system_text, dict):
+                system_text = system_text.get("system", "") or system_text.get("prompt", "")
+        else:
+            system_text = (
+                "你是一个 PPT 排版专家。根据每个 slide 的 Markdown 内容，"
+                "为其分配合适的 layout 类型。"
+                "返回一个 JSON 数组，每个元素包含 slide_number 和 layout_type。"
+            )
+
+        # Call AI service with connection error detection
+        service = get_default_service()
+        try:
+            result = await service.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_text},
+                    {"role": "user", "content": combined_md},
+                ],
+                temperature=0.3,
+                max_tokens=2000,
+            )
+        except Exception as ai_exc:
+            error_msg = str(ai_exc).lower()
+            if any(kw in error_msg for kw in ("connect", "timeout", "refused", "unreachable", "name or service not known")):
+                logger.warning("AI service unreachable for layout assignment: %s", ai_exc)
+                raise HTTPException(
+                    status_code=503,
+                    detail="AI 布局分配服务暂时不可用（Ollama / AI 服务未连接）。"
+                           "请检查 AI 服务是否运行，或跳过自动分配使用手动布局。",
+                )
+            raise
+
+        # Parse response into layout assignments
+        raw = result["choices"][0]["message"]["content"]
+        raw = _extract_json_from_markdown(raw)
+
+        layout_assignments = json.loads(raw)
+        return {"layout_assignments": layout_assignments}
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse AI layout response: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI returned invalid JSON for layout assignments",
+        )
+    except Exception as exc:
+        logger.error("Auto layout assignment failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Auto-assign layouts failed: {str(exc)}",
+        )
+
+
+@router.post("/convert-to-pptx")
+async def convert_to_pptx(
+    body: ConvertToPptxRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Convert a structured JSON payload into a PPTX file.
+    Uses python-pptx for direct generation, bypassing LibreOffice.
+
+    Returns a base64-encoded PPTX for use in render-editor-session.
+    """
+    try:
+        import base64 as _b64
+
+        pptx_bytes = EditorSession._build_pptx_from_json(body.payload, body.theme_id)
+        return {
+            "pptx_base64": _b64.b64encode(pptx_bytes).decode("ascii"),
+            "size_bytes": len(pptx_bytes),
+        }
+
+    except Exception as exc:
+        logger.error("Convert to PPTX failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to convert to PPTX: {str(exc)}")
+
+
+@router.post("/edit-text")
+async def edit_text(
+    body: EditTextRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Commit a text edit to a slide element in the editor session."""
+    session = EditorSession.get_session(body.session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    try:
+        session.commit_text_edit(body.slide_index, body.element_index, body.new_text)
+        return {"status": "ok", "message": "Text edit committed"}
+    except Exception as exc:
+        logger.error("Text edit failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Text edit failed: {str(exc)}")
+
+
+# ---------------------------------------------------------------------------
+# Zoomable preview endpoint
+# ---------------------------------------------------------------------------
+
+@router.get("/preview-zoom")
+async def preview_zoom(
+    session_id: str = Query(..., description="Editor session ID"),
+    zoom: float = Query(1.0, ge=0.1, le=5.0, description="Zoom level"),
+    offset_x: int = Query(0, ge=0, description="Horizontal scroll offset in pixels"),
+    offset_y: int = Query(0, ge=0, description="Vertical scroll offset in pixels"),
+    tile_size: int = Query(256, ge=64, le=1024, description="Tile size for viewport"),
+):
+    """Render a zoomable preview of all slides in a grid layout."""
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
+    png_bytes = session.render_zoomable_preview(
+        zoom=zoom,
+        offset_x=offset_x,
+        offset_y=offset_y,
+        tile_size=tile_size,
+    )
+    if png_bytes is None:
+        raise HTTPException(status_code=404, detail="Preview image not available")
+
+    return Response(content=png_bytes, media_type="image/png")

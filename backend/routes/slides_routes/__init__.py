@@ -2,6 +2,10 @@
 from .router import slides_router, public_slides_router, legacy_sub1_router
 
 # Import submodules to register their routes on the routers above
-from . import template, pipeline, template_mapping, delivery, observability, history, layout_preview, editor  # noqa: F401
+from . import template, pipeline, template_mapping, delivery, observability, history, layout_preview  # noqa: F401
+
+# Editor has its own sub-router — mount it onto slides_router
+from .editor import router as editor_router
+slides_router.include_router(editor_router)
 
 __all__ = ["slides_router", "public_slides_router", "legacy_sub1_router"]
