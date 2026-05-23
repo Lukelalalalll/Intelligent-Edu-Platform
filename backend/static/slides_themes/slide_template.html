@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slide Preview — {{ title }}</title>
+<style>
+{{ css_content | safe }}
+</style>
+<style>
+/* ── Navigation bar ── */
+.slide-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 14px 20px;
+  background: rgba(15, 15, 30, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.slide-nav button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slide-nav button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.slide-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slide-nav .page-indicator {
+  color: #ccc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 80px;
+  text-align: center;
+  user-select: none;
+}
+
+.slide-nav .page-indicator .current {
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+/* ── Single-slide viewport ── */
+.viewport {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 80px;  /* bottom padding for nav bar */
+}
+
+.viewport .slide {
+  display: none;        /* hidden by default; JS shows current */
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.viewport .slide.active {
+  display: flex;
+}
+
+/* Keyboard hint */
+.slide-nav .kbd-hint {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  position: absolute;
+  right: 24px;
+}
+</style>
+</head>
+<body>
+
+<div class="viewport">
+{% for slide in slides %}
+<div class="slide{% if loop.index == 1 %} slide-cover active{% endif %}{% if loop.last and slides|length > 1 %} slide-end{% endif %}" id="slide-{{ loop.index }}">
+  <div class="slide-content">
+    {{ slide.content_html | safe }}
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<nav class="slide-nav">
+  <button id="prevBtn" disabled>&larr; Previous</button>
+  <span class="page-indicator">
+    <span class="current" id="currentPage">1</span> / <span id="totalPages">{{ slides|length }}</span>
+  </span>
+  <button id="nextBtn">Next &rarr;</button>
+  <span class="kbd-hint">← → keys</span>
+</nav>
+
+<script>
+(function () {
+  var slides = document.querySelectorAll('.viewport .slide');
+  var total = slides.length;
+  var current = 0;
+
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var currentPage = document.getElementById('currentPage');
+
+  function showSlide(index) {
+    slides.forEach(function (s, i) {
+      s.classList.toggle('active', i === index);
+    });
+    currentPage.textContent = index + 1;
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === total - 1;
+    current = index;
+  }
+
+  prevBtn.addEventListener('click', function () {
+    if (current > 0) showSlide(current - 1);
+  });
+
+  nextBtn.addEventListener('click', function () {
+    if (current < total - 1) showSlide(current + 1);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      if (current < total - 1) showSlide(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (current > 0) showSlide(current - 1);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

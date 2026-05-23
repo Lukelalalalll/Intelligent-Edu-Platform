@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slide Deck — {{ title | default("Presentation") }}</title>
+<style>
+{{ css_content | safe }}
+</style>
+</head>
+<body>
+{% for slide in slides %}
+<div class="slide{% if loop.index == 1 %} slide-cover{% endif %}{% if loop.last and slides|length > 1 %} slide-end{% endif %}" id="slide-{{ loop.index }}">
+  <div class="slide-content">
+    {{ slide.content_html | safe }}
+  </div>
+  <div class="page-number">{{ loop.index }} / {{ slides|length }}</div>
+</div>
+{% endfor %}
+</body>
+</html>
