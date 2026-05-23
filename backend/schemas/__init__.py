@@ -55,13 +55,14 @@ from backend.schemas.slides import (  # noqa: F401
     SlidesGenerateV2Schema,
     SlidesTaskResponseSchema,
     SlidesTaskStatusSchema,
+    GenerateRenderRequest,
+    ThemeListResponse,
 )
 
 from backend.schemas.questions import (  # noqa: F401
     ExtractQuestionsSchema,
     GenerateQuestionsSchema,
     SuggestConstraintsSchema,
-    ExportQuestionsSchema,
     UploadScreenshotSchema,
     QuestionOpsRunCreateSchema,
     QuestionOpsDedupeApplySchema,

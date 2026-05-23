@@ -1,14 +1,23 @@
+import re
 from typing import List, Optional, Literal
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
+
+
+def _camel_to_snake(name: str) -> str:
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
 class AnnotationPayload(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     submissionId: str
     annotation: dict
 
 
 class SubmissionScoreSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     submissionId: str
     totalScore: float
     rubricScores: dict
@@ -17,6 +26,8 @@ class SubmissionScoreSchema(BaseModel):
 
 
 class FinalizeAnnotationsSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     submissionId: str
     annotations: List[dict]
 
@@ -24,6 +35,8 @@ class FinalizeAnnotationsSchema(BaseModel):
 # === Flat Domain Model Schemas (v2) ===
 
 class CourseSectionSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     courseCode: str
     courseName: str
     semester: str = ""
@@ -32,12 +45,16 @@ class CourseSectionSchema(BaseModel):
 
 
 class EnrollmentSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     courseSectionId: str
     userId: str
     roleInCourse: Literal['teacher', 'student', 'ta'] = 'student'
 
 
 class AssignmentSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     courseSectionId: str
     title: str
     description: str = ""
@@ -48,6 +65,8 @@ class AssignmentSchema(BaseModel):
 
 
 class SubmissionSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     assignmentId: str
     studentId: str
     status: Literal['pending', 'grading', 'graded', 'returned'] = 'pending'
@@ -58,6 +77,8 @@ class SubmissionSchema(BaseModel):
 
 
 class DocumentSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     ownerType: Literal['submission', 'assignment', 'course'] = 'submission'
     ownerId: str
     storageKey: str
@@ -69,6 +90,8 @@ class DocumentSchema(BaseModel):
 
 
 class GradeSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     submissionId: str
     graderId: str
     rubricScores: dict = Field(default_factory=dict)
@@ -79,5 +102,7 @@ class GradeSchema(BaseModel):
 
 
 class StudentSubmissionCreateSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     assignmentId: str
     studentId: str

@@ -2,15 +2,17 @@ from typing import Literal, List, Optional
 
 from pydantic import BaseModel
 
+from backend.core.ai_provider import AIProvider
+
 
 class ExtractQuestionsSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     task_id: str
     page_numbers: List[int] = []
     prompt: str = "exercise"
 
 class GenerateQuestionsSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     task_id: str
     question_type: str
     num_questions: int
@@ -28,7 +30,7 @@ class GenerateQuestionsSchema(BaseModel):
 
 
 class SuggestConstraintsSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     task_id: str
     source_type: Literal['pdf', 'screenshot_set'] = 'pdf'
     page_numbers: List[int] = []
@@ -36,9 +38,6 @@ class SuggestConstraintsSchema(BaseModel):
     num_questions: int = 5
     difficulty: int | str = 3
     output_language: str = "English"
-
-class ExportQuestionsSchema(BaseModel):
-    pass
 
 class UploadScreenshotSchema(BaseModel):
     image: str
@@ -48,7 +47,7 @@ class UploadScreenshotSchema(BaseModel):
 
 
 class QuestionOpsRunCreateSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     task_id: Optional[str] = None
     course_id: Optional[str] = None
     source_text: Optional[str] = None

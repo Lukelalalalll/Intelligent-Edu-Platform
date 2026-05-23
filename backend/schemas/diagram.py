@@ -2,11 +2,13 @@ from typing import Literal, List, Optional
 
 from pydantic import BaseModel
 
+from backend.core.ai_provider import AIProvider
+
 
 class SearchSvgSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     prompt: str
 
 class DownloadSvgSchema(BaseModel):
-    provider: Optional[Literal['coze', 'local_ollama']] = 'local_ollama'
+    provider: Optional[AIProvider] = 'local_ollama'
     svg: str

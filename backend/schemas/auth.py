@@ -1,9 +1,16 @@
+import re
 from typing import List, Optional, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+def _camel_to_snake(name: str) -> str:
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
 class AuthSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     username: str
     password: str
     email: Optional[str] = None
@@ -12,6 +19,8 @@ class AuthSchema(BaseModel):
     staff_code: Optional[str] = None
 
 class UpdateProfileSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     username: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None

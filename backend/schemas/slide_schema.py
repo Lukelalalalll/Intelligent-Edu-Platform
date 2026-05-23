@@ -7,9 +7,14 @@ in render.py.
 from __future__ import annotations
 
 import json
+import re
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _camel_to_snake(name: str) -> str:
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
 class ChartDataItem(BaseModel):
@@ -23,6 +28,8 @@ class ParsedLayoutData(BaseModel):
     The route layer is responsible for parsing slideBody (Markdown / JSON)
     into this structured format before passing to the renderer.
     """
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     bullets: List[str] = Field(default_factory=list)
     col1Title: Optional[str] = Field(default=None, max_length=60)
     col1Bullets: List[str] = Field(default_factory=list)
@@ -41,17 +48,23 @@ class ParsedLayoutData(BaseModel):
 
 
 class RenderOptions(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     animationLevel: Literal["off", "basic", "high"] = "off"
     subtitleMode: Literal["hard_srt", "image_strip", "none"] = "none"
     toneMode: Literal["lecture", "inspire", "poetry"] = "lecture"
 
 
 class SceneAssets(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     customImagePath: Optional[str] = None
     layoutImagePath: Optional[str] = None
 
 
 class SceneModel(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
     id: str
     layoutType: Literal[
         "title-bullets", "image-left", "image-right", "image-top",
