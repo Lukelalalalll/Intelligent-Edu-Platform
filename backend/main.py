@@ -1,6 +1,5 @@
 import os
 import logging
-from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -97,7 +96,6 @@ async def lifespan(app: FastAPI):
     for item in validation_warnings:
         logger.warning("Startup security warning: %s", item)
 
-    max_workers = max(1, (os.cpu_count() or 2) - 1)
     http2_enabled = True
     try:
         import h2  # noqa: F401
@@ -105,7 +103,6 @@ async def lifespan(app: FastAPI):
         http2_enabled = False
         logger.warning("h2 package is not installed; falling back to HTTP/1.1 for shared httpx client.")
 
-    app.state.process_pool = ProcessPoolExecutor(max_workers=max_workers)
     app.state.http_client = httpx.AsyncClient(
         timeout=Config.COZE_REQUEST_TIMEOUT_SECONDS,
         limits=httpx.Limits(max_connections=100, max_keepalive_connections=30, keepalive_expiry=60),
@@ -138,11 +135,33 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Failed to reset stuck indexing jobs on startup")
 
+    # ── Preload RAG models to avoid cold-start latency on first request ──
+    try:
+        from backend.services.course_rag_service.service import course_rag_service
+        logger.info("Preloading embedding model (BAAI/bge-m3) — this may take 10-20s on first run...")
+        _ = course_rag_service.embeddings  # triggers bge-m3 load (~1.1 GB)
+        logger.info("Embedding model loaded")
+    except Exception:
+        logger.warning("Failed to preload embedding model — will load lazily on first request", exc_info=True)
+
+    try:
+        from backend.services.course_rag_service.reranker import _get_cross_encoder
+        logger.info("Preloading reranker model (BAAI/bge-reranker-base)...")
+        _get_cross_encoder()  # triggers bge-reranker-base load (~200 MB)
+        logger.info("Reranker model loaded")
+    except Exception:
+        logger.warning("Failed to preload reranker model — will load lazily on first request", exc_info=True)
+
     try:
         yield
     finally:
         await app.state.http_client.aclose()
-        app.state.process_pool.shutdown(wait=True, cancel_futures=True)
+        try:
+            from backend.services.course_rag_service.service import shutdown_retrieval_pool
+            shutdown_retrieval_pool()
+            logger.info("RAG retrieval thread pool shut down")
+        except Exception:
+            logger.debug("Failed to shut down RAG retrieval thread pool", exc_info=True)
 
 
 app = FastAPI(title="Intelligent Edu Platform API", lifespan=lifespan)

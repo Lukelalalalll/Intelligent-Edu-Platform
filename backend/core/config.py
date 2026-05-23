@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # ── Security ──────────────────────────────────────────────────────
-    SECRET_KEY: str = "your-secret-key"
-    JWT_SECRET_KEY: str = "jwt-secret-key-change-this-in-prod"
+    SECRET_KEY: str = ""
+    JWT_SECRET_KEY: str = ""
     JWT_TOKEN_LOCATION: ClassVar[list[str]] = ["cookies"]
     JWT_COOKIE_CSRF_PROTECT: bool = False   # overridden by model_validator
     JWT_ACCESS_COOKIE_NAME: ClassVar[str] = "access_token_cookie"
@@ -70,12 +70,12 @@ class Settings(BaseSettings):
     COZE_REQUEST_TIMEOUT_SECONDS: float = 90.0
     COZE_POLL_INTERVAL_SECONDS: float = 1.2
     COZE_POLL_MAX_ATTEMPTS: int = 50
+    COZE_OCR_ENABLED: bool = False
 
     # ── AI provider ───────────────────────────────────────────────────
     AI_DEFAULT_PROVIDER: str = "local_ollama"
     AI_ALLOW_PROVIDER_SWITCH: bool = True
-    # OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_BASE_URL: str = "http://hp-z2-hcwu.tail545784.ts.net:11434"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2-vision:11b"
     OLLAMA_REQUEST_TIMEOUT_SECONDS: float = 180.0
     OLLAMA_LIGHT_TEMPERATURE: float = 0.2
@@ -84,6 +84,13 @@ class Settings(BaseSettings):
     OLLAMA_HEAVY_TEMPERATURE: float = 0.4
     OLLAMA_HEAVY_NUM_PREDICT: int = 1024
     OLLAMA_HEAVY_NUM_CTX: int = 8192
+
+    # ── DeepSeek ──────────────────────────────────────────────────────
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_MODEL: str = "deepseek-v4-pro"
+    DEEPSEEK_REQUEST_TIMEOUT_SECONDS: float = 120.0
+    DEEPSEEK_TEMPERATURE: float = 0.4
+    DEEPSEEK_MAX_TOKENS: int = 4096
 
     # ── RAG ───────────────────────────────────────────────────────────
     RAG_VECTORSTORE_DIR: str = ""
@@ -99,6 +106,9 @@ class Settings(BaseSettings):
     RAG_CHUNK_OVERLAP: int = 200
     RAG_NEURAL_RERANK_ENABLED: bool = True
     RAG_NEURAL_RERANK_CANDIDATES: int = 20
+    # ── RAG Internationalization ───────────────────────────────────
+    RAG_QUERY_LANGUAGE: str = "auto"
+
     # ── RAG Advanced Optimizations ────────────────────────────────
     # Contextual Retrieval (Anthropic, Sep 2024): prepend LLM-generated
     # per-chunk context before embedding.  Disabled by default because
@@ -139,6 +149,7 @@ class Settings(BaseSettings):
     RAG_SEMANTIC_CACHE_THRESHOLD: float = 0.92
     RAG_SEMANTIC_CACHE_MAX_ENTRIES: int = 200
     RAG_VECTOR_SIMILARITY_THRESHOLD: float = 0.35
+    RAG_RELEVANCE_THRESHOLD: float = 0.60
     RAG_POSTCHECK_OVERLAP_THRESHOLD: float = 0.18
     RAG_PDF_MAX_PAGES: int = 200
     RAG_OCR_DPI: int = 300
@@ -215,6 +226,16 @@ class Settings(BaseSettings):
     def _lower_samesite(cls, v: str) -> str:
         return str(v or "lax").strip().lower()
 
+    @field_validator("COZE_REQUEST_TIMEOUT_SECONDS", mode="before")
+    @classmethod
+    def _clamp_coze_timeout(cls, v) -> float:
+        return max(5.0, min(300.0, float(v or 90.0)))
+
+    @field_validator("COZE_POLL_INTERVAL_SECONDS", mode="before")
+    @classmethod
+    def _clamp_coze_poll_interval(cls, v) -> float:
+        return max(0.5, min(30.0, float(v or 1.2)))
+
     @field_validator("AI_DEFAULT_PROVIDER", mode="before")
     @classmethod
     def _normalize_provider(cls, v: str) -> str:
@@ -233,6 +254,24 @@ class Settings(BaseSettings):
     def _set_defaults_and_env_flags(self) -> "Settings":
         env = self.ENV.lower()
         sensitive = _is_sensitive(env)
+
+        # Auto-generate strong random secrets if none provided.
+        if not self.SECRET_KEY:
+            generated = os.urandom(32).hex()
+            object.__setattr__(self, "SECRET_KEY", generated)
+            import logging
+            logging.getLogger("config").warning(
+                "SECRET_KEY was not set — using auto-generated key for this session. "
+                "Set SECRET_KEY in .env for persistent sessions across restarts."
+            )
+        if not self.JWT_SECRET_KEY:
+            generated = os.urandom(32).hex()
+            object.__setattr__(self, "JWT_SECRET_KEY", generated)
+            import logging
+            logging.getLogger("config").warning(
+                "JWT_SECRET_KEY was not set — using auto-generated key for this session. "
+                "Set JWT_SECRET_KEY in .env for persistent sessions across restarts."
+            )
 
         # JWT_COOKIE_CSRF_PROTECT defaults to True in sensitive envs
         # (only override if the field is still at its pydantic default of False)

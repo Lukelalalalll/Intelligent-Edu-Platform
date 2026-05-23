@@ -8,9 +8,11 @@ from backend.infrastructure.telemetry import (  # noqa: F401
     COLLECTION,
     LLMTelemetry,
 )
+from backend.infrastructure.rag_telemetry import rag_telemetry  # noqa: F401
 
 __all__ = [
     "llm_telemetry",
+    "rag_telemetry",
     "TelemetryTimer",
     "classify_error",
     "estimate_cost",

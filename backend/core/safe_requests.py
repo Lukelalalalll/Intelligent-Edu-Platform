@@ -58,29 +58,28 @@ def _validate_url(url: str) -> str:
 _MAX_REDIRECTS = 5
 
 
-def safe_get(url: str, *, timeout: int = 15, max_redirects: int = _MAX_REDIRECTS, **kwargs) -> _requests.Response:
-    """requests.get() with SSRF protection.
+def _follow_redirects_safely(
+    method_fn, url: str, *, timeout: int = 15, max_redirects: int = _MAX_REDIRECTS, **kwargs
+) -> _requests.Response:
+    """Follow redirects manually, validating each hop against the blocklist.
 
-    Redirects are followed manually so every hop is validated against
-    the private-IP blocklist, preventing redirect-based SSRF bypass.
+    ``method_fn`` must be ``requests.get``, ``requests.post``, etc.
     """
     kwargs.setdefault("timeout", timeout)
-    # Always disable automatic redirects so we can validate each hop
     kwargs["allow_redirects"] = False
 
     current_url = url
     for _ in range(max_redirects + 1):
         _validate_url(current_url)
-        resp = _requests.get(current_url, **kwargs)
+        resp = method_fn(current_url, **kwargs)
         if resp.is_redirect or resp.is_permanent_redirect:
             location = resp.headers.get("Location")
             if not location:
                 break
-            # Resolve relative redirects
             from urllib.parse import urljoin
+
             current_url = urljoin(current_url, location)
             continue
-        # Not a redirect — final response
         if len(resp.content) > MAX_RESPONSE_BYTES:
             raise HTTPException(status_code=400, detail="Response too large")
         return resp
@@ -88,8 +87,23 @@ def safe_get(url: str, *, timeout: int = 15, max_redirects: int = _MAX_REDIRECTS
     raise HTTPException(status_code=400, detail="Too many redirects")
 
 
-def safe_post(url: str, *, timeout: int = 15, **kwargs) -> _requests.Response:
-    """requests.post() with SSRF protection."""
-    _validate_url(url)
-    kwargs.setdefault("timeout", timeout)
-    return _requests.post(url, **kwargs)
+def safe_get(
+    url: str, *, timeout: int = 15, max_redirects: int = _MAX_REDIRECTS, **kwargs
+) -> _requests.Response:
+    """requests.get() with SSRF protection.
+
+    Redirects are followed manually so every hop is validated against
+    the private-IP blocklist, preventing redirect-based SSRF bypass.
+    """
+    return _follow_redirects_safely(_requests.get, url, timeout=timeout, max_redirects=max_redirects, **kwargs)
+
+
+def safe_post(
+    url: str, *, timeout: int = 15, max_redirects: int = _MAX_REDIRECTS, **kwargs
+) -> _requests.Response:
+    """requests.post() with SSRF protection.
+
+    Redirects are followed manually so every hop is validated against
+    the private-IP blocklist, preventing redirect-based SSRF bypass.
+    """
+    return _follow_redirects_safely(_requests.post, url, timeout=timeout, max_redirects=max_redirects, **kwargs)

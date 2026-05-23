@@ -97,8 +97,8 @@ class RAGTelemetry:
         digest = TDigest()
         for v in r.get("latencies", []):
             digest.update(v)
-        p50 = digest.percentile(50) if digest.weight() else 0
-        p95 = digest.percentile(95) if digest.weight() else 0
+        p50 = digest.percentile(50) if digest.n else 0
+        p95 = digest.percentile(95) if digest.n else 0
         total = r["total"] or 1
 
         return {
@@ -168,6 +168,24 @@ class RAGTelemetry:
         ]
         return await db[COLLECTION].aggregate(pipeline).to_list(20)
 
+    # ── helpers ──────────────────────────────────────────────────────
+    async def _get_hit_rate(self, start: datetime, end: datetime) -> float | None:
+        """Return hit rate (result_count > 0) for the given time window, or None if no data."""
+        pipeline = [
+            {"$match": {"timestamp": {"$gte": start, "$lt": end}}},
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {"$sum": 1},
+                    "hits": {"$sum": {"$cond": [{"$gt": ["$result_count", 0]}, 1, 0]}},
+                }
+            },
+        ]
+        rows = await db[COLLECTION].aggregate(pipeline).to_list(1)
+        if not rows or rows[0]["total"] == 0:
+            return None
+        return rows[0]["hits"] / rows[0]["total"]
+
     # ── alert check ─────────────────────────────────────────────────
     async def check_alerts(
         self, hours: int = 1, thresholds: Dict[str, float] | None = None
@@ -203,6 +221,32 @@ class RAGTelemetry:
                 "value": er,
                 "threshold": th["empty_retrieval_rate"],
             })
+
+        # Hit-rate drop vs baseline (24 h ago, same window length)
+        now = datetime.now(timezone.utc)
+        current_start = now - timedelta(hours=hours)
+        baseline_start = current_start - timedelta(hours=24)
+        baseline_end = baseline_start + timedelta(hours=hours)
+
+        current_hit_rate = await self._get_hit_rate(current_start, now)
+        baseline_hit_rate = await self._get_hit_rate(baseline_start, baseline_end)
+
+        if current_hit_rate is not None and baseline_hit_rate is not None:
+            drop_pct = (baseline_hit_rate - current_hit_rate) * 100
+            if drop_pct > th["hit_rate_drop_pct"]:
+                alerts.append({
+                    "rule": "hit_rate_drop",
+                    "severity": "warning",
+                    "message": (
+                        f"Hit rate dropped from {baseline_hit_rate*100:.1f}% to "
+                        f"{current_hit_rate*100:.1f}% ({drop_pct:.1f} pp drop, "
+                        f"threshold: {th['hit_rate_drop_pct']:.0f} pp)"
+                    ),
+                    "value": round(drop_pct, 1),
+                    "threshold": th["hit_rate_drop_pct"],
+                    "current_hit_rate": round(current_hit_rate, 4),
+                    "baseline_hit_rate": round(baseline_hit_rate, 4),
+                })
 
         return alerts
 
