@@ -22,11 +22,11 @@ from backend.config import Config
 from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.schemas import AiChatSchema
-from backend.services.rag_chat_pipeline import task_profile_for_phase
+from backend.services.rag_service.rag_chat_pipeline import task_profile_for_phase
 
 from .chat_models import ParsedRequest, RAGResult, StreamMeta
 from .chat_providers import generate_chat_response
-from .chat_streaming import sse_error
+from .chat_streaming import sse_error, sse_tool_progress
 from .chat_context_helpers import (
     _compact_chat_history,
     _is_document_summary_request,
@@ -39,9 +39,9 @@ from .prompting import (
     _STUDENT_TUTOR_MODE_MSG,
     _TEACHER_SYSTEM_MSG,
 )
-from .rag_orchestrator import run_student_rag
+from .rag_orchestrator import run_student_rag, _validate_context_window
 from .router import _SUPPORTED_PROVIDERS, _limiter, ai_router
-from backend.services.session_bucket_service import load_all_messages
+from backend.services.chat_service.session_bucket_service import load_all_messages
 
 logger = logging.getLogger(__name__)
 
@@ -174,10 +174,12 @@ def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
     if requested_provider not in _SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {requested_provider}")
     if not Config.AI_ALLOW_PROVIDER_SWITCH and req.provider and req.provider != Config.AI_DEFAULT_PROVIDER:
-        raise HTTPException(status_code=403, detail="Provider switching is disabled")
+        raise HTTPException(status_code=400, detail="Provider switching is disabled")
 
     role = user.get("role", "student")
     user_id = str(user.get("_id", user.get("id", "")))
+
+    enable_thinking = bool(getattr(req, "enable_thinking", False))
 
     return ParsedRequest(
         latest_user_message=latest_user_message,
@@ -197,6 +199,7 @@ def _parse_and_validate(req: AiChatSchema, user: dict) -> ParsedRequest:
         memory_text="",
         session_id=str(getattr(req, "session_id", "") or "").strip(),
         session_backfilled=False,
+        enable_thinking=enable_thinking,
     )
 
 
@@ -333,41 +336,75 @@ async def ai_chat(
     # 2. Load AI memory
     parsed.memory_text = await _load_ai_memory(user)
 
-    # 3. RAG retrieval (all roles with courses)
-    rag_dict = await run_student_rag(
-        user=user,
-        effective_question=parsed.effective_question,
-        uploaded_attachment_text=parsed.uploaded_attachment_text,
-        tutor_mode=parsed.tutor_mode,
-        resolved_provider=parsed.resolved_provider,
-        cleaned_messages=parsed.cleaned_messages,
-        web_search=bool(getattr(req, "web_search", False)),
-        search_engine=str(getattr(req, "search_engine", "auto") or "auto"),
-    )
-    rag = RAGResult.from_dict(rag_dict)
-
-    # 4. Build system override & LLM context
-    _has_web = any(c.get("source_type") == "web" for c in rag.rag_citations)
-    system_override = _build_system_override(
-        parsed,
-        rag.rag_context_text,
-        web_context_text=rag.web_context_text,
-        is_course_relevant=rag.is_course_relevant,
-        has_web_results=_has_web,
-    )
-    context = _build_llm_context(parsed, rag.compact_history, system_override)
-
-    # 5. Build SSE metadata envelope
-    meta = StreamMeta.from_rag(
-        rag,
-        provider=parsed.resolved_provider,
-        requested_provider=parsed.requested_provider,
-        tutor_mode=parsed.tutor_mode,
-    )
-
-    # 6. Stream response
+    # 3-6. Stream response (RAG + context building moved inside generator
+    # so we can push progress frames to the frontend immediately)
     async def _stream():
         try:
+            # ① Push progress frame immediately — lights up the frontend status
+            yield sse_tool_progress("RAG", "running", message="正在检索课程资料与优化查询...")
+
+            # ② RAG retrieval (all roles with courses) — skip if use_rag=False
+            use_rag = bool(getattr(req, "use_rag", True))
+            if use_rag:
+                rag_dict = await run_student_rag(
+                    user=user,
+                    effective_question=parsed.effective_question,
+                    uploaded_attachment_text=parsed.uploaded_attachment_text,
+                    tutor_mode=parsed.tutor_mode,
+                    resolved_provider=parsed.resolved_provider,
+                    cleaned_messages=parsed.cleaned_messages,
+                    web_search=bool(getattr(req, "web_search", False)),
+                    search_engine=str(getattr(req, "search_engine", "auto") or "auto"),
+                )
+            else:
+                rag_dict = {
+                    "rag_context_text": "",
+                    "rag_citations": [],
+                    "rag_top_k": 0,
+                    "rag_retrieve_top_n": 0,
+                    "rag_retry_used": False,
+                    "rag_retry_success": False,
+                    "rag_empty_after_retry": False,
+                    "rag_retrieval_query": parsed.effective_question,
+                    "rag_rewritten_query": parsed.effective_question,
+                    "rag_retrieval_latency_ms": 0.0,
+                    "student_course_ids": [],
+                    "forced_response_message": "",
+                    "compact_history": _compact_chat_history(parsed.cleaned_messages[:-1]),
+                    "is_course_relevant": False,
+                }
+            rag = RAGResult.from_dict(rag_dict)
+
+            # ③ RAG complete
+            yield sse_tool_progress("RAG", "done", message="检索完成")
+
+            # ④ Build system override & LLM context
+            _has_web = any(c.get("source_type") == "web" for c in rag.rag_citations)
+            system_override = _build_system_override(
+                parsed,
+                rag.rag_context_text,
+                web_context_text=rag.web_context_text,
+                is_course_relevant=rag.is_course_relevant,
+                has_web_results=_has_web,
+            )
+            system_override = _validate_context_window(
+                provider=parsed.resolved_provider,
+                system_override=system_override,
+                compact_history=rag.compact_history,
+                question=parsed.effective_question,
+                memory_text=parsed.memory_text,
+            )
+            context = _build_llm_context(parsed, rag.compact_history, system_override)
+
+            # ⑤ Build SSE metadata envelope
+            meta = StreamMeta.from_rag(
+                rag,
+                provider=parsed.resolved_provider,
+                requested_provider=parsed.requested_provider,
+                tutor_mode=parsed.tutor_mode,
+            )
+
+            # ⑥ Stream LLM response
             async for frame in generate_chat_response(parsed, rag, meta, context):
                 yield frame
         except Exception:

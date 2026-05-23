@@ -27,6 +27,7 @@ class ParsedRequest:
     memory_text: str
     session_id: str = ""
     session_backfilled: bool = False
+    enable_thinking: bool = False
 
 
 @dataclass
