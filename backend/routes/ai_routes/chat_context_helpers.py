@@ -5,9 +5,9 @@ import re
 
 from backend.config import Config
 
-logger = logging.getLogger(__name__)
+from .router import _PDF_EXTRACT_MAX_CHARS
 
-_PDF_EXTRACT_MAX_CHARS = 20000
+logger = logging.getLogger(__name__)
 
 
 def _extract_text_from_pdf_bytes(data: bytes, max_chars: int = _PDF_EXTRACT_MAX_CHARS) -> str:
@@ -226,6 +226,37 @@ def _build_uploaded_evidence_cards(text: str) -> str:
     )
 
 
+async def _get_rag_context_for_study(user: dict, content: str) -> tuple[str, list]:
+    """Retrieve RAG citations for study coach/stream endpoints. Never raises."""
+    try:
+        from backend.services.course_rag_service import course_rag_service
+        from backend.services.enrollment_service import get_user_course_profile
+        from backend.services.rag_service.rag_chat_pipeline import pack_evidence
+
+        profile = await get_user_course_profile(user)
+        student_course_ids = [c["courseId"] for c in profile.get("courses", []) if c.get("courseId")]
+        if not student_course_ids:
+            return "", []
+
+        rag_results = await course_rag_service.retrieve_for_student(
+            student_id=str(user.get("_id", user.get("id", ""))),
+            query=content,
+            top_k=max(1, int(Config.RAG_RETRIEVE_TOP_N)),
+            course_ids=student_course_ids,
+        )
+        packed = pack_evidence(
+            rag_results,
+            answer_top_k=4,
+            max_total_chars=Config.RAG_EVIDENCE_MAX_CHARS,
+            max_chars_per_chunk=Config.RAG_EVIDENCE_MAX_CHARS_PER_CHUNK,
+        )
+        if packed:
+            return _build_evidence_cards(packed), packed
+    except Exception:
+        logger.debug("Study RAG retrieval unavailable", exc_info=True)
+    return "", []
+
+
 def _sanitize_answer_text(text: str) -> str:
     raw = str(text or "")
     if not raw.strip():
@@ -260,6 +291,11 @@ def _sanitize_answer_text(text: str) -> str:
     # Collapse excessive blank lines introduced by removals.
     merged = re.sub(r"\n{3,}", "\n\n", merged)
     # Strip residual inline citation/evidence markers the LLM may have emitted
-    # e.g. "(Evidence 2)", "[Evidence 3]", "[Doc 1]", "[Web 2]", "[E1]"
-    merged = re.sub(r"\s*[\(\[](Evidence\s*\d+|Doc\s*\d+|Web\s*\d+|E\d+)[\)\]]", "", merged)
+    # e.g. "(Evidence 2)", "[Evidence 3]", "[Doc 1]", "[Web 2]", "[E1]",
+    #   "【Evidence 1】", "（Doc 3）"
+    merged = re.sub(
+        r"\s*[\(\[（【](Evidence\s*\d+|Doc\s*\d+|Web\s*\d+|E\d+)[\)\]）】]",
+        "",
+        merged,
+    )
     return merged or raw.strip()

@@ -7,7 +7,7 @@ import time
 from cachetools import TTLCache
 
 from backend.config import Config
-from backend.services.rag_chat_pipeline import (
+from backend.services.rag_service.rag_chat_pipeline import (
     build_rewrite_prompt,
     evidence_insufficient_message,
     pack_evidence,
@@ -72,6 +72,53 @@ def _compute_rag_char_budget(
     return max(800, min(char_budget, 12_000))
 
 
+def _validate_context_window(
+    *,
+    provider: str,
+    system_override: str | None,
+    compact_history: list[dict],
+    question: str,
+    memory_text: str = "",
+) -> str | None:
+    """Ensure the assembled context fits within the provider's context window.
+
+    Returns the (possibly truncated) system_override, or the original if it fits.
+    """
+    if not system_override:
+        return system_override
+
+    windows: dict = Config.RAG_PROVIDER_CONTEXT_WINDOWS
+    if provider == "local_ollama":
+        window_tokens = int(Config.OLLAMA_HEAVY_NUM_CTX)
+    else:
+        window_tokens = int(windows.get(provider, 16_000))
+
+    cpt = float(Config.RAG_CHARS_PER_TOKEN)
+
+    history_chars = sum(len(str(m.get("content", "") or "")) for m in compact_history)
+    question_chars = len(str(question or ""))
+    memory_chars = len(str(memory_text or ""))
+    system_chars = len(str(system_override or ""))
+
+    total_chars = history_chars + question_chars + memory_chars + system_chars
+    estimated_tokens = round(total_chars / cpt)
+
+    if estimated_tokens <= window_tokens:
+        return system_override
+
+    # Overflow — truncate the RAG evidence portion to fit
+    overhead = history_chars + question_chars + memory_chars
+    available_for_system = max(400, int(window_tokens * cpt) - overhead)
+    if available_for_system >= len(system_override):
+        return system_override
+
+    logger.warning(
+        "Context window overflow detected for provider=%s: estimated=%d tokens, window=%d. Truncating system_override.",
+        provider, estimated_tokens, window_tokens,
+    )
+    return system_override[:available_for_system]
+
+
 # ── Cache-Aside for student enrollment lookups ────────────────────
 # Course enrollment changes at most once per semester; caching for 5 min
 # eliminates a MongoDB round-trip on every single chat message.
@@ -96,7 +143,7 @@ def _needs_rewrite(question: str, chat_history: list) -> bool:
         return False
     # Has clear question words and no anaphoric references
     if re.search(r'什么是|如何|为什么|怎么|请解释|explain|what is|how to', q, re.I):
-        if not re.search(r'它|这个|那个|this|that|they|其', q, re.I):
+        if not re.search(r'\b(?:it|this|that|they|these|those)\b|它|这个|那个|它们|这些|那些|(?:^|[\s。，！？、：；"""''（）])其(?:$|[\s。，！？、：；"""''（）])', q, re.I):
             return False
     return True
 
@@ -112,30 +159,49 @@ def _resolve_history_keep_pairs(question: str, tutor_mode: str) -> int:
     return base
 
 
-async def _rewrite_query_with_local_model(
+async def _rewrite_query(
     *,
     question: str,
     tutor_mode: str,
     chat_history: list[dict],
+    resolved_provider: str,
 ) -> str:
-    from backend.services.local_llm_service import LocalLLMService, LocalLLMUnavailableError
-
-    svc = LocalLLMService()
     prompt = build_rewrite_prompt(question=question, tutor_mode=tutor_mode)
     context = {
         "task_profile": task_profile_for_phase("rewrite"),
-        "chat_history": chat_history[-6:],
+        "chat_history": chat_history,
         "system_override": (
             "You rewrite retrieval queries. Keep user intent and language. "
             "Resolve pronouns/anaphora (e.g., it/this/that/它/这个/那个) using chat history explicitly. "
             "Return exactly one line with no explanations."
         ),
     }
+
     try:
-        reply = await svc.chat(prompt, context=context)
-    except LocalLLMUnavailableError:
+        reply = ""
+        if resolved_provider == "deepseek":
+            from backend.services.llm_service.deepseek_service import DeepSeekService, DeepSeekUnavailableError
+            svc = DeepSeekService()
+            # Try to fetch non-streaming response for rewrite
+            try:
+                # Assuming simple chat method exists, if not construct manually
+                # Not to block, we just do a fast stream read or implement chat method.
+                reply = ""
+                async for chunk in svc.chat_stream(prompt, context=context, enable_thinking=False):
+                    reply += chunk
+            except DeepSeekUnavailableError:
+                # Fallback to local
+                resolved_provider = "local_ollama"
+
+        if not reply and resolved_provider in ("local_ollama", "local"):
+            from backend.services.llm_service.local_llm_service import LocalLLMService, LocalLLMUnavailableError
+            svc = LocalLLMService()
+            reply = await svc.chat(prompt, context=context)
+
+        return sanitize_rewrite_output(original_query=question, rewritten=reply or question)
+    except Exception as e:
+        logger.warning("Rewrite error: %s", str(e))
         return str(question or "").strip()
-    return sanitize_rewrite_output(original_query=question, rewritten=reply)
 
 
 async def run_student_rag(
@@ -173,7 +239,7 @@ async def run_student_rag(
     try:
         import asyncio
         from backend.services.course_rag_service import course_rag_service
-        from backend.routes.auth_routes import get_profile_courses
+        from backend.services.enrollment_service import get_user_course_profile
 
         # ── P0-2: Parallel enrollment lookup + query rewrite ─────────
         user_id_str = str(user.get("_id") or user.get("id") or "")
@@ -183,7 +249,7 @@ async def run_student_rag(
             if cached_ids is not None:
                 return cached_ids
             try:
-                profile = await get_profile_courses(user)
+                profile = await get_user_course_profile(user)
                 ids = [c["courseId"] for c in profile.get("courses", []) if c.get("courseId")]
                 _enrollment_cache[user_id_str] = ids
                 return ids
@@ -198,10 +264,11 @@ async def run_student_rag(
             if not _needs_rewrite(effective_question, compact_history):
                 logger.debug("Skipping query rewrite (heuristic: clear query)")
                 return effective_question
-            return await _rewrite_query_with_local_model(
+            return await _rewrite_query(
                 question=effective_question,
                 tutor_mode=tutor_mode,
                 chat_history=compact_history,
+                resolved_provider=resolved_provider,
             )
 
         # Run both concurrently
@@ -231,7 +298,7 @@ async def run_student_rag(
             rag_retrieve_top_n = max(rag_top_k, int(Config.RAG_RETRIEVE_TOP_N))
 
             rag_start = time.perf_counter()
-            rag_results = course_rag_service.retrieve_for_student(
+            rag_results = await course_rag_service.retrieve_for_student(
                 student_id=str(user.get("_id", user.get("id", ""))),
                 query=rag_retrieval_query,
                 top_k=rag_retrieve_top_n,
@@ -242,12 +309,13 @@ async def run_student_rag(
                 rag_retry_used = True
                 fallback_query = effective_question
                 if rag_retrieval_query.strip() == effective_question.strip():
-                    fallback_query = await _rewrite_query_with_local_model(
+                    fallback_query = await _rewrite_query(
                         question=effective_question,
                         tutor_mode=tutor_mode,
                         chat_history=compact_history,
+                        resolved_provider=resolved_provider,
                     )
-                rag_results = course_rag_service.retrieve_for_student(
+                rag_results = await course_rag_service.retrieve_for_student(
                     student_id=str(user.get("_id", user.get("id", ""))),
                     query=fallback_query,
                     top_k=rag_retrieve_top_n,
@@ -337,7 +405,7 @@ async def run_student_rag(
     # normalization) so that the threshold is meaningful. The reranked `score` is always
     # artificially high after normalization and cannot be used here.
     _local_citations = [c for c in rag_citations if c.get("source_type") != "web"]
-    _raw_threshold = float(getattr(Config, "RAG_RELEVANCE_THRESHOLD", 0.60))
+    _raw_threshold = float(Config.RAG_RELEVANCE_THRESHOLD)
     is_course_relevant = (
         len(_local_citations) > 0
         and not rag_empty_after_retry

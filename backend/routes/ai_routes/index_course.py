@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, Request
 
 from backend.config import Config
 from backend.core.database import db
-from backend.core.security import get_current_user
+from backend.core.dependencies import require_teacher_or_admin
 
 from .router import ai_router
 
@@ -23,9 +23,9 @@ async def _verify_course_ownership(user: dict, course_id: str) -> None:
     if role == "admin":
         return  # admins may manage any course
 
-    from backend.routes.auth_routes import get_profile_courses
+    from backend.services.enrollment_service import get_user_course_profile
     try:
-        profile = await get_profile_courses(user)
+        profile = await get_user_course_profile(user)
         owned_ids = {str(c.get("courseId") or c.get("id") or "") for c in profile.get("courses", [])}
         if course_id not in owned_ids:
             raise HTTPException(403, "You do not own this course")
@@ -37,11 +37,8 @@ async def _verify_course_ownership(user: dict, course_id: str) -> None:
 
 
 @ai_router.get("/index-course/summary")
-async def index_course_summary(user: dict = Depends(get_current_user)):
+async def index_course_summary(user: dict = Depends(require_teacher_or_admin)):
     """Return a summary of all courses with indexed documents. Teachers / admins only."""
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can view index summary")
-
     from backend.services.course_rag_service import course_rag_service
 
     return {"courses": course_rag_service.get_index_summary()}
@@ -51,7 +48,7 @@ async def index_course_summary(user: dict = Depends(get_current_user)):
 async def index_course_material(
     course_id: str,
     request: Request,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher_or_admin),
 ):
     """Upload a PDF or text file and index it into the course vector store.
 
@@ -59,9 +56,6 @@ async def index_course_material(
     Accepts multipart/form-data with a single file field named ``file``.
     Returns a job_id for async status polling.
     """
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can index course materials")
-
     await _verify_course_ownership(user, course_id)
 
     form = await request.form()
@@ -89,12 +83,9 @@ async def index_course_material(
 @ai_router.get("/index-course/job/{job_id}")
 async def get_indexing_job_status(
     job_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher_or_admin),
 ):
     """Poll the status of an async indexing job."""
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can check indexing status")
-
     from backend.services.indexing_job_service import get_job_status
 
     job = await get_job_status(job_id)
@@ -106,22 +97,15 @@ async def get_indexing_job_status(
 @ai_router.get("/index-course/{course_id}")
 async def list_indexed_documents(
     course_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher_or_admin),
 ):
     """List all indexed documents for a course. Teachers / admins only."""
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can view indexed materials")
-
     await _verify_course_ownership(user, course_id)
 
     from backend.services.course_rag_service import course_rag_service
 
-    meta_path = course_rag_service._meta_path(course_id)
-    print(f"[DEBUG list_indexed_documents] course={course_id} meta_path={meta_path} exists={meta_path.exists()}")
-    if meta_path.exists():
-        print(f"[DEBUG list_indexed_documents] meta content: {meta_path.read_text(encoding='utf-8')[:500]}")
     docs = course_rag_service.list_indexed_documents(course_id)
-    print(f"[DEBUG list_indexed_documents] returning {len(docs)} docs: {[d['doc_name'] for d in docs]}")
+    logger.debug("list_indexed_documents course=%s returning %d docs", course_id, len(docs))
     return {"course_id": course_id, "documents": docs}
 
 
@@ -129,12 +113,9 @@ async def list_indexed_documents(
 async def remove_indexed_document(
     course_id: str,
     doc_name: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher_or_admin),
 ):
     """Remove a single document from the course vector store. Teachers / admins only."""
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can remove indexed materials")
-
     await _verify_course_ownership(user, course_id)
 
     from backend.services.course_rag_service import course_rag_service
@@ -179,16 +160,13 @@ async def remove_indexed_document(
 async def test_retrieval(
     course_id: str,
     body: dict,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_teacher_or_admin),
 ):
     """Test retrieval quality: given a query, return top-k chunks from the course.
 
     Body: { "query": str, "top_k": int (optional, default 5) }
     Teachers / admins only.
     """
-    if user.get("role", "student") not in ("teacher", "admin"):
-        raise HTTPException(403, "Only teachers can test retrieval")
-
     await _verify_course_ownership(user, course_id)
 
     query = str(body.get("query", "")).strip()
@@ -202,7 +180,7 @@ async def test_retrieval(
     import time
 
     start = time.perf_counter()
-    results = course_rag_service.retrieve_for_student(
+    results = await course_rag_service.retrieve_for_student(
         student_id="test_teacher",
         query=query,
         top_k=top_k,

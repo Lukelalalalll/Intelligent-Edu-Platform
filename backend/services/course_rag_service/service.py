@@ -5,7 +5,6 @@ teachers and retrieve relevant chunks when students ask questions in AIInteract.
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import threading
@@ -23,6 +22,12 @@ except ImportError:
 
 from backend.config import Config
 from .chunking import build_chunks, build_structured_chunks
+from .document_processor import detect_content_density
+from .query_handler import (
+    bm25_retrieve_for_course,
+    invalidate_bm25_cache,
+    maybe_neural_rerank,
+)
 from .retrieval_helpers import (
     doc_hash,
     expand_chunk_window,
@@ -35,40 +40,19 @@ from .retrieval_helpers import (
 logger = logging.getLogger(__name__)
 
 # ── Thread pool for parallel retrieval (P0-1, P2-2) ──────────────
-_retrieval_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="rag-retr")
+_retrieval_pool: ThreadPoolExecutor | None = None
+_retrieval_pool_lock = threading.Lock()
 
 
-# ---------------------------------------------------------------------------
-# BM25 index cache — avoids full rebuild on every query
-# ---------------------------------------------------------------------------
-
-class _BM25CacheEntry:
-    __slots__ = ("bm25", "ids", "texts", "metadatas", "doc_count", "corpus_tokens")
-
-    def __init__(self, bm25, ids: list, texts: list, metadatas: list, doc_count: int, corpus_tokens: list):
-        self.bm25 = bm25
-        self.ids = ids
-        self.texts = texts
-        self.metadatas = metadatas
-        self.doc_count = doc_count
-        self.corpus_tokens = corpus_tokens  # P1-2: keep for incremental updates
-
-
-_bm25_cache: Dict[str, _BM25CacheEntry] = {}
-_bm25_cache_lock: Optional["threading.Lock"] = None
-
-
-def _get_bm25_lock():
-    global _bm25_cache_lock
-    if _bm25_cache_lock is None:
-        import threading
-        _bm25_cache_lock = threading.Lock()
-    return _bm25_cache_lock
-
-
-def invalidate_bm25_cache(course_id: str) -> None:
-    """Clear the BM25 cache for a course (call after indexing/removal)."""
-    _bm25_cache.pop(course_id, None)
+def _get_retrieval_pool() -> ThreadPoolExecutor:
+    """Lazy-init the retrieval thread pool on first use."""
+    global _retrieval_pool
+    if _retrieval_pool is not None:
+        return _retrieval_pool
+    with _retrieval_pool_lock:
+        if _retrieval_pool is None:
+            _retrieval_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="rag-retr")
+        return _retrieval_pool
 
 
 class CourseRagService:
@@ -96,9 +80,17 @@ class CourseRagService:
         if self._embeddings is None:
             with self._embeddings_lock:
                 if self._embeddings is None:  # double-checked locking
+                    import torch
+                    if torch.cuda.is_available():
+                        device = "cuda"
+                    elif torch.backends.mps.is_available():
+                        device = "mps"
+                    else:
+                        device = "cpu"
+                    
                     self._embeddings = HuggingFaceEmbeddings(
                         model_name=self.embedding_model_name,
-                        model_kwargs={"device": "cpu"},
+                        model_kwargs={"device": device},
                         encode_kwargs={"normalize_embeddings": True},
                     )
         return self._embeddings
@@ -136,15 +128,44 @@ class CourseRagService:
 
     # F-4: Module-level Chroma store cache
     _store_cache: Dict[str, Any] = {}
+    _store_lock = threading.Lock()
+
     def _get_store(self, course_id: str) -> Chroma:
-        if course_id not in self._store_cache:
-            self._store_cache[course_id] = Chroma(
-                collection_name=f"course_{course_id}",
-                embedding_function=self.embeddings,
-                persist_directory=str(self._course_dir(course_id)),
-                collection_metadata={"hnsw:space": "cosine"},
-            )
-        return self._store_cache[course_id]
+        with self._store_lock:
+            if course_id not in self._store_cache:
+                try:
+                    self._store_cache[course_id] = Chroma(
+                        collection_name=f"course_{course_id}",
+                        embedding_function=self.embeddings,
+                        persist_directory=str(self._course_dir(course_id)),
+                        collection_metadata={"hnsw:space": "cosine"},
+                    )
+                except BaseException as e:
+                    logger.warning(
+                        "Corrupted ChromaDB store for course %s: %s — backing up data dir and rebuilding",
+                        course_id,
+                        e,
+                    )
+                    # Rename the corrupted directory to a .bak backup
+                    import shutil
+                    course_dir = self._course_dir(course_id)
+                    backup_dir = course_dir.with_suffix(".bak")
+                    # Remove any old backup first
+                    if backup_dir.exists():
+                        shutil.rmtree(backup_dir, ignore_errors=True)
+                    try:
+                        course_dir.rename(backup_dir)
+                    except OSError:
+                        shutil.rmtree(course_dir, ignore_errors=True)
+                    # Recreate the directory and reinitialize the store
+                    course_dir.mkdir(parents=True, exist_ok=True)
+                    self._store_cache[course_id] = Chroma(
+                        collection_name=f"course_{course_id}",
+                        embedding_function=self.embeddings,
+                        persist_directory=str(course_dir),
+                        collection_metadata={"hnsw:space": "cosine"},
+                    )
+            return self._store_cache[course_id]
 
     # ------------------------------------------------------------------
     # Public API — Indexing (called by teachers)
@@ -167,7 +188,7 @@ class CourseRagService:
         if not document_text.strip():
             return {"indexed": False, "reason": "empty document"}
 
-        print(f"[DEBUG index_document] START course={course_id} doc={doc_name} text_len={len(document_text)}")
+        logger.debug("index_document: START course=%s doc=%s text_len=%d", course_id, doc_name, len(document_text))
 
         with self._get_meta_lock(course_id):
             meta = self._load_meta(course_id)
@@ -198,7 +219,7 @@ class CourseRagService:
         # (runs outside the lock since it's CPU-heavy and doesn't touch meta)
         chunk_size = self.chunk_size
         chunk_overlap = self.chunk_overlap
-        if _detect_content_density(document_text) == "math_heavy":
+        if detect_content_density(document_text) == "math_heavy":
             chunk_size = max(chunk_size, 1600)
             chunk_overlap = max(chunk_overlap, 300)
         chunks = build_structured_chunks(document_text, chunk_size, chunk_overlap)
@@ -273,9 +294,8 @@ class CourseRagService:
             }
             meta["documents"] = docs_meta
             self._save_meta(course_id, meta)
-            meta_path = self._meta_path(course_id)
-            print(f"[DEBUG index_document] SAVED meta to {meta_path}")
-            print(f"[DEBUG index_document] meta docs: {list(docs_meta.keys())}")
+            logger.debug("index_document: SAVED meta to %s", self._meta_path(course_id))
+            logger.debug("index_document: meta docs: %s", list(docs_meta.keys()))
 
         invalidate_bm25_cache(course_id)
         from .cache import invalidate_course_cache
@@ -361,147 +381,20 @@ class CourseRagService:
     # ------------------------------------------------------------------
 
     def _bm25_retrieve(self, course_id: str, query: str, top_k: int, chapter_id: str = "") -> List[Dict[str, Any]]:
-        """BM25 sparse retrieval with in-memory cache.
-
-        Uses Okapi BM25 (Robertson et al., 2009). The BM25 index is cached
-        per course and invalidated automatically when the document count changes.
-        """
-        import re as _re
-        from rank_bm25 import BM25Okapi
-        import numpy as np
-
-        meta = self._load_meta(course_id)
-        docs_meta = meta.get("documents", {})
-        if not docs_meta:
-            return []
-
-        doc_chapter_map = {
-            str(name): str(info.get("chapter_id") or "")
-            for name, info in docs_meta.items()
-        }
-
-        def _tokenize(text: str) -> List[str]:
-            raw = _re.findall(r"[a-zA-Z0-9\u4e00-\u9fff]+", str(text or "").lower())
-            result: List[str] = []
-            for t in raw:
-                result.append(t)
-                expanded = _re.sub(r'([a-z])(\d)', r'\1 \2', t)
-                expanded = _re.sub(r'(\d)([a-z])', r'\1 \2', expanded)
-                if expanded != t:
-                    result.extend(p for p in expanded.split() if p)
-            return result
-
-        # --- BM25 cache lookup / rebuild ---
-        store = self._get_store(course_id)
-        try:
-            collection = store._collection
-            current_count = collection.count()
-        except Exception:
-            logger.warning("BM25: failed to access collection for course %s", course_id, exc_info=True)
-            return []
-
-        lock = _get_bm25_lock()
-        with lock:
-            entry = _bm25_cache.get(course_id)
-            if entry and entry.doc_count == current_count:
-                pass  # cache hit
-            elif entry and current_count > entry.doc_count:
-                # P1-2: Incremental BM25 update — only tokenize new chunks
-                try:
-                    data = collection.get(include=["documents", "metadatas"])
-                    texts = data.get("documents") or []
-                    metas = data.get("metadatas") or []
-                    ids_list = data.get("ids") or []
-                    if not texts:
-                        return []
-                    old_id_set = set(entry.ids)
-                    new_corpus_tokens = list(entry.corpus_tokens)
-                    new_ids = list(entry.ids)
-                    new_texts = list(entry.texts)
-                    new_metas = list(entry.metadatas)
-                    for i, cid_item in enumerate(ids_list):
-                        if cid_item not in old_id_set:
-                            new_corpus_tokens.append(_tokenize(texts[i]))
-                            new_ids.append(cid_item)
-                            new_texts.append(texts[i])
-                            new_metas.append(metas[i] if i < len(metas) else {})
-                    bm25_obj = BM25Okapi(new_corpus_tokens, k1=1.5, b=0.75)
-                    entry = _BM25CacheEntry(
-                        bm25=bm25_obj, ids=new_ids,
-                        texts=new_texts, metadatas=new_metas,
-                        doc_count=current_count,
-                        corpus_tokens=new_corpus_tokens,
-                    )
-                    _bm25_cache[course_id] = entry
-                except Exception:
-                    logger.warning("BM25: incremental update failed for course %s, doing full rebuild", course_id, exc_info=True)
-                    entry = None  # fall through to full rebuild
-            else:
-                entry = None  # full rebuild needed
-
-            if entry is None:
-                # Full BM25 rebuild
-                try:
-                    data = collection.get(include=["documents", "metadatas"])
-                    texts = data.get("documents") or []
-                    metas = data.get("metadatas") or []
-                    ids_list = data.get("ids") or []
-                    if not texts:
-                        return []
-                    corpus_tokens = [_tokenize(t) for t in texts]
-                    bm25_obj = BM25Okapi(corpus_tokens, k1=1.5, b=0.75)
-                    entry = _BM25CacheEntry(
-                        bm25=bm25_obj, ids=ids_list,
-                        texts=texts, metadatas=metas,
-                        doc_count=current_count,
-                        corpus_tokens=corpus_tokens,
-                    )
-                    _bm25_cache[course_id] = entry
-                except Exception:
-                    logger.warning("BM25: failed to rebuild index for course %s", course_id, exc_info=True)
-                    return []
-
-        # --- Score query against cached index ---
-        query_tokens = _tokenize(query)
-        if not query_tokens:
-            return []
-
-        try:
-            scores = entry.bm25.get_scores(query_tokens)
-        except Exception:
-            return []
-
-        top_indices = np.argsort(scores)[::-1][:top_k]
-        results = []
-        for idx in top_indices:
-            score = float(scores[idx])
-            if score < 0.01:
-                continue
-            text = entry.texts[idx] if idx < len(entry.texts) else ""
-            md = entry.metadatas[idx] if idx < len(entry.metadatas) else {}
-            md = md or {}
-            c_doc_name = md.get("doc_name", "")
-            c_chapter = md.get("chapter_id", "") or doc_chapter_map.get(str(c_doc_name), "")
-            if chapter_id and str(c_chapter) != chapter_id:
-                continue
-            results.append({
-                "course_id": course_id,
-                "text": text,
-                "score": round(score, 4),
-                "doc_name": c_doc_name,
-                "chapter_id": c_chapter,
-                "section_title": md.get("section_title", ""),
-                "section_path": md.get("section_path", ""),
-                "chunk_id": md.get("chunk_id", -1),
-                "page_num": md.get("page_num", -1),
-            })
-        return results
-
+        """BM25 sparse retrieval — delegated to query_handler for cache/index logic."""
+        return bm25_retrieve_for_course(
+            course_id=course_id,
+            query=query,
+            top_k=top_k,
+            meta=self._load_meta(course_id),
+            get_store_fn=self._get_store,
+            chapter_id=chapter_id,
+        )
     # ------------------------------------------------------------------
     # Public API — Retrieval (called during student chat)
     # ------------------------------------------------------------------
 
-    def retrieve_for_student(
+    async def retrieve_for_student(
         self,
         student_id: str,
         query: str,
@@ -575,7 +468,7 @@ class CourseRagService:
         if Config.RAG_MULTI_QUERY_ENABLED:
             try:
                 from .query_transforms import expand_query
-                variants = expand_query(
+                variants = await expand_query(
                     normalized_query, n=Config.RAG_MULTI_QUERY_VARIANTS
                 )
                 # expand_query returns [original, variant1, variant2, ...]
@@ -589,7 +482,7 @@ class CourseRagService:
         if Config.RAG_HYDE_ENABLED:
             try:
                 from .query_transforms import generate_hyde_query
-                hyde_q = generate_hyde_query(normalized_query)
+                hyde_q = await generate_hyde_query(normalized_query)
                 if hyde_q:
                     nh = normalize_query_for_retrieval(hyde_q)
                     if nh not in all_queries:
@@ -650,7 +543,7 @@ class CourseRagService:
                             window=Config.RAG_PARENT_EXPANSION_WINDOW,
                         )
                     results.append(result_item)
-            except Exception:
+            except BaseException:
                 logger.debug("Could not retrieve from course %s", cid, exc_info=True)
             return results
 
@@ -671,9 +564,9 @@ class CourseRagService:
         for q in all_queries:
             for cid in target_courses:
                 key = f"{cid}::{q}"
-                vec_futures_map[key] = _retrieval_pool.submit(_vector_retrieve_one, cid, q)
+                vec_futures_map[key] = _get_retrieval_pool().submit(_vector_retrieve_one, cid, q)
                 if use_hybrid:
-                    bm25_futures_map[key] = _retrieval_pool.submit(_bm25_retrieve_one, cid, q)
+                    bm25_futures_map[key] = _get_retrieval_pool().submit(_bm25_retrieve_one, cid, q)
 
         # Collect per-query result lists for RRF
         # Group results: one list per (query) for vector and BM25 separately
@@ -686,7 +579,7 @@ class CourseRagService:
                     continue
                 try:
                     vec_per_query[q].extend(fut.result(timeout=10))
-                except Exception:
+                except BaseException:
                     logger.warning("Vector retrieval timed out for course %s query %s", cid, q[:40])
 
         for q in all_queries:
@@ -697,7 +590,7 @@ class CourseRagService:
             all_vec_lists = list(vec_per_query.values())
             merged = rrf_merge(all_vec_lists, top_k=max(top_k * 3, top_k))
             ranked = rerank_results(query=normalized_query, items=merged, top_k=top_k)
-            result = _maybe_neural_rerank(normalized_query, ranked, top_k)
+            result = maybe_neural_rerank(normalized_query, ranked, top_k)
             if Config.RAG_LOST_IN_MIDDLE_REORDER:
                 result = reorder_for_llm(result)
             set_cached_results(target_courses, normalized_query, result)
@@ -712,7 +605,7 @@ class CourseRagService:
                     continue
                 try:
                     bm25_per_query[q].extend(fut.result(timeout=10))
-                except Exception:
+                except BaseException:
                     logger.warning("BM25 retrieval timed out for course %s query %s", cid, q[:40])
 
         # Build merged result lists: [vec_q1, bm25_q1, vec_q2, bm25_q2, ...]
@@ -730,7 +623,7 @@ class CourseRagService:
         # Reciprocal Rank Fusion across all result lists
         merged = rrf_merge(all_result_lists, top_k=max(top_k * 3, top_k))
         ranked = rerank_results(query=normalized_query, items=merged, top_k=top_k)
-        result = _maybe_neural_rerank(normalized_query, ranked, top_k)
+        result = maybe_neural_rerank(normalized_query, ranked, top_k)
 
         # ── Lost-in-the-Middle mitigation (Liu et al., 2023) ─────────────
         if Config.RAG_LOST_IN_MIDDLE_REORDER:
@@ -759,53 +652,13 @@ class CourseRagService:
         return courses
 
 
-# ---------------------------------------------------------------------------
-# Content density detection for adaptive chunk sizes
-# ---------------------------------------------------------------------------
-
-def _detect_content_density(text: str) -> str:
-    """Detect if a document is math/code-heavy to use larger chunks."""
-    import re as _re
-    math_hits = len(_re.findall(r'[$\\∫∑∏∂∇]|\d+\.\d+|[=<>]{2,}', text[:10000]))
-    ratio = math_hits / max(len(text[:10000]), 1)
-    if ratio > 0.02:
-        return "math_heavy"
-    return "normal"
+def shutdown_retrieval_pool() -> None:
+    """Gracefully shut down the module-level retrieval thread pool."""
+    global _retrieval_pool
+    if _retrieval_pool is not None:
+        _retrieval_pool.shutdown(wait=True, cancel_futures=True)
+        _retrieval_pool = None
 
 
-# ---------------------------------------------------------------------------
-# Neural cross-encoder reranking (optional, config-gated)
-# ---------------------------------------------------------------------------
-
-def _maybe_neural_rerank(query: str, items: List[Dict[str, Any]], top_k: int) -> List[Dict[str, Any]]:
-    """Apply neural cross-encoder reranking if enabled and worthwhile (P0-3)."""
-    if not Config.RAG_NEURAL_RERANK_ENABLED or not items:
-        return items
-
-
-    # P0-3: Skip reranking when it cannot improve results
-    if len(items) <= top_k:
-        return items
-    if len(items) <= top_k + 2:
-        return items[:top_k]
-    # F-2: Use normalized score stddev as tightness gate
-    norm_scores = [float(i.get("_norm_score", 0.0)) for i in items[:top_k]]
-    if len(norm_scores) > 1:
-        mean = sum(norm_scores) / len(norm_scores)
-        stddev = (sum((x - mean) ** 2 for x in norm_scores) / (len(norm_scores) - 1)) ** 0.5
-        if stddev < 0.04:  # tight cluster, skip rerank
-            return items[:top_k]
-
-    try:
-        from .reranker import neural_rerank
-        candidates = items[:Config.RAG_NEURAL_RERANK_CANDIDATES]
-        return neural_rerank(query, candidates, top_k)
-    except Exception:
-        logger.debug("Neural rerank unavailable, using lexical ranking", exc_info=True)
-        return items
-
-
-# ---------------------------------------------------------------------------
-# Module-level singleton (lazy-loaded embeddings)
 # ---------------------------------------------------------------------------
 course_rag_service = CourseRagService()

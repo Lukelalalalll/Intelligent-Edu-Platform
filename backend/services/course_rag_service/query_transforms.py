@@ -1,7 +1,6 @@
 """Query transformation utilities: Multi-Query expansion, HyDE, Self-Query.
 
-All functions use *synchronous* Ollama calls so they integrate safely with
-the ThreadPoolExecutor-based retrieval pipeline (no asyncio required).
+All LLM calls use *async* Ollama calls to avoid blocking the asyncio event loop.
 
 Modules
 -------
@@ -23,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Shared Ollama sync helper
+# Shared Ollama async helper
 # ---------------------------------------------------------------------------
 
-def _sync_ollama_chat(prompt: str, max_tokens: int = 200) -> str:
-    """Call Ollama synchronously. Returns '' on any failure."""
+async def _async_ollama_chat(prompt: str, max_tokens: int = 200) -> str:
+    """Call Ollama asynchronously. Returns '' on any failure."""
     url = f"{Config.OLLAMA_BASE_URL}/api/chat"
     payload = {
         "model": Config.OLLAMA_MODEL,
@@ -36,8 +35,8 @@ def _sync_ollama_chat(prompt: str, max_tokens: int = 200) -> str:
         "options": {"num_predict": max_tokens, "temperature": 0.4, "top_p": 0.9},
     }
     try:
-        with httpx.Client(timeout=15) as client:
-            resp = client.post(url, json=payload)
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, json=payload)
             resp.raise_for_status()
             data = resp.json()
         return str((data.get("message") or {}).get("content", "")).strip()
@@ -50,26 +49,34 @@ def _sync_ollama_chat(prompt: str, max_tokens: int = 200) -> str:
 # Multi-Query expansion
 # ---------------------------------------------------------------------------
 
-_MULTI_QUERY_PROMPT = (
+_MULTI_QUERY_PROMPT_ZH = (
     "你是一个搜索查询改写助手。"
     "为以下问题生成 {n} 个不同表述的搜索查询（中英文均可），每行一个，"
     "只输出查询本身，不要编号或解释。\n"
     "原始问题：{query}"
 )
 
+_MULTI_QUERY_PROMPT_EN = (
+    "You are a search query rewriter. "
+    "Generate {n} different rephrased search queries for the following question, one per line. "
+    "Output only the queries themselves, without numbering or explanation.\n"
+    "Original question: {query}"
+)
 
-def expand_query(query: str, n: int = 2) -> List[str]:
+
+async def expand_query(query: str, n: int = 2) -> List[str]:
     """Return the original query plus up to *n* rephrased variants.
 
     Falls back to ``[query]`` if the LLM call fails or returns garbage.
 
     Example::
 
-        >>> expand_query("牛顿第二定律的应用", n=2)
+        >>> await expand_query("牛顿第二定律的应用", n=2)
         ['牛顿第二定律的应用', 'F=ma的实际应用场景', '力和加速度的关系例子']
     """
-    prompt = _MULTI_QUERY_PROMPT.format(n=n, query=query.strip())
-    raw = _sync_ollama_chat(prompt, max_tokens=n * 40)
+    prompt_template = _MULTI_QUERY_PROMPT_ZH if _is_zh(query) else _MULTI_QUERY_PROMPT_EN
+    prompt = prompt_template.format(n=n, query=query.strip())
+    raw = await _async_ollama_chat(prompt, max_tokens=n * 40)
     if not raw:
         return [query]
 
@@ -82,7 +89,7 @@ def expand_query(query: str, n: int = 2) -> List[str]:
 # HyDE — Hypothetical Document Embedding
 # ---------------------------------------------------------------------------
 
-_HYDE_PROMPT = (
+_HYDE_PROMPT_ZH = (
     "请根据以下问题，写一段简短的假设性回答（100字以内），"
     "语言专业，涵盖问题涉及的核心概念，即使不完全准确也无妨。"
     "只输出回答本身，不要任何引言。\n"
@@ -90,8 +97,31 @@ _HYDE_PROMPT = (
     "回答："
 )
 
+_HYDE_PROMPT_EN = (
+    "Write a short hypothetical answer (under 100 words) to the following question. "
+    "Use professional language covering key concepts, even if not fully accurate. "
+    "Output only the answer itself, no preamble.\n"
+    "Question: {query}\n"
+    "Answer:"
+)
 
-def generate_hyde_query(query: str) -> Optional[str]:
+# ── Prompt selection ──────────────────────────────────────────────────────
+
+def _detect_language(text: str) -> str:
+    """Heuristic language detection: returns 'zh' or 'en'."""
+    zh_chars = sum(1 for ch in text if '一' <= ch <= '鿿')
+    return 'zh' if zh_chars > len(text) * 0.15 else 'en'
+
+def _is_zh(query: str) -> bool:
+    lang = Config.RAG_QUERY_LANGUAGE.strip().lower()
+    if lang == 'zh':
+        return True
+    if lang == 'en':
+        return False
+    return _detect_language(query) == 'zh'
+
+
+async def generate_hyde_query(query: str) -> Optional[str]:
     """Generate a hypothetical answer passage to use as an additional retrieval query.
 
     HyDE (Gao et al., 2022) embeds the *answer* instead of the *question* to
@@ -99,7 +129,8 @@ def generate_hyde_query(query: str) -> Optional[str]:
 
     Returns ``None`` if the LLM call fails.
     """
-    raw = _sync_ollama_chat(_HYDE_PROMPT.format(query=query.strip()), max_tokens=160)
+    prompt_template = _HYDE_PROMPT_ZH if _is_zh(query) else _HYDE_PROMPT_EN
+    raw = await _async_ollama_chat(prompt_template.format(query=query.strip()), max_tokens=160)
     return raw.strip() or None
 
 
