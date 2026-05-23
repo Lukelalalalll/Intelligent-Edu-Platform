@@ -304,7 +304,7 @@ async def generate_slide_contents(
     rag_context_str = ""
     if source_text and len(source_text) > 100:
         try:
-            from backend.services.tfidf_rag_service import LocalRagService
+            from backend.services.rag_service.tfidf_rag_service import LocalRagService
             rag_svc = LocalRagService()
             rag_result = rag_svc.build_rag_context(
                 document_text=source_text,

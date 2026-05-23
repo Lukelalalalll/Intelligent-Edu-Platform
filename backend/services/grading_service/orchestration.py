@@ -17,7 +17,7 @@ from .annotation_service import (
 )
 from .course_service import find_submission
 
-# Re-export every repo function so existing ``from .v2_repos import X`` works.
+# Re-export every repo function so existing ``from .orchestration import X`` works.
 from backend.repositories.course_section_repo import (  # noqa: F401
     create_course_section,
     get_course_section,

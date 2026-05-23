@@ -9,7 +9,7 @@ Internal layout
 _shared.py           — path constants + tiny utility functions
 annotation_service.py — annotation CRUD + PDF rendering (render_annotations_to_pdf)
 course_service.py    — legacy courses JSON/MongoDB (load_courses, save_courses, …)
-v2_repos.py          — flat domain model repos (course_sections, enrollments, …)
+orchestration.py          — flat domain model repos (course_sections, enrollments, …)
 """
 from .course_service import (
     load_courses,
@@ -29,7 +29,7 @@ from .annotation_service import (
     render_annotations_to_pdf,
 )
 
-from .v2_repos import (
+from .orchestration import (
     create_course_section,
     get_course_section,
     list_course_sections,
@@ -72,33 +72,33 @@ __all__ = [
     "get_annotated_pdf_path",
     "get_pristine_pdf_path",
     "render_annotations_to_pdf",
-    # v2_repos — course sections
+    # orchestration — course sections
     "create_course_section",
     "get_course_section",
     "list_course_sections",
     "update_course_section",
     "delete_course_section",
-    # v2_repos — enrollments
+    # orchestration —enrollments
     "enroll_user",
     "unenroll_user",
     "list_enrollments",
-    # v2_repos — assignments
+    # orchestration —assignments
     "create_assignment",
     "get_assignment",
     "list_assignments",
     "update_assignment",
     "delete_assignment",
-    # v2_repos — submissions
+    # orchestration —submissions
     "create_submission",
     "get_submission",
     "list_submissions",
     "list_submissions_for_student",
     "update_submission",
-    # v2_repos — documents
+    # orchestration —documents
     "create_document",
     "get_document",
     "list_documents",
-    # v2_repos — grades + bundle
+    # orchestration —grades + bundle
     "upsert_grade",
     "get_grade",
     "get_submission_bundle",
