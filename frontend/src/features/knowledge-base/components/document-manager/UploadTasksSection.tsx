@@ -5,9 +5,9 @@ import type { UploadTask } from '../../types';
 
 function phaseLabel(t: UploadTask): string {
     if (t.status === 'uploading') return `Uploading ${t.progress}%`;
-    if (t.phase === 'extracting') return `Extracting PDF… ${t.progress}%`;
-    if (t.phase === 'indexing') return `Building index… ${t.progress}%`;
-    return `Processing… ${t.progress}%`;
+    if (t.phase === 'extracting') return `Extracting ${t.progress}%`;
+    if (t.phase === 'indexing') return `Building index ${t.progress}%`;
+    return `Processing ${t.progress}%`;
 }
 
 export default function UploadTasksSection({
@@ -25,8 +25,8 @@ export default function UploadTasksSection({
 
     const summaryLines = finished.map(t =>
         t.status === 'done'
-            ? `✓  ${t.file.name}  —  ${t.chunkCount ?? 0} chunks indexed`
-            : `✗  ${t.file.name}  —  ${t.error || 'Failed'}`,
+            ? `${t.file.name} - ${t.chunkCount ?? 0} nodes indexed${t.indexVersion ? ` (${t.indexVersion})` : ''}${t.parserUsed ? ` via ${t.parserUsed}` : ''}`
+            : `${t.file.name} - ${t.error || 'Failed'}`,
     );
 
     const title = errorCount > 0

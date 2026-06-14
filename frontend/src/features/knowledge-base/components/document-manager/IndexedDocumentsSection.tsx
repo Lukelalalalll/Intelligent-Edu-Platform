@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import styles from '../../styles/KnowledgeBase.module.css';
 import DocumentRow from '../DocumentRow';
+import DocumentDiagnosticsModal from './DocumentDiagnosticsModal';
 
 export default function IndexedDocumentsSection({
+    courseId,
     loadingDocs,
     documents,
     onDeleteDoc,
@@ -11,6 +13,7 @@ export default function IndexedDocumentsSection({
     onReassignDocChapter,
     uploading,
 }: {
+    courseId: string;
     loadingDocs: boolean;
     documents: any[];
     onDeleteDoc: (docName: string) => void;
@@ -22,6 +25,7 @@ export default function IndexedDocumentsSection({
     // Track previous doc count to detect new docs appearing
     const prevCountRef = useRef(documents.length);
     const [justRefreshed, setJustRefreshed] = useState(false);
+    const [selectedDocName, setSelectedDocName] = useState<string | null>(null);
 
     useEffect(() => {
         if (documents.length > prevCountRef.current) {
@@ -51,7 +55,12 @@ export default function IndexedDocumentsSection({
                             className={`${styles.documentEntry} ${justRefreshed ? styles['doc-entry-appear'] : ''}`}
                             style={justRefreshed ? { animationDelay: `${idx * 0.05}s` } : undefined}
                         >
-                            <DocumentRow doc={d} onDelete={onDeleteDoc} deleting={deletingDoc === d.doc_name} />
+                            <DocumentRow
+                                doc={d}
+                                onDelete={onDeleteDoc}
+                                onViewDetails={setSelectedDocName}
+                                deleting={deletingDoc === d.doc_name}
+                            />
                             <div className={styles.docChapterRow}>
                                 <span className={styles.docChapterLabel}>Chapter:</span>
                                 <select
@@ -69,6 +78,13 @@ export default function IndexedDocumentsSection({
                     ))}
                 </div>
             )}
+
+            <DocumentDiagnosticsModal
+                courseId={courseId}
+                docName={selectedDocName}
+                open={Boolean(selectedDocName)}
+                onClose={() => setSelectedDocName(null)}
+            />
         </div>
     );
 }

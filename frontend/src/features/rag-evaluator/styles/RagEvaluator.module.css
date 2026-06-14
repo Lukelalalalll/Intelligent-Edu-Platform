@@ -6,9 +6,9 @@
 
 .page {
     font-family: inherit;
-    max-width: 1440px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 0 32px 80px;
+    padding: 0 var(--page-padding-inline) var(--page-padding-block);
     color: var(--text-main, #212B36);
     min-height: 100vh;
 }
@@ -55,8 +55,8 @@
     border-radius: var(--radius-lg, 16px);
     border: 1px solid var(--border-color, #E0E0E0);
     box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.06));
-    padding: 2.5rem;
-    margin-bottom: 2.5rem;
+    padding: var(--card-padding);
+    margin-bottom: var(--card-stack-gap);
     position: relative;
     opacity: 0;
     overflow: hidden;
@@ -415,3 +415,77 @@
 
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.traceLegend {
+    margin: -8px 0 16px;
+    font-size: 12px;
+    color: var(--text-sub, #64748b);
+}
+
+.detailModeLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub, #475569);
+    margin-bottom: 6px;
+}
+
+.detailMetaGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.detailMetaCard {
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    background: var(--bg-body, #f8fafc);
+    padding: 10px 12px;
+}
+
+.detailMetaLabel {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-sub, #64748b);
+    margin-bottom: 4px;
+}
+
+.detailMetaValue {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main, #0f172a);
+    line-height: 1.4;
+}
+
+.detailTraceList {
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.detailTraceRow {
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 10px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-color, #eef2f7);
+    background: #fff;
+}
+
+.detailTraceRow:last-child {
+    border-bottom: none;
+}
+
+.detailTraceStage {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-color, #4f46e5);
+}
+
+.detailTraceText {
+    font-size: 12px;
+    color: var(--text-sub, #64748b);
+    line-height: 1.4;
+}

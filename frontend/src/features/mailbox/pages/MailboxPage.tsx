@@ -42,6 +42,7 @@ export default function MailboxPage() {
                 className={styles.mailboxBanner}
                 title={<><i className="fas fa-inbox"></i> Grading Mailbox</>}
                 subtitle={<>Welcome to the intelligent grading workspace, <strong>{storeUser?.username || 'Professor'}</strong>.</>}
+                variant="workspace"
             />
 
             <div className={styles.mailboxContainer}>

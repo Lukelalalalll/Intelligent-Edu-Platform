@@ -3,23 +3,13 @@
    ========================================= */
 
 .mailboxContainer {
-    max-width: 1440px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 0 32px 40px;
+    padding: 0 0 var(--page-padding-block);
 }
 
 .mailboxBanner {
-    text-align: center;
-    margin-bottom: 1.25rem;
-    padding: 3.5rem 2rem;
-    background-image: var(--primary-gradient-animated);
-    background-size: 300% 300%;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
-    color: #fff;
-    position: relative;
-    overflow: hidden;
-    opacity: 1;
+    margin-bottom: 1rem;
 }
 
 .mailboxBanner h1 {
@@ -27,16 +17,10 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 0.8rem;
 }
 
 .mailboxBanner p {
     max-width: 640px;
-    margin: 0 auto;
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.95);
 }
 
 .loadingLine,
@@ -87,6 +71,6 @@
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .mailboxContainer {
-        padding: 0 12px 28px;
+        padding-bottom: 28px;
     }
 }

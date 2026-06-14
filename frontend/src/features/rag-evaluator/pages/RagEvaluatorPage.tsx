@@ -19,9 +19,30 @@ const STEP_LABELS: Record<Step, string> = {
 function loadSavedConfig(): EvalConfig {
     try {
         const raw = localStorage.getItem('ragEvaluatorConfig');
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            return {
+                courseId: parsed.courseId || '',
+                selectedDocs: parsed.selectedDocs || [],
+                mode: parsed.mode || 'comparison',
+                topK: parsed.topK || 4,
+                ragProfile: parsed.ragProfile || 'balanced',
+                debugRetrieval: !!parsed.debugRetrieval,
+                allowWebCorrection: !!parsed.allowWebCorrection,
+                forceQueryClass: parsed.forceQueryClass || '',
+            };
+        }
     } catch { /* ignore */ }
-    return { courseId: '', selectedDocs: [], mode: 'comparison', topK: 4 };
+    return {
+        courseId: '',
+        selectedDocs: [],
+        mode: 'comparison',
+        topK: 4,
+        ragProfile: 'balanced',
+        debugRetrieval: false,
+        allowWebCorrection: false,
+        forceQueryClass: '',
+    };
 }
 
 function saveConfig(config: EvalConfig) {
@@ -70,8 +91,14 @@ export default function RagEvaluatorPage() {
         setResults(null);
         try {
             const result = await api.evaluateAB(
-                dataset, config.topK, config.mode,
+                dataset,
+                config.topK,
+                config.mode,
                 config.selectedDocs.length > 0 ? config.selectedDocs : undefined,
+                config.ragProfile,
+                config.debugRetrieval,
+                config.allowWebCorrection,
+                config.forceQueryClass,
             );
             setResults(result);
         } catch (e: unknown) {
@@ -80,7 +107,18 @@ export default function RagEvaluatorPage() {
         } finally {
             setEvaluating(false);
         }
-    }, [canGoToStep3, dataset, config.topK, config.mode, config.selectedDocs, quality]);
+    }, [
+        canGoToStep3,
+        dataset,
+        config.topK,
+        config.mode,
+        config.selectedDocs,
+        config.ragProfile,
+        config.debugRetrieval,
+        config.allowWebCorrection,
+        config.forceQueryClass,
+        quality,
+    ]);
 
     const completedSteps = new Set<Step>();
     if (canGoToStep2) completedSteps.add(1);
@@ -93,6 +131,7 @@ export default function RagEvaluatorPage() {
                 title="RAG Evaluator"
                 subtitle="Evaluate retrieval quality with A/B comparison between Hybrid and Vector-Only modes"
                 as="header"
+                variant="workspace"
             />
 
             {/* Stepper */}

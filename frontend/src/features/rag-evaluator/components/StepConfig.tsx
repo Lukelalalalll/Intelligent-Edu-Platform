@@ -8,6 +8,10 @@ export interface EvalConfig {
     selectedDocs: string[];
     mode: EvalMode;
     topK: number;
+    ragProfile: 'low-latency' | 'balanced' | 'high-recall';
+    debugRetrieval: boolean;
+    allowWebCorrection: boolean;
+    forceQueryClass: '' | 'keyword/factoid' | 'concept/explanation' | 'comparison' | 'multi-hop' | 'chapter/doc constrained' | 'out-of-domain';
 }
 
 interface Props {
@@ -201,6 +205,19 @@ export default function StepConfig({ config, onChange }: Props) {
                     </div>
                 </div>
 
+                <div className={styles.formRow}>
+                    <label className={styles.formLabel}>RAG Profile</label>
+                    <select
+                        className={styles.formSelect}
+                        value={config.ragProfile}
+                        onChange={e => onChange({ ...config, ragProfile: e.target.value as 'low-latency' | 'balanced' | 'high-recall' })}
+                    >
+                        <option value="low-latency">Low latency</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="high-recall">High recall</option>
+                    </select>
+                </div>
+
                 {(config.mode === 'hybrid' || config.mode === 'comparison') && (
                     <button
                         className={styles.advancedToggle}
@@ -213,10 +230,43 @@ export default function StepConfig({ config, onChange }: Props) {
 
                 {showAdvanced && (config.mode === 'hybrid' || config.mode === 'comparison') && (
                     <div className={styles.advancedPanel}>
-                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 4px' }}>
-                            BM25 and RRF parameters use system defaults (BM25 k1=1.5, b=0.75; RRF k=60).
-                            These are configured at the service level.
-                        </p>
+                        <div className={styles.formRow}>
+                            <label className={styles.formLabel}>Query Class</label>
+                            <select
+                                className={styles.formSelect}
+                                value={config.forceQueryClass}
+                                onChange={e => onChange({
+                                    ...config,
+                                    forceQueryClass: e.target.value as '' | 'keyword/factoid' | 'concept/explanation' | 'comparison' | 'multi-hop' | 'chapter/doc constrained' | 'out-of-domain',
+                                })}
+                            >
+                                <option value="">Auto</option>
+                                <option value="keyword/factoid">Keyword</option>
+                                <option value="concept/explanation">Concept</option>
+                                <option value="comparison">Comparison</option>
+                                <option value="multi-hop">Multi-hop</option>
+                                <option value="chapter/doc constrained">Doc constrained</option>
+                                <option value="out-of-domain">Out of domain</option>
+                            </select>
+                        </div>
+                        <div className={styles.formRow}>
+                            <label className={styles.toggleLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={config.debugRetrieval}
+                                    onChange={() => onChange({ ...config, debugRetrieval: !config.debugRetrieval })}
+                                />
+                                Retrieval trace
+                            </label>
+                            <label className={styles.toggleLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={config.allowWebCorrection}
+                                    onChange={() => onChange({ ...config, allowWebCorrection: !config.allowWebCorrection })}
+                                />
+                                Web correction
+                            </label>
+                        </div>
                     </div>
                 )}
             </div>

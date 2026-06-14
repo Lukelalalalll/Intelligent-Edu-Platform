@@ -63,6 +63,24 @@ export interface EvalChunk {
     correct?: boolean;
 }
 
+export interface RetrievalTraceItem {
+    stage: string;
+    count?: number;
+    query?: string;
+    queries?: string[];
+    latency_ms?: number;
+}
+
+export interface RetrievalConfidence {
+    label?: 'confident' | 'ambiguous' | 'incorrect';
+    score?: number;
+    coverage?: number;
+    score_margin?: number;
+    source_agreement?: number;
+    filter_satisfaction?: number;
+    source_diversity?: number;
+}
+
 export interface EvalDetail {
     id: string;
     query: string;
@@ -74,6 +92,23 @@ export interface EvalDetail {
     retrieved_count: number;
     correct_citations: number;
     latency_ms?: number;
+    retrieval_plan?: {
+        query_class?: string;
+        retrieval_profile?: string;
+        decomposed_queries?: string[];
+    };
+    retrieval_trace?: RetrievalTraceItem[];
+    retrieval_confidence?: RetrievalConfidence;
+    fallback_reason?: string;
+    evidence_spans?: Array<{
+        doc_name: string;
+        page_start?: number;
+        page_end?: number;
+        chunk_id?: number;
+        section_path?: string;
+        source_type?: string;
+        confidence?: number;
+    }>;
     chunks: EvalChunk[];
 }
 
@@ -127,12 +162,20 @@ export async function evaluateAB(
     topK: number,
     mode: EvalMode,
     selectedDocs?: string[],
+    ragProfile: 'low-latency' | 'balanced' | 'high-recall' = 'balanced',
+    debugRetrieval: boolean = false,
+    allowWebCorrection: boolean = false,
+    forceQueryClass: '' | 'keyword/factoid' | 'concept/explanation' | 'comparison' | 'multi-hop' | 'chapter/doc constrained' | 'out-of-domain' = '',
 ): Promise<EvalABResult> {
     const { data } = await client.post('/admin/rag-eval/evaluate-ab', {
         dataset,
         top_k: topK,
         mode,
         selected_docs: selectedDocs ?? [],
+        rag_profile: ragProfile,
+        debug_retrieval: debugRetrieval,
+        allow_web_correction: allowWebCorrection,
+        force_query_class: forceQueryClass,
     });
     return data;
 }

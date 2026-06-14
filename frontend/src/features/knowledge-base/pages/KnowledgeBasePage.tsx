@@ -29,6 +29,12 @@ export default function KnowledgeBasePageContainer() {
             onReassignDocChapter={kb.onReassignDocChapter}
             useFastExtract={kb.useFastExtract}
             onToggleExtractMode={kb.onToggleExtractMode}
+            indexProfile={kb.indexProfile}
+            parserStrategy={kb.parserStrategy}
+            forceReindex={kb.forceReindex}
+            onChangeIndexProfile={kb.onChangeIndexProfile}
+            onChangeParserStrategy={kb.onChangeParserStrategy}
+            onToggleForceReindex={kb.onToggleForceReindex}
         />
     );
 }

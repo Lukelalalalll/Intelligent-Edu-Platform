@@ -29,6 +29,12 @@ interface KnowledgeBaseViewProps {
     onReassignDocChapter: (docName: string, chapterId: string) => void;
     useFastExtract: boolean;
     onToggleExtractMode: () => void;
+    indexProfile: 'auto' | 'quality' | 'fast';
+    parserStrategy: 'auto' | 'docling' | 'marker' | 'fast';
+    forceReindex: boolean;
+    onChangeIndexProfile: (value: 'auto' | 'quality' | 'fast') => void;
+    onChangeParserStrategy: (value: 'auto' | 'docling' | 'marker' | 'fast') => void;
+    onToggleForceReindex: () => void;
 }
 
 export default function KnowledgeBaseView({
@@ -38,6 +44,7 @@ export default function KnowledgeBaseView({
     chapters, selectedChapterId, onSelectChapter, onCreateChapter,
     onUpdateChapter, onDeleteChapter, onReassignDocChapter,
     useFastExtract, onToggleExtractMode,
+    indexProfile, parserStrategy, forceReindex, onChangeIndexProfile, onChangeParserStrategy, onToggleForceReindex,
 }: KnowledgeBaseViewProps) {
     const selectedCourse = courses.find(c => c.courseId === selectedCourseId);
 
@@ -47,7 +54,7 @@ export default function KnowledgeBaseView({
                 className={styles['kb-banner']}
                 title={<><i className="fas fa-book-open"></i> Course Knowledge Base</>}
                 subtitle="Upload course materials to power AI-assisted tutoring for students"
-                style={{ marginBottom: '3.5rem' }}
+                variant="workspace"
             />
 
             <div className={styles['kb-body']}>
@@ -88,6 +95,12 @@ export default function KnowledgeBaseView({
                             onReassignDocChapter={onReassignDocChapter}
                             useFastExtract={useFastExtract}
                             onToggleExtractMode={onToggleExtractMode}
+                            indexProfile={indexProfile}
+                            parserStrategy={parserStrategy}
+                            forceReindex={forceReindex}
+                            onChangeIndexProfile={onChangeIndexProfile}
+                            onChangeParserStrategy={onChangeParserStrategy}
+                            onToggleForceReindex={onToggleForceReindex}
                         />
                     )}
                 </div>

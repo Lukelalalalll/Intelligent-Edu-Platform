@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { knowledgeBaseApi } from '../../../api/knowledgeBaseApi';
 import type { CourseInfo, IndexCourseSummary, IndexedDoc } from '../../../api/knowledgeBaseApi';
 import type { UploadTask } from '../components/DocumentManager';
@@ -15,25 +16,38 @@ export function useKnowledgeBase() {
     const [chapters, setChapters] = useState<any[]>([]);
     const [selectedChapterId, setSelectedChapterId] = useState<string>('');
     const [useFastExtract, setUseFastExtract] = useState(false);
+    const [indexProfile, setIndexProfile] = useState<'auto' | 'quality' | 'fast'>('quality');
+    const [parserStrategy, setParserStrategy] = useState<'auto' | 'docling' | 'marker' | 'fast'>('auto');
+    const [forceReindex, setForceReindex] = useState(false);
 
     const onToggleExtractMode = useCallback(() => setUseFastExtract(v => !v), []);
+    const onToggleForceReindex = useCallback(() => setForceReindex(v => !v), []);
 
     // Load courses + summary on mount
     useEffect(() => {
         let alive = true;
         (async () => {
             try {
-                const [profileRes, summaryRes] = await Promise.all([
-                    knowledgeBaseApi.getCourses(),
-                    knowledgeBaseApi.getSummary(),
-                ]);
+                const profileRes = await knowledgeBaseApi.getCourses();
+                if (alive) {
+                    setCourses(profileRes.courses ?? []);
+                }
+            } catch {
+                if (alive) {
+                    setCourses([]);
+                }
+            }
+
+            try {
+                const summaryRes = await knowledgeBaseApi.getSummary();
                 if (!alive) return;
-                setCourses(profileRes.courses ?? []);
                 const map: Record<string, IndexCourseSummary> = {};
                 for (const s of summaryRes.courses ?? []) map[s.course_id] = s;
                 setSummaryMap(map);
             } catch {
-                // leave empty
+                if (alive) {
+                    setSummaryMap({});
+                }
             } finally {
                 if (alive) setLoadingCourses(false);
             }
@@ -85,6 +99,9 @@ export function useKnowledgeBase() {
                     setUploadTasks(prev => prev.map(t => t.taskId === taskId ? { ...t, progress: pct } : t));
                 },
                 useFastExtract,
+                indexProfile,
+                parserStrategy,
+                forceReindex,
             );
 
             setUploadTasks(prev => prev.map(t =>
@@ -92,36 +109,81 @@ export function useKnowledgeBase() {
             ));
 
             const pollInterval = 1500;
-            const maxPolls = 120;
+            const maxPolls = 160;
+            let reachedTerminalState = false;
+            let lastPhase = 'processing';
             for (let i = 0; i < maxPolls; i++) {
                 await new Promise(r => setTimeout(r, pollInterval));
                 try {
                     const job = await knowledgeBaseApi.getJobStatus(job_id);
+                    lastPhase = job.phase || lastPhase;
                     if (job.status === 'done') {
                         setUploadTasks(prev => prev.map(t =>
-                            t.taskId === taskId
-                                ? { ...t, status: 'done', progress: 100, chunkCount: job.result?.chunk_count }
+                                t.taskId === taskId
+                                ? {
+                                    ...t,
+                                    status: 'done',
+                                    progress: 100,
+                                    chunkCount: job.result?.chunk_count,
+                                    parserUsed: job.parser_used,
+                                    qualityReport: job.quality_report,
+                                    phaseTimings: job.phase_timings,
+                                    indexVersion: job.index_version ?? job.result?.index_version,
+                                    artifactRefs: job.artifact_refs,
+                                }
                                 : t,
                         ));
+                        reachedTerminalState = true;
                         break;
                     }
                     if (job.status === 'failed') {
                         setUploadTasks(prev => prev.map(t =>
-                            t.taskId === taskId
-                                ? { ...t, status: 'error', error: job.error || 'Indexing failed' }
+                                t.taskId === taskId
+                                ? {
+                                    ...t,
+                                    status: 'error',
+                                    error: job.error || 'Indexing failed',
+                                    parserUsed: job.parser_used,
+                                    qualityReport: job.quality_report,
+                                    phaseTimings: job.phase_timings,
+                                    indexVersion: job.index_version,
+                                }
                                 : t,
                         ));
+                        reachedTerminalState = true;
                         break;
                     }
                     // Update progress + phase from backend
                     if (typeof job.progress === 'number') {
                         setUploadTasks(prev => prev.map(t =>
-                            t.taskId === taskId
-                                ? { ...t, status: 'indexing', progress: job.progress!, phase: job.phase }
+                                t.taskId === taskId
+                                ? {
+                                    ...t,
+                                    status: 'indexing',
+                                    progress: job.progress!,
+                                    phase: job.phase,
+                                    parserUsed: job.parser_used,
+                                    qualityReport: job.quality_report,
+                                    phaseTimings: job.phase_timings,
+                                    indexVersion: job.index_version,
+                                    artifactRefs: job.artifact_refs,
+                                }
                                 : t,
                         ));
                     }
                 } catch { /* continue polling */ }
+            }
+
+            if (!reachedTerminalState) {
+                setUploadTasks(prev => prev.map(t =>
+                    t.taskId === taskId
+                        ? {
+                            ...t,
+                            status: 'error',
+                            error: `Indexing is still in ${lastPhase}; refresh the document list later or try Fast parser for this file.`,
+                        }
+                        : t,
+                ));
             }
 
             await loadDocs(selectedCourseId);
@@ -133,7 +195,7 @@ export function useKnowledgeBase() {
                 prev.map(t => t.taskId === taskId ? { ...t, status: 'error', error: msg } : t),
             );
         }
-    }, [selectedCourseId, selectedChapterId, loadDocs, refreshSummary]);
+    }, [selectedCourseId, selectedChapterId, loadDocs, refreshSummary, useFastExtract, indexProfile, parserStrategy, forceReindex]);
 
     const handleDismissUploadTasks = useCallback(() => {
         setUploadTasks(prev => prev.filter(t => t.status === 'uploading' || t.status === 'indexing'));
@@ -144,9 +206,14 @@ export function useKnowledgeBase() {
         setDeletingDoc(docName);
         try {
             await knowledgeBaseApi.removeDoc(selectedCourseId, docName);
+            setDocuments(prev => prev.filter(doc => doc.doc_name !== docName));
             await loadDocs(selectedCourseId);
             await refreshSummary();
-        } catch { /* silent */ } finally {
+            toast.success('Document removed');
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: { detail?: string } }; message?: string };
+            toast.error(e?.response?.data?.detail || e?.message || 'Delete failed');
+        } finally {
             setDeletingDoc(null);
         }
     }, [selectedCourseId, loadDocs, refreshSummary]);
@@ -183,5 +250,11 @@ export function useKnowledgeBase() {
         uploading: uploadTasks.some(t => t.status === 'uploading' || t.status === 'indexing'),
         useFastExtract,
         onToggleExtractMode,
+        indexProfile,
+        parserStrategy,
+        forceReindex,
+        onChangeIndexProfile: setIndexProfile,
+        onChangeParserStrategy: setParserStrategy,
+        onToggleForceReindex,
     };
 }

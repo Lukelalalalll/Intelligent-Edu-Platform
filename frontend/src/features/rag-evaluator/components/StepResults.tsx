@@ -219,6 +219,12 @@ export default function StepResults({ results, loading }: Props) {
                 </div>
             )}
 
+            {(h?.details?.length || v?.details?.length) ? (
+                <div className={styles.traceLegend}>
+                    <span>Confidence and fallback are shown per question in the expanded rows.</span>
+                </div>
+            ) : null}
+
             {/* Per-question detail table */}
             <h4 className={styles.cardTitle} style={{ marginTop: 24, marginBottom: 12 }}>
                 <i className="fas fa-table" style={{ marginRight: 8 }} />

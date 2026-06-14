@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { knowledgeBaseApi } from '../../../api/knowledgeBaseApi';
-import type { ChapterDraft, RetrievalResult } from '../types';
+import type {
+    ChapterDraft,
+    EvidenceSpan,
+    RetrievalConfidence,
+    RetrievalPlan,
+    RetrievalResult,
+    RetrievalTraceItem,
+} from '../types';
 import { extractErrorMessage } from '@/shared/utils/extractError';
 
 export function useDocumentManagerState({
@@ -23,6 +30,16 @@ export function useDocumentManagerState({
     const [testResults, setTestResults] = useState<RetrievalResult[] | null>(null);
     const [testLatency, setTestLatency] = useState<number | null>(null);
     const [testLoading, setTestLoading] = useState(false);
+    const [testDebug, setTestDebug] = useState(true);
+    const [activeIndexVersion, setActiveIndexVersion] = useState<string>('');
+    const [testProfile, setTestProfile] = useState<'low-latency' | 'balanced' | 'high-recall'>('balanced');
+    const [forceQueryClass, setForceQueryClass] = useState<'' | 'keyword/factoid' | 'concept/explanation' | 'comparison' | 'multi-hop' | 'chapter/doc constrained' | 'out-of-domain'>('');
+    const [allowWebCorrection, setAllowWebCorrection] = useState(false);
+    const [retrievalPlan, setRetrievalPlan] = useState<RetrievalPlan | null>(null);
+    const [retrievalTrace, setRetrievalTrace] = useState<RetrievalTraceItem[]>([]);
+    const [retrievalConfidence, setRetrievalConfidence] = useState<RetrievalConfidence | null>(null);
+    const [fallbackReason, setFallbackReason] = useState('');
+    const [evidenceSpans, setEvidenceSpans] = useState<EvidenceSpan[]>([]);
 
     const [newChapterName, setNewChapterName] = useState('');
     const [newChapterDescription, setNewChapterDescription] = useState('');
@@ -50,10 +67,31 @@ export function useDocumentManagerState({
         if (!testQuery.trim() || testLoading) return;
         setTestLoading(true);
         setTestResults(null);
+        setRetrievalPlan(null);
+        setRetrievalTrace([]);
+        setRetrievalConfidence(null);
+        setFallbackReason('');
+        setEvidenceSpans([]);
         try {
-            const res = await knowledgeBaseApi.testRetrieval(courseId, testQuery.trim(), selectedChapterId, testTopK);
+            const res = await knowledgeBaseApi.testRetrieval(
+                courseId,
+                testQuery.trim(),
+                selectedChapterId,
+                testTopK,
+                testDebug,
+                testProfile,
+                testDebug,
+                allowWebCorrection,
+                forceQueryClass,
+            );
             setTestResults(res.results);
             setTestLatency(res.latency_ms);
+            setActiveIndexVersion(res.active_index_version || '');
+            setRetrievalPlan(res.retrieval_plan || null);
+            setRetrievalTrace(res.retrieval_trace || []);
+            setRetrievalConfidence(res.retrieval_confidence || null);
+            setFallbackReason(res.fallback_reason || '');
+            setEvidenceSpans(res.evidence_spans || []);
         } catch {
             setTestResults([]);
         } finally {
@@ -127,6 +165,20 @@ export function useDocumentManagerState({
         testResults,
         testLatency,
         testLoading,
+        testDebug,
+        setTestDebug,
+        activeIndexVersion,
+        testProfile,
+        setTestProfile,
+        forceQueryClass,
+        setForceQueryClass,
+        allowWebCorrection,
+        setAllowWebCorrection,
+        retrievalPlan,
+        retrievalTrace,
+        retrievalConfidence,
+        fallbackReason,
+        evidenceSpans,
         handleTestRetrieval,
         newChapterName,
         setNewChapterName,

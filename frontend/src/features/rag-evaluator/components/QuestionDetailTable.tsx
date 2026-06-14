@@ -49,26 +49,26 @@ export default function QuestionDetailTable({ hybridDetails, vectorDetails, isCo
                                         {d.query}
                                         {d.degenerate && (
                                             <span
-                                                title="No expected_doc_names or expected_keywords — this case cannot be evaluated"
+                                                title="No expected_doc_names or expected_keywords, this case cannot be evaluated"
                                                 style={{ marginLeft: 6, fontSize: 11, color: '#f59e0b', cursor: 'default' }}
                                             >
-                                                ⚠️ no criteria
+                                                no criteria
                                             </span>
                                         )}
                                     </td>
                                     {hasHybrid && isComparison && (
                                         <td className={hd?.degenerate ? '' : hd?.hit ? styles.hitOk : styles.hitMiss}>
-                                            {hd?.degenerate ? '—' : hd?.hit ? '✅' : '❌'}
+                                            {hd?.degenerate ? '-' : hd?.hit ? 'HIT' : 'MISS'}
                                         </td>
                                     )}
                                     {hasVector && isComparison && (
                                         <td className={vd?.degenerate ? '' : vd?.hit ? styles.hitOk : styles.hitMiss}>
-                                            {vd?.degenerate ? '—' : vd?.hit ? '✅' : '❌'}
+                                            {vd?.degenerate ? '-' : vd?.hit ? 'HIT' : 'MISS'}
                                         </td>
                                     )}
                                     {!isComparison && (
                                         <td className={d.degenerate ? '' : d.hit ? styles.hitOk : styles.hitMiss}>
-                                            {d.degenerate ? '—' : d.hit ? '✅ HIT' : '❌ MISS'}
+                                            {d.degenerate ? '-' : d.hit ? 'HIT' : 'MISS'}
                                         </td>
                                     )}
                                     <td style={{ textAlign: 'center' }}>{d.retrieved_count}</td>
@@ -87,13 +87,13 @@ export default function QuestionDetailTable({ hybridDetails, vectorDetails, isCo
                                     <tr>
                                         <td colSpan={99}>
                                             {isComparison && hd && (
-                                                <ChunkList label="Hybrid" chunks={hd.chunks} />
+                                                <DetailBlock label="Hybrid" detail={hd} />
                                             )}
                                             {isComparison && vd && (
-                                                <ChunkList label="Vector" chunks={vd.chunks} />
+                                                <DetailBlock label="Vector" detail={vd} />
                                             )}
                                             {!isComparison && (
-                                                <ChunkList chunks={d.chunks} />
+                                                <DetailBlock detail={d} />
                                             )}
                                         </td>
                                     </tr>
@@ -107,23 +107,63 @@ export default function QuestionDetailTable({ hybridDetails, vectorDetails, isCo
     );
 }
 
-function ChunkList({ chunks, label }: { chunks: { doc: string; score: number; preview: string; correct?: boolean }[]; label?: string }) {
+function DetailBlock({ detail, label }: { detail: EvalDetail; label?: string }) {
+    return (
+        <div style={{ marginBottom: 10 }}>
+            {label && <div className={styles.detailModeLabel}>{label}</div>}
+            <div className={styles.detailMetaGrid}>
+                <div className={styles.detailMetaCard}>
+                    <div className={styles.detailMetaLabel}>Query class</div>
+                    <div className={styles.detailMetaValue}>{detail.retrieval_plan?.query_class || 'auto'}</div>
+                </div>
+                <div className={styles.detailMetaCard}>
+                    <div className={styles.detailMetaLabel}>Confidence</div>
+                    <div className={styles.detailMetaValue}>
+                        {detail.retrieval_confidence?.label || 'unknown'}
+                        {typeof detail.retrieval_confidence?.score === 'number' ? ` · ${detail.retrieval_confidence.score.toFixed(3)}` : ''}
+                    </div>
+                </div>
+                <div className={styles.detailMetaCard}>
+                    <div className={styles.detailMetaLabel}>Fallback</div>
+                    <div className={styles.detailMetaValue}>{detail.fallback_reason || 'none'}</div>
+                </div>
+            </div>
+
+            {detail.retrieval_trace?.length ? (
+                <div className={styles.detailTraceList}>
+                    {detail.retrieval_trace.map((item, idx) => (
+                        <div key={`${item.stage}_${idx}`} className={styles.detailTraceRow}>
+                            <span className={styles.detailTraceStage}>{item.stage}</span>
+                            <span className={styles.detailTraceText}>
+                                {typeof item.count === 'number' ? `${item.count} items` : item.query || (item.queries?.join(' | ') ?? '')}
+                            </span>
+                            {typeof item.latency_ms === 'number' && <span className={styles.detailTraceText}>{item.latency_ms.toFixed(1)} ms</span>}
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+
+            <ChunkList chunks={detail.chunks} />
+        </div>
+    );
+}
+
+function ChunkList({ chunks }: { chunks: { doc: string; score: number; preview: string; correct?: boolean }[] }) {
     if (chunks.length === 0) {
         return <div className={styles.chunkPanel} style={{ opacity: 0.6 }}>No chunks retrieved</div>;
     }
 
     return (
         <div style={{ marginBottom: 8 }}>
-            {label && <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--text-secondary)' }}>{label}</div>}
             {chunks.map((c, j) => (
-                <div key={j} className={styles.chunkPanel} style={c.correct === false ? { borderLeft: '3px solid #ef4444' } : c.correct === true ? { borderLeft: '3px solid #22c55e' } : undefined}>
+                <div
+                    key={j}
+                    className={styles.chunkPanel}
+                    style={c.correct === false ? { borderLeft: '3px solid #ef4444' } : c.correct === true ? { borderLeft: '3px solid #22c55e' } : undefined}
+                >
                     <div className={styles.chunkHeader}>
-                        <span>
-                            {c.correct === true && <span style={{ color: '#22c55e', marginRight: 4 }}>✓</span>}
-                            {c.correct === false && <span style={{ color: '#ef4444', marginRight: 4 }}>✗</span>}
-                            {c.doc || '(unknown)'}
-                        </span>
-                        <span>score: {typeof c.score === 'number' ? c.score.toFixed(3) : '—'}</span>
+                        <span>{c.doc || '(unknown)'}</span>
+                        <span>score: {typeof c.score === 'number' ? c.score.toFixed(3) : '-'}</span>
                     </div>
                     <div className={styles.chunkPreview}>{c.preview || '(empty)'}</div>
                 </div>

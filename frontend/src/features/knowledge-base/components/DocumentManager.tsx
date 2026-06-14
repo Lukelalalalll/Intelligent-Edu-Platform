@@ -31,6 +31,12 @@ export default function DocumentManager({
     onReassignDocChapter,
     useFastExtract,
     onToggleExtractMode,
+    indexProfile,
+    parserStrategy,
+    forceReindex,
+    onChangeIndexProfile,
+    onChangeParserStrategy,
+    onToggleForceReindex,
 }: DocumentManagerProps) {
     const dm = useDocumentManagerState({
         courseId,
@@ -126,9 +132,34 @@ export default function DocumentManager({
                             </span>
                         </div>
 
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                                <span>Index profile</span>
+                                <select value={indexProfile} onChange={e => onChangeIndexProfile(e.target.value as 'auto' | 'quality' | 'fast')}>
+                                    <option value="quality">Quality</option>
+                                    <option value="auto">Auto</option>
+                                    <option value="fast">Fast</option>
+                                </select>
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>
+                                <span>Parser</span>
+                                <select value={parserStrategy} onChange={e => onChangeParserStrategy(e.target.value as 'auto' | 'docling' | 'marker' | 'fast')}>
+                                    <option value="auto">Auto</option>
+                                    <option value="docling">Docling</option>
+                                    <option value="marker">Marker</option>
+                                    <option value="fast">Fast</option>
+                                </select>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#374151', fontWeight: 600, marginTop: 18 }}>
+                                <input type="checkbox" checked={forceReindex} onChange={onToggleForceReindex} />
+                                <span>Force reindex</span>
+                            </label>
+                        </div>
+
                         <UploadTasksSection uploadTasks={uploadTasks as UploadTask[]} onDismissFinished={onDismissUploadTasks} />
 
                         <IndexedDocumentsSection
+                            courseId={courseId}
                             loadingDocs={loadingDocs}
                             documents={documents}
                             onDeleteDoc={onDeleteDoc}
@@ -147,8 +178,22 @@ export default function DocumentManager({
                         testLatency={dm.testLatency}
                         testLoading={dm.testLoading}
                         testResults={dm.testResults}
+                        testDebug={dm.testDebug}
+                        activeIndexVersion={dm.activeIndexVersion}
+                        testProfile={dm.testProfile}
+                        forceQueryClass={dm.forceQueryClass}
+                        allowWebCorrection={dm.allowWebCorrection}
+                        retrievalPlan={dm.retrievalPlan}
+                        retrievalTrace={dm.retrievalTrace}
+                        retrievalConfidence={dm.retrievalConfidence}
+                        fallbackReason={dm.fallbackReason}
+                        evidenceSpans={dm.evidenceSpans}
                         onChangeQuery={dm.setTestQuery}
                         onChangeTopK={dm.setTestTopK}
+                        onChangeProfile={dm.setTestProfile}
+                        onChangeForceQueryClass={dm.setForceQueryClass}
+                        onToggleWebCorrection={() => dm.setAllowWebCorrection(v => !v)}
+                        onToggleDebug={() => dm.setTestDebug(v => !v)}
                         onSearch={dm.handleTestRetrieval}
                     />
                 )}

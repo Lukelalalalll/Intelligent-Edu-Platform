@@ -5,10 +5,11 @@ import type { IndexedDoc } from '../../../api/knowledgeBaseApi';
 interface DocumentRowProps {
     doc: IndexedDoc;
     onDelete: (docName: string) => void;
+    onViewDetails: (docName: string) => void;
     deleting: boolean;
 }
 
-export default function DocumentRow({ doc, onDelete, deleting }: DocumentRowProps) {
+export default function DocumentRow({ doc, onDelete, onViewDetails, deleting }: DocumentRowProps) {
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     const ext = doc.doc_name.split('.').pop()?.toLowerCase() ?? '';
@@ -21,7 +22,7 @@ export default function DocumentRow({ doc, onDelete, deleting }: DocumentRowProp
 
     const timeLabel = doc.indexed_at
         ? new Date(doc.indexed_at).toLocaleString()
-        : '—';
+        : '-';
 
     return (
         <div className={`${styles['doc-row']} ${deleting ? styles['doc-row-deleting'] : ''}`}>
@@ -30,11 +31,28 @@ export default function DocumentRow({ doc, onDelete, deleting }: DocumentRowProp
                 <div>
                     <span className={styles['doc-name']}>{doc.doc_name}</span>
                     <span className={styles['doc-meta']}>
-                        {doc.chunk_count} chunk{doc.chunk_count !== 1 ? 's' : ''} · {timeLabel}
+                        {doc.chunk_count} nodes · {timeLabel}
+                        {doc.page_count ? ` · ${doc.page_count} page${doc.page_count === 1 ? '' : 's'}` : ''}
+                        {doc.parser_used ? ` · ${doc.parser_used}` : ''}
+                        {doc.index_version ? ` · ${doc.index_version}` : ''}
                     </span>
+                    <div className={styles.docBadges}>
+                        {doc.quality_status && <span className={styles.docBadge}>{doc.quality_status}</span>}
+                        {doc.node_counts && Object.entries(doc.node_counts).map(([key, value]) => (
+                            <span key={key} className={styles.docBadgeMuted}>{key}:{value}</span>
+                        ))}
+                    </div>
                 </div>
             </div>
             <div className={styles['doc-row-right']}>
+                <button
+                    className={`${styles.docActionBtn} ${styles.diagnosticsBtn}`}
+                    onClick={() => onViewDetails(doc.doc_name)}
+                    disabled={deleting}
+                    title="View parser and quality diagnostics"
+                >
+                    <i className="fas fa-info-circle" />
+                </button>
                 {confirmOpen ? (
                     <span className={styles['confirm-inline']}>
                         <span>Delete?</span>
@@ -43,7 +61,7 @@ export default function DocumentRow({ doc, onDelete, deleting }: DocumentRowProp
                     </span>
                 ) : (
                     <button
-                        className={styles['delete-btn']}
+                        className={`${styles['delete-btn']} ${styles.docActionBtn}`}
                         onClick={() => setConfirmOpen(true)}
                         disabled={deleting}
                         title="Remove from knowledge base"
