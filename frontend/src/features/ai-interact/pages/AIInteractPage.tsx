@@ -5,17 +5,39 @@ import { useAISessions, useAIMemory } from '../hooks/useAISessions/useAISessions
 import { getRoleInfo, type AIRoleInfo } from '../api/aiApi';
 
 export default function AIInteractPage() {
-    // Business logic from hooks
-    const ai = useAISessions();
+    const {
+        sessions,
+        currentSessionId,
+        isTyping,
+        modalConfig,
+        createNewSession,
+        setCurrentSessionId,
+        setModalConfig,
+        confirmDelete,
+        sendMessage,
+        deletingId,
+        stopStream,
+        regenerate,
+        editUserMsg,
+        selectedProvider,
+        setSelectedProvider,
+        providerHealth,
+        tutorMode,
+        setTutorMode,
+        webSearch,
+        setWebSearch,
+        searchEngine,
+        setSearchEngine,
+        enableThinking,
+        setEnableThinking,
+    } = useAISessions();
     const mem = useAIMemory();
 
-    // Role info
     const [roleInfo, setRoleInfo] = useState<AIRoleInfo | null>(null);
     useEffect(() => {
         getRoleInfo().then(setRoleInfo).catch(() => {});
     }, []);
 
-    // UI-only local state
     const [inputText, setInputText] = useState('');
     const [toastVisible, setToastVisible] = useState(false);
     const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -24,53 +46,57 @@ export default function AIInteractPage() {
     const [attachedFiles, setAttachedFiles] = useState<Array<{ file: File; file_name: string; mime_type: string }>>([]);
     const [isUploadingFile, setIsUploadingFile] = useState(false);
 
-    // Scroll management
+    const inputTextRef = useRef(inputText);
+    const attachedFilesRef = useRef(attachedFiles);
+
+    useEffect(() => {
+        inputTextRef.current = inputText;
+    }, [inputText]);
+
+    useEffect(() => {
+        attachedFilesRef.current = attachedFiles;
+    }, [attachedFiles]);
+
     const { scrollToBottom } = usePretextMeasure(chatMessagesRef, {
         font: '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         lineHeight: 25.6,
         debounceMs: 60,
     });
 
-    // Scroll on new messages only — NOT on every streaming token update
     const prevMsgCountRef = useRef(-1);
     useEffect(() => {
-        const currentSession = ai.sessions?.find(s => s.id === ai.currentSessionId);
+        const currentSession = sessions?.find(s => s.id === currentSessionId);
         const count = currentSession?.messages.length ?? 0;
         if (count !== prevMsgCountRef.current) {
             prevMsgCountRef.current = count;
             scrollToBottom(true);
         }
-    }, [ai.sessions, ai.currentSessionId, scrollToBottom]);
+    }, [sessions, currentSessionId, scrollToBottom]);
 
-    // Input handling
     const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInputText(e.target.value);
         e.target.style.height = 'auto';
         e.target.style.height = e.target.scrollHeight + 'px';
     }, []);
 
-    // Stable refs to avoid breaking memo on every keystroke
-    const inputTextRef = useRef(inputText);
-    inputTextRef.current = inputText;
-    const attachedFilesRef = useRef(attachedFiles);
-    attachedFilesRef.current = attachedFiles;
-
     const handleSend = useCallback(() => {
         const text = inputTextRef.current;
         const files = attachedFilesRef.current;
         if (!text.trim() && files.length === 0) return;
-        ai.sendMessage(text, files);
+        sendMessage(text, files);
         setInputText('');
         setAttachedFiles([]);
         if (inputRef.current) inputRef.current.style.height = 'auto';
-    }, [ai.sendMessage]);
+    }, [sendMessage]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     }, [handleSend]);
 
-    // Clipboard
-    const showToast = useCallback(() => { setToastVisible(true); setTimeout(() => setToastVisible(false), 2500); }, []);
+    const showToast = useCallback(() => {
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 2500);
+    }, []);
 
     const copyToClipboard = useCallback(async (text: string, buttonEl: HTMLElement | null = null) => {
         try {
@@ -97,7 +123,6 @@ export default function AIInteractPage() {
         copyToClipboard(decodeURIComponent(encoded), btn);
     }, [copyToClipboard]);
 
-    // File attachments
     const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
@@ -111,34 +136,33 @@ export default function AIInteractPage() {
         setAttachedFiles(prev => prev.filter((_, i) => i !== idx));
     }, []);
 
-    // Stable wrappers for hook methods — avoid inline lambdas in JSX
-    const switchSession = useCallback((id: string) => ai.setCurrentSessionId(id), [ai.setCurrentSessionId]);
-    const deleteSession = useCallback((id: string) => ai.setModalConfig({ show: true, sessionId: id }), [ai.setModalConfig]);
-    const handleStop = useCallback(() => ai.stopStream(), [ai.stopStream]);
-    const handleRegenerate = useCallback((msgId: number) => ai.regenerate(msgId), [ai.regenerate]);
-    const handleEditUserMsg = useCallback((msgId: number, content: string) => ai.editUserMsg(msgId, content), [ai.editUserMsg]);
+    const switchSession = useCallback((id: string) => setCurrentSessionId(id), [setCurrentSessionId]);
+    const deleteSession = useCallback((id: string) => setModalConfig({ show: true, sessionId: id }), [setModalConfig]);
+    const handleStop = useCallback(() => stopStream(), [stopStream]);
+    const handleRegenerate = useCallback((msgId: number) => regenerate(msgId), [regenerate]);
+    const handleEditUserMsg = useCallback((msgId: number, content: string) => editUserMsg(msgId, content), [editUserMsg]);
 
     return (
         <AIInteract
-            sessions={ai.sessions}
-            currentSessionId={ai.currentSessionId}
+            sessions={sessions}
+            currentSessionId={currentSessionId}
             inputText={inputText}
-            isTyping={ai.isTyping}
-            modalConfig={ai.modalConfig}
+            isTyping={isTyping}
+            modalConfig={modalConfig}
             toastVisible={toastVisible}
             chatMessagesRef={chatMessagesRef}
             inputRef={inputRef}
-            createNewSession={ai.createNewSession}
+            createNewSession={createNewSession}
             switchSession={switchSession}
             deleteSession={deleteSession}
-            confirmDelete={ai.confirmDelete}
-            setModalConfig={ai.setModalConfig}
+            confirmDelete={confirmDelete}
+            setModalConfig={setModalConfig}
             handleInput={handleInput}
             handleKeyDown={handleKeyDown}
             handleSend={handleSend}
             copyToClipboard={copyToClipboard}
             handleChatAreaClick={handleChatAreaClick}
-            deletingId={ai.deletingId}
+            deletingId={deletingId}
             handleStop={handleStop}
             handleRegenerate={handleRegenerate}
             handleEditUserMsg={handleEditUserMsg}
@@ -153,17 +177,17 @@ export default function AIInteractPage() {
             handleFileChange={handleFileChange}
             removeAttachedFile={removeAttachedFile}
             roleInfo={roleInfo}
-            selectedProvider={ai.selectedProvider}
-            setSelectedProvider={ai.setSelectedProvider}
-            providerHealth={ai.providerHealth}
-            tutorMode={ai.tutorMode}
-            setTutorMode={ai.setTutorMode}
-            webSearch={ai.webSearch}
-            setWebSearch={ai.setWebSearch}
-            searchEngine={ai.searchEngine}
-            setSearchEngine={ai.setSearchEngine}
-            enableThinking={ai.enableThinking}
-            setEnableThinking={ai.setEnableThinking}
+            selectedProvider={selectedProvider}
+            setSelectedProvider={setSelectedProvider}
+            providerHealth={providerHealth}
+            tutorMode={tutorMode}
+            setTutorMode={setTutorMode}
+            webSearch={webSearch}
+            setWebSearch={setWebSearch}
+            searchEngine={searchEngine}
+            setSearchEngine={setSearchEngine}
+            enableThinking={enableThinking}
+            setEnableThinking={setEnableThinking}
         />
     );
 }

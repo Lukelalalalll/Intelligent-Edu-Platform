@@ -4,7 +4,7 @@
 .leftPane {
   width: 100%;
   height: 100%;
-  background: #fff;
+  background: var(--bg-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -12,7 +12,7 @@
 
 .leftHeader {
   padding: 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid var(--line-soft);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -27,7 +27,7 @@
 .leftTitle {
   font-size: 1.29rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-main);
   margin: 0;
 }
 
@@ -41,8 +41,8 @@
   height: 34px;
   border-radius: 8px;
   border: none;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--bg-input);
+  color: var(--text-sub);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -63,11 +63,11 @@
 .searchInput {
   width: 100%;
   padding: 8px 12px 8px 34px;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--line-soft);
   border-radius: 8px;
   font-size: 0.95rem;
-  background: #fff;
-  color: #1e293b;
+  background: var(--surface-raised);
+  color: var(--text-main);
   outline: none;
   transition: border-color 0.15s;
   box-sizing: border-box;
@@ -82,7 +82,7 @@
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: var(--text-sub);
   font-size: 0.90rem;
 }
 
@@ -91,17 +91,17 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fef3c7;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: var(--warning-bg);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.22);
   cursor: pointer;
   font-size: 0.95rem;
-  color: #92400e;
+  color: var(--warning-text);
   font-weight: 500;
   transition: background 0.15s;
 }
 
 .requestsBadge:hover {
-  background: #fde68a;
+  background: rgba(245, 158, 11, 0.24);
 }
 
 .requestsBadgeCount {
@@ -135,11 +135,11 @@
 }
 
 .contactItem:hover {
-  background: #e2e8f0;
+  background: var(--bg-input);
 }
 
 .contactItemActive {
-  background: #e0f2fe;
+  background: var(--surface-subtle);
   border-left-color: #0f766e;
 }
 
@@ -165,7 +165,7 @@
 .contactName {
   font-size: 1.01rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -173,7 +173,7 @@
 
 .contactLastMsg {
   font-size: 0.87rem;
-  color: #94a3b8;
+  color: var(--text-sub);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -191,7 +191,7 @@
 
 .contactTime {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: var(--text-sub);
 }
 
 .unreadBadge {
@@ -218,7 +218,7 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 0 0 2px #fff;
+  box-shadow: 0 0 0 2px var(--surface-raised);
   flex-shrink: 0;
 }
 
@@ -229,11 +229,11 @@
 
 .contactNameUnread {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .contactLastMsgUnread {
-  color: #334155;
+  color: var(--text-soft);
   font-weight: 500;
 }
 
@@ -249,7 +249,7 @@
 }
 
 .readTickSent {
-  color: #94a3b8;
+  color: var(--text-sub);
 }
 
 .readTickRead {
@@ -261,8 +261,8 @@
 
 .leftTabBar {
   display: flex;
-  border-top: 1px solid rgba(0,0,0,0.06);
-  background: #fff;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   flex-shrink: 0;
@@ -278,7 +278,7 @@
   padding: 12px 0;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-sub);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -310,7 +310,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #94a3b8;
+  color: var(--text-sub);
   gap: 8px;
 }
 

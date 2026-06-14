@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from '../styles/AISidebar.module.css';
-import type { AIProvider } from '../api/aiApi';
+import type { AIProvider, AIProviderHealth } from '../api/aiApi';
 
 function SidebarSkeleton() {
     return (
@@ -27,7 +27,7 @@ interface SidebarProps {
     deleteSession: (id: string) => void;
     selectedProvider?: AIProvider;
     setSelectedProvider?: (provider: AIProvider) => void;
-    providerHealth?: { ok: boolean; detail: string };
+    providerHealth?: AIProviderHealth;
 }
 
 export default memo(function Sidebar({
@@ -44,16 +44,20 @@ export default memo(function Sidebar({
     const isLoading = sessions === null;
     const isLocal = selectedProvider === 'local_ollama';
     const isDeepseek = selectedProvider === 'deepseek';
-    const providerReady = !!providerHealth?.ok;
+    const healthMatchesProvider = providerHealth?.provider === selectedProvider;
+    const providerChecking = !healthMatchesProvider || !!providerHealth?.checking;
+    const providerReady = healthMatchesProvider && !!providerHealth?.ok && !providerChecking;
 
     const getProviderDisplayName = () => {
         if (isLocal) return 'llama3.2';
         if (isDeepseek) return 'DeepSeek';
         return 'HKU Coze AI';
     };
-    const statusText = providerReady
-        ? `${getProviderDisplayName()} Ready`
-        : `${getProviderDisplayName()} Offline`;
+    const statusText = providerChecking
+        ? `${getProviderDisplayName()} Checking`
+        : providerReady
+            ? `${getProviderDisplayName()} Ready`
+            : `${getProviderDisplayName()} Offline`;
 
     return (
         <aside className={styles['chat-sidebar']}>
@@ -114,7 +118,7 @@ export default memo(function Sidebar({
                     <div className={`${styles['status-dot']} ${!providerReady ? styles['status-dot-offline'] : ''}`}></div>
                     <span>{statusText}</span>
                 </div>
-                {!providerReady && providerHealth?.detail && (
+                {!providerReady && healthMatchesProvider && providerHealth?.detail && (
                     <div className={styles['provider-detail']} title={providerHealth.detail}>
                         {providerHealth.detail}
                     </div>

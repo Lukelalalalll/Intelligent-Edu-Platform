@@ -1,7 +1,8 @@
 import client from '@/shared/api/client';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '../../../types/api';
 
-const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+const API_ROOT = resolveApiRoot();
 
 export type AIProvider = 'coze' | 'local_ollama' | 'deepseek';
 export type AITutorMode = 'tutor' | 'hint_only';
@@ -21,6 +22,7 @@ export interface AIProviderHealth {
     provider: AIProvider;
     ok: boolean;
     detail: string;
+    checking?: boolean;
 }
 
 interface AIMemoryResponse {

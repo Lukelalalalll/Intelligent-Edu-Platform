@@ -1,6 +1,6 @@
-import React, { useMemo, useRef } from 'react';
-import styles from '../styles/AIInteract.module.css';
-import type { AIRoleInfo, AIProvider, AITutorMode, AISearchEngine } from '../api/aiApi';
+import React, { Suspense, lazy, useMemo, useRef } from 'react';
+import workspaceStyles from '../styles/AIWorkspace.module.css';
+import type { AIRoleInfo, AIProvider, AIProviderHealth, AITutorMode, AISearchEngine } from '../api/aiApi';
 import {
     useResizableSidebar,
     SIDEBAR_MIN_WIDTH,
@@ -13,7 +13,8 @@ import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import ConfirmModal from './ConfirmModal';
-import MemoryModal from './MemoryModal';
+
+const MemoryModal = lazy(() => import('./MemoryModal'));
 
 // ── Prop types grouped by domain ──────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ interface ModalProps {
 interface ProviderProps {
     selectedProvider?: AIProvider;
     setSelectedProvider?: (provider: AIProvider) => void;
-    providerHealth?: { ok: boolean; detail: string };
+    providerHealth?: AIProviderHealth;
     tutorMode?: AITutorMode;
     setTutorMode?: (mode: AITutorMode) => void;
     roleInfo?: AIRoleInfo | null;
@@ -115,15 +116,15 @@ export default function AIInteractPage({
 
     return (
         <>
-            <div className={`global-ai-wrapper ${styles['ai-workspace-wrapper']}`}>
-                <div className={styles['workspace-glow']}></div>
+            <div className={`global-ai-wrapper ${workspaceStyles['ai-workspace-wrapper']}`}>
+                <div className={workspaceStyles['workspace-glow']}></div>
 
                 <div
-                    className={`${styles['ai-workspace-container']} ${isDragging ? styles['ai-container-dragging'] : ''}`}
+                    className={`${workspaceStyles['ai-workspace-container']} ${isDragging ? workspaceStyles['ai-container-dragging'] : ''}`}
                     ref={containerRef}
                     style={{ cursor: isDragging ? 'col-resize' : undefined }}
                 >
-                    <div style={{ width: sidebarWidth, flexShrink: 0, display: 'flex' as const }}>
+                    <div className={workspaceStyles['sidebar-shell']} style={{ width: sidebarWidth }}>
                         <Sidebar
                             sessions={sessions}
                             currentSessionId={currentSessionId}
@@ -139,11 +140,11 @@ export default function AIInteractPage({
 
                     {/* Resizer */}
                     <div
-                        className={`${styles['ai-resizer']} ${isDragging ? styles['ai-resizer-dragging'] : ''}`}
+                        className={`${workspaceStyles['ai-resizer']} ${isDragging ? workspaceStyles['ai-resizer-dragging'] : ''}`}
                         onMouseDown={handleMouseDown}
                     />
 
-                    <main className={styles['chat-main']}>
+                    <main className={workspaceStyles['chat-main']}>
                         <ChatHeader
                             onOpenMemory={() => setMemoryModalOpen?.(true)}
                             roleInfo={roleInfo}
@@ -192,16 +193,20 @@ export default function AIInteractPage({
                 confirmDelete={confirmDelete}
             />
 
-            <MemoryModal
-                show={memoryModalOpen ?? false}
-                onClose={() => setMemoryModalOpen?.(false)}
-                memory={aiMemory}
-                onSave={saveMemory}
-                saving={savingMemory}
-            />
+            <Suspense fallback={null}>
+                {memoryModalOpen && (
+                    <MemoryModal
+                        show={memoryModalOpen}
+                        onClose={() => setMemoryModalOpen?.(false)}
+                        memory={aiMemory}
+                        onSave={saveMemory}
+                        saving={savingMemory}
+                    />
+                )}
+            </Suspense>
 
             {/* Toast – styles defined in AIInteract.module.css (.copy-toast / .copy-toast-visible) */}
-            <div className={`${styles['copy-toast']} ${toastVisible ? styles['copy-toast-visible'] : ''}`}>
+            <div className={`${workspaceStyles['copy-toast']} ${toastVisible ? workspaceStyles['copy-toast-visible'] : ''}`}>
                 Copied to clipboard!
             </div>
         </>

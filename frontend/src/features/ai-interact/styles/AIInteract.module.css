@@ -56,7 +56,7 @@
 .ai-workspace-container {
     display: flex;
     height: 100%;
-    background: rgba(255, 255, 255, 0.75);
+    background: var(--bg-card);
     /* Slightly reduced opacity for a more translucent frosted-glass effect */
     /* iOS-grade frosted glass: saturate boosts colour vibrancy through the blur */
     backdrop-filter: blur(32px) saturate(150%);
@@ -66,12 +66,11 @@
 
     /* Layered shadow system: outer shadow for depth, mid shadow for outline, inner shadow for highlight */
     box-shadow:
-        0 24px 80px rgba(0, 0, 0, 0.08),
-        0 4px 12px rgba(0, 0, 0, 0.04),
-        inset 0 1px 1px rgba(255, 255, 255, 0.9),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+        var(--shadow-lg),
+        inset 0 1px 1px var(--card-border),
+        inset 0 0 0 1px var(--card-border);
     overflow: hidden;
-    border: 1px solid rgba(0, 123, 85, 0.15);
+    border: 1px solid var(--line-soft);
     /* Slightly stronger outline highlight on the border */
 }
 
@@ -80,7 +79,7 @@
    ========================================= */
 .ai-resizer {
     width: 1px;
-    background-color: rgba(0, 0, 0, 0.06);
+    background-color: var(--line-soft);
     cursor: col-resize;
     flex-shrink: 0;
     transition: background-color 0.2s;
@@ -122,13 +121,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    background: rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--surface-overlay);
 }
 
 .header-info h2 {
     font-size: 1.25rem;
-    color: #1a1a1a;
+    color: var(--text-main);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -140,7 +139,7 @@
 
 .header-info p {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-sub);
     margin-top: 2px;
 }
 
@@ -174,25 +173,25 @@
 
 .back-home-btn {
     text-decoration: none;
-    color: #374151;
+    color: var(--text-main);
     font-size: 0.9rem;
     font-weight: 600;
     padding: 8px 16px;
     border-radius: var(--radius-pill);
-    background: rgba(0, 0, 0, 0.1); /* NOSONAR */
+    background: var(--bg-input);
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .back-home-btn:hover {
-    background: #dc2626;
-    color: white;
+    background: var(--danger-bg);
+    color: var(--danger-text);
 }
 
 .tutor-mode-container {
     display: flex;
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-input);
+    border: 1px solid var(--line-soft);
     border-radius: 9999px;
     padding: 2px 2px 2px 14px;
     gap: 8px;
@@ -205,7 +204,7 @@
     gap: 6px;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #475569;
+    color: var(--text-sub);
 }
 
 .tutor-mode-label i {
@@ -213,10 +212,10 @@
 }
 
 .tutor-mode-select {
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    background: white;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-raised);
     border-radius: 9999px;
-    color: #0f172a;
+    color: var(--text-main);
     padding: 6px 28px 6px 12px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -249,8 +248,9 @@
     position: fixed;
     top: 20px;
     right: 20px;
-    background: #333;
-    color: white;
+    background: var(--toast-bg);
+    color: var(--toast-color);
+    border: 1px solid var(--toast-border);
     padding: 10px 20px;
     border-radius: 5px;
     opacity: 0;
@@ -280,10 +280,10 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #ffffff;
+    background: var(--surface-raised);
     border-radius: var(--radius-pill);
     padding: 10px 10px 10px 24px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--line-soft);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 
@@ -293,7 +293,7 @@
 
 .input-wrapper:focus-within {
     border-color: rgba(0, 123, 85, 0.4);
-    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 4px var(--focus-ring), 0 8px 24px rgba(0, 0, 0, 0.06);
     transform: translateY(-2px);
 }
 
@@ -305,7 +305,7 @@
     font-family: inherit;
     font-size: 1rem;
     resize: none;
-    color: #1a1a1a;
+    color: var(--text-main);
     padding: 12px 0;
     max-height: 150px;
 }
@@ -334,8 +334,8 @@
 }
 
 .send-btn:disabled {
-    background: #e5e7eb;
-    color: #4b5563;
+    background: var(--border-color);
+    color: var(--text-sub);
     box-shadow: none;
     cursor: not-allowed;
     transform: none;
@@ -365,8 +365,8 @@
 }
 
 .stop-btn:disabled {
-    background: #e5e7eb;
-    color: #4b5563;
+    background: var(--border-color);
+    color: var(--text-sub);
     box-shadow: none;
     cursor: not-allowed;
     transform: none;

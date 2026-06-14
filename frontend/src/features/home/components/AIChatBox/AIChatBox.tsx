@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import styles from '../../styles/home.module.css';
+import { useI18n } from '@/shared/i18n';
+import styles from '../../styles/HomeAIChat.module.css';
 import { useAIChatBox } from '../../hooks/AIChatBox/useAIChatBox';
 import MessageList from './components/MessageList';
 import ChatComposer from './components/ChatComposer';
-import 'highlight.js/styles/github-dark.css';
 
 const itemVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -22,6 +22,7 @@ interface AIChatBoxProps {
 
 export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const { t } = useI18n();
 
     const {
         messages,
@@ -55,7 +56,7 @@ export default function AIChatBox({ aiInteractUrl }: AIChatBoxProps) {
                     <div className={styles['ai-badge']}>
                         <i className="fas fa-sparkles"></i>
                         <Link to={aiInteractUrl ?? ''} className={styles['powered-by-link']}>
-                            <span>AI Workspace</span>
+                            <span>{t('aiChat.workspace')}</span>
                         </Link>
                     </div>
                 </div>

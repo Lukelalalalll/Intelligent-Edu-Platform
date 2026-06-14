@@ -1,5 +1,6 @@
 import React from 'react';
-import styles from '../../../styles/home.module.css';
+import { useI18n } from '@/shared/i18n';
+import styles from '../../../styles/HomeAIChat.module.css';
 
 export default function ChatComposer({
     input,
@@ -22,6 +23,8 @@ export default function ChatComposer({
     handleSend: () => void;
     handleStop: () => void;
 }) {
+    const { t } = useI18n();
+
     return (
         <div className={styles['input-area']}>
             <div className={styles['provider-selector-container']}>
@@ -29,7 +32,7 @@ export default function ChatComposer({
                     className={`${styles['provider-btn']} ${provider === 'local_ollama' ? styles['provider-active'] : ''}`}
                     onClick={() => setProvider('local_ollama')}
                     disabled={isLoading}
-                    title="Use LLaMA (Local Model)"
+                    title={t('aiChat.provider.local.title')}
                 >
                     <i className="fas fa-microchip"></i> LLaMA
                 </button>
@@ -37,7 +40,7 @@ export default function ChatComposer({
                     className={`${styles['provider-btn']} ${provider === 'coze' ? styles['provider-active'] : ''}`}
                     onClick={() => setProvider('coze')}
                     disabled={isLoading}
-                    title="Use Coze (Cloud Model)"
+                    title={t('aiChat.provider.coze.title')}
                 >
                     <i className="fas fa-cloud"></i> Coze
                 </button>
@@ -45,7 +48,7 @@ export default function ChatComposer({
                     className={`${styles['provider-btn']} ${provider === 'deepseek' ? styles['provider-active'] : ''}`}
                     onClick={() => setProvider('deepseek')}
                     disabled={isLoading}
-                    title="Use DeepSeek (Cloud Model)"
+                    title={t('aiChat.provider.deepseek.title')}
                 >
                     <i className="fas fa-brain"></i> DeepSeek
                 </button>
@@ -56,12 +59,12 @@ export default function ChatComposer({
                     className={styles.geminiInput}
                     ref={inputAreaRef}
                     rows={1}
-                    placeholder="Ask anything..."
+                    placeholder={t('aiChat.askPlaceholder')}
                     value={input}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                 ></textarea>
-                <button className={styles['stop-btn']} onClick={handleStop} disabled={!isLoading} title="Stop">
+                <button className={styles['stop-btn']} onClick={handleStop} disabled={!isLoading} title={t('aiChat.stop')}>
                     <i className="fas fa-stop"></i>
                 </button>
                 <button className={styles['send-btn']} disabled={!input.trim() || isLoading} onClick={handleSend}>

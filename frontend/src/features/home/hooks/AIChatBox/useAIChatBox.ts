@@ -4,9 +4,10 @@ import type { ChatMsg, StreamMessage } from './types';
 import { WELCOME_MESSAGE } from './types';
 import { replaceMessageText, toApiMessages } from './messageUtils';
 import { streamChatCompletion } from './chatStream';
+import { resolveApiRoot } from '@/shared/api/root';
 
 function getApiRoot(): string {
-    return import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+    return resolveApiRoot();
 }
 
 export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElement>) {
@@ -35,7 +36,14 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         streamRafRef.current = null;
         setMessages((prev) => prev.map((m) => {
             if (m.id !== targetId) return m;
-            return { ...m, text, uiElements: uiElements ? [...(m.uiElements || []), ...uiElements] : m.uiElements };
+            const nextUiElements = uiElements ? [...uiElements] : m.uiElements;
+            if (m.text === text && m.uiElements === nextUiElements) {
+                return m;
+            }
+            if (m.text === text && uiElements && (m.uiElements?.length ?? 0) === uiElements.length) {
+                return m;
+            }
+            return { ...m, text, uiElements: nextUiElements };
         }));
     }, []);
 

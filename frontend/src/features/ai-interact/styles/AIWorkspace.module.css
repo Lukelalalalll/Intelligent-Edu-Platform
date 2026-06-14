@@ -1,0 +1,168 @@
+/* Workspace shell extracted from AIInteract.module.css */
+
+.ai-workspace-wrapper {
+    position: relative;
+    max-width: 2000px;
+    width: calc(100% - 40px);
+    margin: 10px auto 0;
+    height: calc(100dvh - var(--nav-height, 72px) - 20px);
+    max-height: calc(100dvh - var(--nav-height, 72px) - 20px);
+    min-height: 600px;
+    overflow: hidden;
+    animation: premiumEntrance 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: center bottom;
+}
+
+@keyframes premiumEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.97);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.workspace-glow {
+    position: absolute;
+    top: -100px;
+    left: 5%;
+    right: 5%;
+    bottom: -100px;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0, 123, 85, 0.12), transparent 70%);
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    animation: glowPulse 4s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+}
+
+@keyframes glowPulse {
+    0% {
+        opacity: 0.7;
+        transform: scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+.ai-workspace-container {
+    display: flex;
+    height: 100%;
+    background: var(--bg-card);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
+    border-radius: var(--radius-lg);
+    box-shadow:
+        var(--shadow-lg),
+        inset 0 1px 1px var(--card-border),
+        inset 0 0 0 1px var(--card-border);
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+}
+
+.sidebar-shell {
+    flex-shrink: 0;
+    display: flex;
+}
+
+.ai-resizer {
+    width: 1px;
+    background-color: var(--line-soft);
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+    position: relative;
+    z-index: 10;
+}
+
+.ai-resizer:hover,
+.ai-resizer-dragging {
+    background-color: var(--primary-color);
+    width: 4px;
+}
+
+.ai-resizer-dragging {
+    transition: none;
+}
+
+.ai-container-dragging .sidebar-shell,
+.ai-container-dragging .chat-main {
+    pointer-events: none;
+    user-select: none;
+}
+
+.chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    position: relative;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.copy-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--toast-bg);
+    color: var(--toast-color);
+    border: 1px solid var(--toast-border);
+    padding: 10px 20px;
+    border-radius: 5px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.copy-toast-visible {
+    opacity: 1;
+}
+
+@media (max-width: 900px) {
+    .ai-workspace-wrapper {
+        width: 100%;
+        margin: 0;
+        height: calc(100vh - 60px);
+        padding: 0;
+    }
+
+    .ai-workspace-container {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+    }
+
+    .sidebar-shell {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-workspace-container {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .workspace-glow {
+        animation: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .ai-workspace-container {
+        backdrop-filter: blur(16px) saturate(120%);
+        -webkit-backdrop-filter: blur(16px) saturate(120%);
+    }
+}

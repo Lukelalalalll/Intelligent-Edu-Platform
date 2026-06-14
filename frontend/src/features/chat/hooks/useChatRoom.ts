@@ -6,12 +6,21 @@ import { useCurrentUser } from './useCurrentUser';
 import { networkBus } from '@/shared/hooks/useNetworkStatus';
 import type { ChatMessage } from '../types';
 
+const EMPTY_MESSAGES: ChatMessage[] = [];
+
 export function useChatRoom(roomId: string) {
-    const {
-        rooms, messages, setMessages, prependMessages, appendMessage,
-        updateRoomLastMessage, clearUnread, markMessageFailed, replaceOptimisticMessage, wsSend,
-        recordLastSeen, setActiveRoom,
-    } = useChatStore();
+    const room = useChatStore((state) => state.rooms.find((r) => r.id === roomId));
+    const roomMessages = useChatStore((state) => state.messages[roomId] ?? EMPTY_MESSAGES);
+    const setMessages = useChatStore((state) => state.setMessages);
+    const prependMessages = useChatStore((state) => state.prependMessages);
+    const appendMessage = useChatStore((state) => state.appendMessage);
+    const updateRoomLastMessage = useChatStore((state) => state.updateRoomLastMessage);
+    const clearUnread = useChatStore((state) => state.clearUnread);
+    const markMessageFailed = useChatStore((state) => state.markMessageFailed);
+    const replaceOptimisticMessage = useChatStore((state) => state.replaceOptimisticMessage);
+    const wsSend = useChatStore((state) => state.wsSend);
+    const recordLastSeen = useChatStore((state) => state.recordLastSeen);
+    const setActiveRoom = useChatStore((state) => state.setActiveRoom);
     const navigate = useNavigate();
 
     const [hasMore, setHasMore] = useState(false);
@@ -26,12 +35,9 @@ export function useChatRoom(roomId: string) {
     const [initialLoading, setInitialLoading] = useState(true);
     const initialLoadingRef = useRef(true);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const messagesTopRef = useRef<HTMLDivElement>(null);
     const messagesAreaRef = useRef<HTMLDivElement>(null);
 
-    const room = rooms.find((r) => r.id === roomId);
-    const roomMessages = messages[roomId] || [];
+    const lastMessage = roomMessages[roomMessages.length - 1] ?? null;
 
     useEffect(() => {
         initialLoadingRef.current = initialLoading;
@@ -40,14 +46,34 @@ export function useChatRoom(roomId: string) {
     const currentUser = useCurrentUser();
     const userId = currentUser?.id || '';
 
-    // Check if user is scrolled near the bottom
     const isNearBottom = useCallback(() => {
         const area = messagesAreaRef.current;
         if (!area) return true;
         return area.scrollHeight - area.scrollTop - area.clientHeight < 80;
     }, []);
 
-    // Load messages on room change
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore || roomMessages.length === 0) return;
+        const area = messagesAreaRef.current;
+        const prevHeight = area?.scrollHeight ?? 0;
+        setLoadingMore(true);
+        try {
+            const oldest = roomMessages[0]?.sentAt;
+            const res = await chatApi.getMessages(roomId, oldest);
+            prependMessages(roomId, res.messages);
+            setHasMore(res.hasMore);
+            requestAnimationFrame(() => {
+                if (area) {
+                    area.scrollTop = area.scrollHeight - prevHeight;
+                }
+            });
+        } catch {
+            // ignore
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [loadingMore, hasMore, roomMessages, roomId, prependMessages]);
+
     useEffect(() => {
         let alive = true;
 
@@ -68,12 +94,10 @@ export function useChatRoom(roomId: string) {
                     setInitialLoading(false);
                     return;
                 }
-                // Keep a blocking loading state while offline so users can't act on incomplete room data.
                 if (networkBus.isOffline) {
                     setInitialLoading(true);
                     return;
                 }
-                // For non-network errors, avoid permanently blocking the room.
                 setInitialLoading(false);
             }
         };
@@ -96,46 +120,59 @@ export function useChatRoom(roomId: string) {
             alive = false;
             unsubscribe();
         };
-    }, [roomId, setMessages, clearUnread, setActiveRoom, navigate]);
+    }, [roomId, setMessages, clearUnread, setActiveRoom, navigate, recordLastSeen]);
 
-    // Auto-scroll to bottom has been removed
     useEffect(() => {
-        const lastMsg = roomMessages[roomMessages.length - 1];
-        if (!lastMsg) return;
-        
-        // Only show the new-message banner for messages not sent by the current user when not near the bottom
-        if (lastMsg.senderId !== userId && !isNearBottom()) {
+        if (!lastMessage) return;
+
+        if (lastMessage.senderId !== userId && !isNearBottom()) {
             setHasNewMessage(true);
         } else {
             setHasNewMessage(false);
         }
-    }, [roomMessages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [lastMessage, userId, isNearBottom]);
 
-    // Scroll-to-bottom handler (for the "new message" banner button)
     const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const area = messagesAreaRef.current;
+        if (!area) return;
+        area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
         setHasNewMessage(false);
     }, []);
 
-    // Clear banner when user scrolls to bottom manually
     useEffect(() => {
         const area = messagesAreaRef.current;
         if (!area) return;
-        const handleScroll = () => {
-            if (isNearBottom()) setHasNewMessage(false);
-        };
-        area.addEventListener('scroll', handleScroll, { passive: true });
-        return () => area.removeEventListener('scroll', handleScroll);
-    }, [isNearBottom]);
 
-    // Typing indicator timeout
+        let rafId: number | null = null;
+
+        const handleScroll = () => {
+            if (rafId !== null) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                if (isNearBottom()) {
+                    setHasNewMessage(false);
+                }
+                if (area.scrollTop <= 48) {
+                    void loadMore();
+                }
+            });
+        };
+
+        area.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            area.removeEventListener('scroll', handleScroll);
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+        };
+    }, [isNearBottom, loadMore]);
+
     useEffect(() => {
         if (!typingUser) return;
         const t = setTimeout(() => setTypingUser(null), 3000);
         return () => clearTimeout(t);
     }, [typingUser]);
 
-    // WS typing events
     useEffect(() => {
         const handler = (e: CustomEvent) => {
             const data = e.detail;
@@ -147,37 +184,6 @@ export function useChatRoom(roomId: string) {
         return () => window.removeEventListener('chat_typing' as any, handler);
     }, [roomId, userId]);
 
-    // Load more (with scroll position preservation)
-    const loadMore = useCallback(async () => {
-        if (loadingMore || !hasMore || roomMessages.length === 0) return;
-        const area = messagesAreaRef.current;
-        const prevHeight = area?.scrollHeight ?? 0;
-        setLoadingMore(true);
-        try {
-            const oldest = roomMessages[0]?.sentAt;
-            const res = await chatApi.getMessages(roomId, oldest);
-            prependMessages(roomId, res.messages);
-            setHasMore(res.hasMore);
-            // Preserve scroll position after prepending
-            requestAnimationFrame(() => {
-                if (area) {
-                    area.scrollTop = area.scrollHeight - prevHeight;
-                }
-            });
-        } catch { /* ignore */ }
-        finally { setLoadingMore(false); }
-    }, [loadingMore, hasMore, roomMessages, roomId, prependMessages]);
-
-    // Intersection observer for load-more trigger
-    useEffect(() => {
-        const node = messagesTopRef.current;
-        if (!node) return;
-        const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) loadMore(); }, { threshold: 0.1 });
-        obs.observe(node);
-        return () => obs.disconnect();
-    }, [loadMore]);
-
-    // Reset multi-select when room changes
     useEffect(() => {
         setMultiSelect(false);
         setSelectedIds(new Set());
@@ -211,8 +217,11 @@ export function useChatRoom(roomId: string) {
             const filtered = (store.messages[roomId] || []).filter(m => !selectedIds.has(m.id));
             store.setMessages(roomId, filtered);
             handleExitMultiSelect();
-        } catch { /* ignore */ }
-        finally { setBatchDeleting(false); }
+        } catch {
+            // ignore
+        } finally {
+            setBatchDeleting(false);
+        }
     }, [selectedIds, roomId, handleExitMultiSelect]);
 
     const handleQuote = useCallback((msg: ChatMessage) => setQuotedMessage(msg), []);
@@ -240,13 +249,11 @@ export function useChatRoom(roomId: string) {
             updateRoomLastMessage(roomId, { content, senderId: userId, sentAt: now });
             setQuotedMessage(null);
 
-            // Refuse to send while offline
             if (networkBus.isOffline) {
                 markMessageFailed(roomId, optimisticMsg.id);
                 return;
             }
 
-            // Use store-based wsSend instead of window global
             if (fileData || !wsSend) {
                 try {
                     const res = await chatApi.sendMessage(roomId, content, fileData, quotedMessage?.id);
@@ -263,13 +270,10 @@ export function useChatRoom(roomId: string) {
         [roomId, userId, currentUser, appendMessage, updateRoomLastMessage, quotedMessage, wsSend, markMessageFailed, replaceOptimisticMessage],
     );
 
-    // Retry a failed message
     const handleRetry = useCallback(async (failedMsg: ChatMessage) => {
-        // Remove the failed message first
         const store = useChatStore.getState();
         const filtered = (store.messages[roomId] || []).filter(m => m.id !== failedMsg.id);
         store.setMessages(roomId, filtered);
-        // Re-send
         const fileData = failedMsg.messageType === 'file' && failedMsg.fileUrl
             ? { fileUrl: failedMsg.fileUrl, fileName: failedMsg.fileName!, fileSize: failedMsg.fileSize!, mimeType: failedMsg.mimeType!, messageType: 'file' as const }
             : undefined;
@@ -286,7 +290,7 @@ export function useChatRoom(roomId: string) {
         room, roomMessages, userId, currentUser,
         hasMore, loadingMore, typingUser, hasNewMessage, initialLoading,
         multiSelect, selectedIds, quotedMessage, showForwardModal, batchDeleting,
-        messagesEndRef, messagesTopRef, messagesAreaRef,
+        messagesAreaRef,
         handleToggleSelect, handleEnterMultiSelect, handleExitMultiSelect,
         handleBatchDelete, handleQuote, handleClearQuote,
         handleSend, handleRetry, handleTyping, scrollToBottom,

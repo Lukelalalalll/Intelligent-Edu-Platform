@@ -93,12 +93,10 @@ export function createRafBufferedUpdater(
                 onToolProgress(obj.tool_progress as ToolProgress);
             }
             const tp = obj.tool_progress as ToolProgress;
-            if (tp.status === 'running') {
-                full += `\n\n_正在调用工具: ${tp.name}..._\n\n`;
-            } else if (tp.status === 'error') {
+            if (tp.status === 'error') {
                 full += `\n\n**[工具错误] ${tp.name}**: ${tp.message || 'unknown error'}\n\n`;
+                schedule();
             }
-            schedule();
             return;
         }
 

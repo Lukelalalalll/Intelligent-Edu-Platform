@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type React from 'react';
-import { aiSessionApi, getProviderHealth, type AIProvider } from '../../../api/aiApi';
+import { aiSessionApi, getProviderHealth, type AIProvider, type AIProviderHealth } from '../../../api/aiApi';
 import type { AISession } from '@/types/api';
 import { buildSession, getErrorMessage, PROVIDER_STORAGE_KEY, TUTOR_MODE_STORAGE_KEY, WEB_SEARCH_STORAGE_KEY, SEARCH_ENGINE_STORAGE_KEY, ENABLE_THINKING_STORAGE_KEY } from './sessionHelpers';
 
@@ -30,19 +30,33 @@ export function usePersistAiPreferences(selectedProvider: string, tutorMode: str
 
 export function useProviderHealthCheck(
     selectedProvider: AIProvider,
-    setProviderHealth: (value: { ok: boolean; detail: string }) => void,
+    setProviderHealth: (value: AIProviderHealth) => void,
 ): void {
     useEffect(() => {
         let cancelled = false;
+        setProviderHealth({
+            provider: selectedProvider,
+            ok: false,
+            detail: 'Checking provider status...',
+            checking: true,
+        });
         (async () => {
             try {
                 const health = await getProviderHealth(selectedProvider);
                 if (!cancelled) {
-                    setProviderHealth({ ok: !!health.ok, detail: String(health.detail || '') });
+                    setProviderHealth({
+                        provider: selectedProvider,
+                        ok: !!health.ok,
+                        detail: String(health.detail || ''),
+                    });
                 }
             } catch (err) {
                 if (!cancelled) {
-                    setProviderHealth({ ok: false, detail: getErrorMessage(err) || 'health check failed' });
+                    setProviderHealth({
+                        provider: selectedProvider,
+                        ok: false,
+                        detail: getErrorMessage(err) || 'health check failed',
+                    });
                 }
             }
         })();

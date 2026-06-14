@@ -4,28 +4,57 @@ import { useEffect, useRef } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '@/shared/store/useAuthStore';
 import type { ChatMessage } from '../types';
+import { resolveWsRoot } from '@/shared/api/root';
 
-const WS_BASE = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009')
-    .replace(/^http/, 'ws');
+const WS_BASE = resolveWsRoot();
 
 export function useChatWebSocket(enabled = true) {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectCount = useRef(0);
     const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const {
-        setWsStatus,
-        setWsSend,
-        appendMessage,
-        replaceOptimisticMessage,
-        updateRoomLastMessage,
-        incrementUnread,
-        setPendingRequests,
-        recallMessage,
-        setRooms,
-        setUnreadCounts,
-    } = useChatStore();
 
     useEffect(() => {
+        let disposed = false;
+
+        const {
+            setWsStatus,
+            setWsSend,
+            appendMessage,
+            replaceOptimisticMessage,
+            updateRoomLastMessage,
+            incrementUnread,
+            setPendingRequests,
+            recallMessage,
+            setRooms,
+            setUnreadCounts,
+            setContacts,
+        } = useChatStore.getState();
+
+        const refreshRoomsAndUnread = () => {
+            if (disposed) return;
+            import('../api/wsSyncApi').then(({ fetchRoomsAndUnreadCounts }) => {
+                if (disposed) return;
+                fetchRoomsAndUnreadCounts().then(({ rooms, counts }) => {
+                    if (disposed) return;
+                    setRooms(rooms);
+                    setUnreadCounts(counts);
+                }).catch(() => {});
+            }).catch(() => {});
+        };
+
+        const refreshActiveMessages = () => {
+            if (disposed) return;
+            const activeId = useChatStore.getState().activeRoomId;
+            if (!activeId) return;
+            import('../api/wsSyncApi').then(({ fetchRoomMessages }) => {
+                if (disposed) return;
+                fetchRoomMessages(activeId).then((response) => {
+                    if (disposed) return;
+                    useChatStore.getState().setMessages(activeId, response.messages);
+                }).catch(() => {});
+            }).catch(() => {});
+        };
+
         if (!enabled) {
             setWsStatus('closed');
             setWsSend(null);
@@ -46,11 +75,18 @@ export function useChatWebSocket(enabled = true) {
         };
 
         const connect = () => {
+            if (disposed) return;
+
             setWsStatus('connecting');
             const ws = new WebSocket(`${WS_BASE}/api/chat/ws`);
             wsRef.current = ws;
 
             ws.onopen = () => {
+                if (disposed) {
+                    ws.close();
+                    return;
+                }
+
                 setWsStatus('open');
 
                 // Expose a send function via the store (replaces window.__chatWs)
@@ -62,25 +98,15 @@ export function useChatWebSocket(enabled = true) {
 
                 // On reconnect, re-fetch rooms + unread counts + active messages to catch up
                 if (reconnectCount.current > 0) {
-                    import('../api').then(({ chatApi }) => {
-                        chatApi.getRooms().then((r) => {
-                            setRooms(r.rooms);
-                            const counts: Record<string, number> = {};
-                            for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
-                            setUnreadCounts(counts);
-                        });
-                        const activeId = useChatStore.getState().activeRoomId;
-                        if (activeId) {
-                            chatApi.getMessages(activeId).then((r) => {
-                                useChatStore.getState().setMessages(activeId, r.messages);
-                            });
-                        }
-                    });
+                    refreshRoomsAndUnread();
+                    refreshActiveMessages();
                 }
                 reconnectCount.current = 0;
             };
 
             ws.onmessage = (event) => {
+                if (disposed) return;
+
                 try {
                     const data = JSON.parse(event.data);
                     const type = data.type;
@@ -99,9 +125,7 @@ export function useChatWebSocket(enabled = true) {
                         const isChatRoute = window.location.pathname.startsWith('/chat');
                         const isViewingRoom = isChatRoute && store.activeRoomId === msg.roomId;
                         const myId = getCurrentUserId();
-                        console.log('[WS new_message] roomId:', msg.roomId, 'senderId:', msg.senderId, 'myId:', myId, 'isViewingRoom:', isViewingRoom);
                         if (!isViewingRoom && msg.senderId !== myId) {
-                            console.log('[WS new_message] → incrementUnread for room', msg.roomId);
                             incrementUnread(msg.roomId);
                         }
                     } else if (type === 'message_ack') {
@@ -115,37 +139,16 @@ export function useChatWebSocket(enabled = true) {
                         recallMessage(roomId, messageId);
                     } else if (type === 'room_created') {
                         // Refresh room list + unread counts
-                        import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => {
-                                setRooms(r.rooms);
-                                const counts: Record<string, number> = {};
-                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
-                                setUnreadCounts(counts);
-                            });
-                        });
+                        refreshRoomsAndUnread();
                     } else if (type === 'room_updated') {
                         // Refresh room list + unread counts + notify GroupInfoPanel
-                        import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => {
-                                setRooms(r.rooms);
-                                const counts: Record<string, number> = {};
-                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
-                                setUnreadCounts(counts);
-                            });
-                        });
+                        refreshRoomsAndUnread();
                         window.dispatchEvent(
                             new CustomEvent('chat_room_updated', { detail: data }),
                         );
                     } else if (type === 'room_deleted' || type === 'kicked_from_room') {
                         // Refresh room list + unread counts + if current room, navigate away
-                        import('../api').then(({ chatApi }) => {
-                            chatApi.getRooms().then((r) => {
-                                setRooms(r.rooms);
-                                const counts: Record<string, number> = {};
-                                for (const room of r.rooms) counts[room.id] = (room as any).unreadCount ?? 0;
-                                setUnreadCounts(counts);
-                            });
-                        });
+                        refreshRoomsAndUnread();
                         const store = useChatStore.getState();
                         const kickedRoomId = data.roomId as string;
                         if (store.activeRoomId === kickedRoomId) {
@@ -157,16 +160,17 @@ export function useChatWebSocket(enabled = true) {
                         );
                     } else if (type === 'friend_request' || type === 'friend_accepted') {
                         // Refresh friend requests
-                        import('../api').then(({ chatApi }) => {
-                            chatApi.getFriendRequests().then((r) =>
-                                setPendingRequests(r.requests),
-                            );
+                        import('../api/wsSyncApi').then(({ fetchFriendRequests, fetchContacts }) => {
+                            if (disposed) return;
+                            fetchFriendRequests().then((r) => {
+                                if (!disposed) setPendingRequests(r.requests);
+                            }).catch(() => {});
                             if (type === 'friend_accepted') {
-                                chatApi.getContacts().then((r) =>
-                                    useChatStore.getState().setContacts(r.contacts),
-                                );
+                                fetchContacts().then((r) => {
+                                    if (!disposed) setContacts(r.contacts);
+                                }).catch(() => {});
                             }
-                        });
+                        }).catch(() => {});
                     }
                 } catch {
                     // ignore malformed messages
@@ -174,9 +178,13 @@ export function useChatWebSocket(enabled = true) {
             };
 
             ws.onclose = () => {
+                if (wsRef.current === ws) {
+                    wsRef.current = null;
+                }
+                if (disposed) return;
+
                 setWsStatus('closed');
                 setWsSend(null);
-                wsRef.current = null;
 
                 // Auto-reconnect with exponential backoff (no retry limit)
                 const delay = Math.min(1000 * 2 ** reconnectCount.current, 30000);
@@ -193,6 +201,8 @@ export function useChatWebSocket(enabled = true) {
 
         // Visibility API: force reconnect when tab comes back to foreground
         const handleVisibilityChange = () => {
+            if (disposed) return;
+
             if (document.visibilityState === 'visible') {
                 const ws = wsRef.current;
                 if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -206,12 +216,15 @@ export function useChatWebSocket(enabled = true) {
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
+            disposed = true;
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
             if (wsRef.current) {
-                wsRef.current.close();
+                const ws = wsRef.current;
                 wsRef.current = null;
+                ws.close();
             }
+            setWsStatus('closed');
             setWsSend(null);
         };
     }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps

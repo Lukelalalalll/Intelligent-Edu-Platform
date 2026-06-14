@@ -1,8 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import styles from '../styles/home.module.css';
+import { useI18n } from '@/shared/i18n';
+import styles from '../styles/HomeLayout.module.css';
 
 const ToolCard = ({ title, desc, icon, url }: { title: string; desc: string; icon: string; url: string }) => {
+    const { t } = useI18n();
     const cardRef = useRef<HTMLDivElement | null>(null);
     const sheenRef = useRef<HTMLDivElement | null>(null);
     const rectRef = useRef<DOMRect | null>(null);
@@ -66,7 +68,7 @@ const ToolCard = ({ title, desc, icon, url }: { title: string; desc: string; ico
                 <div className={styles['card-icon']}><i className={`fas ${icon}`}></i></div>
                 <h3 className={styles['card-title']}>{title}</h3>
                 <p className={styles['card-description']}>{desc}</p>
-                <Link to={url} className={styles['card-link']}>Enter</Link>
+                <Link to={url} className={styles['card-link']}>{t('home.card.enter')}</Link>
             </div>
         </div>
     );

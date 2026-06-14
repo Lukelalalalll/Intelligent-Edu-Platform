@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import { useI18n } from '@/shared/i18n';
 import ToolCard from '../components/ToolCard';
 import AIChatBox from '../components/AIChatBox';
-import styles from '../styles/home.module.css';
+import layoutStyles from '../styles/HomeLayout.module.css';
 
 const HOME_URLS = {
     sub1: '/slides/md-processor',
@@ -20,61 +21,59 @@ const HOME_URLS = {
 
 export default function HomePage() {
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState('ai'); // 'ai' | 'tools' | 'homework'
+    const { t } = useI18n();
+    const initialTab = new URLSearchParams(location.search).get('tab');
+    const [activeTab, setActiveTab] = useState(
+        initialTab === 'tools' || initialTab === 'ai' || initialTab === 'homework' ? initialTab : 'ai',
+    ); // 'ai' | 'tools' | 'homework'
     const toolCardsData = useMemo(() => [
-        { title: "AI Slides Generator", desc: "Intelligent document processing and presentation generation", icon: "fa-book-open", url: HOME_URLS.sub1 },
-        { title: "Document Highlighter", desc: "Intelligent document annotation and highlight extraction", icon: "fa-highlighter", url: HOME_URLS.highlighter },
-        { title: "AI Question Generator", desc: "Smart question extraction and automated generation", icon: "fa-question-circle", url: HOME_URLS.sub2 },
-        { title: "AI Visual Tool", desc: "Diagram extraction, image extraction, SVG editing, AI generation", icon: "fa-images", url: HOME_URLS.sub4 },
-        { title: "AI Study Notes", desc: "Generate structured study notes and flashcards from lecture PDFs", icon: "fa-book-reader", url: HOME_URLS.sub5 },
-        { title: "AI Video Generator", desc: "Turn PDFs, notes or text into narrated teaching videos", icon: "fa-film", url: HOME_URLS.videoGen },
-    ], []);
+        { title: t('home.tool.aiSlides.title'), desc: t('home.tool.aiSlides.desc'), icon: "fa-book-open", url: HOME_URLS.sub1 },
+        { title: t('home.tool.highlighter.title'), desc: t('home.tool.highlighter.desc'), icon: "fa-highlighter", url: HOME_URLS.highlighter },
+        { title: t('home.tool.questions.title'), desc: t('home.tool.questions.desc'), icon: "fa-question-circle", url: HOME_URLS.sub2 },
+        { title: t('home.tool.visual.title'), desc: t('home.tool.visual.desc'), icon: "fa-images", url: HOME_URLS.sub4 },
+        { title: t('home.tool.studyNotes.title'), desc: t('home.tool.studyNotes.desc'), icon: "fa-book-reader", url: HOME_URLS.sub5 },
+        { title: t('home.tool.video.title'), desc: t('home.tool.video.desc'), icon: "fa-film", url: HOME_URLS.videoGen },
+    ], [t]);
 
     const homeworkCardsData = useMemo(() => [
         {
-            title: "Grading Mailbox",
-            desc: "Review and grade pending student assignments",
+            title: t('home.homework.mailbox.title'),
+            desc: t('home.homework.mailbox.desc'),
             icon: "fa-inbox",
             url: HOME_URLS.mailbox,
         },
         {
-            title: "Publish Homework",
-            desc: "Create and publish assignments for your courses",
+            title: t('home.homework.publish.title'),
+            desc: t('home.homework.publish.desc'),
             icon: "fa-bullhorn",
             url: HOME_URLS.publishHomework,
         },
-    ], []);
+    ], [t]);
 
-    useEffect(() => {
-        const tab = new URLSearchParams(location.search).get('tab');
-        if (tab === 'tools' || tab === 'ai' || tab === 'homework') {
-            setActiveTab(tab);
-        }
-    }, [location.search]);
 
     return (
         <div>
-            <WelcomeBanner className={styles['welcome-banner']} />
+            <WelcomeBanner className={layoutStyles['welcome-banner']} variant="hero" />
 
             {/* Tab Switcher: AI Space | Tools | Homework Manage */}
-            <div className={styles['tab-switcher']}>
+            <div className={layoutStyles['tab-switcher']}>
                 <button
-                    className={`${styles['tab-btn']} ${activeTab === 'ai' ? styles['tab-active'] : ''}`}
+                    className={`${layoutStyles['tab-btn']} ${activeTab === 'ai' ? layoutStyles['tab-active'] : ''}`}
                     onClick={() => setActiveTab('ai')}
                 >
-                    <i className="fas fa-robot"></i> AI Space
+                    <i className="fas fa-robot"></i> {t('home.tab.ai')}
                 </button>
                 <button
-                    className={`${styles['tab-btn']} ${activeTab === 'tools' ? styles['tab-active'] : ''}`}
+                    className={`${layoutStyles['tab-btn']} ${activeTab === 'tools' ? layoutStyles['tab-active'] : ''}`}
                     onClick={() => setActiveTab('tools')}
                 >
-                    <i className="fas fa-th-large"></i> Tools
+                    <i className="fas fa-th-large"></i> {t('home.tab.tools')}
                 </button>
                 <button
-                    className={`${styles['tab-btn']} ${activeTab === 'homework' ? styles['tab-active'] : ''}`}
+                    className={`${layoutStyles['tab-btn']} ${activeTab === 'homework' ? layoutStyles['tab-active'] : ''}`}
                     onClick={() => setActiveTab('homework')}
                 >
-                    <i className="fas fa-tasks"></i> Homework Manage
+                    <i className="fas fa-tasks"></i> {t('home.tab.homework')}
                 </button>
             </div>
 
@@ -82,7 +81,7 @@ export default function HomePage() {
                 <AIChatBox aiInteractUrl={HOME_URLS.aiInteract} />
             ) : activeTab === 'tools' ? (
                 <>
-                    <div className={styles['cards-container']}>
+                    <div className={layoutStyles['cards-container']}>
                         {toolCardsData.map((card, index) => (
                             <div key={index}>
                                 <ToolCard {...card} />
@@ -92,8 +91,7 @@ export default function HomePage() {
                 </>
             ) : (
                 <div
-                    className={styles['cards-container']}
-                    style={{ gridTemplateColumns: 'repeat(2, minmax(260px, 1fr))', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}
+                    className={`${layoutStyles['cards-container']} ${layoutStyles['homework-cards']}`}
                 >
                     {homeworkCardsData.map((card, index) => (
                         <div key={index}>

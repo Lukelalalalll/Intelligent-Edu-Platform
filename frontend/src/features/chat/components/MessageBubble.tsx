@@ -1,6 +1,6 @@
 // frontend/src/features/chat/components/MessageBubble.tsx
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { memo, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import type { ChatMessage } from '../types';
 import globalStyles from '../styles/globals.module.css';
@@ -95,7 +95,7 @@ function buildDownloadName(name?: string, mimeType?: string, fileUrl?: string): 
     return `${raw}.${hintedExt}`;
 }
 
-export default function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
+function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
     const [hovering, setHovering] = useState(false);
     const [contextMenu, setContextMenu] = useState<{
         x: number;
@@ -314,6 +314,8 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
                                     src={fileUrl}
                                     alt={message.fileName || 'image'}
                                     className={styles.imageMsgThumb}
+                                    loading="lazy"
+                                    decoding="async"
                                     onError={(e) => {
                                         // Fallback to file card on broken image
                                         (e.currentTarget.closest(`.${styles.imageMsgWrapper}`) as HTMLElement | null)
@@ -390,3 +392,17 @@ export default function MessageBubble({ message, isOwn, showSender, multiSelect,
         </div>
     );
 }
+
+export default memo(MessageBubble, (prevProps, nextProps) => {
+    return (
+        prevProps.message === nextProps.message &&
+        prevProps.isOwn === nextProps.isOwn &&
+        prevProps.showSender === nextProps.showSender &&
+        prevProps.multiSelect === nextProps.multiSelect &&
+        prevProps.selected === nextProps.selected &&
+        prevProps.onToggleSelect === nextProps.onToggleSelect &&
+        prevProps.onQuote === nextProps.onQuote &&
+        prevProps.onEnterMultiSelect === nextProps.onEnterMultiSelect &&
+        prevProps.onTransfer === nextProps.onTransfer
+    );
+});
