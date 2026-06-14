@@ -6,9 +6,23 @@ backend.schemas directly for convenience.
 
 from backend.schemas.auth import (  # noqa: F401
     AuthSchema,
+    BackupCodeRegenSchema,
+    GoogleCompleteSchema,
+    GoogleLinkSchema,
+    GoogleLoginSchema,
+    MfaChallengeVerifySchema,
+    MfaConfirmSchema,
+    MfaDisableSchema,
+    MfaEnrollmentStartSchema,
+    SelfUpdateProfileSchema,
     UpdateProfileSchema,
-    ResetPasswordSchema,
+    PasswordResetRequestSchema,
+    PasswordResetConfirmSchema,
+    SessionRevokeSchema,
+    StepUpVerifySchema,
     TeacherPreferencesSchema,
+    DeepSeekConfigSchema,
+    OpenAIConfigSchema,
 )
 
 from backend.schemas.ai import (  # noqa: F401
@@ -78,6 +92,10 @@ from backend.schemas.admin import (  # noqa: F401
     AdminCourseStudentSchema,
     AdminAssignmentSchema,
     AdminDbDocumentSchema,
+)
+from backend.schemas.admin_security import (  # noqa: F401
+    AdminSecurityUnlockSchema,
+    AdminUserStatusUpdateSchema,
 )
 
 from backend.schemas.chat import (  # noqa: F401

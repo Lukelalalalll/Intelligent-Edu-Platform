@@ -7,15 +7,16 @@ Usage (unchanged across the codebase):
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 from collections import Counter
 from datetime import timedelta
-from typing import ClassVar
+from typing import Annotated, ClassVar
 
 from dotenv import load_dotenv
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Load .env files before pydantic-settings picks them up natively.
 _BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -44,6 +45,10 @@ class Settings(BaseSettings):
 
     ENV: str = Field(default="development", alias="ENV")
     LOG_LEVEL: str = "INFO"
+    ENABLE_RAG_PRELOAD: bool = False
+    INTERNAL_GATEWAY_TOKEN: str = ""
+    INTERNAL_GATEWAY_HEADER: str = "X-Internal-Gateway"
+    GOOGLE_AUTH_CLIENT_ID: str = ""
 
     # ── Security ──────────────────────────────────────────────────────
     SECRET_KEY: str = ""
@@ -51,13 +56,33 @@ class Settings(BaseSettings):
     JWT_TOKEN_LOCATION: ClassVar[list[str]] = ["cookies"]
     JWT_COOKIE_CSRF_PROTECT: bool = False   # overridden by model_validator
     JWT_ACCESS_COOKIE_NAME: ClassVar[str] = "access_token_cookie"
+    JWT_REFRESH_COOKIE_NAME: ClassVar[str] = "refresh_token_cookie"
+    JWT_CSRF_COOKIE_NAME: ClassVar[str] = "csrf_token"
+    JWT_CSRF_HEADER_NAME: ClassVar[str] = "X-CSRF-Token"
+    JWT_MFA_CHALLENGE_COOKIE_NAME: ClassVar[str] = "mfa_challenge_cookie"
     JWT_COOKIE_SAMESITE: str = "lax"
     JWT_COOKIE_SECURE: bool = False          # overridden by model_validator
-    JWT_EXPIRES_HOURS: int = 24
+    JWT_EXPIRES_MINUTES: int = 15
+    JWT_REFRESH_EXPIRES_DAYS: int = 30
+    AUTH_LOGIN_PRINCIPAL_WINDOW_MINUTES: int = 15
+    AUTH_LOGIN_PRINCIPAL_MAX_FAILURES: int = 5
+    AUTH_LOGIN_PRINCIPAL_LOCKOUT_MINUTES: int = 15
+    AUTH_LOGIN_IP_WINDOW_MINUTES: int = 15
+    AUTH_LOGIN_IP_MAX_FAILURES: int = 25
+    AUTH_LOGIN_IP_LOCKOUT_MINUTES: int = 15
+    AUTH_PASSWORD_RESET_IDENTIFIER_WINDOW_MINUTES: int = 60
+    AUTH_PASSWORD_RESET_IDENTIFIER_MAX_REQUESTS: int = 3
+    AUTH_PASSWORD_RESET_IP_WINDOW_MINUTES: int = 60
+    AUTH_PASSWORD_RESET_IP_MAX_REQUESTS: int = 10
+    SECURITY_AUDIT_RETENTION_DAYS: int = 180
 
     @property
     def JWT_ACCESS_TOKEN_EXPIRES(self) -> timedelta:
-        return timedelta(hours=self.JWT_EXPIRES_HOURS)
+        return timedelta(minutes=self.JWT_EXPIRES_MINUTES)
+
+    @property
+    def JWT_REFRESH_TOKEN_EXPIRES(self) -> timedelta:
+        return timedelta(days=self.JWT_REFRESH_EXPIRES_DAYS)
 
     # ── External API keys ─────────────────────────────────────────────
     SERP_API_KEY: str | None = None
@@ -106,6 +131,30 @@ class Settings(BaseSettings):
     RAG_CHUNK_OVERLAP: int = 200
     RAG_NEURAL_RERANK_ENABLED: bool = True
     RAG_NEURAL_RERANK_CANDIDATES: int = 20
+    RAG_NEURAL_RERANK_MODEL: str = "BAAI/bge-reranker-v2-m3"
+    RAG_QUERY_PLANNER_ENABLED: bool = True
+    RAG_DEFAULT_PROFILE: str = "balanced"
+    RAG_ENABLE_WEB_CORRECTION: bool = True
+    RAG_WEB_CORRECTION_MIN_SCORE: float = 0.45
+    RAG_STAGE1_CANDIDATE_LIMIT: int = 60
+    RAG_STAGE2_CANDIDATE_LIMIT: int = 20
+    RAG_HYBRID_DENSE_POOL: int = 80
+    RAG_HYBRID_SPARSE_POOL: int = 80
+    RAG_EXPANSION_POOL: int = 40
+    RAG_USE_LATE_INTERACTION: bool = False
+    RAG_LATE_INTERACTION_TOP_K: int = 20
+    RAG_COLBERT_ENDPOINT: str = ""
+    RAG_OPENSEARCH_ENABLED: bool = False
+    RAG_OPENSEARCH_ENDPOINT: str = "http://127.0.0.1:9200"
+    RAG_OPENSEARCH_INDEX_PREFIX: str = "course-rag"
+    RAG_OPENSEARCH_USERNAME: str = ""
+    RAG_OPENSEARCH_PASSWORD: str = ""
+    RAG_OPENSEARCH_TIMEOUT_SECONDS: float = 5.0
+    RAG_OPENSEARCH_VERIFY_CERTS: bool = False
+    RAG_OPENSEARCH_CA_CERTS: str = ""
+    RAG_ENABLE_HIERARCHICAL_RECALL: bool = True
+    RAG_ENABLE_GRAPH_EXPANSION: bool = True
+    RAG_EVIDENCE_MAX_SPANS: int = 8
     # ── RAG Internationalization ───────────────────────────────────
     RAG_QUERY_LANGUAGE: str = "auto"
 
@@ -152,7 +201,12 @@ class Settings(BaseSettings):
     RAG_RELEVANCE_THRESHOLD: float = 0.60
     RAG_POSTCHECK_OVERLAP_THRESHOLD: float = 0.18
     RAG_PDF_MAX_PAGES: int = 200
+    RAG_EXTRACTION_TIMEOUT_SECONDS: float = 180.0
     RAG_OCR_DPI: int = 300
+    RAG_INDEX_SCHEMA_VERSION: int = 2
+    RAG_INDEX_DEFAULT_PROFILE: str = "quality"
+    RAG_INDEX_DEFAULT_PARSER_STRATEGY: str = "auto"
+    RAG_ENABLE_DOCLING: bool = True
 
     # ── Upload / folder paths ─────────────────────────────────────────
     UPLOAD_FOLDER: str = ""
@@ -202,7 +256,9 @@ class Settings(BaseSettings):
     SEARXNG_CONTENT_MAX_CHARS: int = 1200      # chars kept per web result
 
     # ── Misc ──────────────────────────────────────────────────────────
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    ALLOWED_ORIGINS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
 
     # Business constant (not from env, kept as ClassVar)
     DIFFICULTY_MAP: ClassVar[dict[int, str]] = {
@@ -220,6 +276,26 @@ class Settings(BaseSettings):
     @classmethod
     def _strip_ollama_url(cls, v: str) -> str:
         return (str(v or "http://localhost:11434") or "").strip().rstrip("/")
+
+    @field_validator("RAG_COLBERT_ENDPOINT", "RAG_OPENSEARCH_ENDPOINT", mode="before")
+    @classmethod
+    def _strip_optional_urls(cls, v: str) -> str:
+        return (str(v or "") or "").strip().rstrip("/")
+
+    @field_validator("RAG_OPENSEARCH_INDEX_PREFIX", mode="before")
+    @classmethod
+    def _normalize_opensearch_index_prefix(cls, v: str) -> str:
+        raw = str(v or "course-rag").strip().lower()
+        normalized = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in raw)
+        normalized = normalized.strip("-_")
+        while "--" in normalized:
+            normalized = normalized.replace("--", "-")
+        return normalized or "course-rag"
+
+    @field_validator("RAG_OPENSEARCH_TIMEOUT_SECONDS", mode="before")
+    @classmethod
+    def _clamp_opensearch_timeout(cls, v) -> float:
+        return max(1.0, min(60.0, float(v or 5.0)))
 
     @field_validator("JWT_COOKIE_SAMESITE", mode="before")
     @classmethod
@@ -244,10 +320,24 @@ class Settings(BaseSettings):
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def _parse_origins(cls, v) -> list[str]:
-        if isinstance(v, list):
-            return v
-        default = "http://localhost:5173,http://127.0.0.1:5173"
-        raw = str(v or default)
+        default = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        if v is None:
+            return default
+        if isinstance(v, (list, tuple, set)):
+            return [str(item).strip() for item in v if str(item).strip()]
+
+        raw = str(v).strip()
+        if not raw:
+            return default
+
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+
         return [item.strip() for item in raw.split(",") if item.strip()]
 
     @model_validator(mode="after")
@@ -417,6 +507,16 @@ class Settings(BaseSettings):
                 msg = f"CONFIG: {name} is not set — related features will be degraded."
                 warnings.append(msg)
                 _logger.info(msg)
+
+        if self.RAG_OPENSEARCH_ENABLED and not self.RAG_OPENSEARCH_ENDPOINT:
+            msg = "RAG_OPENSEARCH_ENABLED is true but RAG_OPENSEARCH_ENDPOINT is empty"
+            warnings.append(msg)
+            _logger.warning(msg)
+
+        if self.RAG_OPENSEARCH_PASSWORD and not self.RAG_OPENSEARCH_USERNAME:
+            msg = "RAG_OPENSEARCH_PASSWORD is set but RAG_OPENSEARCH_USERNAME is empty"
+            warnings.append(msg)
+            _logger.warning(msg)
 
         return warnings
 

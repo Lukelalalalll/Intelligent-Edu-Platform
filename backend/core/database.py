@@ -1,8 +1,11 @@
+import asyncio
 import logging
+import threading
 from datetime import datetime, timedelta, timezone
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ASCENDING, DESCENDING, IndexModel
+from pymongo.errors import OperationFailure
 
 from backend.config import Config
 
@@ -25,17 +28,186 @@ _GEN_HISTORY_COLS = [
     "video_generation_history",
 ]
 
-client = AsyncIOMotorClient(
-    Config.MONGO_URI,
-    maxPoolSize=50,
-    minPoolSize=5,
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=5000,
-    socketTimeoutMS=30000,
-)
-db = client.get_default_database()
+_client_lock = threading.Lock()
+_client: AsyncIOMotorClient | None = None
+_client_loop_id: int | None = None
+
+
+def _create_client() -> AsyncIOMotorClient:
+    return AsyncIOMotorClient(
+        Config.MONGO_URI,
+        tz_aware=True,
+        maxPoolSize=50,
+        minPoolSize=5,
+        serverSelectionTimeoutMS=5000,
+        connectTimeoutMS=5000,
+        socketTimeoutMS=30000,
+    )
+
+
+def _current_loop_id() -> int | None:
+    try:
+        return id(asyncio.get_running_loop())
+    except RuntimeError:
+        try:
+            return id(asyncio.get_event_loop_policy().get_event_loop())
+        except Exception:
+            return None
+
+
+def _get_client() -> AsyncIOMotorClient:
+    global _client, _client_loop_id
+
+    loop_id = _current_loop_id()
+    stale_client = None
+    with _client_lock:
+        if _client is None or (loop_id is not None and _client_loop_id != loop_id):
+            stale_client = _client
+            _client = _create_client()
+            _client_loop_id = loop_id
+        client = _client
+
+    if stale_client is not None:
+        try:
+            stale_client.close()
+        except Exception:
+            logger.debug("Failed to close stale MongoDB client", exc_info=True)
+    return client
+
+
+def close_database_client() -> None:
+    global _client, _client_loop_id
+
+    with _client_lock:
+        client = _client
+        _client = None
+        _client_loop_id = None
+
+    if client is not None:
+        try:
+            client.close()
+        except Exception:
+            logger.debug("Failed to close MongoDB client", exc_info=True)
+
+
+class _DatabaseProxy:
+    def __getattr__(self, name: str):
+        return getattr(_get_client().get_default_database(), name)
+
+    def __getitem__(self, name: str):
+        return _get_client().get_default_database()[name]
+
+    def __repr__(self) -> str:
+        return repr(_get_client().get_default_database())
+
+
+db = _DatabaseProxy()
 
 DEFAULT_HISTORY_TTL_DAYS = 90
+
+
+_USERNAME_INDEX_KEYS = [("username", ASCENDING)]
+_USERNAME_NORMALIZED_INDEX_KEYS = [("username_normalized", ASCENDING)]
+_EMAIL_INDEX_KEYS = [("email", ASCENDING)]
+_EMAIL_NORMALIZED_INDEX_KEYS = [("email_normalized", ASCENDING)]
+_GOOGLE_SUB_INDEX_KEYS = [("google_auth.sub", ASCENDING)]
+
+
+def _normalize_index_keys(raw_keys) -> list[tuple[str, int]]:
+    if raw_keys is None:
+        return []
+    if isinstance(raw_keys, dict):
+        return list(raw_keys.items())
+    return [(field, direction) for field, direction in raw_keys]
+
+
+def _is_equivalent_username_index(index_spec: dict) -> bool:
+    return (
+        _normalize_index_keys(index_spec.get("key")) == _USERNAME_INDEX_KEYS
+        and bool(index_spec.get("unique"))
+        and not index_spec.get("partialFilterExpression")
+        and not index_spec.get("sparse")
+        and not index_spec.get("expireAfterSeconds")
+        and not index_spec.get("collation")
+    )
+
+
+async def _find_equivalent_username_index_name() -> str | None:
+    indexes = await db.users.list_indexes().to_list(length=None)
+    for index_spec in indexes:
+        if _is_equivalent_username_index(index_spec):
+            return str(index_spec.get("name") or "") or None
+    return None
+
+
+async def _ensure_users_indexes() -> None:
+    existing_username_index = await _find_equivalent_username_index_name()
+    if existing_username_index:
+        logger.info(
+            "Reusing existing users.username unique index '%s'",
+            existing_username_index,
+        )
+    else:
+        try:
+            await db.users.create_index(_USERNAME_INDEX_KEYS, unique=True)
+        except OperationFailure as exc:
+            if getattr(exc, "code", None) != 85:
+                raise
+            existing_username_index = await _find_equivalent_username_index_name()
+            if not existing_username_index:
+                raise
+            logger.info(
+                "Detected equivalent users.username unique index '%s' after create conflict; reusing it",
+                existing_username_index,
+            )
+
+    await db.users.create_index(_EMAIL_INDEX_KEYS, sparse=True)
+    await db.users.create_index(
+        _USERNAME_NORMALIZED_INDEX_KEYS,
+        unique=True,
+        partialFilterExpression={"username_normalized": {"$exists": True, "$type": "string"}},
+    )
+    await db.users.create_index(
+        _EMAIL_NORMALIZED_INDEX_KEYS,
+        unique=True,
+        partialFilterExpression={"email_normalized": {"$exists": True, "$type": "string", "$gt": ""}},
+    )
+    await db.users.create_index(
+        _GOOGLE_SUB_INDEX_KEYS,
+        unique=True,
+        partialFilterExpression={"google_auth.sub": {"$exists": True, "$type": "string", "$gt": ""}},
+    )
+
+
+async def _ensure_google_auth_ticket_indexes() -> None:
+    await db.google_auth_tickets.create_indexes([
+        IndexModel([("ticket_id", ASCENDING)], unique=True),
+        IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+    ])
+
+
+async def _ensure_user_sessions_indexes() -> None:
+    await db.user_sessions.create_indexes([
+        IndexModel([("session_id", ASCENDING)], unique=True),
+        IndexModel([("refresh_token_hash", ASCENDING)], unique=True),
+        IndexModel([("refresh_jti", ASCENDING)], unique=True),
+        IndexModel([("user_id", ASCENDING), ("last_seen_at", DESCENDING)]),
+        IndexModel([("family_id", ASCENDING)]),
+        IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+    ])
+
+
+async def _ensure_auth_security_indexes() -> None:
+    await db.auth_attempt_counters.create_indexes([
+        IndexModel([("scope_key", ASCENDING)], unique=True),
+        IndexModel([("scope", ASCENDING), ("locked_until", DESCENDING)]),
+        IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+    ])
+    await db.security_audit_events.create_indexes([
+        IndexModel([("created_at", DESCENDING), ("user_id", ASCENDING)]),
+        IndexModel([("action", ASCENDING), ("created_at", DESCENDING)]),
+        IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+    ])
 
 
 async def compute_history_expires_at(user_id: str) -> datetime | None:
@@ -53,9 +225,15 @@ async def ensure_indexes() -> None:
     """Create recommended indexes for core collections. Safe to call repeatedly."""
     try:
         # ── core auth / domain ────────────────────────────────────────────────
-        await db.users.create_indexes([
-            IndexModel([("username", ASCENDING)], unique=True),
-            IndexModel([("email", ASCENDING)], sparse=True),
+        await _ensure_users_indexes()
+        await _ensure_google_auth_ticket_indexes()
+        await _ensure_user_sessions_indexes()
+        await _ensure_auth_security_indexes()
+
+        await db.login_mfa_challenges.create_indexes([
+            IndexModel([("challenge_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
         ])
 
         await db.annotations.create_indexes([
@@ -218,8 +396,19 @@ async def ensure_indexes() -> None:
         await db.indexing_jobs.create_indexes([
             IndexModel([("job_id", ASCENDING)], unique=True),
             IndexModel([("course_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("filename", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("normalized_hash", ASCENDING), ("status", ASCENDING)]),
             # TTL: auto-delete records older than 180 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_180D),
+        ])
+
+        # persistent background jobs (bridge toward claim-based worker execution)
+        await db.background_jobs.create_indexes([
+            IndexModel([("job_id", ASCENDING)], unique=True),
+            IndexModel([("job_type", ASCENDING), ("status", ASCENDING), ("available_at", ASCENDING)]),
+            IndexModel([("status", ASCENDING), ("lease_expires_at", ASCENDING)]),
+            # TTL: auto-delete records older than 30 days
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
         ])
 
         # ── file assets registry ──────────────────────────────────────────────
@@ -236,6 +425,12 @@ async def ensure_indexes() -> None:
         ])
 
         # ── question ops runs / items ─────────────────────────────────────────
+        await db.password_reset_tokens.create_indexes([
+            IndexModel([("token_hash", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+        ])
+
         await db.question_ops_runs.create_indexes([
             IndexModel([("run_id", ASCENDING)], unique=True),
             IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)]),

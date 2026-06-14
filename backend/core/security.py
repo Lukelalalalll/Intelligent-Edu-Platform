@@ -1,21 +1,18 @@
-from datetime import datetime, timedelta, timezone
-from jose import jwt, JWTError
+from jose import JWTError
 from fastapi import Request, HTTPException, Depends
 from cachetools import TTLCache
 from backend.config import Config
-from backend.core.database import db
-from backend.core.utils import safe_object_id
+from backend.repositories import session_repo
+from backend.repositories import user_repo
+from backend.services.auth_session_service import decode_access_token, get_active_session_for_access
 
 # In-memory user cache — avoids hitting MongoDB on every authenticated request.
 # TTL=30s keeps it fresh enough; maxsize prevents unbounded growth.
 _user_cache: TTLCache = TTLCache(maxsize=512, ttl=30)
 
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + Config.JWT_ACCESS_TOKEN_EXPIRES
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, Config.JWT_SECRET_KEY, algorithm="HS256")
+def invalidate_user_cache(user_id: str) -> None:
+    _user_cache.pop(str(user_id or ""), None)
 
 
 async def get_current_user(request: Request):
@@ -23,22 +20,73 @@ async def get_current_user(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Please log in first")
     try:
-        payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
+        payload = decode_access_token(token)
         user_id = payload.get("sub")
+        session_id = payload.get("sid")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Invalid session")
     except JWTError:
         raise HTTPException(status_code=401, detail="Token expired")
 
     user = _user_cache.get(user_id)
     if user is None:
-        user = await db.users.find_one({"_id": safe_object_id(user_id, label="user")})
+        user = await user_repo.find_by_id(user_id)
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
         user["id"] = str(user["_id"])
         _user_cache[user_id] = user
+    else:
+        user = dict(user)
+
+    if str(user.get("status") or "active").lower() != "active":
+        raise HTTPException(status_code=403, detail="Account is not active")
+
+    if int(payload.get("token_version") or 0) != int(user.get("token_version") or 0):
+        raise HTTPException(status_code=401, detail="Session is no longer valid")
+
+    session = await get_active_session_for_access(
+        session_id=str(session_id),
+        user_id=str(user["_id"]),
+        token_version=int(payload.get("token_version") or 0),
+    )
+    user["session_id"] = str(session.get("session_id") or "")
+    request.state.current_access_payload = payload
+    request.state.current_session = session
+    request.state.current_user = user
 
     return user
+
+
+async def get_current_session(request: Request, current_user: dict = Depends(get_current_user)):
+    session = getattr(request.state, "current_session", None)
+    if session is not None:
+        return session
+    session_id = str(current_user.get("session_id") or "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Session is no longer valid")
+    session = await session_repo.find_by_session_id(session_id)
+    if not session or session.get("revoked_at"):
+        raise HTTPException(status_code=401, detail="Session is no longer valid")
+    request.state.current_session = session
+    return session
+
+
+async def require_step_up(
+    current_user: dict = Depends(get_current_user),
+    session_doc: dict = Depends(get_current_session),
+):
+    if not bool((current_user.get("mfa") or {}).get("enabled")):
+        return session_doc
+    expires_at = session_doc.get("step_up_expires_at")
+    if not expires_at:
+        raise HTTPException(status_code=403, detail="Step-up authentication required")
+    from backend.services.password_security_service import utcnow
+
+    if expires_at <= utcnow():
+        raise HTTPException(status_code=403, detail="Step-up authentication required")
+    return session_doc
 
 
 def get_admin_user(current_user: dict = Depends(get_current_user)):

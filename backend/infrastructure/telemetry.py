@@ -33,9 +33,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from tdigest import TDigest
-
 from backend.core.database import db
+from backend.infrastructure.quantiles import TDigest
 
 logger = logging.getLogger(__name__)
 
