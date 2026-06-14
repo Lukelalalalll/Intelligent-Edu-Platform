@@ -229,7 +229,7 @@ _FRONTEND_RENDER_URL = _os.environ.get(
     "SLIDE_RENDERER_URL",
     "http://127.0.0.1:5173/slide-renderer",
 )
-# Production: set env SLIDE_RENDERER_URL=http://frontend:4173/slide-renderer
+# Production: set env SLIDE_RENDERER_URL=http://edge-nginx:8080/slide-renderer
 
 # ── Singleton browser instance to avoid cold-start on every generation ──
 _pw_singleton_browser = None

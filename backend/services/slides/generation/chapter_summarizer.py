@@ -455,8 +455,8 @@ class ChapterSummarizer:
         
         # 并行处理所有批次
         final_scripts = []
-        from backend.services.ai_gateway_service import AIGatewayService
-        ai_service = AIGatewayService()
+        from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
+        ai_service = get_ai_gateway_service()
 
         async def _run_batch(data):
             async with self._semaphore:

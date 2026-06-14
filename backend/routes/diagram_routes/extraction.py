@@ -1,4 +1,5 @@
 """Diagram extraction from uploaded PDF/DOCX documents."""
+
 import base64
 import json
 import logging
@@ -6,13 +7,12 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-from docx import Document
 from fastapi import Depends, File, HTTPException, UploadFile
 from werkzeug.utils import secure_filename
 
 from backend.core.database import compute_history_expires_at, db
 from backend.core.security import get_current_user
-from backend.utils.pdf_image_extractor import extract_pdf_images
+from backend.services.diagram_extractor_service import extract_diagrams_from_file
 from backend.utils.svg_utils import get_sub4_paths
 from .router import diagram_router
 
@@ -29,22 +29,13 @@ async def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(ge
     with open(path, "wb") as buffer:
         buffer.write(content)
 
-    extracted = []
     try:
-        if filename.lower().endswith('.pdf'):
-            extracted = extract_pdf_images(path)
-        elif filename.lower().endswith(('.docx', '.doc')):
-            docx = Document(path)
-            for idx, shape in enumerate(docx.inline_shapes):
-                if shape._inline.graphic.graphicData.pic is not None:
-                    rel = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
-                    b64 = base64.b64encode(docx.part.related_parts[rel].blob).decode('ascii')
-                    extracted.append({'page': f"Word-Img-{idx + 1}", 'data': f'data:image/png;base64,{b64}'})
-    except Exception as e:
+        extraction_result = extract_diagrams_from_file(path, filename)
+        extracted = extraction_result.get("extracted", [])
+    except Exception:
         logger.exception("Diagram extraction failed")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    # Save extracted images to disk so history detail can display them
     image_urls: list[str] = []
     try:
         _, generated_folder = get_sub4_paths()
@@ -55,26 +46,21 @@ async def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(ge
             data_uri = item.get("data", "")
             if not data_uri:
                 continue
-            # Strip data URI prefix: data:image/png;base64,<data>
-            if "," in data_uri:
-                raw_b64 = data_uri.split(",", 1)[1]
-            else:
-                raw_b64 = data_uri
+            raw_b64 = data_uri.split(",", 1)[1] if "," in data_uri else data_uri
             img_bytes = base64.b64decode(raw_b64)
             img_filename = f"{idx}.png"
             img_path = os.path.join(img_dir, img_filename)
-            with open(img_path, "wb") as f:
-                f.write(img_bytes)
+            with open(img_path, "wb") as handle:
+                handle.write(img_bytes)
             image_urls.append(f"/generated/sub4/extracted/{batch_id}/{img_filename}")
     except Exception:
         logger.warning("Failed to save extracted diagram images to disk", exc_info=True)
         image_urls = []
 
-    # Save to generation history
     try:
         user_id = str(user.get("id") or user.get("_id") or "")
-        _exp = await compute_history_expires_at(user_id)
-        _doc = {
+        expires_at = await compute_history_expires_at(user_id)
+        document = {
             "user_id": user_id,
             "tool": "extract_diagram",
             "params": {
@@ -87,11 +73,14 @@ async def extract_diagrams(file: UploadFile = File(...), user: dict = Depends(ge
             "result_full": json.dumps({"extracted_count": len(extracted), "images": image_urls}),
             "created_at": datetime.now(timezone.utc),
         }
-        if _exp is not None:
-            _doc["expires_at"] = _exp
-        await db.sub4_generation_history.insert_one(_doc)
+        if expires_at is not None:
+            document["expires_at"] = expires_at
+        await db.sub4_generation_history.insert_one(document)
     except Exception:
-        pass  # history save failure should not block the response
+        pass
 
-    return {'success': True, 'file': {'original_name': filename, 'extracted_count': len(extracted)},
-            'extracted': extracted}
+    return {
+        "success": True,
+        "file": {"original_name": filename, "extracted_count": len(extracted)},
+        "extracted": extracted,
+    }

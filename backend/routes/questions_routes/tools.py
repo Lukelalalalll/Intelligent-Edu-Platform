@@ -15,8 +15,8 @@ from backend.core.ai_provider import resolve_provider
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.schemas import SuggestConstraintsSchema, UploadScreenshotSchema
-from backend.services.ai_gateway_service import AIGatewayService
-from backend.services.questions_service import (
+from backend.services.ai_gateway_service import get_ai_gateway_service
+from backend.services.questions import (
     extract_text_from_image, extract_pdf_text_with_loader,
 )
 from .router import questions_router, _get_task
@@ -84,7 +84,7 @@ async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Requ
                 f"Source Content Snippet:\n{snippet}"
             )
 
-            ai = AIGatewayService()
+            ai = get_ai_gateway_service()
             raw = await ai.chat_with_provider(
                 message=prompt,
                 context={"coze_user_id": "sub2_user"},

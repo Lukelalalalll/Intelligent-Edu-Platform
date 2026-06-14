@@ -1,4 +1,4 @@
 from .router import diagram_router  # noqa: F401
-from .helpers import extract_diagrams_from_file  # noqa: F401 — used by transfer_dispatch_service
+from backend.services.diagram_extractor_service import extract_diagrams_from_file  # noqa: F401
 
 __all__ = ["diagram_router", "extract_diagrams_from_file"]

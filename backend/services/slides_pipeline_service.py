@@ -29,8 +29,9 @@ Requirements:
 
 async def generate_outline(keywords: str, provider: str) -> str:
     """Generate a PPT outline via AI for the given keywords."""
-    from backend.services.ai_gateway_service import AIGatewayService
-    ai_service = AIGatewayService()
+    from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
+
+    ai_service = get_ai_gateway_service()
     context = {"system_override": OUTLINE_SYSTEM_PROMPT}
     return await ai_service.chat_with_provider(message=keywords, context=context, provider=provider)
 

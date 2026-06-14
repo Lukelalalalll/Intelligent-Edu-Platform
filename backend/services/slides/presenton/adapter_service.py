@@ -3,13 +3,13 @@ import json
 import re
 from typing import Any
 
-from backend.services.ai_gateway_service import AIGatewayService
+from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
 
 class PresentonAdapterService:
     def __init__(self, provider: str):
         self.provider = provider
-        self.ai = AIGatewayService()
+        self.ai = get_ai_gateway_service()
 
     @staticmethod
     def _safe_json_loads(raw: str) -> dict[str, Any] | None:

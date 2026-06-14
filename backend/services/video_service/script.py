@@ -166,8 +166,8 @@ Output ONLY a JSON object like {{"title":"...","bullets":["..."],"layoutType":"t
 
 async def _call_ai(prompt: str, provider: str = "local_ollama") -> str:
     """Call AI via the project's AIGatewayService — supports both local_ollama and coze."""
-    from backend.services.ai_gateway_service import AIGatewayService
-    svc = AIGatewayService()
+    from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
+    svc = get_ai_gateway_service()
     return await svc.chat_with_provider(
         message=prompt,
         context={"system_override": "You are a helpful teaching video script writer."},

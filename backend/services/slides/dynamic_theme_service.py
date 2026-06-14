@@ -243,9 +243,9 @@ async def customize_theme(
         system = system[:max_prompt_chars]
 
     try:
-        from backend.services.ai_gateway_service import AIGatewayService
+        from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
-        ai_service = AIGatewayService()
+        ai_service = get_ai_gateway_service()
         context = {"system_override": system}
         response = await ai_service.chat_with_provider(
             message="Generate the complete customised CSS now.",

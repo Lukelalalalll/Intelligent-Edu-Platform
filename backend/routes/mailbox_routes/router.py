@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from backend.core.database import db
 from backend.core.security import get_current_user, can_access_course as _centralized_can_access_course
+from backend.services.mailbox_service import list_assignment_submissions_with_student_info
 from backend.services.grading_service import (
     load_courses, find_submission, find_submission_v2, load_annotations, render_annotations_to_pdf,
     get_source_pdf_web_path,
     # v2 helpers
     list_course_sections, list_assignments, list_submissions,
-    get_submission_bundle, list_enrollments, get_grade,
+    get_submission_bundle, list_enrollments,
     get_course_section, get_assignment, get_submission as get_submission_v2,
 )
 
@@ -200,7 +200,6 @@ async def get_assignments_v2(course_section_id: str, current_user: dict = Depend
 @teacher_router.get("/v2/submissions/{assignment_id}")
 async def get_submissions_v2(assignment_id: str, current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
-    from backend.core.database import db as _db
 
     # Validate assignment exists and teacher has access to its course
     assignment = await get_assignment(assignment_id)
@@ -209,25 +208,7 @@ async def get_submissions_v2(assignment_id: str, current_user: dict = Depends(ge
     if assignment.get("courseSectionId"):
         await _assert_v2_course_access(assignment["courseSectionId"], current_user)
 
-    subs = await list_submissions(assignment_id)
-
-    # Enrich with student info and grade
-    for s in subs:
-        student_id = s.get("studentId", "")
-        if student_id:
-            try:
-                from bson import ObjectId as OID
-                student = await _db.users.find_one({"_id": OID(student_id)})
-                if student:
-                    s["studentName"] = student.get("username", "")
-                    s["studentEmail"] = student.get("email", "")
-            except Exception:
-                pass
-        grade = await get_grade(s["id"])
-        if grade:
-            s["totalScore"] = grade.get("totalScore")
-            s["gradingStatus"] = grade.get("gradingStatus")
-
+    subs = await list_assignment_submissions_with_student_info(assignment_id)
     return {"submissions": subs}
 
 

@@ -57,7 +57,7 @@ async def header_correction(input_text: str, provider: str = "local_ollama") -> 
     Returns the corrected JSON string on success, or *input_text* unchanged on failure
     so the caller can gracefully fall back to raw headers.
     """
-    from backend.services.ai_gateway_service import AIGatewayService
+    from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
     prompt = _USER_PROMPT_TEMPLATE.format(input_text=str(input_text or "").strip())
     context: dict = {
@@ -65,7 +65,7 @@ async def header_correction(input_text: str, provider: str = "local_ollama") -> 
         "task_profile": "light",
     }
 
-    svc = AIGatewayService()
+    svc = get_ai_gateway_service()
     try:
         result = await svc.chat_with_provider(
             message=prompt,

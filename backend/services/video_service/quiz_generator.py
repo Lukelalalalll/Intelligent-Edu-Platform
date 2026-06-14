@@ -160,9 +160,9 @@ async def generate_quiz_markers(
     List of ``{"time", "question", "options", "answer"}`` dicts.
     """
     import asyncio
-    from backend.services.ai_gateway_service import AIGatewayService
+    from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
-    svc = AIGatewayService()
+    svc = get_ai_gateway_service()
     template = _QUIZ_PROMPT_ZH if lang == "zh" else _QUIZ_PROMPT_EN
 
     async def _gen_one(i: int, script: str, offset: float) -> Optional[dict]:

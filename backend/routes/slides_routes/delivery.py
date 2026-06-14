@@ -10,9 +10,15 @@ from fastapi.responses import StreamingResponse
 
 from backend.config import Config
 from backend.core.ai_provider import resolve_provider
-from backend.core.database import db
 from backend.core.security import get_current_user
 from backend.schemas import SlidesGenerateV2Schema
+from backend.services.background_job_dispatcher import background_job_dispatcher
+from backend.services.background_job_runtime import spawn_background_coro
+from backend.services.slides_delivery_service import (
+    create_delivery_job,
+    get_delivery_artifact,
+    get_delivery_job,
+)
 from backend.services.slides import (
     PresentonAdapterService,
     PresentonTaskService,
@@ -22,6 +28,7 @@ from backend.services.slides import (
 from .router import slides_router, SlidesDeliveryJobSchema
 
 logger = logging.getLogger(__name__)
+SLIDES_GENERATE_V2_JOB_TYPE = "slides.generate_v2"
 
 
 @slides_router.post("/delivery/jobs")
@@ -29,64 +36,7 @@ async def create_slides_delivery_job(
     payload: SlidesDeliveryJobSchema,
     user: dict = Depends(get_current_user),
 ):
-    slides = payload.ppt_schema.get("slides", []) if isinstance(payload.ppt_schema, dict) else []
-    if not slides:
-        raise HTTPException(status_code=400, detail="ppt_schema.slides is required")
-
-    now = datetime.now(timezone.utc)
-    job_id = uuid.uuid4().hex[:14]
-
-    agenda, speaker_notes, in_class_questions, homework = [], [], [], []
-    for idx, slide in enumerate(slides, start=1):
-        title = str(slide.get("title") or f"Slide {idx}")
-        agenda.append(f"{idx}. {title}")
-        speaker_notes.append({
-            "slide": idx,
-            "title": title,
-            "note": f"Explain the core idea of '{title}' in 60-90 seconds, then connect it to the previous point.",
-        })
-        in_class_questions.append({
-            "slide": idx,
-            "question": f"What is the most important takeaway from '{title}'?",
-            "expected_depth": "short_reasoning",
-        })
-        homework.append({
-            "task_id": f"HW-{idx}",
-            "prompt": f"Write a concise reflection on '{title}' and include one practical example.",
-            "estimated_minutes": 12,
-        })
-
-    artifacts = {
-        "agenda": agenda,
-        "speaker_notes": speaker_notes,
-        "in_class_questions": in_class_questions,
-        "homework_suggestions": homework,
-    }
-    doc = {
-        "job_id": job_id,
-        "user_id": str(user.get("id", "")),
-        "title": payload.title,
-        "status": "completed",
-        "locale": payload.locale,
-        "script_style": payload.script_style,
-        "slides_count": len(slides),
-        "artifacts": artifacts,
-        "created_at": now,
-        "updated_at": now,
-    }
-    await db.slides_delivery_jobs.insert_one(doc)
-    return {
-        "success": True,
-        "job_id": job_id,
-        "status": "completed",
-        "slides_count": len(slides),
-        "artifacts_preview": {
-            "agenda_count": len(agenda),
-            "speaker_notes_count": len(speaker_notes),
-            "in_class_questions_count": len(in_class_questions),
-            "homework_count": len(homework),
-        },
-    }
+    return await create_delivery_job(payload=payload, user=user)
 
 
 async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resolved_provider: str):
@@ -200,6 +150,45 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resol
         await PresentonTaskService.fail(task_id, str(e), step="generate_v2")
 
 
+def _schema_dump(req: SlidesGenerateV2Schema) -> dict:
+    if hasattr(req, "model_dump"):
+        return req.model_dump()
+    return req.dict()
+
+
+async def _run_generate_v2_dispatch_job(
+    dispatch_job_id: str,
+    task_id: str,
+    req: SlidesGenerateV2Schema,
+    resolved_provider: str,
+) -> None:
+    worker_id = f"api-slides-generate-v2-{task_id}"
+    claimed = await background_job_dispatcher.claim(
+        worker_id=worker_id,
+        job_types=[SLIDES_GENERATE_V2_JOB_TYPE],
+        job_id=dispatch_job_id,
+        lease_seconds=900,
+    )
+    if not claimed:
+        return
+
+    await _run_generate_v2_task(task_id, req, resolved_provider)
+    task = await PresentonTaskService.get_task(task_id)
+    if (task or {}).get("status") == "completed":
+        await background_job_dispatcher.mark_done(
+            job_id=dispatch_job_id,
+            worker_id=worker_id,
+            result={"task_id": task_id, "status": "completed"},
+        )
+        return
+
+    await background_job_dispatcher.mark_failed(
+        job_id=dispatch_job_id,
+        worker_id=worker_id,
+        error=str((task or {}).get("error") or "Slides generate_v2 task failed"),
+    )
+
+
 @slides_router.post("/generate_v2")
 async def generate_v2(
     req: SlidesGenerateV2Schema,
@@ -216,7 +205,28 @@ async def generate_v2(
             "generate_talking_script": req.generate_talking_script,
         },
     )
-    asyncio.create_task(_run_generate_v2_task(task["task_id"], req, resolved_provider))
+    dispatch_job = await background_job_dispatcher.enqueue(
+        job_type=SLIDES_GENERATE_V2_JOB_TYPE,
+        payload={
+            "task_id": task["task_id"],
+            "request_id": request_id,
+            "provider": resolved_provider,
+            "request": _schema_dump(req),
+        },
+        metadata={"task_id": task["task_id"], "request_id": request_id},
+    )
+    await PresentonTaskService.add_event(
+        task["task_id"],
+        "step_progress",
+        "queued",
+        "Background job enqueued",
+        progress=2,
+        payload={"dispatch_job_id": dispatch_job["job_id"]},
+    )
+    spawn_background_coro(
+        _run_generate_v2_dispatch_job(dispatch_job["job_id"], task["task_id"], req, resolved_provider),
+        label=f"slides-generate-v2:{task['task_id']}",
+    )
     return {"success": True, "task_id": task["task_id"], "status": task["status"],
             "request_id": request_id}
 
@@ -276,30 +286,11 @@ async def slides_provider_health(
 
 @slides_router.get("/delivery/jobs/{job_id}")
 async def get_slides_delivery_job(job_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.slides_delivery_jobs.find_one(
-        {"job_id": job_id, "user_id": str(user.get("id", ""))},
-        {"_id": 0},
-    )
-    if not doc:
-        raise HTTPException(status_code=404, detail="Slides delivery job not found")
-    for key in ("created_at", "updated_at"):
-        if hasattr(doc.get(key), "isoformat"):
-            doc[key] = doc[key].isoformat()
-    return {"success": True, "job": doc}
+    return await get_delivery_job(job_id=job_id, user=user)
 
 
 @slides_router.get("/delivery/jobs/{job_id}/artifact/{artifact_type}")
 async def get_slides_delivery_artifact(
     job_id: str, artifact_type: str, user: dict = Depends(get_current_user)
 ):
-    doc = await db.slides_delivery_jobs.find_one(
-        {"job_id": job_id, "user_id": str(user.get("id", ""))},
-        {"_id": 0, "artifacts": 1},
-    )
-    if not doc:
-        raise HTTPException(status_code=404, detail="Slides delivery job not found")
-    artifacts = doc.get("artifacts", {})
-    if artifact_type not in artifacts:
-        raise HTTPException(status_code=404, detail="Artifact type not found")
-    return {"success": True, "job_id": job_id, "artifact_type": artifact_type,
-            "data": artifacts.get(artifact_type)}
+    return await get_delivery_artifact(job_id=job_id, artifact_type=artifact_type, user=user)

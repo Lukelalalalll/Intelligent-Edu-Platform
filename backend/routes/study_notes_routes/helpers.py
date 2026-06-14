@@ -7,7 +7,7 @@ import tempfile
 from pydantic import BaseModel, Field
 
 from backend.config import Config
-from backend.services.ai_gateway_service import AIGatewayService
+from backend.core.dependencies import get_ai_gateway_service
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ Example: [{"question":"What is X?","answer":"X is..."}]"""
 
 
 async def call_coze_text(system_prompt: str, user_content: str, endpoint_label: str = "sub5/notes", provider: str = "local_ollama") -> str:
-    ai_service = AIGatewayService()
+    ai_service = get_ai_gateway_service()
     context = {"system_override": system_prompt}
     return await ai_service.chat_with_provider(message=user_content, context=context, provider=provider)
 

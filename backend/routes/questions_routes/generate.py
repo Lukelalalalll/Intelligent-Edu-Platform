@@ -5,23 +5,22 @@ import json
 import os
 import time
 import traceback
-import uuid
-from datetime import datetime, timezone
 
 from fastapi import Depends, Request, UploadFile, File
 from fastapi.responses import JSONResponse
-from werkzeug.utils import secure_filename
 
 from backend.config import Config
 from backend.core.ai_provider import resolve_provider
-from backend.core.database import db, compute_history_expires_at
+from backend.core.database import compute_history_expires_at
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.schemas import ExtractQuestionsSchema, GenerateQuestionsSchema
-from backend.services.questions_service import (
-    allowed_file, extract_text_from_image,
+from backend.services.history_service import save_history_record
+from backend.services.questions import (
     call_provider_generate,
+    extract_text_from_image,
     extract_pdf_text_with_loader, format_extracted_text,
+    save_upload_file,
 )
 from .router import questions_router, _get_task, _set_task
 from .validators import (
@@ -34,60 +33,28 @@ from .validators import (
 @questions_router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     try:
-        if not file.filename:
-            return JSONResponse(content={'error': 'Empty filename'}, status_code=400)
+        upload_result = await save_upload_file(file)
+        task_id = upload_result["task_id"]
+        _set_task(request, task_id, {
+            "uploaded_file": upload_result["uploaded_file"],
+            "uploaded_filename": upload_result["uploaded_filename"],
+            "uploaded_storage_name": upload_result["uploaded_storage_name"],
+            "file_type": upload_result["file_type"],
+            "total_pages": upload_result["total_pages"],
+        })
 
-        if allowed_file(file.filename):
-            display_filename = secure_filename(file.filename)
-            if not display_filename:
-                return JSONResponse(content={'error': 'Invalid filename'}, status_code=400)
-
-            stem, ext = os.path.splitext(display_filename)
-            storage_filename = f"{uuid.uuid4().hex[:12]}_{stem}{ext.lower()}"
-            filepath = os.path.join(Config.UPLOAD_FOLDER_SUB2, storage_filename)
-
-            # Stream upload in chunks to avoid loading entire file into memory
-            MAX_UPLOAD_SIZE = Config.MAX_CONTENT_LENGTH
-            total_written = 0
-            with open(filepath, "wb") as buffer:
-                while True:
-                    chunk = await file.read(1024 * 256)  # 256KB chunks
-                    if not chunk:
-                        break
-                    total_written += len(chunk)
-                    if total_written > MAX_UPLOAD_SIZE:
-                        buffer.close()
-                        os.remove(filepath)
-                        return JSONResponse(content={'error': f'File too large (max {MAX_UPLOAD_SIZE // (1024*1024)}MB)'}, status_code=413)
-                    buffer.write(chunk)
-
-            total_pages = 0
-            file_type = 'image'
-            if storage_filename.lower().endswith('.pdf'):
-                import PyPDF2
-                with open(filepath, 'rb') as f:
-                    reader = PyPDF2.PdfReader(f)
-                    total_pages = len(reader.pages)
-                    if total_pages > 200:
-                        os.remove(filepath)
-                        return JSONResponse(content={'error': 'PDF exceeds 200-page limit'}, status_code=400)
-                file_type = 'pdf'
-
-            # Generate task_id for this upload session
-            task_id = uuid.uuid4().hex[:12]
-            _set_task(request, task_id, {
-                'uploaded_file': filepath,
-                'uploaded_filename': display_filename,
-                'uploaded_storage_name': storage_filename,
-                'file_type': file_type,
-                'total_pages': total_pages,
-            })
-
-            return {'success': True, 'filename': display_filename, 'total_pages': total_pages, 'file_type': file_type, 'task_id': task_id}
-
-        return JSONResponse(content={'error': 'File type not allowed'}, status_code=400)
-    except Exception as e:
-        return JSONResponse(content={'error': str(e)}, status_code=500)
+        return {
+            "success": True,
+            "filename": upload_result["uploaded_filename"],
+            "total_pages": upload_result["total_pages"],
+            "file_type": upload_result["file_type"],
+            "task_id": task_id,
+        }
+    except ValueError as exc:
+        status_code = 413 if "File too large" in str(exc) else 400
+        return JSONResponse(content={"error": str(exc)}, status_code=status_code)
+    except Exception as exc:
+        return JSONResponse(content={"error": str(exc)}, status_code=500)
 
 
 @questions_router.post("/extract_questions")
@@ -290,9 +257,10 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
         source_total_pages = int(task.get('total_pages', 0) or 0)
         _uid = user.get('id', '')
         _exp = await compute_history_expires_at(_uid)
-        _doc = {
-            'user_id': _uid,
-            'params': {
+        await save_history_record(
+            tool="questions",
+            user_id=_uid,
+            params={
                 'question_type': req.question_type,
                 'num_questions': req.num_questions,
                 'difficulty': req.difficulty,
@@ -302,20 +270,17 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
                 'saved_screenshots_count': len(req.saved_screenshots or []),
                 'page_numbers': req.page_numbers,
             },
-            'source': {
+            source={
                 'task_id': req.task_id,
                 'file_path': source_file_path,
                 'file_name': source_file_name,
                 'file_type': source_file_type,
                 'total_pages': source_total_pages,
             },
-            'result_preview': result_text[:500],
-            'result_full': result_text,
-            'created_at': datetime.now(timezone.utc),
-        }
-        if _exp is not None:
-            _doc['expires_at'] = _exp
-        await db.sub2_generation_history.insert_one(_doc)
+            result_preview=result_text[:500],
+            result_full=result_text,
+            expires_at=_exp,
+        )
     except Exception:
         pass  # history save failure should not block the response
 

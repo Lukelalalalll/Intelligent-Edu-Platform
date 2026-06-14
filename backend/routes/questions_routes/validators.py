@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from backend.services.ai_gateway_service import AIGatewayService
+from backend.services.ai_gateway_service import get_ai_gateway_service
 
 
 # ── Text normalization ──
@@ -279,7 +279,7 @@ async def _repair_output_format(
         f"{str(draft_text or '').strip()}"
     )
 
-    ai_service = AIGatewayService()
+    ai_service = get_ai_gateway_service()
     repaired = await ai_service.chat_with_provider(
         message=prompt,
         context={"coze_user_id": "sub2_user", "qtype": qtype},

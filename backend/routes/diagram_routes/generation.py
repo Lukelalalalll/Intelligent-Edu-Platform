@@ -10,6 +10,7 @@ from backend.core.ai_provider import resolve_provider
 from backend.core.database import compute_history_expires_at, db
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
+from backend.services.ai_gateway_service import get_ai_gateway_service
 from backend.services.diagram_service import generate_svg
 from .router import diagram_router
 
@@ -36,10 +37,7 @@ async def generate_diagram(
 
     try:
         resolved_provider = resolve_provider(provider, feature="diagram.generate_diagram", user=user)
-
-        from backend.services.ai_gateway_service import AIGatewayService
-
-        ai_service = AIGatewayService()
+        ai_service = get_ai_gateway_service()
 
         timer = TelemetryTimer(
             provider=resolved_provider,
@@ -132,9 +130,7 @@ async def coze_generate_text(
     full_prompt = f"{system_prompt}\n\nKeywords/Topic: {keywords}"
 
     try:
-        from backend.services.ai_gateway_service import AIGatewayService
-
-        ai_service = AIGatewayService()
+        ai_service = get_ai_gateway_service()
         timer = TelemetryTimer(
             provider=resolved_provider,
             model="diagram-text-generator",
