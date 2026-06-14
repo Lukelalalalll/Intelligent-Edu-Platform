@@ -9,12 +9,18 @@ import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useToast } from './hooks/useToast';
+import { useI18n } from '@/shared/i18n';
 import ToastContainer from './ToastContainer';
+import usePrefersReducedMotion from './hooks/usePrefersReducedMotion';
+import { getBannerMotion } from './motion/presets';
 
 export default function NetworkBanner() {
     const { isOffline } = useNetworkStatus();
     const { toasts, showToast, removeToast } = useToast(3000);
+    const { t } = useI18n();
     const prevOffline = useRef<boolean | null>(null);
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const bannerMotion = getBannerMotion(prefersReducedMotion);
 
     // Show recovery toast exactly once when connection comes back
     useEffect(() => {
@@ -23,10 +29,10 @@ export default function NetworkBanner() {
             return;
         }
         if (prevOffline.current && !isOffline) {
-            showToast('Connection restored. You are back online.', 'success');
+            showToast(t('network.restored'), 'success');
         }
         prevOffline.current = isOffline;
-    }, [isOffline, showToast]);
+    }, [isOffline, showToast, t]);
 
     return (
         <>
@@ -35,18 +41,15 @@ export default function NetworkBanner() {
                 {isOffline && (
                     <motion.div
                         key="offline-banner"
-                        initial={{ y: -60, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -60, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                        {...bannerMotion}
                         style={bannerStyle}
                         role="alert"
                         aria-live="assertive"
                     >
                         <i className="fas fa-wifi" style={{ opacity: 0.7, marginRight: 8 }} />
                         <span>
-                            <strong>No Internet Connection</strong>
-                            &nbsp;— Some features are unavailable. Please check your network.
+                            <strong>{t('network.offline.title')}</strong>
+                            &nbsp;- {t('network.offline.body')}
                         </span>
                     </motion.div>
                 )}

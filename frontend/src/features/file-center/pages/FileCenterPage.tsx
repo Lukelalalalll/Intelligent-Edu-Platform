@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 import type { ToolSummary, HistoryItem } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
+import { useAsyncLoader } from '@/shared/hooks/useAsyncLoader';
 import ToolSummaryCards from '../components/ToolSummaryCards';
 import ToolHistoryTab from '../components/ToolHistoryTab';
 import HistoryDetailModal from '../components/HistoryDetailModal';
@@ -9,26 +10,28 @@ import styles from '../styles/fileCenter.module.css';
 import '../../../styles/base.css';
 
 export default function FileCenterPage() {
-    const [tools, setTools] = useState<ToolSummary[]>([]);
     const [activeTool, setActiveTool] = useState('');
     const [detailItem, setDetailItem] = useState<HistoryItem | null>(null);
+    const loadToolSummary = useCallback(() => fileCenterHistoryApi.getSummary(), []);
 
-    const loadSummary = useCallback(async () => {
-        try {
-            const data = await fileCenterHistoryApi.getSummary();
-            setTools(data);
-        } catch {
-            // silently fail
-        }
-    }, []);
+    const {
+        data: tools,
+        reload: loadSummary,
+    } = useAsyncLoader<ToolSummary[]>({
+        initialData: [],
+        load: loadToolSummary,
+    });
 
-    useEffect(() => { loadSummary(); }, [loadSummary]);
+    useEffect(() => {
+        void loadSummary();
+    }, [loadSummary]);
 
     return (
         <div className={styles.page}>
             <WelcomeBanner
                 title={<><i className="fas fa-folder-open" /> File Center</>}
                 subtitle="Browse and manage your generation history across all tools"
+                variant="workspace"
             />
 
             {/* Tool selection */}
@@ -47,12 +50,11 @@ export default function FileCenterPage() {
                     <ToolHistoryTab
                         key={activeTool}
                         tool={activeTool}
-                        onDeleted={loadSummary}
+                        onDeleted={() => void loadSummary()}
                     />
                 </>
             )}
 
-            
             {detailItem && (
                 <HistoryDetailModal
                     item={detailItem}

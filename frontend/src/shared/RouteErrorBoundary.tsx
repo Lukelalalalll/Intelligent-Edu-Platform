@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { log } from './utils/logger';
+import { useI18n } from '@/shared/i18n';
 import styles from './ErrorBoundary.module.css';
 
 interface Props {
@@ -12,11 +13,18 @@ interface State {
   error: Error | null;
 }
 
+interface ErrorLabels {
+  title: string;
+  unexpected: string;
+  retry: string;
+  backHome: string;
+}
+
 class RouteErrorBoundaryInner extends React.Component<
-  Props & { onGoHome: () => void },
+  Props & { labels: ErrorLabels; onGoHome: () => void },
   State
 > {
-  constructor(props: Props & { onGoHome: () => void }) {
+  constructor(props: Props & { labels: ErrorLabels; onGoHome: () => void }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -31,21 +39,22 @@ class RouteErrorBoundaryInner extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const { labels } = this.props;
       return (
         <div className={styles.container}>
-          <h2 className={styles.title}>This page encountered an error</h2>
+          <h2 className={styles.title}>{labels.title}</h2>
           <p className={styles.message}>
-            {this.state.error?.message || 'An unexpected error occurred.'}
+            {this.state.error?.message || labels.unexpected}
           </p>
           <div className={styles.actions}>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
               className={styles.retryBtn}
             >
-              Retry
+              {labels.retry}
             </button>
             <button onClick={this.props.onGoHome} className={styles.homeBtn}>
-              Back to Home
+              {labels.backHome}
             </button>
           </div>
         </div>
@@ -57,8 +66,17 @@ class RouteErrorBoundaryInner extends React.Component<
 
 export default function RouteErrorBoundary({ children }: Props) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   return (
-    <RouteErrorBoundaryInner onGoHome={() => navigate('/')}>
+    <RouteErrorBoundaryInner
+      labels={{
+        title: t('error.pageTitle'),
+        unexpected: t('error.unexpected'),
+        retry: t('error.retry'),
+        backHome: t('error.backHome'),
+      }}
+      onGoHome={() => navigate('/')}
+    >
       {children}
     </RouteErrorBoundaryInner>
   );

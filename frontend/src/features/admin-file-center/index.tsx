@@ -5,7 +5,7 @@ import {
     type AIUserSummary,
     type ChatRoomAssetSummary,
     type FileAsset,
-} from '@/api/fileCenterApi';
+} from './api/fileCenterApi';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
 import BaseModal from '../../shared/BaseModal';
 import '../../styles/base.css';
@@ -136,7 +136,7 @@ export default function AdminFileCenterPage() {
 
     useEffect(() => {
         if (rootMode === 'toolHistory') { void loadToolHistoryUsers(); }
-    }, [rootMode]);
+    }, [rootMode, loadToolHistoryUsers]);
 
     const runAction = useCallback(async (asset: FileAsset, action: 'soft' | 'restore' | 'hard') => {
         setConfirmModal({ show: true, asset, action });
@@ -278,6 +278,7 @@ export default function AdminFileCenterPage() {
                 title={<><i className="fa-solid fa-server" aria-hidden="true"></i> Admin File Center</>}
                 subtitle="Oversee, manage, and audit all digital assets across the platform. Control group files and AI chat attachments within a centralized, secure environment."
                 as="header"
+                variant="workspace"
             />
 
             <div className={styles.toolbar}>

@@ -8,6 +8,7 @@ import {
   TEACHER_NAV_SECTIONS,
   ADMIN_SECTION,
 } from './navigationConfig';
+import { useI18n } from '@/shared/i18n';
 import styles from '../Layout.module.css';
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ function isLinkActive(to: string, pathname: string, search: string): boolean {
 
 export default function Sidebar({ user, isAuthPage, sidebarOpen }: SidebarProps) {
   const location = useLocation();
+  const { t } = useI18n();
   const totalUnread = useChatStore((s) =>
     Object.values(s.unreadCounts).reduce((sum, n) => sum + n, 0),
   );
@@ -48,8 +50,8 @@ export default function Sidebar({ user, isAuthPage, sidebarOpen }: SidebarProps)
           links: [
             ...ADMIN_SECTION.links,
             location.pathname === '/home_student'
-              ? { to: '/', label: 'Teacher View', icon: 'fa-chalkboard-teacher', tone: 'teacher' as const }
-              : { to: '/home_student', label: 'Student View', icon: 'fa-graduation-cap', tone: 'student' as const },
+              ? { to: '/', labelKey: 'sidebar.teacherView', icon: 'fa-chalkboard-teacher', tone: 'teacher' as const }
+              : { to: '/home_student', labelKey: 'sidebar.studentView', icon: 'fa-graduation-cap', tone: 'student' as const },
           ],
         },
       ];
@@ -63,28 +65,31 @@ export default function Sidebar({ user, isAuthPage, sidebarOpen }: SidebarProps)
     <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarCollapsed}`}>
       <nav className={styles.sidebarNav}>
         {sections.map((section) => (
-          <div key={section.title} className={styles.sidebarSection}>
+          <div key={section.titleKey} className={styles.sidebarSection}>
             <div className={styles.sectionTitle}>
-              <span className={styles.sectionTitleText}>{section.title}</span>
+              <span className={styles.sectionTitleText}>{t(section.titleKey)}</span>
             </div>
-            {section.links.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`${styles.sidebarLink} ${getToneClassName(item.tone)} ${isLinkActive(item.to, location.pathname, location.search) ? styles.sidebarLinkActive : ''}`}
-                title={item.label}
-              >
-                <span className={styles.navIconWrapper}>
-                  <i className={`fas ${item.icon}`}></i>
-                  {item.to === '/chat' && totalUnread > 0 && (
-                    <span className={styles.navBadge}>
-                      {totalUnread > 99 ? '99+' : totalUnread}
-                    </span>
-                  )}
-                </span>
-                <span className={styles.linkText}>{item.label}</span>
-              </Link>
-            ))}
+            {section.links.map((item) => {
+              const label = t(item.labelKey);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`${styles.sidebarLink} ${getToneClassName(item.tone)} ${isLinkActive(item.to, location.pathname, location.search) ? styles.sidebarLinkActive : ''}`}
+                  title={label}
+                >
+                  <span className={styles.navIconWrapper}>
+                    <i className={`fas ${item.icon}`}></i>
+                    {item.to === '/chat' && totalUnread > 0 && (
+                      <span className={styles.navBadge}>
+                        {totalUnread > 99 ? '99+' : totalUnread}
+                      </span>
+                    )}
+                  </span>
+                  <span className={styles.linkText}>{label}</span>
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>

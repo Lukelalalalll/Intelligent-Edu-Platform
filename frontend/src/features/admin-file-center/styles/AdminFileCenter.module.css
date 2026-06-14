@@ -1,7 +1,7 @@
 .page {
-    max-width: 1280px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 28px 20px;
+    padding: 0 var(--page-padding-inline) var(--page-padding-block);
 }
 
 @keyframes tabPopIn {
@@ -17,8 +17,8 @@
 
 .cardGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
     opacity: 0;
     animation: tabPopIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.2s;
 }
@@ -27,7 +27,7 @@
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: var(--radius-lg, 20px);
     background: var(--bg-card, #ffffff);
-    padding: 32px 28px;
+    padding: 26px 22px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;

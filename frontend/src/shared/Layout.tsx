@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import client from './api/client';
 import { log } from './utils/logger';
-import { safeJsonParse } from './utils/safeJsonParse';
 import { useAuthStore } from './store/useAuthStore';
-import { useChatWebSocket, useChatRooms } from '@/features/chat';
+import { useChatUnreadSync } from '@/features/chat/hooks/useChatUnreadSync';
 import NetworkBanner from './NetworkBanner';
 import Navbar from './layout/Navbar';
 import Sidebar from './layout/Sidebar';
@@ -17,6 +16,8 @@ export default function Layout() {
   const navigate = useNavigate();
   const storeUser = useAuthStore((s) => s.user);
   const storeLogout = useAuthStore((s) => s.logout);
+  const authStatus = useAuthStore((s) => s.status);
+  const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const stored = localStorage.getItem('sidebarOpen');
     return stored === null ? true : stored === 'true';
@@ -25,10 +26,9 @@ export default function Layout() {
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
   const isChatPage = location.pathname.startsWith('/chat');
   const isAIPage = location.pathname === '/ai-interaction';
+  const isAuthPending = !isAuthPage && (authStatus === 'unknown' || (isSessionLoading && !storeUser));
 
-  // Keep chat state synced globally so sidebar unread badge updates in real time.
-  useChatWebSocket(!isAuthPage);
-  useChatRooms(!isAuthPage);
+  useChatUnreadSync(Boolean(storeUser) && !isAuthPage && !isChatPage);
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => {
@@ -57,6 +57,7 @@ export default function Layout() {
         user={storeUser}
         sidebarOpen={sidebarOpen}
         isAuthPage={isAuthPage}
+        isAuthPending={isAuthPending}
         onToggleSidebar={toggleSidebar}
         onLogout={handleLogout}
       />

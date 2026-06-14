@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
-import { fileCenterApi, type FileAsset } from '@/api/fileCenterApi';
+import { fileCenterApi, type FileAsset } from '@/features/admin-file-center/api/fileCenterApi';
+import { useAsyncLoader } from '@/shared/hooks/useAsyncLoader';
 import styles from '../styles/AdminDashboard.module.css';
 
 type Filters = {
@@ -25,11 +26,6 @@ function formatBytes(num: number): string {
 }
 
 export default function FileCenterPanel() {
-    const [loading, setLoading] = useState(false);
-    const [statsLoading, setStatsLoading] = useState(false);
-    const [auditLoading, setAuditLoading] = useState(false);
-    const [error, setError] = useState('');
-
     const [filters, setFilters] = useState<Filters>({
         fileType: '',
         status: '',
@@ -38,32 +34,40 @@ export default function FileCenterPanel() {
         keyword: '',
     });
 
-    const [assets, setAssets] = useState<FileAsset[]>([]);
-    const [total, setTotal] = useState(0);
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [auditLoading, setAuditLoading] = useState(false);
     const [rows, setRows] = useState<Array<{ file_type: string; status: string; count: number; total_size: number }>>([]);
     const [audit, setAudit] = useState<{ counts?: { orphan_disk_files: number; dangling_registry: number } } | null>(null);
 
-    const fetchAssets = useCallback(async () => {
-        setLoading(true);
-        setError('');
-        try {
-            const data = await fileCenterApi.listAssets({
-                file_type: filters.fileType,
-                status: filters.status,
-                owner_type: filters.ownerType,
-                course_id: filters.courseId,
-                q: filters.keyword,
-                limit: 120,
-                skip: 0,
-            });
-            setAssets(data.assets || []);
-            setTotal(Number(data.total || 0));
-        } catch (e: any) {
-            setError(e?.response?.data?.detail || 'Failed to load file assets');
-        } finally {
-            setLoading(false);
-        }
+    const loadAssets = useCallback(async () => {
+        const data = await fileCenterApi.listAssets({
+            file_type: filters.fileType,
+            status: filters.status,
+            owner_type: filters.ownerType,
+            course_id: filters.courseId,
+            q: filters.keyword,
+            limit: 120,
+            skip: 0,
+        });
+        return {
+            assets: data.assets || [],
+            total: Number(data.total || 0),
+        };
     }, [filters]);
+
+    const {
+        data: assetData,
+        loading,
+        error,
+        reload: fetchAssets,
+        clearError,
+    } = useAsyncLoader({
+        initialData: { assets: [] as FileAsset[], total: 0 },
+        load: loadAssets,
+    });
+
+    const assets = assetData.assets;
+    const total = assetData.total;
 
     const fetchStats = useCallback(async () => {
         setStatsLoading(true);
@@ -84,15 +88,6 @@ export default function FileCenterPanel() {
             setAuditLoading(false);
         }
     }, []);
-
-    useEffect(() => {
-        fetchAssets();
-    }, [fetchAssets]);
-
-    useEffect(() => {
-        fetchStats();
-        fetchAudit();
-    }, [fetchStats, fetchAudit]);
 
     const totalSize = useMemo(
         () => assets.reduce((sum, a) => sum + Number(a.size || 0), 0),
@@ -122,6 +117,20 @@ export default function FileCenterPanel() {
             toast.error(e?.response?.data?.detail || 'Operation failed');
         }
     };
+
+    const handleApplyFilters = () => {
+        clearError();
+        void fetchAssets();
+    };
+
+    useEffect(() => {
+        void fetchAssets();
+    }, [fetchAssets]);
+
+    useEffect(() => {
+        void fetchStats();
+        void fetchAudit();
+    }, [fetchStats, fetchAudit]);
 
     return (
         <div>
@@ -179,7 +188,7 @@ export default function FileCenterPanel() {
                         value={filters.keyword}
                         onChange={(e) => setFilters((p) => ({ ...p, keyword: e.target.value }))}
                     />
-                    <button className={styles.btnAdd} type="button" onClick={() => void fetchAssets()}>Apply</button>
+                    <button className={styles.btnAdd} type="button" onClick={handleApplyFilters}>Apply</button>
                 </div>
             </div>
 

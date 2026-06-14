@@ -1,9 +1,9 @@
 /* 1. Shared centred container */
 .container,
 .image-selector-container {
-    max-width: 1440px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 0 32px;
+    padding: 0 var(--page-padding-inline);
     width: 100%;
     flex: 1;
 }
@@ -11,18 +11,62 @@
 /* 2. Shared top dynamic gradient banner */
 .page-header,
 .header {
+    --banner-radius: var(--radius-lg);
+    --banner-margin-bottom: var(--workspace-banner-margin-bottom);
+    --banner-padding-inline: var(--workspace-banner-padding-inline);
+    --banner-padding-block: var(--workspace-banner-padding-block);
+    --banner-title-size: var(--workspace-title-size);
+    --banner-subtitle-size: var(--workspace-subtitle-size);
+    --banner-intro-margin-bottom: var(--workspace-banner-intro-margin-bottom);
+    --banner-intro-padding-block: var(--workspace-banner-intro-padding-block);
+    --banner-intro-title-size: var(--workspace-banner-intro-title-size);
+    --banner-intro-subtitle-size: var(--workspace-banner-intro-subtitle-size);
+    --banner-subtitle-opacity: 1;
+    --banner-subtitle-max-height: 5rem;
+    --banner-subtitle-transform: translateY(0);
+    --banner-orb-opacity: 1;
     text-align: center;
-    margin-bottom: 3.5rem;
-    padding: 3.5rem 2rem;
+    margin-bottom: var(--banner-margin-bottom);
+    padding: var(--banner-padding-block) var(--banner-padding-inline);
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
     animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    border-radius: var(--radius-lg);
+    border-radius: var(--banner-radius);
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
     opacity: 0;
+    transition:
+        margin-bottom 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        padding 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        border-radius 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.page-header--hero {
+    --banner-margin-bottom: var(--hero-banner-margin-bottom);
+    --banner-padding-block: var(--hero-banner-padding-block);
+    --banner-title-size: var(--hero-banner-title-size);
+    --banner-subtitle-size: var(--hero-banner-subtitle-size);
+}
+
+.page-header--workspace.page-header--intro {
+    animation:
+        gradientFlow 8s ease infinite,
+        tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
+        workspaceBannerSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
+}
+
+.page-header--workspace.page-header--collapsible.page-header--collapsed {
+    --banner-margin-bottom: 0.75rem;
+    --banner-padding-block: 0.95rem;
+    --banner-title-size: 1.1rem;
+    --banner-subtitle-opacity: 0;
+    --banner-subtitle-max-height: 0;
+    --banner-subtitle-transform: translateY(-8px);
+    --banner-orb-opacity: 0.3;
+    box-shadow: 0 14px 28px -14px rgba(0, 123, 85, 0.3);
 }
 
 @keyframes gradientFlow {
@@ -53,6 +97,8 @@
     background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
     border-radius: 50%;
     animation: floatOrb 10s ease-in-out infinite;
+    opacity: var(--banner-orb-opacity);
+    transition: opacity 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @keyframes floatOrb {
@@ -62,34 +108,198 @@
 
 .page-header h1,
 .header h1 {
-    font-size: 2.2rem;
-    font-weight: 800;
-    margin-bottom: 0.8rem;
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    transform: translateY(20px);
-    animation: slideUpFade 0.8s forwards 0.2s;
+    display: flex;
+    align-items: center;
     justify-content: center;
     gap: 12px;
+    font-size: var(--banner-title-size);
+    font-weight: 800;
+    margin-bottom: 0;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+    transition:
+        font-size 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        margin-bottom 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .page-header .subtitle,
-.header .subtitle,
-.subtitle {
-    font-size: 1.15rem;
+.header .subtitle {
+    font-size: var(--banner-subtitle-size);
     color: rgba(255, 255, 255, 0.95);
     max-width: 640px;
     margin: 0 auto;
-    opacity: 0;
-    transform: translateY(20px);
-    animation: slideUpFade 0.8s forwards 0.4s;
     font-weight: 400;
+    line-height: 1.55;
+    max-height: var(--banner-subtitle-max-height);
+    opacity: var(--banner-subtitle-opacity);
+    overflow: hidden;
+    position: relative;
+    transform: var(--banner-subtitle-transform);
+    z-index: 1;
+    transition:
+        font-size 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 180ms ease,
+        max-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        margin-top 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.page-header--workspace h1 {
+    margin-bottom: 0.55rem;
+}
+
+.page-header--hero h1 {
+    margin-bottom: 0.8rem;
+}
+
+.page-header--workspace.page-header--collapsible.page-header--collapsed h1 {
+    margin-bottom: 0;
 }
 
 @keyframes slideUpFade {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes workspaceBannerSettle {
+    from {
+        margin-bottom: var(--banner-intro-margin-bottom);
+        padding-top: var(--banner-intro-padding-block);
+        padding-bottom: var(--banner-intro-padding-block);
+    }
+    to {
+        margin-bottom: var(--banner-margin-bottom);
+        padding-top: var(--banner-padding-block);
+        padding-bottom: var(--banner-padding-block);
+    }
+}
+
+@keyframes workspaceTitleSettle {
+    from {
+        font-size: var(--banner-intro-title-size);
+        margin-bottom: 0.8rem;
+    }
+    to {
+        font-size: var(--banner-title-size);
+        margin-bottom: 0.55rem;
+    }
+}
+
+@keyframes workspaceSubtitleSettle {
+    from {
+        font-size: var(--banner-intro-subtitle-size);
+    }
+    to {
+        font-size: var(--banner-subtitle-size);
+    }
+}
+
+.page-header--workspace.page-header--intro h1 {
+    animation: workspaceTitleSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
+}
+
+.page-header--workspace.page-header--intro .subtitle {
+    animation: workspaceSubtitleSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
+}
+
+@media (max-width: 1024px) {
+    .page-header--workspace {
+        --banner-intro-padding-block: 3rem;
+        --banner-intro-title-size: 2rem;
+        --banner-intro-subtitle-size: 1.05rem;
+    }
+
+    .page-header--hero {
+        --banner-padding-block: 3rem;
+        --banner-padding-inline: 1.5rem;
+        --banner-title-size: 2rem;
+        --banner-subtitle-size: 1.05rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header,
+    .header {
+        --banner-padding-inline: 1rem;
+    }
+
+    .page-header--workspace {
+        --banner-padding-block: 2rem;
+        --banner-title-size: 1.65rem;
+        --banner-subtitle-size: 0.95rem;
+        --banner-intro-padding-block: 2.8rem;
+        --banner-intro-title-size: 1.9rem;
+        --banner-intro-subtitle-size: 1rem;
+    }
+
+    .page-header--workspace.page-header--collapsible.page-header--collapsed {
+        --banner-padding-block: 0.85rem;
+        --banner-title-size: 1rem;
+    }
+
+    .page-header--hero {
+        --banner-margin-bottom: 3rem;
+        --banner-padding-block: 2.8rem;
+        --banner-title-size: 1.9rem;
+        --banner-subtitle-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header--workspace {
+        --banner-title-size: 1.5rem;
+        --banner-subtitle-size: 0.92rem;
+        --banner-intro-padding-block: 2.5rem;
+        --banner-intro-title-size: 1.55rem;
+        --banner-intro-subtitle-size: 0.92rem;
+    }
+
+    .page-header--workspace.page-header--collapsible.page-header--collapsed {
+        --banner-title-size: 0.98rem;
+    }
+
+    .page-header--hero {
+        --banner-padding-block: 2.5rem;
+        --banner-title-size: 1.55rem;
+        --banner-subtitle-size: 0.92rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .page-header--workspace {
+        --banner-title-size: 1.35rem;
+        --banner-subtitle-size: 0.86rem;
+        --banner-intro-padding-block: 2.2rem;
+        --banner-intro-title-size: 1.4rem;
+        --banner-intro-subtitle-size: 0.86rem;
+    }
+
+    .page-header--hero {
+        --banner-title-size: 1.4rem;
+        --banner-subtitle-size: 0.86rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-header,
+    .header,
+    .page-header::before,
+    .header::before {
+        animation: none !important;
+        opacity: 1;
+        transition: none;
+    }
+
+    .page-header h1,
+    .header h1,
+    .page-header .subtitle,
+    .header .subtitle {
+        transition: none;
+        animation: none !important;
     }
 }
 
@@ -107,8 +317,8 @@
     border-radius: var(--radius-lg);
     border: 1px solid var(--card-border);
     box-shadow: var(--shadow-sm);
-    padding: 2.5rem;
-    margin-bottom: 2.5rem;
+    padding: var(--card-padding);
+    margin-bottom: var(--card-stack-gap);
     position: relative;
     overflow: hidden;
     transition: var(--transition);
@@ -142,7 +352,7 @@
 .export-section:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-hover);
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
 }
 
 /* 4. Shared circular icon and card title */
@@ -164,7 +374,7 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: rgba(0, 123, 85, 0.1);
+    background: var(--surface-subtle);
     color: var(--primary-color);
     display: flex;
     align-items: center;
@@ -193,7 +403,7 @@
 .file-drop-area {
     border: 2px dashed rgba(0, 123, 85, 0.2);
     border-radius: var(--radius-lg);
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: var(--surface-overlay);
     padding: 3rem 2rem;
     text-align: center;
     transition: var(--transition);
@@ -206,7 +416,7 @@
 .file-drop-area:hover,
 .file-drop-area.active {
     border-color: var(--primary-color);
-    background-color: rgba(0, 123, 85, 0.05);
+    background-color: var(--surface-subtle);
     transform: scale(1.01);
 }
 
@@ -243,9 +453,9 @@ input[type="text"]:focus,
 .dropdown:focus,
 .prompt-input:focus {
     outline: none;
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+    box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 /* 7. Shared primary button */
@@ -317,16 +527,16 @@ select {
 }
 
 select:hover:not(:disabled) {
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     border-color: rgba(0, 123, 85, 0.3);
     box-shadow: var(--shadow-sm);
 }
 
 select:focus {
     outline: none;
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
+    box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 select:disabled {
@@ -340,7 +550,7 @@ select:disabled {
 select option {
     font-weight: 500;
     color: var(--text-main);
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     padding: 12px;
 }
 
@@ -372,14 +582,14 @@ select.hku-select {
 }
 
 .custom-select-wrapper:hover .custom-select-trigger {
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     border-color: rgba(0, 123, 85, 0.3);
 }
 
 .custom-select-wrapper.open .custom-select-trigger {
-    background-color: var(--card-bg);
+    background-color: var(--surface-raised);
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.15);
+    box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 .custom-select-trigger::after {
@@ -403,9 +613,9 @@ select.hku-select {
     left: 0;
     right: 0;
     background-color: var(--bg-card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line-soft);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-hover);
     padding: 8px 0;
@@ -414,15 +624,13 @@ select.hku-select {
     opacity: 0;
     visibility: hidden;
     transform: translateY(-15px) scale(0.96);
-    filter: blur(6px);
-    transition: all 0.4s var(--ease-cinematic);
+    transition: opacity 0.3s var(--ease-cinematic), visibility 0.3s var(--ease-cinematic), transform 0.3s var(--ease-cinematic);
 }
 
 .custom-select-wrapper.open .custom-options {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
-    filter: blur(0);
 }
 
 .custom-option {
@@ -431,7 +639,7 @@ select.hku-select {
     font-size: 0.95rem;
     color: var(--text-main);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     border-left: 3px solid transparent;
 }
 
@@ -451,4 +659,11 @@ select.hku-select {
 .custom-option.selected:hover {
     background-color: var(--primary-dark);
     padding-left: 16px;
+}
+
+@media (max-width: 768px), (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .custom-options {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
 }

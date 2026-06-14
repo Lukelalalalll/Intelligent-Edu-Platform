@@ -3,9 +3,9 @@
    ═══════════════════════════════════════════════════════════ */
 
 .page {
-    max-width: 1280px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 28px 20px;
+    padding: 0 var(--page-padding-inline) var(--page-padding-block);
 }
 
 /* ── Summary Cards ── */
@@ -17,9 +17,9 @@
 
 .summaryGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
     opacity: 0;
     animation: cardPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.15s;
 }
@@ -28,7 +28,7 @@
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: var(--radius-md, 16px);
     background: var(--bg-card, #fff);
-    padding: 20px 18px;
+    padding: 18px 16px;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
@@ -231,7 +231,7 @@
 
 .historyGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.25rem;
     margin-top: 1rem;
     animation: cardPopIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;

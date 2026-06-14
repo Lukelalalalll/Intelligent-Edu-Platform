@@ -164,6 +164,7 @@ export default function AdminDbConsole({
             <WelcomeBanner
                 title="Database Console"
                 subtitle="Visual browser and editor for MongoDB collections"
+                variant="workspace"
             />
 
             <div className={styles.consoleGrid}>

@@ -4,13 +4,13 @@
 }
 
 .title {
-  color: #d32f2f;
+  color: var(--error-color);
   margin-bottom: 16px;
   font-size: 1.25rem;
 }
 
 .message {
-  color: #666;
+  color: var(--text-sub);
   margin-bottom: 24px;
 }
 
@@ -22,7 +22,7 @@
 
 .retryBtn {
   padding: 10px 24px;
-  background: #007B55;
+  background: var(--primary-color);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -32,9 +32,9 @@
 
 .homeBtn {
   padding: 10px 24px;
-  background: #555;
-  color: #fff;
-  border: none;
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--line-soft);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;

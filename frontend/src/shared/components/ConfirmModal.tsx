@@ -5,6 +5,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import { getFadeMotion, getModalMotion } from '../motion/presets';
 
 export interface ConfirmModalProps {
     open: boolean;
@@ -18,23 +20,15 @@ export interface ConfirmModalProps {
     onClose: () => void;
 }
 
-const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-};
-
 const cardStyle: React.CSSProperties = {
-    background: '#fff',
+    background: 'var(--surface-raised)',
     borderRadius: 'var(--radius-lg, 24px)',
     padding: '28px 32px',
     minWidth: 320,
     maxWidth: 480,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+    color: 'var(--text-main)',
+    border: '1px solid var(--line-soft)',
+    boxShadow: 'var(--shadow-lg)',
 };
 
 const footerStyle: React.CSSProperties = {
@@ -64,35 +58,44 @@ export default function ConfirmModal({
     onConfirm,
     onClose,
 }: ConfirmModalProps) {
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const overlayMotion = getFadeMotion(prefersReducedMotion);
+    const modalMotion = getModalMotion(prefersReducedMotion);
+    const overlayStyle: React.CSSProperties = {
+        position: 'fixed',
+        inset: 0,
+        background: 'var(--scrim-bg)',
+        backdropFilter: prefersReducedMotion ? 'none' : 'blur(4px)',
+        WebkitBackdropFilter: prefersReducedMotion ? 'none' : 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+    };
+
     return createPortal(
         <AnimatePresence>
             {open && (
                 <motion.div
                     style={overlayStyle}
                     onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    {...overlayMotion}
                 >
                     <motion.div
                         style={cardStyle}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                        {...modalMotion}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{title}</h3>
                             <button
                                 onClick={onClose}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1 }}
+                                style={{ background: 'none', color: 'var(--text-sub)', border: 'none', cursor: 'pointer', fontSize: '1.4rem', lineHeight: 1 }}
                             >
                                 &times;
                             </button>
                         </div>
                         {message && (
-                            <div style={{ marginBottom: 8, color: '#555', fontSize: '1rem', whiteSpace: 'pre-wrap' }}>
+                            <div style={{ marginBottom: 8, color: 'var(--text-sub)', fontSize: '1rem', whiteSpace: 'pre-wrap' }}>
                                 {message}
                             </div>
                         )}
@@ -100,7 +103,7 @@ export default function ConfirmModal({
                             {!hideCancel && (
                                 <button
                                     onClick={onClose}
-                                    style={{ ...btnBase, background: '#f1f5f9', color: '#333' }}
+                                    style={{ ...btnBase, background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--line-soft)' }}
                                 >
                                     {cancelLabel}
                                 </button>
@@ -109,7 +112,7 @@ export default function ConfirmModal({
                                 onClick={() => { onConfirm(); onClose(); }}
                                 style={{
                                     ...btnBase,
-                                    background: confirmDanger ? '#f43f5e' : '#3b82f6',
+                                    background: confirmDanger ? 'var(--error-color)' : 'var(--primary-color)',
                                     color: '#fff',
                                 }}
                             >

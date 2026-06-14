@@ -1,89 +1,95 @@
+import type { TranslationKey } from '@/shared/i18n';
+
 interface NavLink {
   to: string;
-  label: string;
+  labelKey: TranslationKey;
   icon: string;
   tone?: string;
 }
 
 export interface NavSection {
-  title: string;
+  titleKey: TranslationKey;
   links: NavLink[];
 }
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Main',
+    titleKey: 'sidebar.section.main',
     links: [
-      { to: '/', label: 'Home', icon: 'fa-home' },
-      { to: '/home_student', label: 'Student View', icon: 'fa-graduation-cap' },
-      { to: '/chat', label: 'Chat', icon: 'fa-comments' },
+      { to: '/', labelKey: 'sidebar.home', icon: 'fa-home' },
+      { to: '/home_student', labelKey: 'sidebar.studentView', icon: 'fa-graduation-cap' },
+      { to: '/chat', labelKey: 'sidebar.chat', icon: 'fa-comments' },
     ],
   },
   {
-    title: 'AI Tools',
+    titleKey: 'sidebar.section.aiTools',
     links: [
-      { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-      { to: '/knowledge-base', label: 'Knowledge Base', icon: 'fa-database' },
+      { to: '/ai-interaction', labelKey: 'sidebar.aiWorkspace', icon: 'fa-robot' },
+      { to: '/ai-config', labelKey: 'sidebar.aiConfig', icon: 'fa-sliders-h' },
+      { to: '/knowledge-base', labelKey: 'sidebar.knowledgeBase', icon: 'fa-database' },
     ],
   },
   {
-    title: 'Workflow',
+    titleKey: 'sidebar.section.workflow',
     links: [
-      { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
-      { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
-      { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
+      { to: '/?tab=tools', labelKey: 'sidebar.tools', icon: 'fa-toolbox' },
+      { to: '/mailbox', labelKey: 'sidebar.mailbox', icon: 'fa-inbox' },
+      { to: '/file-center', labelKey: 'sidebar.fileCenter', icon: 'fa-folder-open' },
     ],
   },
 ];
 
 export const STUDENT_NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Main',
+    titleKey: 'sidebar.section.main',
     links: [
-      { to: '/home_student', label: 'Home', icon: 'fa-home' },
-      { to: '/chat', label: 'Chat', icon: 'fa-comments' },
+      { to: '/home_student', labelKey: 'sidebar.home', icon: 'fa-home' },
+      { to: '/chat', labelKey: 'sidebar.chat', icon: 'fa-comments' },
     ],
   },
   {
-    title: 'AI Tools',
+    titleKey: 'sidebar.section.aiTools',
     links: [
-      { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-      { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
+      { to: '/ai-interaction', labelKey: 'sidebar.aiWorkspace', icon: 'fa-robot' },
+      { to: '/ai-config', labelKey: 'sidebar.aiConfig', icon: 'fa-sliders-h' },
+      { to: '/file-center', labelKey: 'sidebar.fileCenter', icon: 'fa-folder-open' },
     ],
   },
 ];
 
 export const TEACHER_NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Main',
+    titleKey: 'sidebar.section.main',
     links: [
-      { to: '/', label: 'Home', icon: 'fa-home' },
-      { to: '/chat', label: 'Chat', icon: 'fa-comments' },
+      { to: '/', labelKey: 'sidebar.home', icon: 'fa-home' },
+      { to: '/chat', labelKey: 'sidebar.chat', icon: 'fa-comments' },
     ],
   },
   {
-    title: 'AI Tools',
+    titleKey: 'sidebar.section.aiTools',
     links: [
-      { to: '/ai-interaction', label: 'AI Workspace', icon: 'fa-robot' },
-      { to: '/knowledge-base', label: 'Knowledge Base', icon: 'fa-database' },
+      { to: '/ai-interaction', labelKey: 'sidebar.aiWorkspace', icon: 'fa-robot' },
+      { to: '/ai-config', labelKey: 'sidebar.aiConfig', icon: 'fa-sliders-h' },
+      { to: '/knowledge-base', labelKey: 'sidebar.knowledgeBase', icon: 'fa-database' },
     ],
   },
   {
-    title: 'Workflow',
+    titleKey: 'sidebar.section.workflow',
     links: [
-      { to: '/?tab=tools', label: 'Tools', icon: 'fa-toolbox' },
-      { to: '/mailbox', label: 'Mailbox', icon: 'fa-inbox' },
-      { to: '/file-center', label: 'File Center', icon: 'fa-folder-open' },
+      { to: '/?tab=tools', labelKey: 'sidebar.tools', icon: 'fa-toolbox' },
+      { to: '/mailbox', labelKey: 'sidebar.mailbox', icon: 'fa-inbox' },
+      { to: '/file-center', labelKey: 'sidebar.fileCenter', icon: 'fa-folder-open' },
     ],
   },
 ];
 
 export const ADMIN_SECTION: NavSection = {
-  title: 'Admin',
+  titleKey: 'sidebar.section.admin',
   links: [
-    { to: '/admin/dashboard', label: 'Dashboard', icon: 'fa-shield-alt', tone: 'admin' },
-    { to: '/admin/file-center', label: 'File Center', icon: 'fa-folder-tree', tone: 'admin' },
-    { to: '/admin/db-console', label: 'Database', icon: 'fa-database', tone: 'database' },
-    { to: '/admin/rag-evaluator', label: 'RAG Evaluator', icon: 'fa-flask', tone: 'admin' },
+    { to: '/admin/dashboard', labelKey: 'sidebar.dashboard', icon: 'fa-shield-alt', tone: 'admin' },
+    { to: '/admin/security', labelKey: 'sidebar.security', icon: 'fa-user-shield', tone: 'admin' },
+    { to: '/admin/file-center', labelKey: 'sidebar.fileCenter', icon: 'fa-folder-tree', tone: 'admin' },
+    { to: '/admin/db-console', labelKey: 'sidebar.database', icon: 'fa-database', tone: 'database' },
+    { to: '/admin/rag-evaluator', labelKey: 'sidebar.ragEvaluator', icon: 'fa-flask', tone: 'admin' },
   ],
 };

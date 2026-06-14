@@ -1,9 +1,9 @@
 .card {
   background: var(--bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-lg, 16px);
   box-shadow: var(--shadow-sm);
-  padding: 1.8rem 2rem;
+  padding: var(--card-padding);
 }
 
 .glass {

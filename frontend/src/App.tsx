@@ -3,12 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Toaster } from 'react-hot-toast';
 import ScrollToTop from './shared/ScrollToTop';
 import Layout from './shared/Layout';
-import { CourseProvider } from './shared/hooks/useCourseContext';
 import { ErrorBoundary } from './shared/ErrorBoundary';
 import RouteErrorBoundary from './shared/RouteErrorBoundary';
 import ProtectedRoute from './shared/ProtectedRoute';
+import { useAuthBootstrap } from './shared/hooks/useAuthBootstrap';
 import { useAuthStore } from './shared/store/useAuthStore';
 import { ROUTES, type RouteConfig } from './router/routes';
+import RouteSkeleton from './shared/RouteSkeleton';
 
 /** Forces a full remount of children when the given URL param changes. */
 function KeyedByParam({ param, children }: { param: string; children: ReactNode }) {
@@ -19,7 +20,18 @@ function KeyedByParam({ param, children }: { param: string; children: ReactNode 
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((s) => s.user);
-  if (user) return <Navigate to="/" replace />;
+  const status = useAuthStore((s) => s.status);
+  const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
+
+  if (status === 'unknown' || (isSessionLoading && !user)) {
+    return <RouteSkeleton />;
+  }
+
+  if (user) {
+    const defaultPath = user.role === 'student' ? '/home_student' : '/';
+    return <Navigate to={defaultPath} replace />;
+  }
+
   return children;
 };
 
@@ -47,6 +59,8 @@ const layoutRoutes = ROUTES.filter((r) => !r.fullScreen);
 const fullScreenRoutes = ROUTES.filter((r) => r.fullScreen);
 
 function App() {
+  useAuthBootstrap();
+
   return (
     <BrowserRouter>
       <Toaster
@@ -55,39 +69,39 @@ function App() {
           duration: 4000,
           style: {
             borderRadius: '8px',
-            background: '#363636',
-            color: '#fff',
+            background: 'var(--toast-bg)',
+            color: 'var(--toast-color)',
+            border: '1px solid var(--toast-border)',
+            boxShadow: 'var(--shadow-md)',
           },
         }}
       />
       <ErrorBoundary>
-        <CourseProvider>
-          <ScrollToTop />
-          <Suspense fallback={null}>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                {layoutRoutes.map((route) => (
-                  <Route
-                    key={route.path}
-                    path={route.path}
-                    element={wrapRoute(route)}
-                  />
-                ))}
-                {/* Catch-all: redirect unknown paths under layout to home */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-
-              {/* Full-screen routes — outside <Layout> (no sidebar/navbar) */}
-              {fullScreenRoutes.map((route) => (
+        <ScrollToTop />
+        <Suspense fallback={<RouteSkeleton />}>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              {layoutRoutes.map((route) => (
                 <Route
                   key={route.path}
                   path={route.path}
                   element={wrapRoute(route)}
                 />
               ))}
-            </Routes>
-          </Suspense>
-        </CourseProvider>
+              {/* Catch-all: redirect unknown paths under layout to home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+
+            {/* Full-screen routes — outside <Layout> (no sidebar/navbar) */}
+            {fullScreenRoutes.map((route) => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={wrapRoute(route)}
+              />
+            ))}
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </BrowserRouter>
   );

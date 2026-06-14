@@ -7,10 +7,10 @@ interface ToastContainerProps {
 }
 
 const typeStyles: Record<Toast['type'], React.CSSProperties & { borderColor: string }> = {
-    success: { background: '#d4edda', color: '#155724', borderColor: '#c3e6cb' },
-    error:   { background: '#f8d7da', color: '#721c24', borderColor: '#f5c6cb' },
-    info:    { background: '#d1ecf1', color: '#0c5460', borderColor: '#bee5eb' },
-    warning: { background: '#fff3cd', color: '#856404', borderColor: '#ffeeba' },
+    success: { background: 'var(--success-bg)', color: 'var(--success-text)', borderColor: 'rgba(34, 197, 94, 0.22)' },
+    error:   { background: 'var(--danger-bg)', color: 'var(--danger-text)', borderColor: 'rgba(239, 68, 68, 0.22)' },
+    info:    { background: 'var(--info-bg)', color: 'var(--info-text)', borderColor: 'rgba(59, 130, 246, 0.22)' },
+    warning: { background: 'var(--warning-bg)', color: 'var(--warning-text)', borderColor: 'rgba(245, 158, 11, 0.22)' },
 };
 
 const iconMap: Record<Toast['type'], string> = {
@@ -35,7 +35,7 @@ export default function ToastContainer({ toasts = [], onDismiss }: ToastContaine
                         padding: '12px 18px',
                         borderRadius: 8,
                         borderLeft: `4px solid ${(typeStyles[t.type] || typeStyles.info).borderColor}`,
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+                        boxShadow: 'var(--shadow-md)',
                         display: 'flex', alignItems: 'center', gap: 10,
                         animation: 'fadeInRight 0.3s ease',
                         cursor: 'pointer',

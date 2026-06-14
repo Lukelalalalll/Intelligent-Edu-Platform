@@ -1,15 +1,15 @@
 /* Global app layout */
 main {
     flex: 1;
-    max-width: 1440px;
+    max-width: var(--page-max-width);
     width: 100%;
     margin: 0 auto;
-    padding: 48px 32px;
+    padding: var(--page-padding-block) var(--page-padding-inline);
     position: relative;
 }
 
 .footer {
-    background-color: #fff;
+    background-color: var(--bg-card);
     padding: 2rem 0;
     margin-top: auto;
     border-top: 1px solid var(--border-color);
@@ -24,6 +24,7 @@ main {
 main:has(.auth-page-root),
 main:has(.global-ai-wrapper),
 main:has(.global-chat-wrapper),
+main:has(.study-room-workspace),
 main:has([class*="ai-workspace-wrapper"]) {
     padding: 0;
     max-width: 100%;

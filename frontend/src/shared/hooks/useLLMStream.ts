@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { StartStreamOptions, StreamDeltaFrame } from '@/types/llm';
+import { resolveApiRoot } from '@/shared/api/root';
 
-const viteEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
-const apiRoot = (viteEnv.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 interface StreamState {
     loading: boolean;

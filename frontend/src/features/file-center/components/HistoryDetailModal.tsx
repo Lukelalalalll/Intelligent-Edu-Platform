@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
-import client from '@/shared/api/client';
+import client, { resolveApiRoot } from '@/shared/api/client';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
 import type { HistoryItem, HistoryDetail } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
@@ -17,7 +17,7 @@ interface Props {
 const getFileUrl = (path: string) => {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
-    const base = client.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000';
+    const base = client.defaults.baseURL?.replace(/\/api$/, '') || resolveApiRoot() || window.location.origin;
     return `${base}/${path.replace(/^\/+/, '')}`;
 };
 

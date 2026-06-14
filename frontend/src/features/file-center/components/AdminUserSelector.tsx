@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import type { AdminUser } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
+import { useAsyncLoader } from '@/shared/hooks/useAsyncLoader';
 import styles from '../styles/fileCenter.module.css';
 
 interface Props {
@@ -9,11 +10,15 @@ interface Props {
 }
 
 export default function AdminUserSelector({ selectedUserId, onSelect }: Props) {
-    const [users, setUsers] = useState<AdminUser[]>([]);
+    const loadUsers = useCallback(() => fileCenterHistoryApi.adminGetUsers(), []);
+    const { data: users, reload } = useAsyncLoader<AdminUser[]>({
+        initialData: [],
+        load: loadUsers,
+    });
 
     useEffect(() => {
-        fileCenterHistoryApi.adminGetUsers().then(setUsers).catch(() => {});
-    }, []);
+        void reload();
+    }, [reload]);
 
     return (
         <div className={styles.adminBar}>
@@ -28,7 +33,7 @@ export default function AdminUserSelector({ selectedUserId, onSelect }: Props) {
                 <option value="">All Users</option>
                 {users.map(u => (
                     <option key={u.id} value={u.id}>
-                        {u.username} ({u.role}) — {u.email || u.id}
+                        {u.username} ({u.role}) - {u.email || u.id}
                     </option>
                 ))}
             </select>
