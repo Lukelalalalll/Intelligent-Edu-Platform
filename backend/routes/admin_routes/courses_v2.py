@@ -1,11 +1,10 @@
 """v2 flat-model course, enrollment, and assignment admin endpoints."""
 from __future__ import annotations
 
-from bson.objectid import ObjectId
 from fastapi import Depends, HTTPException
 
-from backend.core.database import db
 from backend.core.security import get_admin_user
+from backend.repositories import user_repo
 from backend.services.grading_service import (
     create_course_section, list_course_sections, update_course_section, delete_course_section,
     enroll_user, unenroll_user, list_enrollments,
@@ -62,13 +61,10 @@ async def list_course_enrollments(section_id: str, admin: dict = Depends(get_adm
     enrolls = await list_enrollments(course_section_id=section_id)
     # Enrich with user info
     for e in enrolls:
-        try:
-            user = await db.users.find_one({"_id": ObjectId(e["userId"])})
-            if user:
-                e["username"] = user.get("username", "")
-                e["email"] = user.get("email", "")
-        except Exception:
-            pass
+        user = await user_repo.find_by_id(e["userId"])
+        if user:
+            e["username"] = user.get("username", "")
+            e["email"] = user.get("email", "")
     return {"enrollments": enrolls}
 
 

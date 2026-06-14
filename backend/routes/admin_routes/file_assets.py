@@ -4,13 +4,12 @@ from __future__ import annotations
 import base64
 import os
 
-from bson.objectid import ObjectId
 from fastapi import Depends, HTTPException, Query
 from fastapi.responses import FileResponse, Response
 
 from backend.config import Config
-from backend.core.database import db
 from backend.core.security import get_admin_user
+from backend.repositories import ai_session_repo, file_asset_repo
 from backend.services.file_asset_service import (
     list_assets, get_asset, soft_delete_asset,
     restore_asset, hard_delete_asset, run_audit,
@@ -94,18 +93,17 @@ async def download_file_asset(asset_id: str, admin: dict = Depends(get_admin_use
         meta = asset.get("metadata", {})
         msg_idx = meta.get("message_index")
         img_idx = meta.get("image_index")
-        if ObjectId.is_valid(session_id):
-            sess = await db.ai_chat_sessions.find_one({"_id": ObjectId(session_id)})
-            if sess:
-                msgs = sess.get("messages", [])
-                if 0 <= msg_idx < len(msgs):
-                    imgs = msgs[msg_idx].get("images", [])
-                    if 0 <= img_idx < len(imgs):
-                        b64_data = imgs[img_idx]
-                        if b64_data.startswith("data:image"):
-                            _, b64_data = b64_data.split(",", 1)
-                        content = base64.b64decode(b64_data)
-                        return Response(content=content, media_type="image/jpeg", headers={"Content-Disposition": f"attachment; filename=\"{asset.get('filename')}\""})
+        sess = await ai_session_repo.find_by_id(session_id)
+        if sess:
+            msgs = sess.get("messages", [])
+            if 0 <= msg_idx < len(msgs):
+                imgs = msgs[msg_idx].get("images", [])
+                if 0 <= img_idx < len(imgs):
+                    b64_data = imgs[img_idx]
+                    if b64_data.startswith("data:image"):
+                        _, b64_data = b64_data.split(",", 1)
+                    content = base64.b64decode(b64_data)
+                    return Response(content=content, media_type="image/jpeg", headers={"Content-Disposition": f"attachment; filename=\"{asset.get('filename')}\""})
         raise HTTPException(status_code=404, detail="Mongo base64 image not found")
 
     path = _absolute_from_storage_path(storage_path)
@@ -122,19 +120,8 @@ async def audit_file_assets(admin: dict = Depends(get_admin_user)):
 
 @admin_router.get("/files/stats")
 async def file_asset_stats(admin: dict = Depends(get_admin_user)):
-    pipeline = [
-        {
-            "$group": {
-                "_id": {"file_type": "$file_type", "status": "$status"},
-                "count": {"$sum": 1},
-                "total_size": {"$sum": "$size"},
-            }
-        },
-        {"$sort": {"_id.file_type": 1, "_id.status": 1}},
-    ]
-
     rows = []
-    async for item in db.file_assets.aggregate(pipeline):
+    for item in await file_asset_repo.aggregate_stats_by_type_and_status():
         rows.append({
             "file_type": item.get("_id", {}).get("file_type", ""),
             "status": item.get("_id", {}).get("status", ""),

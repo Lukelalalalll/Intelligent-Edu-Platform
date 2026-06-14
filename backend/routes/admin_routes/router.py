@@ -8,7 +8,6 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from bson.objectid import ObjectId
 
-from backend.core.database import db
 from backend.config import Config
 from backend.services.grading_service import load_courses, normalize_courses_data, save_courses
 

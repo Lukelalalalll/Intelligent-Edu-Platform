@@ -97,6 +97,10 @@ async def rag_case_test(req: CaseTestRequest, admin: dict = Depends(get_admin_us
         query=req.query,
         top_k=req.top_k,
         use_hybrid=req.use_hybrid,
+        rag_profile=req.rag_profile,
+        debug_retrieval=req.debug_retrieval,
+        allow_web_correction=req.allow_web_correction,
+        force_query_class=req.force_query_class,
     )
     return result
 
@@ -276,6 +280,10 @@ async def evaluate_ab(req: EvaluateABRequest, admin: dict = Depends(get_admin_us
         top_k=req.top_k,
         mode=req.mode,
         selected_docs=req.selected_docs if req.selected_docs else None,
+        rag_profile=req.rag_profile,
+        debug_retrieval=req.debug_retrieval,
+        allow_web_correction=req.allow_web_correction,
+        force_query_class=req.force_query_class,
     )
 
     # Persist results so they survive page refreshes
@@ -284,6 +292,10 @@ async def evaluate_ab(req: EvaluateABRequest, admin: dict = Depends(get_admin_us
         "top_k": req.top_k,
         "dataset": dataset_dicts,
         "course_id": dataset_dicts[0].get("course_ids", [""])[0] if dataset_dicts else "",
+        "rag_profile": req.rag_profile,
+        "debug_retrieval": req.debug_retrieval,
+        "allow_web_correction": req.allow_web_correction,
+        "force_query_class": req.force_query_class,
     })
     eval_result["run_id"] = run_id
 

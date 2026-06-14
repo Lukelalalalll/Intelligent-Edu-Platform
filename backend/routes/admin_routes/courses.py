@@ -1,11 +1,10 @@
 """v1 JSON-based course & assignment CRUD + relations overview."""
 from __future__ import annotations
 
-from bson.objectid import ObjectId
 from fastapi import Depends, HTTPException
 
-from backend.core.database import db
 from backend.core.security import get_admin_user
+from backend.repositories import user_repo
 from backend.schemas import AdminCourseSchema, AdminCourseStudentSchema, AdminAssignmentSchema
 from .router import (
     admin_router,
@@ -66,10 +65,7 @@ async def create_course(req: AdminCourseSchema, admin: dict = Depends(get_admin_
     await _save_courses_payload(payload)
 
     if req.teacherId.strip() and _is_object_id(req.teacherId.strip()):
-        await db.users.update_one(
-            {"_id": ObjectId(req.teacherId.strip())},
-            {"$addToSet": {"teacherCourseIds": course_id}},
-        )
+        await user_repo.add_teacher_course(req.teacherId.strip(), course_id)
 
     return {"message": "Course created", "course": new_course}
 
@@ -94,15 +90,9 @@ async def update_course(course_id: str, req: AdminCourseSchema, admin: dict = De
     await _save_courses_payload(payload)
 
     if old_teacher_id and old_teacher_id != new_teacher_id and _is_object_id(old_teacher_id):
-        await db.users.update_one(
-            {"_id": ObjectId(old_teacher_id)},
-            {"$pull": {"teacherCourseIds": course_id}},
-        )
+        await user_repo.remove_teacher_course(old_teacher_id, course_id)
     if new_teacher_id and _is_object_id(new_teacher_id):
-        await db.users.update_one(
-            {"_id": ObjectId(new_teacher_id)},
-            {"$addToSet": {"teacherCourseIds": course_id}},
-        )
+        await user_repo.add_teacher_course(new_teacher_id, course_id)
 
     return {"message": "Course updated", "course": course}
 
@@ -118,7 +108,7 @@ async def delete_course(course_id: str, admin: dict = Depends(get_admin_user)):
     payload["courses"] = [c for c in courses if str(c.get("courseId") or c.get("id") or "") != course_id]
     await _save_courses_payload(payload)
 
-    await db.users.update_many({}, {"$pull": {"teacherCourseIds": course_id}})
+    await user_repo.remove_teacher_course_from_all(course_id)
     return {"message": "Course deleted"}
 
 

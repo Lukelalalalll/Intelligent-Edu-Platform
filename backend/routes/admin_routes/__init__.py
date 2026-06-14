@@ -14,4 +14,5 @@ from . import (  # noqa: F401
     file_center,
     courses_v2,
     staff_codes,
+    security,
 )
