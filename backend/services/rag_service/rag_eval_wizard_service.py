@@ -81,7 +81,7 @@ async def generate_eval_questions_data(
 ) -> list[dict]:
     """Use AI to generate evaluation questions from indexed course documents."""
     from backend.services.course_rag_service import course_rag_service
-    from backend.services.ai_gateway_service import AIGatewayService
+    from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
     store = course_rag_service._get_store(course_id)
     all_docs = store.similarity_search("", k=200)
@@ -154,7 +154,7 @@ Example of the EXACT format required:
   {{"query": "How many marks is the final exam and what topics does it cover?", "expected_doc_names": ["syllabus.pdf"], "expected_keywords": ["final", "40%", "marks", "exam"]}}
 ]"""
 
-    ai_service = AIGatewayService()
+    ai_service = get_ai_gateway_service()
     try:
         raw_response = await ai_service.chat_with_provider(message=prompt, context=None, provider=provider)
     except Exception as e:
@@ -240,6 +240,10 @@ async def _run_one_ab_mode(
     use_hybrid: bool,
     top_k: int,
     selected_docs: Optional[List[str]] = None,
+    rag_profile: str = "balanced",
+    debug_retrieval: bool = False,
+    allow_web_correction: bool = False,
+    force_query_class: str = "",
 ) -> dict:
     """Run evaluation for one retrieval mode.
 
@@ -296,13 +300,18 @@ async def _run_one_ab_mode(
             evaluable_total += 1
 
         t0 = time.perf_counter()
-        retrieved = await course_rag_service.retrieve_for_student(
+        detailed = await course_rag_service.retrieve_for_student_detailed(
             student_id="__evaluator__",
             query=query,
             top_k=top_k,
             course_ids=course_ids,
             use_hybrid=use_hybrid,
+            rag_profile=rag_profile,
+            debug_retrieval=debug_retrieval,
+            allow_web_correction=allow_web_correction,
+            force_query_class=force_query_class,
         )
+        retrieved = detailed.results
         latency_ms = round((time.perf_counter() - t0) * 1000, 2)
         latencies.append(latency_ms)
 
@@ -339,6 +348,11 @@ async def _run_one_ab_mode(
             "retrieved_count": len(retrieved),
             "correct_citations": scoring["correct_citations"],
             "latency_ms": latency_ms,
+            "retrieval_plan": detailed.retrieval_plan,
+            "retrieval_trace": detailed.retrieval_trace,
+            "retrieval_confidence": detailed.retrieval_confidence,
+            "fallback_reason": detailed.fallback_reason,
+            "evidence_spans": detailed.evidence_spans,
             "chunks": [
                 {
                     "doc": chunk.get("doc_name", ""),
@@ -385,18 +399,36 @@ async def run_ab_evaluation(
     top_k: int,
     mode: str,
     selected_docs: Optional[List[str]] = None,
+    rag_profile: str = "balanced",
+    debug_retrieval: bool = False,
+    allow_web_correction: bool = False,
+    force_query_class: str = "",
 ) -> dict:
     """Run A/B evaluation and return results dict."""
     results: Dict[str, Any] = {}
 
     if mode in ("hybrid", "comparison"):
         results["hybrid"] = await _run_one_ab_mode(
-            dataset, use_hybrid=True, top_k=top_k, selected_docs=selected_docs,
+            dataset,
+            use_hybrid=True,
+            top_k=top_k,
+            selected_docs=selected_docs,
+            rag_profile=rag_profile,
+            debug_retrieval=debug_retrieval,
+            allow_web_correction=allow_web_correction,
+            force_query_class=force_query_class,
         )
 
     if mode in ("vector", "comparison"):
         results["vector"] = await _run_one_ab_mode(
-            dataset, use_hybrid=False, top_k=top_k, selected_docs=selected_docs,
+            dataset,
+            use_hybrid=False,
+            top_k=top_k,
+            selected_docs=selected_docs,
+            rag_profile=rag_profile,
+            debug_retrieval=debug_retrieval,
+            allow_web_correction=allow_web_correction,
+            force_query_class=force_query_class,
         )
 
     if mode == "comparison" and "hybrid" in results and "vector" in results:
@@ -421,6 +453,10 @@ async def persist_ab_results(eval_result: dict, config: dict) -> str:
         "mode": config.get("mode", "comparison"),
         "top_k": config.get("top_k", 4),
         "course_id": config.get("course_id", ""),
+        "rag_profile": config.get("rag_profile", "balanced"),
+        "debug_retrieval": bool(config.get("debug_retrieval", False)),
+        "allow_web_correction": bool(config.get("allow_web_correction", False)),
+        "force_query_class": config.get("force_query_class", ""),
         "case_count": len(config.get("dataset", [])),
         "results": eval_result,
         "created_at": datetime.now(timezone.utc),

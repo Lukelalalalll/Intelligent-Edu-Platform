@@ -49,6 +49,7 @@ def bm25_retrieve_for_course(
     meta: dict,
     get_store_fn,
     chapter_id: str = "",
+    metadata_filters: Optional[dict] = None,
 ) -> List[Dict[str, Any]]:
     """BM25 sparse retrieval with in-memory cache.
 
@@ -155,6 +156,7 @@ def bm25_retrieve_for_course(
 
     top_indices = np.argsort(scores)[::-1][:top_k]
     results = []
+    active_filters = metadata_filters or {}
     for idx in top_indices:
         score = float(scores[idx])
         if score < 0.01:
@@ -163,19 +165,60 @@ def bm25_retrieve_for_course(
         md = entry.metadatas[idx] if idx < len(entry.metadatas) else {}
         md = md or {}
         c_doc_name = md.get("doc_name", "")
+        node_type = str(md.get("node_type") or "leaf_chunk")
+        if node_type not in {"leaf_chunk", "table_chunk", "section_summary"}:
+            continue
         c_chapter = md.get("chapter_id", "") or doc_chapter_map.get(str(c_doc_name), "")
         if chapter_id and str(c_chapter) != chapter_id:
             continue
+        if active_filters.get("doc_name") and str(c_doc_name) != str(active_filters["doc_name"]):
+            continue
+        if active_filters.get("node_type") and str(node_type) != str(active_filters["node_type"]):
+            continue
+        if active_filters.get("section_path") and str(md.get("section_path", "")) != str(active_filters["section_path"]):
+            continue
+        if active_filters.get("heading_level") and int(md.get("heading_level", 0) or 0) != int(active_filters["heading_level"]):
+            continue
+        page_start = int(md.get("page_start", md.get("page_num", -1)) or -1)
+        page_end = int(md.get("page_end", md.get("page_num", -1)) or -1)
+        if active_filters.get("page_start") and page_start != int(active_filters["page_start"]):
+            continue
+        if active_filters.get("page_end") and page_end != int(active_filters["page_end"]):
+            continue
+        query_tokens_set = set(query_tokens)
+        title_tokens = set(_tokenize(str(md.get("section_title", "")) or str(c_doc_name or "")))
+        body_tokens = set(_tokenize(text))
+        title_overlap = len(query_tokens_set & title_tokens) / max(1, len(query_tokens_set))
+        heading_overlap = len(query_tokens_set & set(_tokenize(str(md.get("heading_path", ""))))) / max(1, len(query_tokens_set))
+        lexical_overlap = len(query_tokens_set & body_tokens) / max(1, len(query_tokens_set))
+        filter_match = 1.0 if active_filters else 0.0
         results.append({
             "course_id": course_id,
             "text": text,
             "score": round(score, 4),
+            "sparse_score": round(score, 4),
+            "retrieval_score": round(score, 4),
             "doc_name": c_doc_name,
             "chapter_id": c_chapter,
             "section_title": md.get("section_title", ""),
             "section_path": md.get("section_path", ""),
+            "heading_path": md.get("heading_path", md.get("section_path", "")),
             "chunk_id": md.get("chunk_id", -1),
             "page_num": md.get("page_num", -1),
+            "page_start": page_start,
+            "page_end": page_end,
+            "node_type": node_type,
+            "element_type": md.get("element_type", "paragraph"),
+            "parser_used": md.get("parser_used", ""),
+            "token_count": md.get("token_count", 0),
+            "index_version": md.get("index_version", ""),
+            "retrieval_sources": ["bm25"],
+            "source_rank": int(len(results)),
+            "title_overlap": round(title_overlap, 4),
+            "heading_overlap": round(heading_overlap, 4),
+            "lexical_overlap": round(lexical_overlap, 4),
+            "filter_match": filter_match,
+            "heading_level": int(md.get("heading_level", 0) or 0),
         })
     return results
 

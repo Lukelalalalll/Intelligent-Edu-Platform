@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 def _get_cross_encoder():
     """Lazy-load the cross-encoder model (singleton, ~200MB on first load)."""
     from sentence_transformers import CrossEncoder
-    return CrossEncoder("BAAI/bge-reranker-base", max_length=512)
+    from backend.config import Config
+
+    return CrossEncoder(Config.RAG_NEURAL_RERANK_MODEL, max_length=768)
 
 
 def neural_rerank(
@@ -33,7 +35,7 @@ def neural_rerank(
         return candidates
 
     encoder = _get_cross_encoder()
-    pairs = [(query, str(c.get("text", ""))[:400]) for c in candidates]
+    pairs = [(query, _build_reranker_input(c)) for c in candidates]
     raw_scores = encoder.predict(pairs)
 
     # Normalize cross-encoder scores to [0, 1] via sigmoid-like mapping
@@ -47,3 +49,17 @@ def neural_rerank(
 
     candidates.sort(key=lambda x: float(x.get("score", 0.0)), reverse=True)
     return candidates[:top_k]
+
+
+def _build_reranker_input(candidate: Dict[str, Any]) -> str:
+    title = str(candidate.get("section_title") or candidate.get("doc_name") or "").strip()
+    heading = str(candidate.get("heading_path") or "").strip()
+    text = str(candidate.get("text", "")).strip()
+    excerpt = text[:700]
+    parts = []
+    if title:
+        parts.append(f"Title: {title}")
+    if heading and heading != title:
+        parts.append(f"Heading: {heading}")
+    parts.append(f"Passage: {excerpt}")
+    return "\n".join(parts)

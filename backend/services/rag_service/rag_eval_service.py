@@ -82,6 +82,10 @@ async def run_evaluation(
 
     top_k = config.get("top_k", 5)
     use_hybrid = config.get("use_hybrid", True)
+    rag_profile = str(config.get("rag_profile", "balanced") or "balanced").strip().lower()
+    debug_retrieval = bool(config.get("debug_retrieval", False))
+    allow_web_correction = bool(config.get("allow_web_correction", False))
+    force_query_class = str(config.get("force_query_class", "") or "").strip()
 
     run_id = str(uuid.uuid4())
     started_at = datetime.now(timezone.utc)
@@ -98,13 +102,18 @@ async def run_evaluation(
         expected_keywords = [str(k) for k in case.get("expected_keywords", []) if k]
 
         t0 = time.perf_counter()
-        retrieved = await course_rag_service.retrieve_for_student(
+        detailed = await course_rag_service.retrieve_for_student_detailed(
             student_id="eval_runner",
             query=query,
             top_k=top_k,
             course_ids=[course_id],
             use_hybrid=use_hybrid,
+            rag_profile=rag_profile,
+            debug_retrieval=debug_retrieval,
+            allow_web_correction=allow_web_correction,
+            force_query_class=force_query_class,
         )
+        retrieved = detailed.results
         latency_ms = round((time.perf_counter() - t0) * 1000, 2)
         total_latency += latency_ms
 
@@ -127,6 +136,11 @@ async def run_evaluation(
             "correct_citations": scoring["correct_citations"],
             "latency_ms": latency_ms,
             "top_k": top_k,
+            "retrieval_plan": detailed.retrieval_plan,
+            "retrieval_trace": detailed.retrieval_trace,
+            "retrieval_confidence": detailed.retrieval_confidence,
+            "fallback_reason": detailed.fallback_reason,
+            "evidence_spans": detailed.evidence_spans,
         }
         results.append(result_doc)
 
@@ -184,18 +198,27 @@ async def case_test(
     query: str,
     top_k: int = 5,
     use_hybrid: bool = True,
+    rag_profile: str = "balanced",
+    debug_retrieval: bool = False,
+    allow_web_correction: bool = False,
+    force_query_class: str = "",
 ) -> dict:
     """Single-query debug test — not persisted as a run."""
     from backend.services.course_rag_service import course_rag_service
 
     t0 = time.perf_counter()
-    retrieved = await course_rag_service.retrieve_for_student(
+    detailed = await course_rag_service.retrieve_for_student_detailed(
         student_id="case_test",
         query=query,
         top_k=top_k,
         course_ids=[course_id],
         use_hybrid=use_hybrid,
+        rag_profile=rag_profile,
+        debug_retrieval=debug_retrieval,
+        allow_web_correction=allow_web_correction,
+        force_query_class=force_query_class,
     )
+    retrieved = detailed.results
     latency_ms = round((time.perf_counter() - t0) * 1000, 2)
 
     return {
@@ -205,6 +228,11 @@ async def case_test(
         "use_hybrid": use_hybrid,
         "latency_ms": latency_ms,
         "results": retrieved,
+        "retrieval_plan": detailed.retrieval_plan,
+        "retrieval_trace": detailed.retrieval_trace,
+        "retrieval_confidence": detailed.retrieval_confidence,
+        "fallback_reason": detailed.fallback_reason,
+        "evidence_spans": detailed.evidence_spans,
     }
 
 

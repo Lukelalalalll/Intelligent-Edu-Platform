@@ -36,6 +36,18 @@ class EvaluateABRequest(BaseModel):
         default=[],
         description="If non-empty, only chunks from these documents are considered during scoring.",
     )
+    rag_profile: Literal["low-latency", "balanced", "high-recall"] = "balanced"
+    debug_retrieval: bool = False
+    allow_web_correction: bool = False
+    force_query_class: Literal[
+        "keyword/factoid",
+        "concept/explanation",
+        "comparison",
+        "multi-hop",
+        "chapter/doc constrained",
+        "out-of-domain",
+        "",
+    ] = ""
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +71,18 @@ class CaseTestRequest(BaseModel):
     query: str = Field(..., min_length=1)
     top_k: int = Field(default=5, ge=1, le=20)
     use_hybrid: bool = True
+    rag_profile: Literal["low-latency", "balanced", "high-recall"] = "balanced"
+    debug_retrieval: bool = False
+    allow_web_correction: bool = False
+    force_query_class: Literal[
+        "keyword/factoid",
+        "concept/explanation",
+        "comparison",
+        "multi-hop",
+        "chapter/doc constrained",
+        "out-of-domain",
+        "",
+    ] = ""
 
 
 class SetBaselineRequest(BaseModel):

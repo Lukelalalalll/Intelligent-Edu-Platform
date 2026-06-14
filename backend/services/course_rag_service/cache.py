@@ -50,18 +50,48 @@ def _get_embed_fn():
     return _embed_fn
 
 
-def _cache_key(course_ids: List[str], query: str) -> str:
+def _cache_key(
+    course_ids: List[str],
+    query: str,
+    *,
+    use_hybrid: bool = True,
+    rag_profile: str = "",
+    force_query_class: str = "",
+    chapter_id: str = "",
+    metadata_filters: Optional[dict[str, Any]] = None,
+) -> str:
+    filter_sig = ""
+    if metadata_filters:
+        filter_sig = "|".join(f"{k}={metadata_filters[k]}" for k in sorted(metadata_filters))
     norm = " ".join(sorted(course_ids)) + "|" + query.lower().strip()
+    norm += f"|hybrid={int(bool(use_hybrid))}|profile={rag_profile}|qclass={force_query_class}|chapter={chapter_id}|filters={filter_sig}"
     return hashlib.sha1(norm.encode("utf-8")).hexdigest()
 
 
-def get_cached_results(course_ids: List[str], query: str) -> Optional[List[Dict[str, Any]]]:
+def get_cached_results(
+    course_ids: List[str],
+    query: str,
+    *,
+    use_hybrid: bool = True,
+    rag_profile: str = "",
+    force_query_class: str = "",
+    chapter_id: str = "",
+    metadata_filters: Optional[dict[str, Any]] = None,
+) -> Optional[List[Dict[str, Any]]]:
     """Return cached retrieval results or None.
 
     L1: exact key match (fast).
     L2: embedding cosine similarity > threshold (P1-3).
     """
-    key = _cache_key(course_ids, query)
+    key = _cache_key(
+        course_ids,
+        query,
+        use_hybrid=use_hybrid,
+        rag_profile=rag_profile,
+        force_query_class=force_query_class,
+        chapter_id=chapter_id,
+        metadata_filters=metadata_filters,
+    )
 
     # L1: exact match
     exact = _retrieval_cache.get(key)
@@ -92,9 +122,27 @@ def get_cached_results(course_ids: List[str], query: str) -> Optional[List[Dict[
     return None
 
 
-def set_cached_results(course_ids: List[str], query: str, results: List[Dict[str, Any]]) -> None:
+def set_cached_results(
+    course_ids: List[str],
+    query: str,
+    results: List[Dict[str, Any]],
+    *,
+    use_hybrid: bool = True,
+    rag_profile: str = "",
+    force_query_class: str = "",
+    chapter_id: str = "",
+    metadata_filters: Optional[dict[str, Any]] = None,
+) -> None:
     """Store retrieval results in both L1 (exact) and L2 (embedding) caches."""
-    key = _cache_key(course_ids, query)
+    key = _cache_key(
+        course_ids,
+        query,
+        use_hybrid=use_hybrid,
+        rag_profile=rag_profile,
+        force_query_class=force_query_class,
+        chapter_id=chapter_id,
+        metadata_filters=metadata_filters,
+    )
 
     # L1: exact cache
     _retrieval_cache[key] = results
