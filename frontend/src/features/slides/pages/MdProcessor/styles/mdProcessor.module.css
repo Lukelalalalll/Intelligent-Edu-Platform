@@ -529,14 +529,6 @@
 /* Placeholder class definitions so that JS imports don't trigger undefined-property errors */
 
 @media (max-width: 768px) {
-    .pageHeader {
-        padding: 2.5rem 1.5rem;
-    }
-
-    .pageHeader h1 {
-        font-size: 1.8rem;
-    }
-
     .cardBody {
         padding: 0 !important;
     }

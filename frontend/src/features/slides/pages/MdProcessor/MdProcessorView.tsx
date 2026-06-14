@@ -39,6 +39,7 @@ export default function MdProcessor({
                     subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
                     className={styles.pageHeader}
                     as="header"
+                    variant="workspace"
                 />
             )}
 

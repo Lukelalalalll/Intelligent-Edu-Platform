@@ -51,6 +51,7 @@ export default function VideoGenView({ viewSwitchSlot, hideBanner }: { viewSwitc
                     className={styles.videoBanner}
                     title="AI Teaching Video Generator"
                     subtitle="Upload content, generate narration scripts, customise scenes and create teaching videos"
+                    variant="workspace"
                 />
             )}
 

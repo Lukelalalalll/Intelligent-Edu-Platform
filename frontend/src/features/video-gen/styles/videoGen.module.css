@@ -6,10 +6,8 @@
 }
 
 .page {
-    max-width: 1440px;
     width: 100%;
-    margin: 0 auto;
-    padding: 32px 32px 60px;
+    padding: 0 0 60px;
 }
 
 .videoBanner { margin-bottom: 1rem; }
@@ -17,7 +15,7 @@
 /* ── Stepper (shared with question-bank) ── */
 .stepperWrap {
     composes: stepperWrap from '../../../shared/styles/stepper.module.css';
-    max-width: 1440px;
+    max-width: 100%;
     margin-top: -5px;
 }
 .stepperItem { composes: stepperItem from '../../../shared/styles/stepper.module.css'; }
@@ -39,8 +37,8 @@
     border-radius: var(--radius-lg, 16px);
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: var(--shadow-sm, 0 2px 12px rgba(0,0,0,0.06));
-    padding: 2.5rem;
-    margin-bottom: 2.5rem;
+    padding: var(--card-padding);
+    margin-bottom: var(--card-stack-gap);
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
@@ -416,7 +414,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 1.6rem;
+    font-size: 1.45rem;
     font-weight: 800;
     color: var(--text-main, #0f172a);
     margin-bottom: 24px;

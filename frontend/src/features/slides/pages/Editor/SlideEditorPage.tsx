@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { slidesEditorApi } from '../../api/slidesApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import { useEditorSession } from './hooks/useEditorSession';
 import SlideEditorView from './SlideEditorView';
 
@@ -12,7 +13,7 @@ export default function SlideEditorPage() {
     const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
 
-    const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+    const API_ROOT = resolveApiRoot();
 
     const handleTextChange = useCallback((id: string, text: string) => {
         dispatch({ type: 'EDIT_TEXT', slideIdx: activeSlide, id, content: text });

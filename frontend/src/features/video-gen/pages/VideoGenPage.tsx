@@ -27,6 +27,7 @@ export default function VideoGenPage() {
                 className={videoStyles.videoBanner}
                 title="AI Teaching Video Generator"
                 subtitle="Upload content, generate narration scripts, customise scenes and create teaching videos"
+                variant="workspace"
             />
             {viewSwitchJSX}
             {activeView === 'workflow' && <VideoGenView hideBanner />}

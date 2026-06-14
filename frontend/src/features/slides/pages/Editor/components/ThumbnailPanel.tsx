@@ -1,9 +1,10 @@
 import React from 'react';
 import type { EditorSession } from '../../../api/slidesApi';
 import type { EditorState } from '../hooks/useEditorSession';
+import { resolveApiRoot } from '@/shared/api/root';
 import styles from '../styles/SlideEditor.module.css';
 
-const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+const API_ROOT = resolveApiRoot();
 
 interface Props {
     slides: EditorSession['slides'] | undefined;
@@ -27,6 +28,7 @@ export default function ThumbnailPanel({ slides, activeIndex, onSelect }: Props)
                         src={`${API_ROOT}${slide.preview_url}`}
                         alt={`Slide ${idx + 1}`}
                         loading="lazy"
+                        decoding="async"
                     />
                     <span className={styles.thumbLabel}>{idx + 1}</span>
                 </div>

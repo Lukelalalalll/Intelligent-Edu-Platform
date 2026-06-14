@@ -1,6 +1,6 @@
 import type React from 'react';
 import type { AIProvider } from '../../../../../shared/aiProvider';
-import styles from '../styles/pptTemplate.module.css';
+import styles from '../styles/PptTemplateSteps.module.css';
 import type { LayoutItem, SlideSchemaItem } from '../types';
 
 type Props = {
@@ -158,6 +158,8 @@ export default function LayoutAssignmentStepView({
                                         <img
                                             src={getLayoutPreviewSrc(selectedTheme, layout.name)}
                                             alt={layout.name}
+                                            loading="lazy"
+                                            decoding="async"
                                             onError={(e) => onLayoutPreviewError(e, selectedTheme, layout.name)}
                                         />
                                     </div>

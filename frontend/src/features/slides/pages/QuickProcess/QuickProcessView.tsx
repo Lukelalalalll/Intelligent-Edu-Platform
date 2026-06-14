@@ -37,6 +37,7 @@ export default function QuickProcess({
                 title={<><i className="fas fa-magic"></i> Quick Content Processor</>}
                 subtitle="Auto-generate structured PPT content and scripts from all chapters"
                 as="header"
+                variant="workspace"
             />
 
             <div className={stepStyles.stepperWrap} style={{ maxWidth: '900px' }}>

@@ -1,3 +1,5 @@
+import { resolveApiRoot } from '@/shared/api/root';
+
 type ThemeFamily = 'Business' | 'Classic' | 'Dark' | 'Light';
 
 // These lists mirror exactly what is on disk in backend/static/img/{family}/.
@@ -57,8 +59,7 @@ function resolveFamily(raw: string): ThemeFamily | null {
 }
 
 function apiRootPrefix(): string {
-    const root = String(import.meta.env.VITE_API_ROOT || '').trim().replace(/\/$/, '');
-    return root;
+    return resolveApiRoot();
 }
 
 export function resolveLayoutImageUrl(themeFamilyOrName: string, layoutName: string): string | null {

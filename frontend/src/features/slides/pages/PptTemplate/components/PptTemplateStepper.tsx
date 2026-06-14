@@ -1,4 +1,4 @@
-import styles from '../styles/pptTemplate.module.css';
+import styles from '../styles/PptTemplateSteps.module.css';
 
 type StepItem = {
     step: number;

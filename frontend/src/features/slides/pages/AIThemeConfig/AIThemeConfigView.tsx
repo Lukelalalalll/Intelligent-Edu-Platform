@@ -5,6 +5,7 @@ import { THEME_OPTIONS } from './types';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import SlidesLoadingState from '../../components/SlidesLoadingState';
 import client from '@/shared/api/client';
+import { resolveApiRoot } from '@/shared/api/root';
 import styles from './styles/aiThemeConfig.module.css';
 
 interface AIThemeConfigViewProps {
@@ -22,7 +23,7 @@ interface AIThemeConfigViewProps {
 }
 
 function buildFullUrl(path: string): string {
-  const base = (client.defaults.baseURL || 'http://localhost:5009').replace(/\/+$/, '');
+  const base = resolveApiRoot();
   return `${base}${path}`;
 }
 
@@ -85,6 +86,7 @@ export default function AIThemeConfigView({
         subtitle="Choose a base style and customize it with natural language"
         className={styles.pageHeader}
         as="header"
+        variant="workspace"
       />
 
       {/* Back nav */}

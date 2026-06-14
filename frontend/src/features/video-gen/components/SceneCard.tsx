@@ -185,7 +185,7 @@ const SceneCard: React.FC<Props> = React.memo(({ scene, idx, subtitles, onChange
             <span className={s.label}>Embedded Layout Image</span>
             <div className={s.layoutImgUpload} onClick={() => layoutFileRef.current?.click()}>
               {localScene._layoutImagePreviewUrl ? (
-                <img src={localScene._layoutImagePreviewUrl} alt="layout img" />
+                <img src={localScene._layoutImagePreviewUrl} alt="layout img" loading="lazy" decoding="async" />
               ) : (
                 <span><i className="fas fa-image" /> Upload Image</span>
               )}

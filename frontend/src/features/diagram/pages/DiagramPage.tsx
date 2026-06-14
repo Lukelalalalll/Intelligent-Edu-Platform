@@ -9,11 +9,12 @@ import { useDiagramGenerate } from '../hooks/useDiagramGenerate';
 import { useDiagramImageExtract } from '../hooks/useDiagramImageExtract';
 import { transferApi } from '../../chat/api/transferApi';
 import * as historyApi from '../api/historyApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
 import s from '../../../styles/history.module.css';
 import styles from '../styles/diagram.module.css';
 
-const BASE_URL = 'http://localhost:5009';
+const BASE_URL = resolveApiRoot();
 
 /** Normalise an image entry – may be a plain string or {src: '…'} object. */
 const toSrc = (v: unknown): string => {
@@ -160,6 +161,7 @@ export default function DiagramPage() {
                 title="Visual Tool"
                 subtitle="Extract diagrams & images, search SVGs, and generate with AI"
                 className={styles.diagramBanner}
+                variant="workspace"
             />
             {viewSwitchJSX}
             {activeView === 'workflow' && (

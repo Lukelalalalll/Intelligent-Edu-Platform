@@ -34,6 +34,7 @@ export default function DiagramTool({
                     className={styles.diagramBanner}
                     title="Visual Tool"
                     subtitle="Extract diagrams & images, search SVGs, and generate with AI"
+                    variant="workspace"
                 />
             )}
 

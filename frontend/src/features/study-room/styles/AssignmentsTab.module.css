@@ -109,7 +109,7 @@
     position: relative;
     padding: 28px 32px;
     text-align: left;
-    background: #fff;
+    background: var(--surface-raised);
     border: 1px solid rgba(0, 123, 85, 0.1);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
@@ -203,8 +203,8 @@
     padding: 28px 24px;
     text-align: center;
     color: var(--text-sub);
-    background: #f8fafc;
-    border: 2px dashed #cbd5e1;
+    background: var(--bg-input);
+    border: 2px dashed var(--border-color);
     border-radius: 12px;
     cursor: pointer;
     transition: var(--transition);
@@ -225,7 +225,7 @@
 .submissionInfo {
     padding: 16px 20px;
     font-size: 0.9rem;
-    background: #f1f5f9;
+    background: var(--bg-input);
     border-radius: 10px;
 }
 
@@ -294,7 +294,8 @@
     max-height: 85vh;
     padding: 28px 28px 24px;
     overflow-y: auto;
-    background: #fff;
+    background: var(--surface-raised);
+    border: 1px solid var(--line-soft);
     border-radius: 16px;
     box-shadow: 0 24px 80px rgba(0,0,0,0.18);
     animation: slideUp 0.2s ease;
@@ -333,7 +334,7 @@
 
 .feedbackClose:hover {
     color: var(--text-main);
-    background: #f1f5f9;
+    background: var(--bg-input);
 }
 
 .feedbackScore {
@@ -380,7 +381,7 @@
     justify-content: space-between;
     margin-bottom: 6px;
     padding: 8px 12px;
-    background: #f8fafc;
+    background: var(--bg-soft);
     border-radius: 8px;
 }
 

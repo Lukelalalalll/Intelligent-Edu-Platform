@@ -1,9 +1,9 @@
 /* frontend/src/styles/sub1/quickProcess.module.css */
 
 .container {
-    max-width: 1300px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 0 24px 4rem;
+    padding: 0 var(--page-padding-inline) max(4rem, var(--page-padding-block));
     flex: 1;
 }
 
@@ -11,7 +11,7 @@
     display: grid;
     grid-template-columns: 1.8fr 1fr;
     /* Left content column is slightly wider for comfortable reading */
-    gap: 2.5rem;
+    gap: 2rem;
     align-items: stretch;
     margin-top: 1rem;
 }
@@ -56,7 +56,7 @@
     bottom: 0;
     display: flex;
     flex-direction: column;
-    padding: 2.5rem;
+    padding: var(--card-padding);
 }
 
 .markdownContent {
@@ -70,8 +70,8 @@
 .sectionItem {
     background: #fff;
     border-radius: var(--radius-md);
-    padding: 2.5rem;
-    margin-bottom: 2rem;
+    padding: var(--card-padding);
+    margin-bottom: var(--card-stack-gap);
     border: 1px solid rgba(0, 0, 0, 0.05);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
     transition: var(--transition);

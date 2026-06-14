@@ -52,7 +52,7 @@
     font-size: 0.85rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.25s !important;
+    transition: background-color 0.25s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease !important;
     box-shadow: none !important;
 }
 .uploadBtn:hover {
@@ -66,9 +66,9 @@
 
 .splitLayout {
     display: grid;
-    grid-template-columns: 70% 30%;
-    gap: 20px;
-    height: calc(100vh - var(--nav-height, 72px) - 130px);
+    grid-template-columns: minmax(0, 7fr) minmax(320px, 3fr);
+    gap: 16px;
+    height: calc(100vh - var(--nav-height, 72px) - 108px);
     min-height: 600px;
 }
 
@@ -76,6 +76,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
     min-height: 0;
     background: #fff;
     border-radius: var(--radius-lg, 24px);
@@ -88,6 +89,7 @@
 .rightPanel {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     min-height: 0;
     background: #fff;
     border-radius: var(--radius-lg, 24px);
@@ -165,7 +167,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s !important;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease !important;
     box-shadow: none !important;
     padding: 0 !important;
 }
@@ -221,7 +223,7 @@
     font-size: 0.78rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
     box-shadow: none !important;
 }
 .viewerCloseBtn:hover {
@@ -304,7 +306,7 @@
     font-size: 0.76rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.15s !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
     white-space: nowrap;
     box-shadow: none !important;
 }
@@ -335,6 +337,24 @@
     display: flex;
     flex-direction: column;
 }
+.pdfStatusMessage {
+    display: flex;
+    flex: 1;
+    min-height: 240px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 3rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.pdfStatusMessage i {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+}
+
 /* Let PdfHighlighter fill the wrapper fully and scroll itself */
 .pdfHighlighterWrap :global(.PdfHighlighter) {
     position: absolute !important;
@@ -480,7 +500,7 @@
     font-size: 0.78rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease !important;
     box-shadow: none !important;
 }
 .btnExplain {
@@ -626,7 +646,7 @@
     font-size: 0.72rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
     box-shadow: none !important;
 }
 .saveNoteBtn:hover {
@@ -687,7 +707,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease !important;
     box-shadow: none !important;
     padding: 0 !important;
     flex-shrink: 0;
@@ -712,7 +732,7 @@
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     margin-top: 12px;
     flex-shrink: 0;
 }
@@ -787,7 +807,7 @@
     border-radius: 50% !important;
     border: 2px solid transparent !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
     padding: 0 !important;
     box-shadow: none !important;
 }
@@ -808,7 +828,7 @@
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: background-color 0.2s ease, transform 0.2s ease !important;
     box-shadow: none !important;
 }
 .addNoteBtn:hover {
@@ -872,7 +892,7 @@
     color: #991b1b !important; /* NOSONAR */
     font-size: 0.7rem !important;
     cursor: pointer;
-    transition: all 0.2s !important;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
     box-shadow: none !important;
 }
 .noteDeleteBtn:hover {
@@ -976,6 +996,25 @@
 }
 
 /* ========== Responsive ========== */
+
+@media (prefers-reduced-motion: reduce) {
+    .selPopover,
+    .actionCard,
+    .msgBubble,
+    .streamingDot,
+    .noteItem {
+        animation: none !important;
+    }
+
+    .uploadBtn:hover,
+    .actionBtn:hover,
+    .coachSendBtn:hover:not(:disabled),
+    .colorDot:hover,
+    .addNoteBtn:hover,
+    .noteItem:hover {
+        transform: none !important;
+    }
+}
 
 @media (max-width: 900px) {
     .splitLayout {

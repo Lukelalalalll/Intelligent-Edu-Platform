@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import PDFViewer from '../components/PDFViewer';
 import CozeAssistant from '../components/CozeAssistant';
 import RubricPanel from '../components/RubricPanel';
 import { teacherApi } from '../../../api/mailboxApi';
@@ -17,6 +16,7 @@ import type { Annotation } from '../../../types/api';
  * mismatches that cause "first load fails, refresh works".
  */
 const apiRoot = resolveApiRoot();
+const PDFViewer = lazy(() => import('../components/PDFViewer'));
 
 // ==========================================
 // Phase 1: TypeScript Types
@@ -425,12 +425,14 @@ export default function GradingWorkbench() {
                                 <div className={styles.tag}><i className="fas fa-map-marker-alt" /> {detail?.submission?.studentName || 'Student'}</div>
                             </div>
                         </div>
-                        <PDFViewer
-                            file={pdfUrl}
-                            annotations={annotations as any}
-                            onSaveAnnotation={actions.saveAnnotation as any}
-                            onDeleteAnnotation={actions.deleteAnnotation}
-                        />
+                        <Suspense fallback={<div className={styles.loading} style={{ padding: 20 }}>Loading PDF viewer...</div>}>
+                            <PDFViewer
+                                file={pdfUrl}
+                                annotations={annotations as any}
+                                onSaveAnnotation={actions.saveAnnotation as any}
+                                onDeleteAnnotation={actions.deleteAnnotation}
+                            />
+                        </Suspense>
                     </div>
 
                     <div key={activePane} className={`${styles.pane} ${styles.rightPaneAnimated}`}>

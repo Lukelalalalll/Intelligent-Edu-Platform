@@ -100,6 +100,7 @@ export default function PublishHomeworkPage() {
                 subtitle="Create assignments and set submission constraints for your courses."
                 className={styles.pageHeader}
                 as="header"
+                variant="workspace"
             />
 
             <div className={styles.mainCard}>

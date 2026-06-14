@@ -24,6 +24,7 @@ export default function Specify({
             <WelcomeBanner
                 title="Configure Your Scripts"
                 subtitle="Customize bullet points, and generate talking scripts"
+                variant="workspace"
             />
 
             {loading ? (

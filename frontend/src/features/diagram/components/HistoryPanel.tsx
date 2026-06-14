@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import HistoryPanel from '../../../shared/components/HistoryPanel/HistoryPanel';
 import * as api from '../api/historyApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import s from '../../../styles/history.module.css';
 
-const BASE_URL = 'http://localhost:5009';
+const BASE_URL = resolveApiRoot();
 
 /** Normalise an image entry – may be a plain string or {src: '…'} object. */
 const toSrc = (v: unknown): string => {

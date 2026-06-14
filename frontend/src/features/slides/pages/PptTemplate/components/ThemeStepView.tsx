@@ -1,5 +1,5 @@
 import type React from 'react';
-import styles from '../styles/pptTemplate.module.css';
+import styles from '../styles/PptTemplateSteps.module.css';
 import type { ThemeItem } from '../types';
 
 type Props = {
@@ -35,6 +35,8 @@ export default function ThemeStepView({
                             <img
                                 src={getThemePreviewSrc(theme.name)}
                                 alt={theme.name}
+                                loading="lazy"
+                                decoding="async"
                                 onError={(e) => onThemePreviewError(e, theme.name)}
                             />
                         </div>

@@ -1,10 +1,11 @@
 import React from 'react';
 import HistoryPanel, { type HistoryApi } from '../../../shared/components/HistoryPanel/HistoryPanel';
 import * as api from '../api/videoApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { GenerationHistoryItem } from '../../../types/api';
 import s from '../../../styles/history.module.css';
 
-const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 type VideoHistoryParams = {
     lang?: string;

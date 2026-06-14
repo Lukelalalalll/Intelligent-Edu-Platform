@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from '../styles/videoGen.module.css';
 import { videoApi } from '../api/videoApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { Scene } from '../data/themes';
 import VideoPlayerWithChapters from './VideoPlayerWithChapters';
 
-const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 interface ClipError {
     clip_index: number;

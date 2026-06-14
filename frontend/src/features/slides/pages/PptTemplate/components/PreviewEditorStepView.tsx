@@ -1,5 +1,5 @@
 import type React from 'react';
-import styles from '../styles/pptTemplate.module.css';
+import styles from '../styles/PptTemplateSteps.module.css';
 import type { EditorSession } from '../../../api/slidesApi';
 import type { FloatingImage } from '../types';
 import SlideCanvas from '../../Editor/components/SlideCanvas';
@@ -101,6 +101,8 @@ export default function PreviewEditorStepView({
                                     src={`${apiBase}${slide.preview_url}`}
                                     alt={`Slide ${idx + 1}`}
                                     draggable={false}
+                                    loading={idx === activeSlideIdx ? 'eager' : 'lazy'}
+                                    decoding="async"
                                 />
                             </div>
                             <span className={styles.sidebarThumbLabel}>{idx + 1}</span>

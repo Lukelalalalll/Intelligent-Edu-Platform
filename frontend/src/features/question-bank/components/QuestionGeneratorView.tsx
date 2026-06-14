@@ -36,6 +36,7 @@ export default function QuestionGenerator({ states, handlers }) {
                 className={styles.sub2Banner}
                 title="Intelligent Question Extraction and Generation"
                 subtitle="Extract question content from PDF and intelligently generate new practice exercises"
+                variant="workspace"
             />
 
             <div className={styles.viewSwitch}>

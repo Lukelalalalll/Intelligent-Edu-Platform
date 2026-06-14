@@ -143,6 +143,7 @@ export default function Highlighter({
             <WelcomeBanner
                 title="Markdown Highlighter"
                 subtitle="Read, highlight, and manage key concepts from your documents"
+                variant="workspace"
             />
 
             <div className={styles.workspaceGrid}>

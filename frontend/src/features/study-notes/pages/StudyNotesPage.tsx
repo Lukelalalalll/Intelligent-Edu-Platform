@@ -98,6 +98,7 @@ export default function StudyNotesPage() {
                 subtitle="Upload lecture PDFs to generate structured notes and flashcards"
                 className={styles.pageHeader}
                 as="header"
+                variant="workspace"
             />
             <div className={s.viewSwitch}>
                 <Button type="button" variant={activeView === 'workflow' ? 'primary' : 'outline'} onClick={() => setActiveView('workflow')}>

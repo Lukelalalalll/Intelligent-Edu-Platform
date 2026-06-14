@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import styles from '../styles/videoGen.module.css';
 import { videoApi } from '../api/videoApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { Scene } from '../data/themes';
 import { createScene } from '../data/themes';
 
@@ -27,7 +28,7 @@ export default function StepScript({ inputData, lang, provider, audience, maxSeg
     const [progressMsg, setProgressMsg] = useState('');
     const [error, setError] = useState('');
 
-    const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+    const apiRoot = resolveApiRoot();
 
     useEffect(() => {
         let cancelled = false;

@@ -231,11 +231,4 @@
         justify-content: center;
     }
 
-    .pageHeader {
-        padding: 2.5rem 1.5rem;
-    }
-
-    .pageHeader h1 {
-        font-size: 1.8rem;
-    }
 }

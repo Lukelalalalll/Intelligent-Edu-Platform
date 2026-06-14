@@ -116,6 +116,7 @@ export default function MdProcessor() {
                 subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
                 className={mdStyles.pageHeader}
                 as="header"
+                variant="workspace"
             />
             {viewSwitchJSX}
             {activeView === 'workflow' && <MdProcessorView {...pageProps} hideBanner viewSwitchSlot={null} />}

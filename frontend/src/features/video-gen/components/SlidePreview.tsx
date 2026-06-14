@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveApiRoot } from '@/shared/api/root';
 import { THEMES } from '../data/themes';
 import type { Scene } from '../data/themes';
 import s from '../styles/sceneEditor.module.css';
@@ -14,7 +15,7 @@ interface Props {
   isFullScreen?: boolean;
 }
 
-const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles, isFullScreen = false }) => {
   const t = THEMES[scene.themeId] ?? THEMES['dark-ocean'];
@@ -53,7 +54,7 @@ const SlidePreview: React.FC<Props> = ({ scene, idx, subtitles, isFullScreen = f
   const renderImgPlaceholder = (w: string, h: string) => (
     <div style={{ width: w, height: h, background: 'rgba(255,255,255,0.08)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
       {layoutImgSrc
-        ? <img src={layoutImgSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ? <img src={layoutImgSrc} alt="" loading={isFullScreen ? 'eager' : 'lazy'} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : <i className="fas fa-image" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 18 }} />}
     </div>
   );

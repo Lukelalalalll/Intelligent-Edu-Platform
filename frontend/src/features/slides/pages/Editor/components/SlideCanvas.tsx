@@ -3,9 +3,10 @@ import type { EditorSlide, EditorBbox } from '../../../api/slidesApi';
 import type { SlideEdits } from '../hooks/useEditorSession';
 import EditableTextOverlay from './EditableTextOverlay';
 import ImageUploadOverlay from './ImageUploadOverlay';
+import { resolveApiRoot } from '@/shared/api/root';
 import styles from '../styles/SlideEditor.module.css';
 
-const API_ROOT = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+const API_ROOT = resolveApiRoot();
 
 interface Props {
     slide: EditorSlide | undefined;

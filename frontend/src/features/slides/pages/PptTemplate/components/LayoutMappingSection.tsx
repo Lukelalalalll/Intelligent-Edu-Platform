@@ -189,6 +189,8 @@ export default function LayoutMappingSection({
                                                 <img
                                                     src={previewImageUrl}
                                                     alt={layout.name}
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }}
                                                 />
                                             ) : previewPlaceholders.length > 0 ? (

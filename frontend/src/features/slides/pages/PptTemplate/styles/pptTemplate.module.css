@@ -9,15 +9,10 @@
 }
 
 .pageHeader {
-    margin-bottom: 2.6rem;
-    padding: 3rem 1.8rem;
-    text-align: center;
-    color: #fff;
+    margin-bottom: 1rem;
     background: linear-gradient(120deg, #007B55, #004D40, #008f66, #004D40);
-    background-size: 300% 300%;
     border-radius: 20px;
     box-shadow: 0 15px 30px -5px rgba(0, 123, 85, 0.25);
-    animation: gradientFlow 8s ease infinite;
 }
 
 .actionGrid {
@@ -976,7 +971,7 @@
 
 @media (max-width: 768px) {
     .pageHeader {
-        padding: 2rem 1.2rem;
+        border-radius: 16px;
     }
 
     .pageTitle {

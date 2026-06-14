@@ -1,77 +1,90 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import PdfViewer from './PdfViewer';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import StudyCoach from './StudyCoach';
 import NotesPanel from './NotesPanel';
 import client from '@/shared/api/client';
 import styles from '../styles/StudyRoom.module.css';
 
+const PdfViewer = lazy(() => import('./PdfViewer'));
+
 export default function StudyRoom() {
     const [file, setFile] = useState<File | null>(null);
-    const [fileType, setFileType] = useState<'pdf' | 'md' | null>(null); // 'pdf' | 'md'
+    const [fileType, setFileType] = useState<'pdf' | 'md' | null>(null);
     const [pendingHighlight, setPendingHighlight] = useState<string | { text?: string; mode?: string } | null>(null);
     const [notes, setNotes] = useState<any[]>([]);
     const [pdfText, setPdfText] = useState('');
 
-    // Load notes from localStorage — use ref to prevent save-before-load race
     const storageKey = file ? `study_notes_${file.name}_${file.size}` : null;
     const notesLoadedRef = useRef(false);
 
     useEffect(() => {
         notesLoadedRef.current = false;
-        if (!storageKey) { setNotes([]); return; }
+        if (!storageKey) {
+            setNotes([]);
+            return;
+        }
 
-        // 1. Load from localStorage immediately for instant render
         let localNotes: any[] = [];
         try {
             const saved = localStorage.getItem(storageKey);
             localNotes = saved ? JSON.parse(saved) : [];
-        } catch { /* ignore */ }
+        } catch {
+            localNotes = [];
+        }
+
         setNotes(localNotes);
         notesLoadedRef.current = true;
 
-        // 2. Fetch cloud notes and merge (cloud wins by note_id)
         client.get('/study-notes/room-notes', { params: { source_doc: storageKey } })
-            .then(res => {
-                const cloudNotes: any[] = (res.data || []).map((n: any) => ({
-                    id: n.note_id,
-                    content: n.content,
-                    color: n.color || 'yellow',
-                    highlightedText: n.highlighted_text || null,
-                    pageNumber: n.page_number || null,
-                    createdAt: n.created_at || new Date().toISOString(),
+            .then((response) => {
+                const cloudNotes: any[] = (response.data || []).map((note: any) => ({
+                    id: note.note_id,
+                    content: note.content,
+                    color: note.color || 'yellow',
+                    highlightedText: note.highlighted_text || null,
+                    pageNumber: note.page_number || null,
+                    createdAt: note.created_at || new Date().toISOString(),
                 }));
-                if (cloudNotes.length === 0) return;
-                setNotes(prev => {
-                    const mergedMap = new Map(prev.map(n => [n.id, n]));
-                    cloudNotes.forEach(n => mergedMap.set(n.id, n));
+
+                if (cloudNotes.length === 0) {
+                    return;
+                }
+
+                setNotes((prev) => {
+                    const mergedMap = new Map(prev.map((note) => [note.id, note]));
+                    cloudNotes.forEach((note) => mergedMap.set(note.id, note));
                     return [...mergedMap.values()].sort(
-                        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
                     );
                 });
             })
-            .catch(() => { /* cloud unavailable — local notes are fine */ });
+            .catch(() => {});
     }, [storageKey]);
 
-    // Persist notes — only after initial load completes
     useEffect(() => {
-        if (!storageKey || !notesLoadedRef.current) return;
+        if (!storageKey || !notesLoadedRef.current) {
+            return;
+        }
+
         localStorage.setItem(storageKey, JSON.stringify(notes));
     }, [notes, storageKey]);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'md') => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        setFile(f);
+    const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'md') => {
+        const selectedFile = event.target.files?.[0];
+        if (!selectedFile) {
+            return;
+        }
+
+        setFile(selectedFile);
         setFileType(type);
         setPendingHighlight(null);
-    };
+    }, []);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setFile(null);
         setFileType(null);
         setPendingHighlight(null);
         setPdfText('');
-    };
+    }, []);
 
     const handleHighlight = useCallback((text: string, mode: string) => {
         setPendingHighlight({ text, mode: mode || 'explain' });
@@ -81,17 +94,26 @@ export default function StudyRoom() {
         setPendingHighlight(null);
     }, []);
 
-    const handleAddNote = useCallback(({ content, color, highlightedText }: { content: string; color: string; highlightedText?: string }) => {
+    const handleAddNote = useCallback(({
+        content,
+        color,
+        highlightedText,
+    }: {
+        content: string;
+        color: string;
+        highlightedText?: string;
+    }) => {
         const note = {
-            id: 'note-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            id: `note-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
             content,
             color: color || 'yellow',
             highlightedText: highlightedText || null,
             pageNumber: null,
             createdAt: new Date().toISOString(),
         };
-        setNotes(prev => [note, ...prev]);
-        // Fire-and-forget cloud sync
+
+        setNotes((prev) => [note, ...prev]);
+
         if (storageKey) {
             client.post('/study-notes/room-notes', {
                 note_id: note.id,
@@ -105,21 +127,19 @@ export default function StudyRoom() {
     }, [storageKey]);
 
     const handleDeleteNote = useCallback((id: string | number) => {
-        setNotes(prev => prev.filter(n => n.id !== id));
-        // Fire-and-forget cloud delete
+        setNotes((prev) => prev.filter((note) => note.id !== id));
         client.delete(`/study-notes/room-notes/${id}`).catch(() => {});
     }, []);
 
     const handleSaveCoachNote = useCallback((content: string) => {
-        const hlText = pendingHighlight && typeof pendingHighlight === 'object'
+        const highlightedText = pendingHighlight && typeof pendingHighlight === 'object'
             ? pendingHighlight.text
             : typeof pendingHighlight === 'string'
                 ? pendingHighlight
                 : undefined;
-        handleAddNote({ content, color: 'blue', highlightedText: hlText });
+        handleAddNote({ content, color: 'blue', highlightedText });
     }, [handleAddNote, pendingHighlight]);
 
-    // Upload zone (no file loaded yet)
     if (!file) {
         return (
             <div className={styles.studyRoomWrapper}>
@@ -139,29 +159,39 @@ export default function StudyRoom() {
                             <i className="fas fa-file-alt"></i> Upload MD
                         </button>
                     </div>
-                    <input id="sr-pdf-input" type="file" accept=".pdf" style={{ display: 'none' }}
-                        onChange={(e) => handleFileSelect(e, 'pdf')} />
-                    <input id="sr-md-input" type="file" accept=".md,.markdown,.txt" style={{ display: 'none' }}
-                        onChange={(e) => handleFileSelect(e, 'md')} />
+                    <input
+                        id="sr-pdf-input"
+                        type="file"
+                        accept=".pdf"
+                        style={{ display: 'none' }}
+                        onChange={(event) => handleFileSelect(event, 'pdf')}
+                    />
+                    <input
+                        id="sr-md-input"
+                        type="file"
+                        accept=".md,.markdown,.txt"
+                        style={{ display: 'none' }}
+                        onChange={(event) => handleFileSelect(event, 'md')}
+                    />
                 </div>
             </div>
         );
     }
 
-    // Split layout: viewer + coach
     return (
         <div className={styles.studyRoomWrapper}>
             <div className={styles.splitLayout}>
-                {/* Left: Document Viewer + Notes */}
                 <div className={styles.leftPanel}>
-                    <PdfViewer
-                        file={file}
-                        fileType={fileType ?? undefined}
-                        onHighlight={handleHighlight}
-                        onClose={handleClose}
-                        onAddNote={handleAddNote}
-                        onTextExtracted={setPdfText}
-                    />
+                    <Suspense fallback={<div style={{ flex: 1, display: 'grid', placeItems: 'center', color: '#888' }}>Loading viewer...</div>}>
+                        <PdfViewer
+                            file={file}
+                            fileType={fileType ?? undefined}
+                            onHighlight={handleHighlight}
+                            onClose={handleClose}
+                            onAddNote={handleAddNote}
+                            onTextExtracted={setPdfText}
+                        />
+                    </Suspense>
                     <NotesPanel
                         notes={notes}
                         onAdd={handleAddNote}
@@ -170,7 +200,6 @@ export default function StudyRoom() {
                     />
                 </div>
 
-                {/* Right: AI Study Coach */}
                 <div className={styles.rightPanel}>
                     <StudyCoach
                         pendingHighlight={pendingHighlight ?? undefined}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import AnnotationLayer from './AnnotationLayer';
 import LabelEditor, { AnnotationData } from './LabelEditor';
@@ -52,12 +52,13 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         setLoadRetry(0);
     }, [file]);
 
-    const separator = file?.includes('?') ? '&' : '?';
-    const resolvedFile = file
-        ? `${file}${separator}pdf_retry=${loadRetry}`
-        : file;
+    const resolvedFile = useMemo(() => {
+        if (!file) return file;
+        const separator = file.includes('?') ? '&' : '?';
+        return `${file}${separator}pdf_retry=${loadRetry}`;
+    }, [file, loadRetry]);
 
-    const handlePageClick = (event, pageNum) => {
+    const handlePageClick = useCallback((event, pageNum) => {
         if (!onSaveAnnotation || !isPlacingLabel) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const x = (event.clientX - rect.left) / rect.width;
@@ -73,7 +74,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         });
         setIsPlacingLabel(false);
         setLocalError('');
-    };
+    }, [isPlacingLabel, onSaveAnnotation]);
 
     const handleSaveTag = async () => {
         if (!activeAnnotation || !onSaveAnnotation) return;
@@ -105,11 +106,20 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         setLocalError('');
     };
 
-    const visibleAnnotations = annotations.filter((a) => a.pageNumber === pageNumber);
-    const hasPendingNewLabel = activeAnnotation && !activeAnnotation.id && activeAnnotation.pageNumber === pageNumber;
-    const renderAnnotations = hasPendingNewLabel
-        ? [...visibleAnnotations, { ...activeAnnotation, id: '__pending_label__' }]
-        : visibleAnnotations;
+    const visibleAnnotations = useMemo(
+        () => annotations.filter((a) => a.pageNumber === pageNumber),
+        [annotations, pageNumber],
+    );
+    const hasPendingNewLabel = useMemo(
+        () => Boolean(activeAnnotation && !activeAnnotation.id && activeAnnotation.pageNumber === pageNumber),
+        [activeAnnotation, pageNumber],
+    );
+    const renderAnnotations = useMemo(
+        () => hasPendingNewLabel && activeAnnotation
+            ? [...visibleAnnotations, { ...activeAnnotation, id: '__pending_label__' }]
+            : visibleAnnotations,
+        [activeAnnotation, hasPendingNewLabel, visibleAnnotations],
+    );
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%', minHeight: 0 }}>

@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import styles from './styles/pptTemplate.module.css';
+import layoutStyles from './styles/PptTemplateSteps.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import { slidesEditorApi } from '../../api/slidesApi';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { EditorEdit } from '../../api/slidesApi';
 import type { PptTemplateProps, FloatingImage, ThemeItem } from './types';
 import { useActiveSlide } from './hooks/useActiveSlide';
@@ -100,8 +101,8 @@ export default function PptTemplate({ states, handlers }: PptTemplateProps) {
         },
     });
 
-    const backendStaticBase = `${import.meta.env.VITE_API_ROOT || 'http://localhost:5009'}/static`;
-    const apiBase = import.meta.env.VITE_API_ROOT || 'http://localhost:5009';
+    const apiBase = resolveApiRoot();
+    const backendStaticBase = `${apiBase}/static`;
 
     const genId = useCallback(() => `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, []);
 
@@ -360,17 +361,18 @@ export default function PptTemplate({ states, handlers }: PptTemplateProps) {
     const currentSlide = pptSchema?.slides?.[currentSlideIndex];
 
     return (
-        <div className={`container ${styles.pageShell}`}>
+        <div className={`container ${layoutStyles.pageShell}`}>
             <WelcomeBanner
                 title={<><i className="fas fa-palette" /> PowerPoint Template Selection</>}
                 subtitle="Select a theme, let AI design your slides, then preview and add images"
+                variant="workspace"
             />
 
             <PptTemplateStepper items={STEP_ITEMS} currentStep={currentStep} onStepClick={handleStepClick} />
 
             {errorMsg && <div className="alert alert-warning" role="alert">{errorMsg}</div>}
 
-            <div key={currentStep} className={styles.stepView}>
+            <div key={currentStep} className={layoutStyles.stepView}>
                 {currentStep === 1 && (
                     <ThemeStepView
                         themes={themes}

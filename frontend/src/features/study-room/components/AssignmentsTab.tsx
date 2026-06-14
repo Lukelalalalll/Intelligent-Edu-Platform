@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { resolveApiRoot } from '@/shared/api/root';
 import styles from '../styles/AssignmentsTab.module.css';
 
 interface Course {
@@ -46,7 +47,7 @@ interface AssignmentsTabProps {
     handleSubmitWork: (assignmentId: string, fileName: string) => void;
 }
 
-const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 function FeedbackCard({ grade, pdfPath, onClose }: { grade: Grade; pdfPath?: string; onClose: () => void }) {
     const rubricEntries = Object.entries(grade.rubricScores || {});

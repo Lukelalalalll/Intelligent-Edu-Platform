@@ -3,9 +3,10 @@
  * Combines videoApi (from api.ts) and videoHistoryApi.ts.
  */
 import client from '@/shared/api/client';
+import { resolveApiRoot } from '@/shared/api/root';
 import type { GenerationHistoryItem } from '../../../types/api';
 
-const apiRoot = (import.meta.env.VITE_API_ROOT || 'http://localhost:5009').replace(/\/$/, '');
+const apiRoot = resolveApiRoot();
 
 export const videoApi = {
     optimizeScript: (inputData: { text?: string; file?: File; fileType?: string }, lang = 'zh', provider = 'local_ollama', maxSegments = 8, audience = 'student') => {

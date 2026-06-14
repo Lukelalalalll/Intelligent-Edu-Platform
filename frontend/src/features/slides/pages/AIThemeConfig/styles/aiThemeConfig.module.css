@@ -4,35 +4,18 @@
 
 /* ── Shell & Entry ── */
 .pageShell {
-    max-width: 1024px;
+    max-width: min(100%, 1180px);
     margin: 0 auto;
-    padding: 24px 20px 80px;
+    padding: 0 var(--page-padding-inline) var(--page-padding-block);
     animation: pageFadeIn 0.55s ease-out both;
 }
 
 /* ── Page Header (WelcomeBanner override) ── */
 .pageHeader {
-    margin-bottom: 2rem;
-    padding: 2.8rem 1.8rem;
-    text-align: center;
-    color: #fff;
+    margin-bottom: 1rem;
     background: linear-gradient(120deg, #007B55, #004D40, #008f66, #004D40);
-    background-size: 300% 300%;
     border-radius: 20px;
     box-shadow: 0 15px 30px -5px rgba(0, 123, 85, 0.25);
-    animation: gradientFlow 8s ease infinite;
-}
-
-.pageHeader h1 {
-    color: #fff;
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.pageHeader .subtitle {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 1.05rem;
 }
 
 /* ── Back Button ── */
@@ -628,12 +611,7 @@
 
 @media (max-width: 768px) {
     .pageHeader {
-        padding: 2rem 1.2rem;
         border-radius: 16px;
-    }
-
-    .pageHeader h1 {
-        font-size: 1.5rem;
     }
 
     .stepper {
