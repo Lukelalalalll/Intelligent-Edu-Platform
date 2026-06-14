@@ -1,8 +1,9 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.12.11
-aiosignal==1.3.2
+aiohttp==3.13.5
+aiosignal==1.4.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
+argon2-cffi==25.1.0
 anthropic==0.46.0
 anyio==4.12.1
 attrs==25.3.0
@@ -68,6 +69,7 @@ networkx==3.6.1
 nodeenv==1.10.0
 numpy==2.2.6
 openai==1.86.0
+opensearch-py==3.2.0
 opencv-python-headless==4.13.0.92
 openpyxl==3.1.5
 packaging>=23.2.0,<26.0.0
@@ -112,7 +114,6 @@ rsa==4.9.1
 safetensors==0.7.0
 scikit-learn==1.8.0
 rank-bm25==0.2.2
-tdigest==0.5.2.2
 scipy==1.17.1
 seaborn==0.13.2
 six==1.17.0

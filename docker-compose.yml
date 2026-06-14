@@ -1,97 +1,473 @@
-# ============================================================
-# Intelligent Edu Platform — Docker Compose (Production)
-# ============================================================
-# Usage:
-#   1. Copy backend/.env.production → backend/.env  (fill in real values)
-#   2. Copy frontend/.env.production → frontend/.env (set VITE_API_ROOT)
-#   3. docker compose up --build -d
-# ============================================================
-
 services:
-  # ── MongoDB ──────────────────────────────────────────────
   mongo:
-    image: mongo:7
+    image: mongo:7.0.25
     restart: unless-stopped
     volumes:
       - mongo_data:/data/db
-    ports:
-      - "27017:27017"
+    expose:
+      - "27017"
+    networks:
+      - data
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
+    security_opt:
+      - no-new-privileges:true
 
-  # ── FastAPI backend ─────────────────────────────────────
-  backend:
+  api-core:
     build:
       context: .
       dockerfile: deploy/Dockerfile.backend
+      target: core
     restart: unless-stopped
     depends_on:
       mongo:
         condition: service_healthy
     env_file:
-      - backend/.env
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.core
+        required: false
     environment:
-      - MONGO_URI=mongodb://mongo:27017/intelligent_edu
-      - ENV=production
-      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
-      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
-      - GUNICORN_BIND=0.0.0.0:5009
+      ENV: production
+      APP_MODULE: backend.apps.core:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SEARXNG_BASE_URL: http://searxng:8080
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${CORE_GUNICORN_WORKERS:-2}
+      GUNICORN_TIMEOUT: ${CORE_GUNICORN_TIMEOUT:-180}
+      GUNICORN_BIND: 0.0.0.0:5009
     volumes:
-      - backend_uploads:/app/backend/uploads
-      - backend_static:/app/backend/static
+      - core_uploads:/app/backend/uploads
+      - core_static:/app/backend/static
+      - core_generated:/app/backend/generated
+      - rag_vectorstore:/app/backend/generated/vectorstore
     expose:
       - "5009"
+    networks:
+      - ingress
+      - data
+      - search
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5009/api/health', timeout=5).read()\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5009/healthz', timeout=5).read()\""]
       interval: 20s
       timeout: 6s
       retries: 5
-      start_period: 25s
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
-  # ── Nginx (serves frontend + reverse-proxies API) ──────
-  nginx:
+  slides-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: slides
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.slides
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.slides:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${SLIDES_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${SLIDES_GUNICORN_TIMEOUT:-300}
+      GUNICORN_BIND: 0.0.0.0:5010
+    volumes:
+      - slides_uploads:/app/backend/uploads/sub1
+      - slides_md:/app/backend/md/sub1
+      - slides_highlights:/app/backend/highlights/sub1
+      - slides_ppt_results:/app/backend/static/ppt_results
+      - slides_script_results:/app/backend/static/script_results
+      - slides_generated:/app/backend/generated/sub1
+    expose:
+      - "5010"
+    networks:
+      - ingress
+      - data
+      - egress
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5010/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  highlighter-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: highlighter
+    restart: unless-stopped
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.highlighter
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.highlighter:app
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${HIGHLIGHTER_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${HIGHLIGHTER_GUNICORN_TIMEOUT:-240}
+      GUNICORN_BIND: 0.0.0.0:5012
+    volumes:
+      - slides_uploads:/app/backend/uploads/sub1
+      - slides_md:/app/backend/md/sub1
+      - slides_highlights:/app/backend/highlights/sub1
+    expose:
+      - "5012"
+    networks:
+      - ingress
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5012/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  question-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: questions
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.questions
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.questions:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${QUESTIONS_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${QUESTIONS_GUNICORN_TIMEOUT:-300}
+      GUNICORN_BIND: 0.0.0.0:5013
+    volumes:
+      - questions_uploads:/app/backend/uploads/sub2
+      - questions_generated:/app/backend/generated/sub2
+      - questions_screenshots:/app/backend/static/sub2/screenshots
+    expose:
+      - "5013"
+    networks:
+      - ingress
+      - data
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5013/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  visual-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: visual
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.visual
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.visual:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${VISUAL_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${VISUAL_GUNICORN_TIMEOUT:-300}
+      GUNICORN_BIND: 0.0.0.0:5014
+    volumes:
+      - visual_uploads_sub3:/app/backend/uploads/sub3
+      - visual_uploads_sub4:/app/backend/uploads/sub4
+      - visual_generated_sub3:/app/backend/generated/sub3
+      - visual_generated_sub4:/app/backend/generated/sub4
+      - visual_static_sub4:/app/backend/static/sub4
+    expose:
+      - "5014"
+    networks:
+      - ingress
+      - data
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5014/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  study-notes-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: study-notes
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.study-notes
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.study_notes:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      GUNICORN_WORKERS: ${STUDY_NOTES_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${STUDY_NOTES_GUNICORN_TIMEOUT:-300}
+      GUNICORN_BIND: 0.0.0.0:5015
+    volumes:
+      - study_notes_uploads:/app/backend/uploads/sub5
+      - study_notes_generated:/app/backend/generated/sub5
+    expose:
+      - "5015"
+    networks:
+      - ingress
+      - data
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5015/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  video-service:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+      target: video
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - path: backend/.env.shared
+        required: false
+      - path: backend/.env.video
+        required: false
+    environment:
+      ENV: production
+      APP_MODULE: backend.apps.video:app
+      MONGO_URI: mongodb://mongo:27017/intelligent_edu
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
+      JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_CSRF_PROTECT: "true"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
+      SLIDE_RENDERER_URL: http://edge-nginx:8080/slide-renderer
+      GUNICORN_WORKERS: ${VIDEO_GUNICORN_WORKERS:-1}
+      GUNICORN_TIMEOUT: ${VIDEO_GUNICORN_TIMEOUT:-600}
+      GUNICORN_BIND: 0.0.0.0:5011
+    volumes:
+      - video_tmp:/app/backend/uploads/video_tmp
+      - video_artifacts:/app/backend/generated/videos
+    expose:
+      - "5011"
+    networks:
+      - ingress
+      - data
+      - egress
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5011/healthz', timeout=5).read()\""]
+      interval: 20s
+      timeout: 6s
+      retries: 5
+      start_period: 45s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  edge-nginx:
     build:
       context: .
       dockerfile: deploy/Dockerfile.frontend
+      args:
+        VITE_API_ROOT: ${VITE_API_ROOT:-}
     restart: unless-stopped
     depends_on:
-      backend:
+      api-core:
         condition: service_healthy
+      slides-service:
+        condition: service_healthy
+      highlighter-service:
+        condition: service_healthy
+      question-service:
+        condition: service_healthy
+      visual-service:
+        condition: service_healthy
+      study-notes-service:
+        condition: service_healthy
+      video-service:
+        condition: service_healthy
+    environment:
+      INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # Mount your SSL certs here:
-      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - "80:8080"
+    networks:
+      - ingress
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /etc/nginx/conf.d
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
-  # ── SearXNG (self-hosted meta-search engine) ───────────────────
   searxng:
-    image: searxng/searxng:latest
+    image: searxng/searxng:2026.6.13-a29cda858
     restart: unless-stopped
     environment:
-      - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY:-change-this-secret}
+      SEARXNG_SECRET_KEY: "${SEARXNG_SECRET_KEY:?Set SEARXNG_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
     volumes:
       - ./deploy/searxng:/etc/searxng:rw
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
+    networks:
+      - search
+      - egress
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 3
       start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  ingress:
+    internal: true
+  data:
+    internal: true
+  search:
+    internal: true
+  egress:
+    internal: false
 
 volumes:
   mongo_data:
-  backend_uploads:
-  backend_static:
+  core_uploads:
+  core_static:
+  core_generated:
+  rag_vectorstore:
+  slides_uploads:
+  slides_md:
+  slides_highlights:
+  slides_ppt_results:
+  slides_script_results:
+  slides_generated:
+  questions_uploads:
+  questions_generated:
+  questions_screenshots:
+  visual_uploads_sub3:
+  visual_uploads_sub4:
+  visual_generated_sub3:
+  visual_generated_sub4:
+  visual_static_sub4:
+  study_notes_uploads:
+  study_notes_generated:
+  video_tmp:
+  video_artifacts:

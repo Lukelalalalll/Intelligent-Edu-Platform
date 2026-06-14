@@ -16,6 +16,7 @@ Before starting, ensure the following tools are installed on your machine:
 - **Node.js 18 or greater** (LTS recommended)
 - **npm** (Node Package Manager)
 - **MongoDB 7.0+** (running locally at `mongodb://localhost:27017` or via Docker)
+- **OpenSearch 3.x** *(optional, but recommended for enterprise-grade RAG sparse / metadata retrieval)*
 
 ---
 
@@ -46,6 +47,19 @@ If you have Docker installed, you can simply spin up a MongoDB instance using:
 docker compose up -d mongo
 ```
 *(If you are running MongoDB locally without Docker, just make sure `MONGO_URI` in the root `.env` matches your address, e.g., `mongodb://localhost:27017/edu_platform`).*
+
+### Search Infrastructure Configuration (Optional OpenSearch for RAG)
+If you want to enable the enterprise sparse / metadata retrieval path for RAG, set the following in the root `.env`:
+
+```env
+RAG_OPENSEARCH_ENABLED=true
+RAG_OPENSEARCH_ENDPOINT=http://127.0.0.1:9200
+RAG_OPENSEARCH_INDEX_PREFIX=course-rag
+RAG_OPENSEARCH_VERIFY_CERTS=false
+```
+
+For the local Windows setup already prepared in this repository, see:
+`infra/opensearch/README-local.md`
 
 ### AI Provider Configuration (Local Ollama on Windows)
 If you are deploying a local Large Language Model via Ollama on a **separate Windows machine**, you must configure Windows to allow local network access, and subsequently update the backend configuration.
@@ -100,7 +114,18 @@ Open a terminal at the project root and run the following commands:
    pip install -r backend/requirements.txt
    ```
 
-4. **Start the Application**:
+4. **Start OpenSearch (recommended for RAG development)**:
+   - For Windows PowerShell:
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File .\infra\opensearch\start-opensearch-dev.ps1
+     ```
+   - Verify status:
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File .\infra\opensearch\status-opensearch-dev.ps1
+     ```
+   *This step is optional for general backend work, but recommended if you are developing or testing the RAG retrieval stack.*
+
+5. **Start the Application**:
    ```bash
    python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5009
    ```
@@ -131,18 +156,25 @@ Open a second terminal at the project root and run:
 
 If you prefer to run the entire stack (Frontend, Backend, MongoDB) via Docker, use the provided Docker Compose configuration.
 
-1. **Setup Production Environment Files**:
+1. **Setup backend environment files**:
    ```bash
-   cp backend/.env.production backend/.env
-   cp frontend/.env.production frontend/.env
+   cp backend/.env.shared.example backend/.env.shared
+   cp backend/.env.core.example backend/.env.core
    ```
+   Fill in real production values for `ALLOWED_ORIGINS`, `SECRET_KEY`, `JWT_SECRET_KEY`, and any AI / OAuth credentials you use.
 
-2. **Build and start the containers**:
+2. **Create a secure Compose env file outside the repo**:
+   Use [`deploy/compose.production.env.example`](deploy/compose.production.env.example) as a template and save the real file somewhere outside the repository, for example `/secure/path/compose.prod.env`.
+
+3. **Build and start the containers**:
    ```bash
-   docker compose up --build -d
+   docker compose --env-file /secure/path/compose.prod.env up --build -d
    ```
+   `INTERNAL_GATEWAY_TOKEN` and `SEARXNG_SECRET_KEY` are required. `docker compose config` will fail fast if they are missing.
 
-3. Access the main UI locally by navigating to: `http://localhost`
+4. Access the main UI locally by navigating to: `http://localhost`
+
+Only the `edge-nginx` entrypoint is published to the host. Backend services, MongoDB, and SearXNG stay on internal Docker networks.
 
 ---
 
@@ -164,9 +196,10 @@ Before triggering a video generation, ensure the frontend is running (`npm run d
 **Production Environment:**
 Configure the `SLIDE_RENDERER_URL` environment variable on the backend to point to the built frontend service:
 ```env
-SLIDE_RENDERER_URL=http://frontend:4173/slide-renderer
+SLIDE_RENDERER_URL=http://edge-nginx:8080/slide-renderer
 ```
-When deploying using Docker Compose, the `frontend` service runs `vite preview` and this is handled automatically.
+In the Docker stack, the renderer page is served by `edge-nginx` on the internal ingress network.
+When deploying using Docker Compose, the frontend bundle is served by `edge-nginx` and `/slide-renderer` stays available on the internal ingress network.
 
 **Automatic Fallback:**
 If the frontend service is unreachable, the backend will automatically fallback to Pillow-based static image rendering.
@@ -244,6 +277,7 @@ Intelligent Edu Platform 是一个功能全面的全栈教育系统，旨在提�
 - **Node.js 18 或更高版本**（建议使用 LTS 版本）
 - **npm**（Node 包管理器）
 - **MongoDB 7.0+**（本地运行在 `mongodb://localhost:27017`，或通过 Docker 运行）
+- **OpenSearch 3.x**（可选，但如果你要做企业级 RAG 稀疏检索 / 元数据检索，建议启用）
 
 ---
 
@@ -276,6 +310,20 @@ Intelligent Edu Platform 是一个功能全面的全栈教育系统，旨在提�
 docker compose up -d mongo
 ```
 *（如果你不使用 Docker，而是本地运行 MongoDB，确保根目录 `.env` 中的 `MONGO_URI` 与你本地地址一致，例如 `mongodb://localhost:27017/edu_platform`）。*
+
+### 搜索基础设施配置（可选 OpenSearch，用于 RAG）
+
+如果你要启用企业级稀疏检索 / 元数据检索链路，请在根目录 `.env` 中加入：
+
+```env
+RAG_OPENSEARCH_ENABLED=true
+RAG_OPENSEARCH_ENDPOINT=http://127.0.0.1:9200
+RAG_OPENSEARCH_INDEX_PREFIX=course-rag
+RAG_OPENSEARCH_VERIFY_CERTS=false
+```
+
+如果你使用的是本仓库已经准备好的本机 Windows OpenSearch 方案，可参考：
+`infra/opensearch/README-local.md`
 
 ### AI 提供商配置（Windows 本地 Ollama）
 
@@ -332,7 +380,18 @@ docker compose up -d mongo
    pip install -r backend/requirements.txt
    ```
 
-4. **启动应用**：
+4. **启动 OpenSearch（建议做 RAG 开发时先启动）**：
+   - Windows PowerShell：
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File .\infra\opensearch\start-opensearch-dev.ps1
+     ```
+   - 查看状态：
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File .\infra\opensearch\status-opensearch-dev.ps1
+     ```
+   *这一步对普通后端开发不是强制的，但如果你要调试或评测 RAG 检索链路，建议先启动。*
+
+5. **启动应用**：
    ```bash
    python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5009
    ```
@@ -398,9 +457,10 @@ docker compose up -d mongo
 **生产环境：**
 在后端配置 `SLIDE_RENDERER_URL` 环境变量，指向已构建的前端服务：
 ```env
-SLIDE_RENDERER_URL=http://frontend:4173/slide-renderer
+SLIDE_RENDERER_URL=http://edge-nginx:8080/slide-renderer
 ```
-使用 Docker Compose 部署时，`frontend` 服务会运行 `vite preview`，此配置已自动处理。
+In the Docker stack, the renderer page is served by `edge-nginx` on the internal ingress network.
+使用 Docker Compose 部署时，前端静态资源由 `edge-nginx` 提供，`/slide-renderer` 会继续在内部 ingress 网络上可用。
 
 **自动回退：**
 如果前端服务不可达，后端将自动回退到基于 Pillow 的静态图像渲染。

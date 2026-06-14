@@ -1,0 +1,16 @@
+-r base.txt
+python-pptx==1.0.2
+lxml==6.0.2
+pdf2image==1.17.0
+pdfplumber==0.11.5
+PyPDF2==3.0.1
+pypdfium2==4.30.0
+pytesseract==0.3.10
+opencv-python-headless==4.13.0.92
+markdown_analysis==0.1.5
+matplotlib==3.10.8
+seaborn==0.13.2
+scipy==1.17.1
+RapidFuzz==3.14.3
+playwright==1.52.0
+filetype==1.2.0

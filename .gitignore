@@ -43,6 +43,12 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+backend/.env.shared
+backend/.env.core
+backend/.env.slides
+backend/.env.video
+frontend/.env
 
 # 3.1 OAuth / API 密钥文件
 backend/client_secret_*.json
@@ -89,3 +95,9 @@ backend/sub4/results/
 *.swo
 .DS_Store
 Thumbs.db
+
+# 7. Local infra runtime state
+infra/opensearch/runtime/
+infra/opensearch/opensearch-*/
+.codegraph/
+.codex-logs/

@@ -6,4 +6,4 @@ if not exist "backend\venv\Scripts\python.exe" (
   echo Recreate venv first: python -m venv backend\venv
   exit /b 1
 )
-call "backend\venv\Scripts\python.exe" -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+call "backend\venv\Scripts\python.exe" -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5009
