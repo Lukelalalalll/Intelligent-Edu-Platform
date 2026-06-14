@@ -21,6 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from backend.core.ai_provider import AIProvider, resolve_provider
+from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
 from backend.schemas.ai import ChatMessageSchema
 from .router import ai_router, _limiter
@@ -81,8 +82,7 @@ async def study_stream(
                         yield f"data: {json.dumps({'type': 'text', 'data': chunk})}\n\n"
 
             else:
-                from backend.services.ai_gateway_service import AIGatewayService
-                ai = AIGatewayService()
+                ai = get_ai_gateway_service()
                 ai_context = {
                     "system_override": system,
                     "system_memory": f"Document:\n{context[:8000]}" if context else "",

@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from backend.core.ai_provider import resolve_provider
+from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
 from backend.schemas import StudyCozeSchema
 
@@ -19,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _call_study_ai(system_prompt: str, user_content: str, context: str = "", user_id: str = "study_coach", history_messages: list = None, provider: str = "local_ollama") -> str:
-    from backend.services.ai_gateway_service import AIGatewayService
-    from backend.services.llm_service.local_llm_service import LocalLLMUnavailableError
-    ai_service = AIGatewayService()
+    ai_service = get_ai_gateway_service()
     ai_context = {
         "system_override": system_prompt,
         "system_memory": "" if not context else f"Here is the document I am studying:\n{context[:8000]}",

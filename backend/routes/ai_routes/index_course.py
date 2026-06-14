@@ -1,12 +1,9 @@
 """Course material indexing endpoints — teacher only."""
 
 import logging
-from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
 
-from backend.config import Config
-from backend.core.database import db
 from backend.core.dependencies import require_teacher_or_admin
 
 from .router import ai_router
@@ -65,6 +62,9 @@ async def index_course_material(
 
     chapter_id = str(form.get("chapter_id") or "").strip() or None
     use_fast_extract = str(form.get("use_fast_extract") or "").lower() in ("true", "1", "yes")
+    index_profile = str(form.get("index_profile") or "").strip().lower() or "quality"
+    parser_strategy = str(form.get("parser_strategy") or "").strip().lower() or "auto"
+    force_reindex = str(form.get("force_reindex") or "").lower() in ("true", "1", "yes")
 
     filename: str = getattr(upload, "filename", "untitled")
     content_bytes: bytes = await upload.read()
@@ -76,7 +76,17 @@ async def index_course_material(
     from backend.services.indexing_job_service import create_job
 
     user_id = str(user.get("_id", user.get("id", "")))
-    job = await create_job(course_id, filename, content_bytes, user_id, chapter_id=chapter_id, use_fast_extract=use_fast_extract)
+    job = await create_job(
+        course_id,
+        filename,
+        content_bytes,
+        user_id,
+        chapter_id=chapter_id,
+        use_fast_extract=use_fast_extract,
+        index_profile=index_profile,
+        parser_strategy=parser_strategy,
+        force_reindex=force_reindex,
+    )
     return job
 
 
@@ -109,6 +119,22 @@ async def list_indexed_documents(
     return {"course_id": course_id, "documents": docs}
 
 
+@ai_router.get("/index-course/{course_id}/{doc_name}/diagnostics")
+async def get_indexed_document_diagnostics(
+    course_id: str,
+    doc_name: str,
+    user: dict = Depends(require_teacher_or_admin),
+):
+    await _verify_course_ownership(user, course_id)
+
+    from backend.services.course_rag_service import course_rag_service
+
+    diagnostics = course_rag_service.get_document_diagnostics(course_id, doc_name)
+    if not diagnostics:
+        raise HTTPException(404, "Document diagnostics not found")
+    return diagnostics
+
+
 @ai_router.delete("/index-course/{course_id}/{doc_name}")
 async def remove_indexed_document(
     course_id: str,
@@ -124,35 +150,11 @@ async def remove_indexed_document(
     if not removed:
         raise HTTPException(404, "Document not found in index")
 
-    now = datetime.now(timezone.utc)
+    from backend.services.file_asset_service import soft_delete_course_source_assets
+    from backend.services.indexing_job_service import mark_document_removed
 
-    # Invalidate old indexing jobs so re-uploading the same file won't be
-    # short-circuited by the duplicate detection in indexing_job_service.
-    await db.indexing_jobs.update_many(
-        {
-            "course_id": course_id,
-            "filename": doc_name,
-            "status": "done",
-        },
-        {"$set": {"status": "deleted", "updated_at": now}},
-    )
-
-    await db.file_assets.update_many(
-        {
-            "file_type": "knowledge_source",
-            "course_id": course_id,
-            "filename": doc_name,
-            "status": {"$ne": "hard_deleted"},
-        },
-        {
-            "$set": {
-                "status": "soft_deleted",
-                "deleted_at": now,
-                "updated_at": now,
-                "delete_reason": "Removed from course index",
-            }
-        },
-    )
+    await mark_document_removed(course_id=course_id, filename=doc_name)
+    await soft_delete_course_source_assets(course_id=course_id, filename=doc_name)
     return {"ok": True}
 
 
@@ -164,7 +166,14 @@ async def test_retrieval(
 ):
     """Test retrieval quality: given a query, return top-k chunks from the course.
 
-    Body: { "query": str, "top_k": int (optional, default 5) }
+    Body: {
+      "query": str,
+      "top_k": int,
+      "rag_profile": "low-latency" | "balanced" | "high-recall",
+      "debug_retrieval": bool,
+      "allow_web_correction": bool,
+      "force_query_class": str
+    }
     Teachers / admins only.
     """
     await _verify_course_ownership(user, course_id)
@@ -175,17 +184,27 @@ async def test_retrieval(
 
     chapter_id = str(body.get("chapter_id", "") or "").strip()
     top_k = min(int(body.get("top_k", 5)), 20)
+    debug = bool(body.get("debug"))
+    rag_profile = str(body.get("rag_profile", "balanced") or "balanced").strip().lower()
+    debug_retrieval = bool(body.get("debug_retrieval", debug))
+    allow_web_correction = bool(body.get("allow_web_correction", False))
+    force_query_class = str(body.get("force_query_class", "") or "").strip()
 
     from backend.services.course_rag_service import course_rag_service
     import time
 
     start = time.perf_counter()
-    results = await course_rag_service.retrieve_for_student(
+    detailed = await course_rag_service.retrieve_for_student_detailed(
         student_id="test_teacher",
         query=query,
         top_k=top_k,
         course_ids=[course_id],
         chapter_id=chapter_id,
+        debug=debug,
+        rag_profile=rag_profile,
+        debug_retrieval=debug_retrieval,
+        allow_web_correction=allow_web_correction,
+        force_query_class=force_query_class,
     )
     latency_ms = round((time.perf_counter() - start) * 1000, 1)
 
@@ -193,6 +212,17 @@ async def test_retrieval(
         "query": query,
         "course_id": course_id,
         "top_k": top_k,
+        "debug": debug,
+        "rag_profile": rag_profile,
+        "debug_retrieval": debug_retrieval,
+        "allow_web_correction": allow_web_correction,
+        "force_query_class": force_query_class,
+        "active_index_version": course_rag_service.active_index_version(course_id),
         "latency_ms": latency_ms,
-        "results": results,
+        "results": detailed.results,
+        "retrieval_plan": detailed.retrieval_plan,
+        "retrieval_trace": detailed.retrieval_trace,
+        "retrieval_confidence": detailed.retrieval_confidence,
+        "fallback_reason": detailed.fallback_reason,
+        "evidence_spans": detailed.evidence_spans,
     }

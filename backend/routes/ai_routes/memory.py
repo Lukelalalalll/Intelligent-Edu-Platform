@@ -5,10 +5,12 @@ import logging
 
 from fastapi import Depends, File, HTTPException, UploadFile
 
-from backend.core.database import db
+from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
+from backend.services.ai_memory_service import get_ai_memory as get_user_ai_memory
+from backend.services.ai_memory_service import update_ai_memory as update_user_ai_memory
 
-from .router import ai_router, _SUPPORTED_PROVIDERS, ai_gateway_service
+from .router import ai_router, _SUPPORTED_PROVIDERS
 from .chat_context_helpers import _extract_text_from_pdf_bytes, _PDF_EXTRACT_MAX_CHARS
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,16 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
     selected = str(provider or "local_ollama").strip().lower()
     if selected not in _SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {selected}")
+    if selected == "deepseek":
+        from backend.services.llm_service.deepseek_service import DeepSeekService
+        from backend.services.user_profile_service import load_deepseek_runtime_config
+
+        ok, detail = await DeepSeekService.from_config(
+            await load_deepseek_runtime_config(user)
+        ).health_check()
+        return {"provider": selected, "ok": ok, "detail": detail}
+
+    ai_gateway_service = get_ai_gateway_service()
     ok, detail = await ai_gateway_service.check_provider_health(selected)
     return {"provider": selected, "ok": ok, "detail": detail}
 
@@ -48,14 +60,34 @@ async def get_ai_role_info(user: dict = Depends(get_current_user)):
     """Return the user's role and whether Socratic/RAG mode is active."""
     role = user.get("role", "student")
     is_student = role not in ("teacher", "admin")
+    user_id = str(user.get("_id") or user.get("id") or "")
     rag_indexed_courses: list[str] = []
     try:
         from backend.services.course_rag_service import course_rag_service
-        rag_indexed_courses = course_rag_service.get_indexed_courses_for_student(
-            str(user.get("_id", user.get("id", "")))
-        )
+        from backend.services.enrollment_service import get_user_course_profile
+
+        indexed_course_ids = {
+            str(course_id)
+            for course_id in course_rag_service.get_indexed_courses_for_student(
+                user_id
+            )
+            if str(course_id)
+        }
+        profile = await get_user_course_profile(user)
+        enrolled_course_ids = [
+            str(course.get("courseId"))
+            for course in profile.get("courses", [])
+            if course.get("courseId")
+        ]
+        rag_indexed_courses = [
+            course_id for course_id in enrolled_course_ids if course_id in indexed_course_ids
+        ]
     except Exception as exc:
-        logger.warning("Failed to load indexed courses for role-info | user=%s err=%s", str(user.get("id") or ""), str(exc)[:240])
+        logger.warning(
+            "Failed to load indexed courses for role-info | user=%s err=%s",
+            user_id,
+            str(exc)[:240],
+        )
     return {
         "role": role,
         "mode": "socratic" if is_student else "direct",
@@ -67,21 +99,12 @@ async def get_ai_role_info(user: dict = Depends(get_current_user)):
 @ai_router.get("/memory")
 async def get_ai_memory(user: dict = Depends(get_current_user)):
     """Return the user's AI memory profile."""
-    user_doc = await db.users.find_one({"_id": user["_id"]})
-    memory = (user_doc or {}).get("ai_memory", {})
+    memory = await get_user_ai_memory(str(user.get("_id") or user.get("id") or ""))
     return {"memory": memory}
 
 
 @ai_router.put("/memory")
 async def update_ai_memory(body: dict, user: dict = Depends(get_current_user)):
     """Update the user's AI memory profile. Accepts { name, major, year, preferences }."""
-    allowed_keys = {"name", "major", "year", "preferences"}
-    sanitized = {}
-    for k in allowed_keys:
-        val = str(body.get(k, "") or "").strip()[:200]
-        sanitized[k] = val
-    await db.users.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"ai_memory": sanitized}},
-    )
+    sanitized = await update_user_ai_memory(str(user.get("_id") or user.get("id") or ""), body)
     return {"memory": sanitized}

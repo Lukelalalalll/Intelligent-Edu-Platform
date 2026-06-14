@@ -11,6 +11,7 @@ from typing import Optional
 from backend.core.database import db
 from backend.prompts import prompt_registry
 from backend.services.ai_gateway_service import AIGatewayService
+from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ _ai_svc: Optional[AIGatewayService] = None
 def _get_ai_svc() -> AIGatewayService:
     global _ai_svc
     if _ai_svc is None:
-        _ai_svc = AIGatewayService()
+        _ai_svc = get_ai_gateway_service()
     return _ai_svc
 
 

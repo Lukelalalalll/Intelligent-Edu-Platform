@@ -11,8 +11,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import UploadFile as FastAPIUploadFile
-
 from backend.config import Config
 from backend.core.database import db
 
@@ -341,7 +339,7 @@ async def _dispatch_sub1(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub2(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub2 (questions): upload + extract logic."""
-    from backend.services.questions_service import save_upload, get_file_info
+    from backend.services.questions import save_upload
 
     ext = _get_extension(file_name)
     with open(abs_path, "rb") as f:
@@ -358,7 +356,7 @@ async def _dispatch_sub2(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub3 (image-extractor): extract-pdf-images logic."""
-    from backend.routes.image_extractor_routes import extract_images_from_pdf
+    from backend.services.image_extractor_service import extract_images_from_pdf
 
     result = extract_images_from_pdf(abs_path)
     return {
@@ -369,7 +367,7 @@ async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub4(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub4 (diagram): upload_document logic."""
-    from backend.routes.diagram_routes import extract_diagrams_from_file
+    from backend.services.diagram_extractor_service import extract_diagrams_from_file
 
     result = extract_diagrams_from_file(abs_path, file_name)
     return {

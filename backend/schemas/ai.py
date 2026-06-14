@@ -27,8 +27,13 @@ class SessionMessageSchema(BaseModel):
 
     role: Literal['user', 'assistant', 'system']
     content: str = Field(default="", max_length=50000)
+    reasoning: str = Field(default="", max_length=50000)
+    is_course_relevant: Optional[bool] = None
     images: List[str] = Field(default_factory=list, max_length=8)
     files: List[SessionAttachmentMetaSchema] = Field(default_factory=list, max_length=20)
+    citations: List[dict[str, JsonValue]] = Field(default_factory=list, max_length=32)
+    ui_elements: List[dict[str, JsonValue]] = Field(default_factory=list, max_length=16)
+    tool_progresses: List[dict[str, JsonValue]] = Field(default_factory=list, max_length=32)
 
 
 class UpdateAiSessionSchema(BaseModel):
@@ -78,6 +83,18 @@ class AiChatSchema(BaseModel):
     enable_thinking: bool = False
     use_rag: bool = True
     rag_top_k: int = Field(default=6, ge=1, le=20)
+    rag_profile: Literal['low-latency', 'balanced', 'high-recall'] = 'balanced'
+    debug_retrieval: bool = False
+    allow_web_correction: bool = False
+    force_query_class: Literal[
+        'keyword/factoid',
+        'concept/explanation',
+        'comparison',
+        'multi-hop',
+        'chapter/doc constrained',
+        'out-of-domain',
+        '',
+    ] = ''
 
 
 class StudyCozeSchema(BaseModel):

@@ -27,11 +27,33 @@ class DeepSeekUnavailableError(Exception):
 class DeepSeekService:
     """Thin wrapper around the DeepSeek API (OpenAI-compatible /v1/chat/completions)."""
 
-    def __init__(self):
-        self.api_key = Config.DEEPSEEK_API_KEY
-        self.base_url = Config.DEEPSEEK_BASE_URL.rstrip("/")
-        self.model = Config.DEEPSEEK_MODEL
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
+        thinking_type: str | None = None,
+    ):
+        self.api_key = (api_key or Config.DEEPSEEK_API_KEY or "").strip()
+        self.base_url = (base_url or Config.DEEPSEEK_BASE_URL).rstrip("/")
+        self.model = (model or Config.DEEPSEEK_MODEL).strip()
+        self.reasoning_effort = (reasoning_effort or "high").strip().lower()
+        self.thinking_type = (thinking_type or "enabled").strip().lower()
         self.timeout_seconds = Config.DEEPSEEK_REQUEST_TIMEOUT_SECONDS
+
+    @classmethod
+    def from_config(cls, config: Optional[Dict[str, Any]] = None) -> "DeepSeekService":
+        """Create a service from a persisted per-user AI config."""
+        cfg = config or {}
+        return cls(
+            api_key=cfg.get("api_key"),
+            base_url=cfg.get("base_url"),
+            model=cfg.get("model"),
+            reasoning_effort=cfg.get("reasoning_effort"),
+            thinking_type=cfg.get("thinking_type"),
+        )
 
     @property
     def _chat_url(self) -> str:
@@ -42,6 +64,13 @@ class DeepSeekService:
             "Authorization": f"Bearer {self.api_key or ''}",
             "Content-Type": "application/json",
         }
+
+    def _apply_reasoning_options(self, payload: dict[str, Any]) -> None:
+        if self.thinking_type == "disabled":
+            return
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        payload["thinking"] = {"type": self.thinking_type or "enabled"}
 
     def _build_messages(
         self,
@@ -94,10 +123,9 @@ class DeepSeekService:
             "messages": self._build_messages(message=message, context=context),
             "temperature": Config.DEEPSEEK_TEMPERATURE,
             "max_tokens": Config.DEEPSEEK_MAX_TOKENS,
-            "reasoning_effort": "high",
-            "thinking": {"type": "enabled"},
             "stream": False,
         }
+        self._apply_reasoning_options(payload)
 
         with timer:
             try:
@@ -150,10 +178,9 @@ class DeepSeekService:
             "messages": messages_payload,
             "temperature": Config.DEEPSEEK_TEMPERATURE,
             "max_tokens": Config.DEEPSEEK_MAX_TOKENS,
-            "reasoning_effort": "high",
-            "thinking": {"type": "enabled"},
             "stream": False,
         }
+        self._apply_reasoning_options(payload)
         if tools:
             payload["tools"] = tools
 
@@ -202,8 +229,7 @@ class DeepSeekService:
         }
 
         if enable_thinking:
-            payload["reasoning_effort"] = "high"
-            payload["thinking"] = {"type": "enabled"}
+            self._apply_reasoning_options(payload)
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
@@ -269,10 +295,9 @@ class DeepSeekService:
             "messages": self._build_messages(message=message, context=context),
             "temperature": Config.DEEPSEEK_TEMPERATURE,
             "max_tokens": Config.DEEPSEEK_MAX_TOKENS,
-            "reasoning_effort": "high",
-            "thinking": {"type": "enabled"},
             "stream": True,
         }
+        self._apply_reasoning_options(payload)
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:

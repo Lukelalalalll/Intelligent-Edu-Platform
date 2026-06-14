@@ -28,6 +28,10 @@ class ParsedRequest:
     session_id: str = ""
     session_backfilled: bool = False
     enable_thinking: bool = False
+    rag_profile: str = ""
+    debug_retrieval: bool = False
+    allow_web_correction: bool = False
+    force_query_class: str = ""
 
 
 @dataclass
@@ -49,6 +53,11 @@ class RAGResult:
     forced_response_message: str = ""
     compact_history: list[dict] = field(default_factory=list)
     is_course_relevant: bool = False
+    retrieval_plan: dict = field(default_factory=dict)
+    retrieval_trace: list[dict] = field(default_factory=list)
+    retrieval_confidence: dict = field(default_factory=dict)
+    fallback_reason: str = ""
+    evidence_spans: list[dict] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict) -> RAGResult:
@@ -77,6 +86,11 @@ class StreamMeta:
     fallback_from: str | None = None
     fallback_to: str | None = None
     postcheck_downgraded: int | None = None
+    retrieval_plan: dict | None = None
+    retrieval_trace: list[dict] | None = None
+    retrieval_confidence: dict | None = None
+    fallback_reason: str | None = None
+    evidence_spans: list[dict] | None = None
 
     def to_dict(self) -> dict:
         d: dict = {
@@ -103,6 +117,16 @@ class StreamMeta:
             d["fallback_to"] = self.fallback_to
         if self.postcheck_downgraded is not None:
             d["postcheck_downgraded"] = self.postcheck_downgraded
+        if self.retrieval_plan is not None:
+            d["retrieval_plan"] = self.retrieval_plan
+        if self.retrieval_trace is not None:
+            d["retrieval_trace"] = self.retrieval_trace
+        if self.retrieval_confidence is not None:
+            d["retrieval_confidence"] = self.retrieval_confidence
+        if self.fallback_reason is not None:
+            d["fallback_reason"] = self.fallback_reason
+        if self.evidence_spans is not None:
+            d["evidence_spans"] = self.evidence_spans
         return d
 
     @classmethod
@@ -121,4 +145,9 @@ class StreamMeta:
             rag_retrieval_latency_ms=rag.rag_retrieval_latency_ms,
             citations=rag.rag_citations if rag.rag_citations else None,
             is_course_relevant=rag.is_course_relevant,
+            retrieval_plan=rag.retrieval_plan or None,
+            retrieval_trace=rag.retrieval_trace or None,
+            retrieval_confidence=rag.retrieval_confidence or None,
+            fallback_reason=rag.fallback_reason or None,
+            evidence_spans=rag.evidence_spans or None,
         )

@@ -2,10 +2,8 @@
 
 from fastapi import APIRouter
 from backend.routes.auth_routes.router import limiter as _limiter
-from backend.services.ai_gateway_service import AIGatewayService
 
 ai_router = APIRouter(prefix="/ai", tags=["AI Chat"])
-ai_gateway_service = AIGatewayService()
 
 # Shared error messages / constants
 _DEFAULT_TITLE = "New Conversation"

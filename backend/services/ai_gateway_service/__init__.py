@@ -227,3 +227,5 @@ class AIGatewayService:
 
 # Backward compatibility alias for older imports.
 CozeService = AIGatewayService
+
+from .provider_factory import get_ai_gateway_service, get_default_service  # noqa: E402,F401

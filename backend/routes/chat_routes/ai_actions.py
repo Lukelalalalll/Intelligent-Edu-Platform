@@ -5,9 +5,7 @@ import logging
 from fastapi import Depends, HTTPException
 
 from backend.core.ai_provider import resolve_provider
-from backend.core.database import db
 from backend.core.security import get_current_user
-from backend.core.utils import safe_object_id
 from backend.schemas import (
     ChatAiSummarySchema,
     ChatAiReplySuggestionsSchema,
@@ -15,6 +13,7 @@ from backend.schemas import (
     ChatAiAssistantSchema,
     ChatTransferStartSchema,
 )
+from backend.services.chat_service.query_service import get_room_for_member
 
 from .router import chat_router
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 async def _verify_room_member(room_id: str, user_id: str):
     """Helper: verify user is a member of the room, return room doc or raise 404."""
-    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": user_id})
+    room = await get_room_for_member(room_id, user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found or not a member")
     return room

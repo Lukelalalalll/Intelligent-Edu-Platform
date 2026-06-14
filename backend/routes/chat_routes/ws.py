@@ -2,15 +2,15 @@
 
 import logging
 
-from fastapi import WebSocket, WebSocketDisconnect
-from jose import jwt, JWTError
+from fastapi import HTTPException, WebSocket, WebSocketDisconnect
+from jose import JWTError
 
 from backend.config import Config
-from backend.core.database import db
-from backend.core.utils import safe_object_id
-from fastapi import HTTPException
+from backend.services.auth_session_service import decode_access_token, get_active_session_for_access
+from backend.services.chat_service.message_service import create_message, mark_room_read_for_member
+from backend.services.chat_service.query_service import get_chat_user_by_id, get_room_for_member
 
-from .router import chat_router, _utcnow, manager
+from .router import chat_router, manager
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +18,19 @@ logger = logging.getLogger(__name__)
 async def _authenticate_ws(token: str) -> dict | None:
     """Validate JWT token and return user dict, or None."""
     try:
-        payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
+        payload = decode_access_token(token)
         user_id = payload.get("sub")
-        if not user_id:
+        session_id = payload.get("sid")
+        if not user_id or not session_id:
             return None
-        from bson import ObjectId as _ObjectId
-        user = await db.users.find_one({"_id": _ObjectId(user_id)})
+        user = await get_chat_user_by_id(user_id)
         if not user:
             return None
-        user["id"] = str(user["_id"])
+        await get_active_session_for_access(
+            session_id=str(session_id),
+            user_id=str(user_id),
+            token_version=int(payload.get("token_version") or 0),
+        )
         return user
     except (JWTError, Exception):
         return None
@@ -57,78 +61,35 @@ async def websocket_endpoint(ws: WebSocket):
                     continue
 
                 try:
-                    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+                    result = await create_message(
+                        room_id=room_id,
+                        user=user,
+                        content=content,
+                        message_type="text",
+                        reply_to_id=data.get("replyTo", ""),
+                    )
                 except HTTPException:
                     continue
-                if not room:
-                    continue
 
-                reply_to = None
-                reply_to_id = data.get("replyTo", "")
-                if reply_to_id:
-                    try:
-                        ref = await db.chat_messages.find_one({"_id": safe_object_id(reply_to_id, label="message")})
-                    except HTTPException:
-                        ref = None
-                    if ref:
-                        reply_to = {
-                            "id": str(ref["_id"]),
-                            "senderName": ref.get("senderName", ""),
-                            "content": (ref.get("content", "") or "")[:120],
-                        }
-
-                now = _utcnow()
-                msg_doc = {
-                    "roomId": room_id,
-                    "senderId": uid,
-                    "senderName": user.get("username", ""),
-                    "content": content,
-                    "type": "text",
-                    "messageType": "text",
-                    "replyTo": reply_to,
-                    "recalled": False,
-                    "readBy": [uid],
-                    "deletedFor": [],
-                    "sentAt": now,
-                }
-                result = await db.chat_messages.insert_one(msg_doc)
-                msg_doc["id"] = str(result.inserted_id)
-                msg_doc.pop("_id", None)
-
-                try:
-                    await db.chat_rooms.update_one(
-                        {"_id": safe_object_id(room_id, label="room")},
-                    {"$set": {"lastMessage": {
-                        "content": content,
-                        "senderId": uid,
-                        "sentAt": now,
-                        "readBy": [uid],
-                    }}},
-                )
-                except HTTPException as exc:
-                    logger.warning("Skipping lastMessage update due to invalid room id | user=%s room=%s detail=%s", uid, room_id, exc.detail)
-
+                room = result["room"]
+                message = result["message"]
                 await manager.broadcast_to_room(
                     room.get("members", []),
-                    {"type": "new_message", "message": msg_doc},
+                    {"type": "new_message", "message": message},
                     exclude=uid,
                 )
-
-                await manager.send_to_user(uid, {
-                    "type": "message_ack",
-                    "localId": local_id,
-                    "message": msg_doc,
-                })
+                await manager.send_to_user(
+                    uid,
+                    {"type": "message_ack", "localId": local_id, "message": message},
+                )
 
             elif event_type == "typing":
                 room_id = data.get("roomId", "")
                 if not room_id:
                     continue
                 try:
-                    room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
+                    room = await get_room_for_member(room_id, uid)
                 except HTTPException:
-                    continue
-                if not room:
                     continue
                 await manager.broadcast_to_room(
                     room.get("members", []),
@@ -138,21 +99,17 @@ async def websocket_endpoint(ws: WebSocket):
 
             elif event_type == "read_receipt":
                 room_id = data.get("roomId", "")
-                if room_id:
-                    await db.chat_messages.update_many(
-                        {"roomId": room_id, "readBy": {"$ne": uid}},
-                        {"$addToSet": {"readBy": uid}},
-                    )
-                    try:
-                        room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room"), "members": uid})
-                    except HTTPException:
-                        room = None
-                    if room:
-                        await manager.broadcast_to_room(
-                            room.get("members", []),
-                            {"type": "read_receipt", "roomId": room_id, "userId": uid},
-                            exclude=uid,
-                        )
+                if not room_id:
+                    continue
+                try:
+                    room = await mark_room_read_for_member(room_id=room_id, user_id=uid)
+                except HTTPException:
+                    continue
+                await manager.broadcast_to_room(
+                    room.get("members", []),
+                    {"type": "read_receipt", "roomId": room_id, "userId": uid},
+                    exclude=uid,
+                )
 
     except WebSocketDisconnect:
         logger.info("WS disconnected: user=%s", uid)

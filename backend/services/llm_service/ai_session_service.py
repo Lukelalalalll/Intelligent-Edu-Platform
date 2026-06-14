@@ -5,8 +5,43 @@ from backend.schemas.ai import UpdateAiSessionSchema
 MAX_TOTAL_ATTACHMENT_META_CHARS = 6000
 
 
-_ALLOWED_MESSAGE_KEYS = {"role", "content", "images", "files"}
+_ALLOWED_MESSAGE_KEYS = {
+    "role",
+    "content",
+    "reasoning",
+    "is_course_relevant",
+    "images",
+    "files",
+    "citations",
+    "ui_elements",
+    "tool_progresses",
+}
 _ALLOWED_FILE_KEYS = {"file_name", "mime_type"}
+
+
+def _sanitize_json_value(value: Any, *, max_string_chars: int = 2000, depth: int = 0) -> Any:
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:max_string_chars]
+    if depth >= 4:
+        return str(value)[:max_string_chars]
+    if isinstance(value, list):
+        return [
+            _sanitize_json_value(item, max_string_chars=max_string_chars, depth=depth + 1)
+            for item in value[:32]
+        ]
+    if isinstance(value, dict):
+        cleaned: dict[str, Any] = {}
+        for raw_key, raw_value in list(value.items())[:24]:
+            key = str(raw_key)[:80]
+            cleaned[key] = _sanitize_json_value(
+                raw_value,
+                max_string_chars=max_string_chars,
+                depth=depth + 1,
+            )
+        return cleaned
+    return str(value)[:max_string_chars]
 
 
 def sanitize_session_update_payload(payload: UpdateAiSessionSchema) -> dict[str, Any]:
@@ -30,6 +65,11 @@ def sanitize_session_update_payload(payload: UpdateAiSessionSchema) -> dict[str,
                 cleaned["role"] = str(item.get("role", "")).strip().lower()
             elif key == "content":
                 cleaned["content"] = str(item.get("content", ""))[:12000]
+            elif key == "reasoning":
+                cleaned["reasoning"] = str(item.get("reasoning", ""))[:20000]
+            elif key == "is_course_relevant":
+                if item.get("is_course_relevant") is not None:
+                    cleaned["is_course_relevant"] = bool(item.get("is_course_relevant"))
             elif key == "images":
                 images = item.get("images", []) or []
                 cleaned["images"] = [str(img)[:2_000_000] for img in images[:8] if str(img)]
@@ -42,6 +82,24 @@ def sanitize_session_update_payload(payload: UpdateAiSessionSchema) -> dict[str,
                     total_file_meta_chars += len(safe_meta.get("file_name", "")) + len(safe_meta.get("mime_type", ""))
                     files.append(safe_meta)
                 cleaned["files"] = files
+            elif key == "citations":
+                cleaned["citations"] = [
+                    _sanitize_json_value(citation, max_string_chars=12000)
+                    for citation in (item.get("citations", []) or [])[:32]
+                    if isinstance(citation, dict)
+                ]
+            elif key == "ui_elements":
+                cleaned["ui_elements"] = [
+                    _sanitize_json_value(element, max_string_chars=4000)
+                    for element in (item.get("ui_elements", []) or [])[:16]
+                    if isinstance(element, dict)
+                ]
+            elif key == "tool_progresses":
+                cleaned["tool_progresses"] = [
+                    _sanitize_json_value(progress, max_string_chars=4000)
+                    for progress in (item.get("tool_progresses", []) or [])[:32]
+                    if isinstance(progress, dict)
+                ]
         cleaned_messages.append(cleaned)
 
     if total_file_meta_chars > MAX_TOTAL_ATTACHMENT_META_CHARS:
