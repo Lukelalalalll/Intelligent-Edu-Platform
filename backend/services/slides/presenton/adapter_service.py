@@ -7,8 +7,9 @@ from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_
 
 
 class PresentonAdapterService:
-    def __init__(self, provider: str):
-        self.provider = provider
+    def __init__(self, provider: str | None = None, runtime=None):
+        self.runtime = runtime
+        self.provider = str(provider or getattr(runtime, "provider_id", "") or "local_ollama")
         self.ai = get_ai_gateway_service()
 
     @staticmethod
@@ -44,7 +45,33 @@ class PresentonAdapterService:
             return None
 
     async def check_provider_health(self) -> tuple[bool, str]:
+        if self.runtime is not None:
+            return await self.ai.check_runtime_health(self.runtime)
         return await self.ai.check_provider_health(self.provider)
+
+    async def _chat(self, prompt: str, context: dict[str, Any] | None = None) -> str:
+        if self.runtime is not None:
+            return await self.ai.chat_with_runtime(message=prompt, context=context, runtime=self.runtime)
+        return await self.ai.chat_with_provider(message=prompt, provider=self.provider, context=context)
+
+    async def _chat_json(self, prompt: str, *, expected_key: str | None = None) -> dict[str, Any] | None:
+        raw = await self._chat(prompt, context={"response_format": "json"})
+        parsed = self._safe_json_loads(raw)
+        if isinstance(parsed, dict) and (expected_key is None or expected_key in parsed):
+            return parsed
+
+        repair_prompt = (
+            "Repair the following model output into valid JSON only. "
+            "Do not add markdown fences or commentary.\n\n"
+            f"Expected key: {expected_key or 'JSON object'}\n"
+            f"Original prompt:\n{prompt[:4000]}\n\n"
+            f"Model output:\n{raw[:6000]}"
+        )
+        repaired = await self._chat(repair_prompt, context={"response_format": "json", "repair": True})
+        parsed = self._safe_json_loads(repaired)
+        if isinstance(parsed, dict) and (expected_key is None or expected_key in parsed):
+            return parsed
+        return None
 
     async def generate_outline(
         self,
@@ -60,15 +87,10 @@ class PresentonAdapterService:
             f"{source_text[:12000]}"
         )
 
-        # Try up to 2 times before falling back
-        raw = None
-        parsed = None
-        for attempt in range(2):
-            raw = await self.ai.chat_with_provider(message=prompt, provider=self.provider, context=None)
-            parsed = self._safe_json_loads(raw) or {}
-            slides = parsed.get("slides") if isinstance(parsed, dict) else None
-            if isinstance(slides, list) and slides:
-                return slides[:total_pages]
+        parsed = await self._chat_json(prompt, expected_key="slides") or {}
+        slides = parsed.get("slides") if isinstance(parsed, dict) else None
+        if isinstance(slides, list) and slides:
+            return slides[:total_pages]
 
         # Fallback: build outline from actual chapter_data (section titles + real text snippets)
         if chapter_data:
@@ -119,8 +141,7 @@ class PresentonAdapterService:
             "latex must be array, chart_reasoning must be array of one string. Return only JSON.\n\n"
             f"Title: {title}\nObjective: {objective}\nKey points: {json.dumps(key_points, ensure_ascii=False)}"
         )
-        raw = await self.ai.chat_with_provider(message=prompt, provider=self.provider, context=None)
-        parsed = self._safe_json_loads(raw)
+        parsed = await self._chat_json(prompt)
 
         if not isinstance(parsed, dict):
             parsed = {}

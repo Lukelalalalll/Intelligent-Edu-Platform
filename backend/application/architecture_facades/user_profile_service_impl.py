@@ -128,6 +128,12 @@ async def load_deepseek_runtime_config(current_user: dict) -> dict:
     return build_deepseek_response(ai_config.get("deepseek"), include_api_key=True)
 
 
+async def load_openai_runtime_config(current_user: dict) -> dict:
+    user_doc = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config.openai": 1})
+    ai_config = (user_doc or {}).get("ai_config") or {}
+    return build_openai_response(ai_config.get("openai"), include_api_key=True)
+
+
 async def save_deepseek_config(current_user: dict, payload) -> dict:
     existing_user = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
     existing = ((existing_user or {}).get("ai_config") or {}).get("deepseek") or {}

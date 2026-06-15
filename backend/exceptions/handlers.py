@@ -6,7 +6,8 @@ Call register_exception_handlers(app) once during application startup
 
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend.exceptions.domain import (
@@ -18,6 +19,20 @@ from backend.exceptions.domain import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _is_multipart_request(request: Request) -> bool:
+    content_type = str(request.headers.get("content-type") or "").lower()
+    return content_type.startswith("multipart/form-data")
+
+
+async def _drain_multipart_body(request: Request) -> None:
+    if not _is_multipart_request(request):
+        return
+    try:
+        await request.body()
+    except Exception:  # noqa: BLE001
+        logger.debug("Failed to drain multipart request body for %s", request.url.path, exc_info=True)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -37,6 +52,20 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=422, content={"error": "validation_error", "message": str(exc)}
         )
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        await _drain_multipart_body(request)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=exc.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_handler(request: Request, exc: RequestValidationError):
+        await _drain_multipart_body(request)
+        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
     @app.exception_handler(ExternalServiceError)
     async def external_service_handler(request: Request, exc: ExternalServiceError):
         logger.warning("External service error: %s", exc)
@@ -55,6 +84,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         request_id = getattr(request.state, "request_id", "unknown")
+        await _drain_multipart_body(request)
         logger.exception(
             "Unhandled exception | request_id=%s path=%s",
             request_id,

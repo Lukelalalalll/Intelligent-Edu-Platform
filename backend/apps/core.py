@@ -12,6 +12,7 @@ from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.chat_routes import chat_router
 from backend.routes.homework_routes import router as homework_router
 from backend.routes.file_center_routes import file_center_router
+from backend.routes.slides_routes import slides_router, public_slides_router, legacy_sub1_router
 
 from .factory import create_app
 
@@ -20,6 +21,7 @@ TEST_PDF_ROOT = os.path.join(Config.BASE_DIR, "test_pdf")
 STATIC_ROOT = os.path.join(Config.BASE_DIR, "static")
 ANNOTATED_PDF_ROOT = os.path.join(Config.BASE_DIR, "static", "grading_annotated")
 UPLOADS_ROOT = os.path.join(Config.BASE_DIR, "uploads")
+GENERATED_SUB1_ROOT = os.path.join(Config.BASE_DIR, "generated", "sub1")
 
 app = create_app(
     title="Intelligent Edu Platform Core API",
@@ -32,14 +34,17 @@ app = create_app(
         ai_gateway_router,
         chat_router,
         file_center_router,
+        slides_router,
+        legacy_sub1_router,
     ),
-    direct_routers=(homework_router,),
+    direct_routers=(homework_router, public_slides_router),
     static_mounts=(
         ("/data", DATA_ROOT, "data"),
         ("/test_pdf", TEST_PDF_ROOT, "test_pdf"),
         ("/static", STATIC_ROOT, "static"),
         ("/grading_annotated", ANNOTATED_PDF_ROOT, "grading_annotated"),
         ("/uploads", UPLOADS_ROOT, "uploads"),
+        ("/generated/sub1", GENERATED_SUB1_ROOT, "generated_sub1"),
     ),
     require_gateway_token=True,
     ensure_indexes_on_startup=True,

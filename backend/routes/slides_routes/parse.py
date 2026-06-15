@@ -34,6 +34,11 @@ async def parse_md(
     tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="parse")
     try:
         filename = secure_filename(file.filename)
+        if not filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+
+        os.makedirs(Config.SUB1_UPLOAD_FOLDER, exist_ok=True)
+        os.makedirs(Config.SUB1_MD_FOLDER, exist_ok=True)
         upload_path = os.path.join(Config.SUB1_UPLOAD_FOLDER, filename)
         with open(upload_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -66,6 +71,10 @@ async def parse_md(
     except Exception:
         tracker.finish(StepStatus.FAILED)
         logger.exception("[%s] Parse failed", tracker.request_id)
+        try:
+            await tracker.save()
+        except Exception:
+            logger.exception("[%s] Failed to save parse failure metadata", tracker.request_id)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

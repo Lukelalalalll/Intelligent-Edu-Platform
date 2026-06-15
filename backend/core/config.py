@@ -116,6 +116,12 @@ class Settings(BaseSettings):
     DEEPSEEK_REQUEST_TIMEOUT_SECONDS: float = 120.0
     DEEPSEEK_TEMPERATURE: float = 0.4
     DEEPSEEK_MAX_TOKENS: int = 4096
+    OPENAI_API_KEY: str | None = None
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-5.5"
+    OPENAI_REQUEST_TIMEOUT_SECONDS: float = 120.0
+    OPENAI_TEMPERATURE: float = 0.4
+    OPENAI_MAX_TOKENS: int = 4096
 
     # ── RAG ───────────────────────────────────────────────────────────
     RAG_VECTORSTORE_DIR: str = ""

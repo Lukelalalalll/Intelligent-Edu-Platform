@@ -3,13 +3,14 @@ import json
 import uuid
 import logging
 import asyncio
+import os
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import StreamingResponse
+from fastapi import HTTPException, Depends, Request
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 
 from backend.config import Config
-from backend.core.ai_provider import resolve_provider
+from backend.core.ai_provider import list_provider_statuses, resolve_provider_runtime
 from backend.core.security import get_current_user
 from backend.schemas import SlidesGenerateV2Schema
 from backend.services.background_job_dispatcher import background_job_dispatcher
@@ -25,6 +26,7 @@ from backend.services.slides import (
     ChapterSummarizer,
     generate_talking_script_word,
 )
+from backend.services.slides.svg_pipeline import build_svg_deck
 from .router import slides_router, SlidesDeliveryJobSchema
 
 logger = logging.getLogger(__name__)
@@ -39,13 +41,14 @@ async def create_slides_delivery_job(
     return await create_delivery_job(payload=payload, user=user)
 
 
-async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resolved_provider: str):
+async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runtime):
     try:
-        adapter = PresentonAdapterService(provider=resolved_provider)
+        resolved_provider = runtime.provider_id
+        adapter = PresentonAdapterService(runtime=runtime)
         await PresentonTaskService.set_status(task_id, "running", progress=5)
 
         await PresentonTaskService.add_event(task_id, "step_start", "provider_health",
-                                             f"Checking provider health ({resolved_provider})", progress=10)
+                                             f"Checking provider health ({resolved_provider}/{runtime.model})", progress=10)
         healthy, message = await adapter.check_provider_health()
         if not healthy:
             raise RuntimeError(f"Provider health check failed: {message}")
@@ -105,9 +108,22 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resol
             "slides": [{**slide, "tables": slide.get("tables") or []} for slide in slides_results],
             "metadata": {
                 "provider": resolved_provider,
+                "model": runtime.model,
+                "provider_source": runtime.config_source,
                 "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             },
         }
+
+        await PresentonTaskService.add_event(task_id, "step_start", "svg_deck",
+                                             "Building SVG-first deck artifacts", progress=82)
+        deck_manifest = build_svg_deck(
+            task_id=task_id,
+            title=title,
+            slides=slides_results,
+            runtime=runtime,
+        )
+        await PresentonTaskService.add_event(task_id, "step_done", "svg_deck",
+                                             "SVG deck artifacts generated", progress=84)
 
         script_payload = None
         if req.generate_talking_script:
@@ -139,8 +155,25 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, resol
         await PresentonTaskService.add_event(task_id, "step_done", "complete",
                                              "Packaging response", progress=98)
 
-        result = {"status": "success", "results": slides_results, "ppt_schema": ppt_schema,
-                  "provider": resolved_provider}
+        runtime_public = runtime.public_dict()
+        result = {
+            "status": "success",
+            "results": slides_results,
+            "ppt_schema": ppt_schema,
+            "provider": resolved_provider,
+            "provider_requested": runtime.requested_provider,
+            "provider_resolved": runtime.provider_id,
+            "provider_source": runtime.config_source,
+            "provider_model": runtime.model,
+            "fallback_events": [],
+            "deck_id": deck_manifest["deck_id"],
+            "design_spec_url": deck_manifest["design_spec_url"],
+            "spec_lock": deck_manifest["spec_lock"],
+            "quality_report": deck_manifest["quality_report"],
+            "slides": deck_manifest["slides"],
+            "exports": deck_manifest["exports"],
+            "provider_runtime": runtime_public,
+        }
         if script_payload:
             result.update(script_payload)
         await PresentonTaskService.complete(task_id, result)
@@ -160,7 +193,7 @@ async def _run_generate_v2_dispatch_job(
     dispatch_job_id: str,
     task_id: str,
     req: SlidesGenerateV2Schema,
-    resolved_provider: str,
+    runtime,
 ) -> None:
     worker_id = f"api-slides-generate-v2-{task_id}"
     claimed = await background_job_dispatcher.claim(
@@ -172,7 +205,7 @@ async def _run_generate_v2_dispatch_job(
     if not claimed:
         return
 
-    await _run_generate_v2_task(task_id, req, resolved_provider)
+    await _run_generate_v2_task(task_id, req, runtime)
     task = await PresentonTaskService.get_task(task_id)
     if (task or {}).get("status") == "completed":
         await background_job_dispatcher.mark_done(
@@ -196,11 +229,14 @@ async def generate_v2(
     request: Request = None,
 ):
     request_id = (request.headers.get("X-Request-ID") if request else None) or uuid.uuid4().hex
-    resolved_provider = resolve_provider(req.provider, feature="slides.generate_v2", user=user)
+    runtime = await resolve_provider_runtime(req.provider or "auto", feature="slides.generate_v2", user=user, require_healthy=True)
     task = await PresentonTaskService.create_task(
         request_id=request_id,
         meta={
-            "provider": resolved_provider,
+            "provider_requested": runtime.requested_provider,
+            "provider": runtime.provider_id,
+            "provider_source": runtime.config_source,
+            "model": runtime.model,
             "requested_pages": req.total_pages,
             "generate_talking_script": req.generate_talking_script,
         },
@@ -210,7 +246,10 @@ async def generate_v2(
         payload={
             "task_id": task["task_id"],
             "request_id": request_id,
-            "provider": resolved_provider,
+            "provider": runtime.provider_id,
+            "provider_requested": runtime.requested_provider,
+            "provider_source": runtime.config_source,
+            "model": runtime.model,
             "request": _schema_dump(req),
         },
         metadata={"task_id": task["task_id"], "request_id": request_id},
@@ -224,7 +263,7 @@ async def generate_v2(
         payload={"dispatch_job_id": dispatch_job["job_id"]},
     )
     spawn_background_coro(
-        _run_generate_v2_dispatch_job(dispatch_job["job_id"], task["task_id"], req, resolved_provider),
+        _run_generate_v2_dispatch_job(dispatch_job["job_id"], task["task_id"], req, runtime),
         label=f"slides-generate-v2:{task['task_id']}",
     )
     return {"success": True, "task_id": task["task_id"], "status": task["status"],
@@ -278,10 +317,65 @@ async def slides_provider_health(
     provider: Optional[str] = None,
     user: dict = Depends(get_current_user),
 ):
-    resolved_provider = resolve_provider(provider, feature="slides.provider_health", user=user)
-    adapter = PresentonAdapterService(provider=resolved_provider)
+    runtime = await resolve_provider_runtime(provider or "auto", feature="slides.provider_health", user=user)
+    adapter = PresentonAdapterService(runtime=runtime)
     healthy, message = await adapter.check_provider_health()
-    return {"success": healthy, "provider": resolved_provider, "message": message}
+    return {
+        "success": healthy,
+        "provider": runtime.provider_id,
+        "requested_provider": runtime.requested_provider,
+        "source": runtime.config_source,
+        "model": runtime.model,
+        "message": message,
+    }
+
+
+@slides_router.get("/providers")
+async def slides_providers(user: dict = Depends(get_current_user)):
+    return {"providers": [status.public_dict() for status in await list_provider_statuses(user)]}
+
+
+def _deck_dir(deck_id: str) -> str:
+    safe = "".join(ch for ch in deck_id if ch.isalnum() or ch in {"-", "_"})
+    path = os.path.abspath(os.path.join(Config.PPT_RESULTS_FOLDER, "svg_decks", safe))
+    root = os.path.abspath(os.path.join(Config.PPT_RESULTS_FOLDER, "svg_decks"))
+    if os.path.commonpath([root, path]) != root:
+        raise HTTPException(status_code=400, detail="Invalid deck id")
+    return path
+
+
+@slides_router.get("/decks/{deck_id}")
+async def get_svg_deck(deck_id: str, user: dict = Depends(get_current_user)):
+    manifest_path = os.path.join(_deck_dir(deck_id), "manifest.json")
+    if not os.path.isfile(manifest_path):
+        raise HTTPException(status_code=404, detail="Deck not found")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@slides_router.get("/decks/{deck_id}/design-spec")
+async def get_svg_deck_design_spec(deck_id: str, user: dict = Depends(get_current_user)):
+    path = os.path.join(_deck_dir(deck_id), "design_spec.md")
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Design spec not found")
+    with open(path, "r", encoding="utf-8") as f:
+        return PlainTextResponse(f.read(), media_type="text/markdown")
+
+
+@slides_router.get("/decks/{deck_id}/slides/{slide_index}.svg")
+async def get_svg_deck_slide(deck_id: str, slide_index: int, user: dict = Depends(get_current_user)):
+    manifest_path = os.path.join(_deck_dir(deck_id), "manifest.json")
+    if not os.path.isfile(manifest_path):
+        raise HTTPException(status_code=404, detail="Deck not found")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    slide = next((item for item in manifest.get("slides", []) if int(item.get("index", 0)) == slide_index), None)
+    if not slide:
+        raise HTTPException(status_code=404, detail="Slide not found")
+    path = os.path.join(_deck_dir(deck_id), "svg_output", slide["filename"])
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Slide SVG not found")
+    return FileResponse(path, media_type="image/svg+xml")
 
 
 @slides_router.get("/delivery/jobs/{job_id}")

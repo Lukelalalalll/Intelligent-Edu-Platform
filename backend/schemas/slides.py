@@ -75,7 +75,7 @@ class PptProcessSchema(BaseModel):
 class SlidesGenerateV2Schema(BaseModel):
     model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
 
-    provider: Optional[AIProvider] = None
+    provider: Optional[AIProvider] = "auto"
     content: str = ""
     chapterData: List[dict] = []
     total_pages: int = 8
