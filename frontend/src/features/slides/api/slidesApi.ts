@@ -53,8 +53,53 @@ export interface SlidesArtifactResponse<T = unknown> {
 
 // ── Generation Types ──
 
+export type SlidesRuntimeProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai';
+
+export interface SlidesProviderStatus {
+    id: SlidesRuntimeProvider;
+    label: string;
+    available: boolean;
+    configured: boolean;
+    source: string;
+    model: string;
+    message: string;
+    is_recommended: boolean;
+}
+
+export interface SvgDeckSlide {
+    index: number;
+    title: string;
+    rhythm: string;
+    svg_url: string;
+    preview_url: string;
+    quality_status: string;
+    filename: string;
+}
+
+export interface SlidesQualityIssue {
+    slide_index: number;
+    severity: 'error' | 'warning';
+    message: string;
+}
+
+export interface SlidesQualityReport {
+    status: 'passed' | 'failed';
+    total_slides: number;
+    issues: SlidesQualityIssue[];
+}
+
+export interface SvgDeckManifest {
+    deck_id: string;
+    title: string;
+    slides: SvgDeckSlide[];
+    quality_report: SlidesQualityReport;
+    design_spec_url: string;
+    spec_lock: Record<string, unknown>;
+    exports: Record<string, unknown>;
+}
+
 export type SlidesGenerateV2Payload = {
-    provider?: 'coze' | 'local_ollama' | 'deepseek';
+    provider?: SlidesRuntimeProvider;
     content?: string;
     chapterData?: Array<{ sectionTitle?: string; text?: string }>;
     total_pages: number;
@@ -95,7 +140,18 @@ export type SlidesGenerateV2TaskStatusResponse = {
             slides: Array<Record<string, unknown>>;
             metadata?: Record<string, unknown>;
         };
-        provider: 'coze' | 'local_ollama' | 'deepseek';
+        provider: Exclude<SlidesRuntimeProvider, 'auto'>;
+        provider_requested?: SlidesRuntimeProvider;
+        provider_resolved?: Exclude<SlidesRuntimeProvider, 'auto'>;
+        provider_source?: string;
+        provider_model?: string;
+        fallback_events?: Array<Record<string, unknown>>;
+        deck_id?: string;
+        design_spec_url?: string;
+        spec_lock?: Record<string, unknown>;
+        quality_report?: SlidesQualityReport;
+        slides?: SvgDeckSlide[];
+        exports?: Record<string, unknown>;
         total_scripts?: number;
         estimated_total_duration?: string;
         word_document?: {
@@ -142,10 +198,22 @@ export const slidesGenerationApi = {
         const res = await client.get(`/slides/tasks/${taskId}`);
         return res.data;
     },
-    async checkProviderHealth(provider?: 'coze' | 'local_ollama' | 'deepseek') {
+    async checkProviderHealth(provider?: SlidesRuntimeProvider) {
         const res = await client.get('/slides/provider-health', {
             params: provider ? { provider } : undefined,
         });
+        return res.data;
+    },
+    async listProviders(): Promise<{ providers: SlidesProviderStatus[] }> {
+        const res = await client.get('/slides/providers');
+        return res.data;
+    },
+    async getDeck(deckId: string): Promise<SvgDeckManifest> {
+        const res = await client.get(`/slides/decks/${deckId}`);
+        return res.data;
+    },
+    async getDesignSpec(deckId: string): Promise<string> {
+        const res = await client.get(`/slides/decks/${deckId}/design-spec`, { responseType: 'text' });
         return res.data;
     },
 };

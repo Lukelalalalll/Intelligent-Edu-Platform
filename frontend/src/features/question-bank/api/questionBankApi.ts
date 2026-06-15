@@ -9,6 +9,7 @@
  */
 import client from '@/shared/api/client';
 import type { components, operations } from '../../../types/generated/schema';
+import type { AIProvider } from '../../../shared/aiProvider';
 import type {
     Sub2UploadResponse,
     Sub2ExtractResponse,
@@ -24,7 +25,7 @@ type HistoryParams = NonNullable<
 >;
 
 export interface GeneratePayload {
-    provider?: 'coze' | 'local_ollama' | 'deepseek';
+    provider?: AIProvider;
     task_id: string;
     question_type: string;
     num_questions: number;
@@ -41,7 +42,7 @@ export interface GeneratePayload {
 }
 
 export interface SuggestConstraintsPayload {
-    provider?: 'coze' | 'local_ollama' | 'deepseek';
+    provider?: AIProvider;
     task_id: string;
     source_type: 'pdf' | 'screenshot_set';
     page_numbers?: number[];

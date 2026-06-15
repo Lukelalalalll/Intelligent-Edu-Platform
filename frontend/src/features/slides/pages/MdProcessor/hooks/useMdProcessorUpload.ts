@@ -64,14 +64,17 @@ export function useMdProcessorUpload() {
         setLoading(true);
         setErrorMsg('');
 
-        const formData = new FormData();
-        formData.append('file', targetFile);
-        formData.append('use_llm', useLLM ? 'true' : 'false');
-        if (useLLM) formData.append('header_llm_provider', headerLlmProvider);
-
         try {
+            await client.get('/session', {
+                headers: { 'X-Skip-Auth-Retry': '1' },
+            });
+
+            const formData = new FormData();
+            formData.append('file', targetFile);
+            formData.append('use_llm', useLLM ? 'true' : 'false');
+            if (useLLM) formData.append('header_llm_provider', headerLlmProvider);
+
             const response = await client.post('/slides/parse-md', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
                 onUploadProgress: (progressEvent) => {
                     const percentComplete = Math.round((progressEvent.loaded * 100) / (progressEvent.total ?? 1));
                     setUploadProgress(percentComplete);
@@ -87,9 +90,9 @@ export function useMdProcessorUpload() {
             setSelectedIndices([]);
             setTimeout(() => { setUploadStatus('idle'); setUploadProgress(0); }, 1000);
         } catch (error: unknown) {
-            const e = error as { response?: { data?: { detail?: string; message?: string; error?: string } } };
+            const e = error as { response?: { data?: { detail?: string; message?: string; error?: string } }; message?: string };
             setUploadStatus('error');
-            setErrorMsg(e.response?.data?.detail || e.response?.data?.message || e.response?.data?.error || 'Upload failed');
+            setErrorMsg(e.response?.data?.detail || e.response?.data?.message || e.response?.data?.error || e.message || 'Upload failed');
         } finally {
             setLoading(false);
         }

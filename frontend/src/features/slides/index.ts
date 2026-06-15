@@ -4,6 +4,7 @@
 export { default as MdProcessorPage } from './pages/MdProcessor';
 export { default as HighlighterPage } from './pages/Highlighter';
 export { default as QuickProcessPage } from './pages/QuickProcess';
+export { default as GenerateWorkbenchPage } from './pages/GenerateWorkbench';
 export { default as SpecifyPage } from './pages/Specify';
 export { default as PptTemplatePage } from './pages/PptTemplate';
 export { default as AIThemeConfigPage } from './pages/AIThemeConfig';

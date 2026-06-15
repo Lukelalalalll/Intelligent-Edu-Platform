@@ -13,4 +13,4 @@ export type SlidesTaskEvent = {
     ts: number;
 };
 
-export type SlidesProvider = 'coze' | 'local_ollama' | 'deepseek';
+export type SlidesProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai';

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import { marked } from 'marked';
 import client from '@/shared/api/client';
-import { slidesGenerationApi } from '../../../api/slidesApi';
+import { slidesGenerationApi, type SlidesProviderStatus } from '../../../api/slidesApi';
 import type { SlidesSection, SlidesTaskEvent, SlidesProvider } from '../../../types';
+import { getStoredSlidesProvider, setStoredSlidesProvider } from '../../../utils/providerStorage';
 
 type QuickProcessFormState = {
     totalPages: number;
@@ -39,7 +40,8 @@ export function useQuickProcess(navigate: NavigateFunction) {
     const [taskProgress, setTaskProgress] = useState(0);
     const [taskStep, setTaskStep] = useState('');
     const [taskEvents, setTaskEvents] = useState<SlidesTaskEvent[]>([]);
-    const [provider, setProvider] = useState<SlidesProvider>('local_ollama');
+    const [provider, setProvider] = useState<SlidesProvider>(() => getStoredSlidesProvider());
+    const [providerOptions, setProviderOptions] = useState<SlidesProviderStatus[]>([]);
     const [providerHealth, setProviderHealth] = useState('');
 
     useEffect(() => {
@@ -80,6 +82,43 @@ export function useQuickProcess(navigate: NavigateFunction) {
         fetchContent();
     }, [navigate]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchProviders = async () => {
+            try {
+                const data = await slidesGenerationApi.listProviders();
+                if (cancelled) return;
+                const nextOptions = data.providers || [];
+                setProviderOptions(nextOptions);
+
+                const stored = getStoredSlidesProvider();
+                const storedStatus = nextOptions.find((item) => item.id === stored);
+                const nextProvider = stored === 'auto' || (storedStatus?.available && storedStatus?.configured)
+                    ? stored
+                    : 'auto';
+                setProvider(nextProvider);
+                setStoredSlidesProvider(nextProvider);
+            } catch (error: any) {
+                if (!cancelled) {
+                    setProviderHealth(error?.response?.data?.detail || error?.message || 'Failed to load providers');
+                }
+            }
+        };
+
+        fetchProviders();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const selected = providerOptions.find((item) => item.id === provider);
+        if (selected) {
+            setProviderHealth(selected.message || '');
+        }
+    }, [provider, providerOptions]);
+
     const checkProviderHealth = async (targetProvider?: SlidesProvider) => {
         try {
             const currentProvider = targetProvider || provider;
@@ -108,6 +147,10 @@ export function useQuickProcess(navigate: NavigateFunction) {
         setTaskStep('queued');
         setTaskEvents([]);
         try {
+            const selected = providerOptions.find((item) => item.id === provider);
+            if (selected && provider !== 'auto' && (!selected.configured || !selected.available)) {
+                throw new Error(selected.message || `${selected.label} is not available`);
+            }
             const res = await slidesGenerationApi.createTask({
                 provider,
                 chapterData: sections.map(s => ({ sectionTitle: s.title, text: s.content })),
@@ -120,6 +163,8 @@ export function useQuickProcess(navigate: NavigateFunction) {
                 generate_word_document: Boolean(formState.generateWordDocument),
             });
             setTaskId(res.task_id);
+            localStorage.setItem('slides_last_task_id', res.task_id);
+            setStoredSlidesProvider(provider);
 
             let pollCount = 0;
             while (pollCount < 240) {
@@ -137,6 +182,9 @@ export function useQuickProcess(navigate: NavigateFunction) {
                     if (status.result.ppt_schema) {
                         setGeneratedPptSchema(status.result.ppt_schema);
                         localStorage.setItem('ppt_schema', JSON.stringify(status.result.ppt_schema));
+                    }
+                    if (status.result.deck_id) {
+                        localStorage.setItem('slides_last_deck_id', status.result.deck_id);
                     }
                     break;
                 }
@@ -172,7 +220,14 @@ export function useQuickProcess(navigate: NavigateFunction) {
     };
 
     const handleProceed = () => {
-        navigate('/slides/ppt-template', { state: { pptSchema: generatedPptSchema } });
+        navigate('/slides/generate-workbench', {
+            state: {
+                taskId,
+                deckId: talkingScriptResult?.deck_id,
+                result: talkingScriptResult,
+                pptSchema: generatedPptSchema,
+            },
+        });
     };
 
     return {
@@ -191,11 +246,15 @@ export function useQuickProcess(navigate: NavigateFunction) {
             taskStep,
             taskEvents,
             provider,
+            providerOptions,
             providerHealth,
         },
         handlers: {
             setFormState,
-            setProvider,
+            setProvider: (next: SlidesProvider) => {
+                setProvider(next);
+                setStoredSlidesProvider(next);
+            },
             checkProviderHealth,
             handleSubmit,
             handleProceed,

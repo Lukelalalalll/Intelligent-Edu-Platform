@@ -9,7 +9,7 @@ export default function QuickProcess({
     maxAllowedPages, totalChapters, errorMsg,
     results, talkingScriptResult,
     taskId, taskProgress, taskStep, taskEvents,
-    provider, setProvider, providerHealth, checkProviderHealth,
+    provider, providerOptions, setProvider, providerHealth, checkProviderHealth,
     handleSubmit, handleProceed, handleDownloadScript
 }) {
     const [currentStep, setCurrentStep] = useState(1);
@@ -115,9 +115,20 @@ export default function QuickProcess({
                                                 value={provider}
                                                 onChange={(e) => setProvider(e.target.value)}
                                             >
-                                                <option value="local_ollama">local_ollama (llama)</option>
-                                                <option value="coze">coze (from env)</option>
-                                                <option value="deepseek">deepseek (from env)</option>
+                                                {(providerOptions?.length ? providerOptions : [
+                                                    { id: 'auto', label: 'Auto', available: true, configured: true, message: 'Use best available provider' },
+                                                    { id: 'openai', label: 'OpenAI', available: false, configured: false, message: 'Not checked' },
+                                                    { id: 'deepseek', label: 'DeepSeek', available: false, configured: false, message: 'Not checked' },
+                                                    { id: 'local_ollama', label: 'Local Ollama', available: false, configured: true, message: 'Not checked' },
+                                                    { id: 'coze', label: 'Coze', available: false, configured: false, message: 'Not checked' },
+                                                ]).map((item) => {
+                                                    const disabled = item.id !== 'auto' && (!item.available || !item.configured);
+                                                    return (
+                                                        <option key={item.id} value={item.id} disabled={disabled}>
+                                                            {item.label}{disabled ? ` - ${item.message}` : item.model ? ` - ${item.model}` : ''}
+                                                        </option>
+                                                    );
+                                                })}
                                             </select>
                                             <button
                                                 type="button"
@@ -179,7 +190,7 @@ export default function QuickProcess({
                                     )}
 
                                     <button type="submit" className="btn btn-primary w-100" style={{ marginTop: '20px' }} disabled={loading || contentLoading}>
-                                        {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> Generate PPT Content</>}
+                                        {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> Generate SVG Deck</>}
                                     </button>
                                 </form>
                             </div>
@@ -194,7 +205,7 @@ export default function QuickProcess({
                             <h2 className={styles.cardTitle} style={{ margin: 0 }}><i className="fas fa-list-check"></i> Generated Results</h2>
                             {results && (
                                 <button className={styles.btnProceed} onClick={handleProceed} style={{ margin: 0, padding: '0.6rem 1.2rem', fontSize: '0.9rem' }}>
-                                    Confirm & Proceed <i className="fas fa-arrow-right"></i>
+                                    Open Workbench <i className="fas fa-arrow-right"></i>
                                 </button>
                             )}
                         </div>
@@ -239,7 +250,7 @@ export default function QuickProcess({
 
                                 <div className={styles.proceedWrap}>
                                     <button className={styles.btnProceed} onClick={handleProceed}>
-                                        Confirm & Proceed to Templates <i className="fas fa-arrow-right"></i>
+                                        Open Generate Workbench <i className="fas fa-arrow-right"></i>
                                     </button>
                                 </div>
                             </div>

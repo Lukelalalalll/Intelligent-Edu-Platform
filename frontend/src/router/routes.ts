@@ -36,6 +36,7 @@ export const ROUTES: RouteConfig[] = [
   { path: 'slides/highlighter', Component: lazy(() => import('@/features/slides/pages/Highlighter/HighlighterPage')), auth: 'protected' },
   { path: 'slides/specify', Component: lazy(() => import('@/features/slides/pages/Specify/SpecifyPage')), auth: 'protected' },
   { path: 'slides/quick-process', Component: lazy(() => import('@/features/slides/pages/QuickProcess/QuickProcessPage')), auth: 'protected' },
+  { path: 'slides/generate-workbench', Component: lazy(() => import('@/features/slides/pages/GenerateWorkbench/GenerateWorkbenchPage')), auth: 'protected' },
   { path: 'slides/ppt-template', Component: lazy(() => import('@/features/slides/pages/PptTemplate/PptTemplatePage')), auth: 'protected' },
   { path: 'slides/ai-theme-config', Component: lazy(() => import('@/features/slides/pages/AIThemeConfig/AIThemeConfigPage')), auth: 'protected' },
   { path: 'slides/editor/:sessionId', Component: lazy(() => import('@/features/slides/pages/Editor/SlideEditorPage')), auth: 'protected', fullScreen: true },

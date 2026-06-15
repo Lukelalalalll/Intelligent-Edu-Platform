@@ -1,11 +1,12 @@
 import type { ChatMessage } from './api';
+import type { AIProvider } from '../shared/aiProvider';
 
 export type ChatRole = 'user' | 'assistant' | 'system';
 
 export type { ChatMessage };
 
 export interface FeedbackRequestPayload {
-    provider?: 'coze' | 'local_ollama' | 'deepseek';
+    provider?: AIProvider;
     submissionId: string;
     selectedText: string;
     assignment?: string;
