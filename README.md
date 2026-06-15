@@ -248,12 +248,13 @@ Intelligent-Edu-Platform/
 ├── data/                  # Static application seeds (default courses, slide themes)
 ├── docs/                  # Architecture decisions, refactoring plans, and tech specs
 ├── evaluator/             # Validation scripts/datasets for RAG & LLM performance
-├── pdf_loader/            # Specialized parsers for knowledge base document extraction
 ├── docker-compose.yml     # Local multi-container orchestration configuration
 ├── pyproject.toml         # Python tooling and ecosystem configuration
 ├── locustfile.py          # Load-testing and performance benchmarking scripts
 └── README.md              # Project onboarding and operation manual
 ```
+
+PDF parsing is provided by the backend Python dependency `opendataloader-pdf==2.1.1`, with PyMuPDF/PaddleOCR fallbacks in backend services.
 
 ---
 

@@ -10,6 +10,8 @@ import unicodedata
 
 from PIL import Image
 
+from backend.utils.pdf_loader_adapter import convert_pdf
+
 
 def slugify(text: str, fallback: str = "image") -> str:
     if not text:
@@ -43,8 +45,6 @@ def extract_images_opendataloader(data: bytes):
     import shutil
     import tempfile
 
-    import opendataloader_pdf
-
     tmp_dir = tempfile.mkdtemp(prefix="sub3_pdf_")
     try:
         img_dir = os.path.join(tmp_dir, "images")
@@ -54,7 +54,7 @@ def extract_images_opendataloader(data: bytes):
         with open(pdf_path, "wb") as handle:
             handle.write(data)
 
-        opendataloader_pdf.convert(
+        convert_pdf(
             input_path=pdf_path,
             output_dir=tmp_dir,
             format="json",

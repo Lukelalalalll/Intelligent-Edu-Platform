@@ -84,7 +84,7 @@ async def extract_text_from_image(file_path, extract_prompt="exercise", provider
 async def format_extracted_text(markdown_text, extract_prompt="exercise", provider="local_ollama"):
     """Use configured AI provider to format extracted markdown into exercise JSON."""
     if not markdown_text or not markdown_text.strip():
-        raise Exception("No extracted markdown text from pdf_loader")
+        raise Exception("No extracted markdown text from PDF loader")
 
     prompt = f"""You are an educational content formatting assistant. Below is high-accuracy Markdown text extracted from a PDF.
 

@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import logging
-import os
 import tempfile
 
 import fitz
 
-try:
-    import opendataloader_pdf
-except ModuleNotFoundError:
-    opendataloader_pdf = None  # type: ignore[assignment]
+from backend.utils.pdf_loader_adapter import (
+    PDFLoaderError,
+    convert_pdf,
+    is_pdf_loader_available,
+    read_markdown_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,14 +102,14 @@ def _fitz_then_paddle(pdf_path, page_numbers):
 
 def extract_pdf_text_with_loader(pdf_path, page_numbers):
     """Use OpenDataLoader to extract selected PDF pages as markdown text."""
-    if opendataloader_pdf is None:
+    if not is_pdf_loader_available():
         logger.warning("OpenDataLoader unavailable, using PyMuPDF fallback")
         return _fitz_then_paddle(pdf_path, page_numbers)
 
     page_spec = _page_numbers_to_spec(page_numbers)
     try:
         with tempfile.TemporaryDirectory(prefix="sub2_odl_") as tmp_dir:
-            opendataloader_pdf.convert(
+            convert_pdf(
                 input_path=pdf_path,
                 output_dir=tmp_dir,
                 format="markdown",
@@ -116,25 +117,7 @@ def extract_pdf_text_with_loader(pdf_path, page_numbers):
                 image_output="off",
                 pages=page_spec,
             )
-
-            stem = os.path.splitext(os.path.basename(pdf_path))[0]
-            md_candidates = [
-                os.path.join(tmp_dir, f"{stem}.md"),
-                os.path.join(tmp_dir, f"{stem}_markdown.md"),
-            ]
-            md_path = next((path for path in md_candidates if os.path.exists(path)), None)
-
-            if not md_path:
-                md_files = [name for name in os.listdir(tmp_dir) if name.lower().endswith(".md")]
-                if not md_files:
-                    raise Exception("pdf_loader did not produce markdown output")
-                md_path = os.path.join(tmp_dir, md_files[0])
-
-            with open(md_path, "r", encoding="utf-8", errors="replace") as handle:
-                return handle.read()
-    except FileNotFoundError as exc:
-        logger.warning("OpenDataLoader unavailable (likely Java missing), using PyMuPDF fallback: %s", exc)
-        return _fitz_then_paddle(pdf_path, page_numbers)
-    except Exception as exc:
+            return read_markdown_output(tmp_dir, pdf_path)
+    except PDFLoaderError as exc:
         logger.warning("OpenDataLoader failed, using PyMuPDF fallback: %s", exc)
         return _fitz_then_paddle(pdf_path, page_numbers)

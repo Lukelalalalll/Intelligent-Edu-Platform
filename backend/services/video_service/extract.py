@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 import tempfile
 from pathlib import Path
+
+from backend.utils.pdf_loader_adapter import (
+    PDFLoaderError,
+    convert_pdf,
+    read_markdown_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -13,33 +18,21 @@ logger = logging.getLogger(__name__)
 def extract_text_from_pdf(pdf_path: str) -> list[str]:
     """Extract text per page, using OpenDataLoader (high-quality) with fitz fallback."""
     try:
-        import opendataloader_pdf
         with tempfile.TemporaryDirectory(prefix="video_odl_") as tmp_dir:
-            opendataloader_pdf.convert(
+            convert_pdf(
                 input_path=pdf_path,
                 output_dir=tmp_dir,
                 format="markdown",
                 quiet=True,
                 image_output="off",
             )
-            stem = os.path.splitext(os.path.basename(pdf_path))[0]
-            md_candidates = [
-                os.path.join(tmp_dir, f"{stem}.md"),
-                os.path.join(tmp_dir, f"{stem}_markdown.md"),
-            ]
-            md_path = next((p for p in md_candidates if os.path.exists(p)), None)
-            if not md_path:
-                md_files = [f for f in os.listdir(tmp_dir) if f.lower().endswith(".md")]
-                if md_files:
-                    md_path = os.path.join(tmp_dir, md_files[0])
-            if md_path:
-                text = open(md_path, "r", encoding="utf-8", errors="replace").read()
-                # Split by markdown headings or double newlines
-                chunks = re.split(r"\n#{1,3} |\n\n", text)
-                result = [c.strip() for c in chunks if len(c.strip()) > 20]
-                if result:
-                    return result
-    except Exception as exc:
+            text = read_markdown_output(tmp_dir, pdf_path)
+            # Split by markdown headings or double newlines
+            chunks = re.split(r"\n#{1,3} |\n\n", text)
+            result = [c.strip() for c in chunks if len(c.strip()) > 20]
+            if result:
+                return result
+    except PDFLoaderError as exc:
         logger.info("OpenDataLoader unavailable, using PyMuPDF fallback: %s", exc)
 
     # Fallback: pymupdf page-by-page

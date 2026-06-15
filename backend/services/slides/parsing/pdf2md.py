@@ -1,13 +1,14 @@
-import glob
 import json
 import logging
 import os
 import re
 
-try:
-    import opendataloader_pdf
-except ModuleNotFoundError:  # optional dependency
-    opendataloader_pdf = None  # type: ignore[assignment]
+from backend.utils.pdf_loader_adapter import (
+    PDFLoaderError,
+    convert_pdf,
+    find_json_output,
+    find_markdown_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -158,48 +159,30 @@ def convert_pdf_to_md(file_path, output_path):
     # Generate both markdown and JSON so we can enrich headers if needed.
     # If Java is unavailable, degrade gracefully to a PyMuPDF-based converter.
     try:
-        opendataloader_pdf.convert(
+        convert_pdf(
             input_path=file_path,
             output_dir=output_dir,
             format="json,markdown",
             quiet=True,
             image_output="off",
         )
-    except FileNotFoundError as exc:
-        logger.warning("OpenDataLoader unavailable (likely missing Java), using fallback parser: %s", exc)
+    except PDFLoaderError as exc:
+        logger.warning("OpenDataLoader failed, using fallback parser: %s", exc)
         _fallback_pdf_to_md(file_path, output_path)
         return
-    except Exception as exc:  # noqa: BLE001
-        msg = str(exc).lower()
-        if "java" in msg:
-            logger.warning("OpenDataLoader Java runtime error, using fallback parser: %s", exc)
-            _fallback_pdf_to_md(file_path, output_path)
-            return
-        raise
-
-    stem = os.path.splitext(os.path.basename(file_path))[0]
 
     # Locate the markdown file produced by the converter.
     if not os.path.exists(output_path):
-        candidates = sorted(
-            glob.glob(os.path.join(output_dir, f"{stem}*.md")),
-            key=os.path.getmtime,
-            reverse=True,
-        )
-        if not candidates:
+        md_path = find_markdown_output(output_dir, file_path)
+        if not md_path:
             raise RuntimeError(
                 f"OpenDataLoader did not generate markdown for: {file_path}"
             )
-        if candidates[0] != output_path:
-            os.replace(candidates[0], output_path)
+        if md_path != output_path:
+            os.replace(md_path, output_path)
 
     # Locate the companion JSON file.
-    json_candidates = sorted(
-        glob.glob(os.path.join(output_dir, f"{stem}*.json")),
-        key=os.path.getmtime,
-        reverse=True,
-    )
-    json_path = json_candidates[0] if json_candidates else ""
+    json_path = find_json_output(output_dir, file_path) or ""
 
     # Enrich: inject headings from JSON / heuristics when markdown lacks them.
     _enrich_md_with_json(output_path, json_path)

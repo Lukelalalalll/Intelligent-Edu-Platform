@@ -183,7 +183,7 @@ async def extract_pdf_content(pdf_url: str, page_number: int = 1) -> str:
         import requests
         from bs4 import BeautifulSoup
 
-        # For local files, use the pdf_loader module
+        # Full local extraction is handled by the backend PDF extraction pipeline.
         if pdf_url.startswith("http"):
             resp = requests.get(pdf_url, timeout=30)
             resp.raise_for_status()
@@ -193,11 +193,11 @@ async def extract_pdf_content(pdf_url: str, page_number: int = 1) -> str:
                     "status": "error",
                     "message": f"URL does not point to a PDF file (got: {content_type})",
                 })
-            # Return a marker — full extraction would use pdf_loader
+            # Return a marker; full extraction uses the backend OpenDataLoader wrapper.
             return json.dumps({
                 "status": "success",
                 "message": f"PDF at {pdf_url} is accessible ({len(resp.content)} bytes).",
-                "page_count_hint": "Use local pdf_loader for full extraction.",
+                "page_count_hint": "Use backend PDF extraction for full extraction.",
             })
 
         # Local file path
