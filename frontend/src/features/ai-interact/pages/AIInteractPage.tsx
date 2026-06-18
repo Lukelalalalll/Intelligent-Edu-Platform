@@ -22,6 +22,7 @@ export default function AIInteractPage() {
         selectedProvider,
         setSelectedProvider,
         providerHealth,
+        setShouldCheckHealth,
         tutorMode,
         setTutorMode,
         webSearch,
@@ -35,8 +36,19 @@ export default function AIInteractPage() {
 
     const [roleInfo, setRoleInfo] = useState<AIRoleInfo | null>(null);
     useEffect(() => {
-        getRoleInfo().then(setRoleInfo).catch(() => {});
-    }, []);
+        const schedule = window.requestIdleCallback
+            ? window.requestIdleCallback
+            : (cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 250);
+        const cancel = window.cancelIdleCallback
+            ? window.cancelIdleCallback
+            : window.clearTimeout;
+
+        const id = schedule(() => {
+            getRoleInfo().then(setRoleInfo).catch(() => {});
+            setShouldCheckHealth(true);
+        });
+        return () => cancel(id);
+    }, [setShouldCheckHealth]);
 
     const [inputText, setInputText] = useState('');
     const [toastVisible, setToastVisible] = useState(false);

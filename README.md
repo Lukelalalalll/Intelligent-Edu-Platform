@@ -15,6 +15,7 @@ Before starting, ensure the following tools are installed on your machine:
 - **Python 3.11 or 3.12** *(⚠️ Important: Do not use Python 3.13 as some machine learning dependencies like `shapely` lack precompiled wheels and will fail to build).*
 - **Node.js 18 or greater** (LTS recommended)
 - **npm** (Node Package Manager)
+- **Java 11 or greater** on `PATH` (required by `opendataloader-pdf`; Java 17 LTS is recommended)
 - **MongoDB 7.0+** (running locally at `mongodb://localhost:27017` or via Docker)
 - **OpenSearch 3.x** *(optional, but recommended for enterprise-grade RAG sparse / metadata retrieval)*
 
@@ -39,7 +40,7 @@ You need to set up environment variables for both the backend and frontend.
    cp .env.example .env
    cd ..
    ```
-   *Ensure the `frontend/.env` points to the local backend API (default is usually `VITE_API_ROOT=http://localhost:5009`).*
+   *For local Vite development, keep `VITE_API_ROOT=/` so requests go through the dev proxy. The proxy forwards to the backend on `http://localhost:5009`.*
 
 ### Database Configuration (MongoDB)
 If you have Docker installed, you can simply spin up a MongoDB instance using:
@@ -113,6 +114,11 @@ Open a terminal at the project root and run the following commands:
    ```bash
    pip install -r backend/requirements.txt
    ```
+   PDF conversion uses `opendataloader-pdf==2.1.1`. On Windows, install a JDK/JRE first, then confirm it is visible:
+   ```powershell
+   java -version
+   python -c "import opendataloader_pdf; print('opendataloader_pdf OK')"
+   ```
 
 4. **Start OpenSearch (recommended for RAG development)**:
    - For Windows PowerShell:
@@ -125,11 +131,23 @@ Open a terminal at the project root and run the following commands:
      ```
    *This step is optional for general backend work, but recommended if you are developing or testing the RAG retrieval stack.*
 
-5. **Start the Application**:
-   ```bash
-   python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5009
+5. **Start the Backend Application**:
+   ```powershell
+   .\run-backend.cmd
    ```
-   *The backend is now running at `http://localhost:5009`. You can verify by visiting: `http://localhost:5009/api/health`*
+   *后端固定运行在 `http://127.0.0.1:5009`。可以访问 `http://127.0.0.1:5009/healthz` 进行验证。*
+   `run-backend.cmd` starts `backend.main:app` on `http://127.0.0.1:5009`, injects `JAVA_HOME` / `PATH` for `D:\Java\jdk21` when available, and prints the detected `java.exe`.
+
+   To enable Uvicorn reload explicitly:
+   ```powershell
+   $env:BACKEND_RELOAD="1"
+   .\run-backend.cmd
+   ```
+
+   Verify the backend:
+   ```powershell
+   curl http://127.0.0.1:5009/healthz
+   ```
 
 ### B) Start the Frontend Client (Terminal 2)
 Open a second terminal at the project root and run:
@@ -211,9 +229,15 @@ If the frontend service is unreachable, the backend will automatically fallback 
 - **"Building wheel for accumulation-tree ... error" during `pip install`**:
   You are likely using Python 3.13. Please downgrade to Python 3.11 or 3.12, delete the `backend/venv` folder, and recreate the virtual environment.
 - **Frontend cannot connect to the backend**:
-  Verify the value of `VITE_API_ROOT` in the `frontend/.env` file. It should properly point to your backend server address (e.g., `http://localhost:5009`).
+  For local Vite development, keep `VITE_API_ROOT=/` and `VITE_DEV_BACKEND_TARGET=http://localhost:5009`. Vite proxies `/api` and `/static` to the backend and injects the internal gateway header.
 - **Backend cannot connect to the database**:
   Verify the `MONGO_URI` in the `.env` file and ensure your MongoDB instance or Docker container is running properly.
+- **Port 5009 is occupied but `taskkill` cannot find the PID**:
+  This can happen on Windows after killing a `uvicorn --reload` parent/child process. Open PowerShell as Administrator and run:
+  ```powershell
+  Restart-Service hns,WinNAT,iphlpsvc -Force
+  ```
+  If the orphan listener remains, restart Windows, then start the backend with `.\run-backend.cmd`.
 - **AI functionalities are failing**:
   Double-check the `backend/core/config.py` and `.env` file to ensure API keys (`COZE_API_KEY`) and URLs (`OLLAMA_BASE_URL`) for your chosen AI providers are correctly configured.
 - **Generated video slides look different from the browser preview**:
@@ -254,7 +278,7 @@ Intelligent-Edu-Platform/
 └── README.md              # Project onboarding and operation manual
 ```
 
-PDF parsing is provided by the backend Python dependency `opendataloader-pdf==2.1.1`, with PyMuPDF/PaddleOCR fallbacks in backend services.
+PDF parsing is provided by the backend Python dependency `opendataloader-pdf==2.1.1`, which requires Java 11+ on `PATH`. PyMuPDF/PaddleOCR fallbacks remain available in backend services when OpenDataLoader cannot run.
 
 ---
 
@@ -302,7 +326,7 @@ Intelligent Edu Platform 是一个功能全面的全栈教育系统，旨在提�
    cp .env.example .env
    cd ..
    ```
-   *确保 `frontend/.env` 中的 `VITE_API_ROOT` 指向本地后端 API（默认值为 `http://localhost:5009`）。*
+   *本地 Vite 开发时保持 `VITE_API_ROOT=/`，并设置 `VITE_DEV_BACKEND_TARGET=http://localhost:5009`，让 Vite 代理 `/api` 和 `/static` 到后端。*
 
 ### 数据库配置（MongoDB）
 
@@ -394,9 +418,9 @@ RAG_OPENSEARCH_VERIFY_CERTS=false
 
 5. **启动应用**：
    ```bash
-   python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 5009
+   .\run-backend.cmd
    ```
-   *后端现已运行在 `http://localhost:5009`。你可以访问 `http://localhost:5009/api/health` 进行验证。*
+   *后端固定运行在 `http://127.0.0.1:5009`。你可以访问 `http://127.0.0.1:5009/healthz` 进行验证。*
 
 ### B) 启动前端客户端（终端 2）
 
@@ -473,7 +497,7 @@ In the Docker stack, the renderer page is served by `edge-nginx` on the internal
 - **`pip install` 时出现 "Building wheel for accumulation-tree ... error" 错误**：
   你很可能使用了 Python 3.13。请降级到 Python 3.11 或 3.12，删除 `backend/venv` 文件夹，然后重新创建虚拟环境。
 - **前端无法连接后端**：
-  检查 `frontend/.env` 文件中 `VITE_API_ROOT` 的值。它应该正确指向你的后端服务地址（例如 `http://localhost:5009`）。
+  本地 Vite 开发时保持 `VITE_API_ROOT=/`，并设置 `VITE_DEV_BACKEND_TARGET=http://localhost:5009`，让 Vite 代理 `/api` 和 `/static` 到后端。
 - **后端无法连接数据库**：
   检查根目录 `.env` 中的 `MONGO_URI`，确保 MongoDB 实例或 Docker 容器正在正常运行。
 - **AI 功能无法使用**：

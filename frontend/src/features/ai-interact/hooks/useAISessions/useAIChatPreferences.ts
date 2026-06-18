@@ -45,6 +45,7 @@ export function useAIChatPreferences() {
         detail: 'Checking provider status...',
         checking: true,
     });
+    const [shouldCheckHealth, setShouldCheckHealth] = useState(false);
 
     const webSearchRef = useRef(webSearch);
     const searchEngineRef = useRef(searchEngine);
@@ -63,7 +64,7 @@ export function useAIChatPreferences() {
     }, [enableThinking]);
 
     usePersistAiPreferences(selectedProvider, tutorMode, webSearch, searchEngine, enableThinking);
-    useProviderHealthCheck(selectedProvider, setProviderHealth);
+    useProviderHealthCheck(selectedProvider, setProviderHealth, shouldCheckHealth);
 
     return {
         selectedProvider,
@@ -77,6 +78,8 @@ export function useAIChatPreferences() {
         enableThinking,
         setEnableThinking,
         providerHealth,
+        shouldCheckHealth,
+        setShouldCheckHealth,
         webSearchRef,
         searchEngineRef,
         enableThinkingRef,

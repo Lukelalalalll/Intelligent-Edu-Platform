@@ -130,6 +130,10 @@ export interface AISession {
   title: string;
   messages: ChatMessage[];
   _needFetch?: boolean;
+  historyStart?: number;
+  messageCount?: number;
+  hasMoreMessages?: boolean;
+  previewMessages?: ChatMessage[];
 }
 
 export interface AISessionListResponse {

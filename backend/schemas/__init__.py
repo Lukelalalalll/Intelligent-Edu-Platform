@@ -70,6 +70,8 @@ from backend.schemas.slides import (  # noqa: F401
     SlidesTaskResponseSchema,
     SlidesTaskStatusSchema,
     GenerateRenderRequest,
+    ExportRenderDraftRequest,
+    RenderDraftPreviewRequest,
     ThemeListResponse,
 )
 

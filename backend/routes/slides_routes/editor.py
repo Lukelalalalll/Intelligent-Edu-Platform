@@ -20,15 +20,18 @@ import os
 import re
 import tempfile
 import traceback
+import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from backend.core.config import Config
 from backend.core.security import get_current_user
 from backend.services.slides.output.editor_session import EditorSession
+from backend.services.slides_pipeline_service import create_ppt
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +52,10 @@ def _extract_json_from_markdown(text: str) -> str:
 
 class RenderEditorSessionRequest(BaseModel):
     """Request to create a new editor session with PPTX rendering."""
-    pptx_base64: str = Field(..., description="Base64-encoded PPTX bytes")
-    theme_id: str = Field(..., description="Theme identifier for template merging")
+    pptx_base64: Optional[str] = Field(None, description="Base64-encoded PPTX bytes")
+    theme_id: Optional[str] = Field(None, description="Theme identifier for template merging")
+    theme: Optional[str] = Field(None, description="Frontend theme identifier")
+    ppt_schema: Optional[Dict[str, Any]] = Field(None, description="Frontend PPT schema")
     slide_lookup_table: Dict[int, str] = Field(
         default_factory=dict,
         description="Mapping from slide index to layout type (e.g. 'title_slide')",
@@ -59,9 +64,12 @@ class RenderEditorSessionRequest(BaseModel):
 
 class AutoAssignLayoutsRequest(BaseModel):
     """Request body for AI-powered layout assignment."""
-    slides_md: List[Dict[str, Any]] = Field(
-        ..., description="Array of slide objects with md_content and slide_number"
+    slides_md: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Array of slide objects with md_content and slide_number"
     )
+    provider: Optional[str] = None
+    theme: Optional[str] = None
+    ppt_schema: Optional[Dict[str, Any]] = None
 
 
 class ConvertToPptxRequest(BaseModel):
@@ -80,6 +88,20 @@ class EditTextRequest(BaseModel):
     new_text: str = Field(..., min_length=1, description="New text content")
 
 
+class ReRenderSessionRequest(BaseModel):
+    session_id: str = Field(..., description="Editor session ID")
+    edits: List[Dict[str, Any]] = Field(default_factory=list)
+    slide_images: Optional[List[Dict[str, Any]]] = None
+
+
+class ExportPptxRequest(BaseModel):
+    session_id: str = Field(..., description="Editor session ID")
+    theme: Optional[str] = None
+    ppt_schema: Optional[Dict[str, Any]] = None
+    edits: List[Dict[str, Any]] = Field(default_factory=list)
+    slide_images: Optional[List[Dict[str, Any]]] = None
+
+
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -95,6 +117,70 @@ def _prep_auto_markdown(slides_md: list) -> str:
         md = s.get("md_content", "")
         parts.append(f"--- Slide {num} ---\n{md}")
     return "\n\n".join(parts)
+
+
+def _theme_from_body(body: RenderEditorSessionRequest) -> str:
+    return (body.theme_id or body.theme or "Dark").strip() or "Dark"
+
+
+def _build_pptx_bytes_from_schema(ppt_schema: Dict[str, Any], theme: str) -> bytes:
+    schema = dict(ppt_schema or {})
+    schema["theme"] = theme
+    schema["slides"] = [
+        {**slide, "layout": slide.get("layout") or {"name": "Title and Content"}}
+        for slide in schema.get("slides", [])
+        if isinstance(slide, dict)
+    ]
+    filename = create_ppt(schema)
+    pptx_path = Path(Config.PPT_RESULTS_FOLDER) / filename
+    if not pptx_path.is_file():
+        raise RuntimeError(f"Generated PPTX not found: {pptx_path}")
+    return pptx_path.read_bytes()
+
+
+def _frontend_session_payload(session: EditorSession) -> Dict[str, Any]:
+    slide_total = session.slide_count or len(session._slide_pngs)
+    slides = [
+        {
+            "index": idx - 1,
+            "preview_url": f"/api/slides/editor/sessions/{session.session_id}/slides/{idx}.png",
+            "elements": [],
+        }
+        for idx in range(1, slide_total + 1)
+    ]
+    return {
+        "session_id": session.session_id,
+        "theme": session.theme_id,
+        "theme_id": session.theme_id,
+        "slide_width_pt": 960,
+        "slide_height_pt": 540,
+        "slides": slides,
+        "total_slides": slide_total,
+        "status": "ready",
+    }
+
+
+def _get_session_or_404(session_id: str) -> EditorSession:
+    session = EditorSession.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    return session
+
+
+def _editor_asset_dir() -> Path:
+    path = Path(Config.PPT_RESULTS_FOLDER) / "editor_assets"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _resolve_editor_asset(asset_id: str) -> Path:
+    safe_name = os.path.basename(asset_id)
+    if not safe_name or safe_name != asset_id:
+        raise HTTPException(status_code=400, detail="Invalid asset id")
+    path = _editor_asset_dir() / safe_name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -119,30 +205,37 @@ async def render_editor_session(
     try:
         import base64 as _b64
 
-        # Decode base64 PPTX
-        try:
-            pptx_bytes = _b64.b64decode(body.pptx_base64)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid base64 PPTX data")
+        theme_id = _theme_from_body(body)
+        if body.ppt_schema is not None:
+            pptx_bytes = _build_pptx_bytes_from_schema(body.ppt_schema, theme_id)
+        elif body.pptx_base64:
+            try:
+                pptx_bytes = _b64.b64decode(body.pptx_base64)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Invalid base64 PPTX data")
+        else:
+            raise HTTPException(status_code=400, detail="ppt_schema or pptx_base64 is required")
 
         # Template loading is optional – the PPTX is self-contained;
         # template merging only enhances visual fidelity when the theme exists.
         # create_session handles the missing-LibreOffice case with Pillow fallback.
         try:
-            _ = EditorSession._load_template_bytes(body.theme_id)
+            _ = EditorSession._load_template_bytes(theme_id)
         except FileNotFoundError:
             logger.warning(
                 "Template not found for theme '%s'; session will use fallback rendering",
-                body.theme_id,
+                theme_id,
             )
 
         # Create session (this also renders PNGs via LibreOffice or Pillow fallback)
         session = EditorSession.create_session(
             pptx_bytes=pptx_bytes,
-            theme_id=body.theme_id,
+            theme_id=theme_id,
             slide_lookup_table=body.slide_lookup_table,
         )
 
+        if body.ppt_schema is not None:
+            return _frontend_session_payload(session)
         return session.get_pptx_payload()
 
     except HTTPException:
@@ -169,6 +262,21 @@ async def get_slide_png(
     if png is None:
         raise HTTPException(status_code=404, detail="Slide PNG not available")
 
+    return Response(content=png, media_type="image/png")
+
+
+@router.get("/sessions/{session_id}/slides/{slide_index}.png")
+async def get_session_slide_png(
+    session_id: str,
+    slide_index: int,
+):
+    """Return a slide PNG using a cache-bustable path instead of query params."""
+    session = _get_session_or_404(session_id)
+    if slide_index < 1:
+        raise HTTPException(status_code=400, detail="slide_index must be 1-based")
+    png = session.get_slide_png(slide_index)
+    if png is None:
+        raise HTTPException(status_code=404, detail="Slide PNG not available")
     return Response(content=png, media_type="image/png")
 
 
@@ -202,21 +310,22 @@ async def export_pptx(
         raise HTTPException(status_code=500, detail="Failed to export PPTX")
 
 
+@router.post("/export-pptx")
+async def export_pptx_post(
+    body: ExportPptxRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Frontend-compatible PPTX export endpoint."""
+    return await export_pptx(body.session_id)
+
+
 @router.get("/get-editor-session")
 async def get_editor_session(
     session_id: str = Query(..., description="Editor session ID"),
 ):
     """Retrieve session metadata (slide count, theme, status)."""
-    session = EditorSession.get_session(session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found or expired")
-
-    return {
-        "session_id": session.session_id,
-        "theme_id": session.theme_id,
-        "total_slides": session.slide_count or len(session._slide_pngs),
-        "status": "ready",
-    }
+    session = _get_session_or_404(session_id)
+    return _frontend_session_payload(session)
 
 
 @router.get("/session-health")
@@ -258,11 +367,14 @@ async def auto_assign_layouts(
     the same Tailscale network), returns a 503 with a clear error message
     so the frontend can fall back to manual layout assignment.
     """
+    if body.ppt_schema is not None:
+        return {"ppt_schema": body.ppt_schema}
+
     try:
         from backend.services.ai_gateway_service import get_default_service
 
         # Build combined Markdown
-        combined_md = _prep_auto_markdown(body.slides_md)
+        combined_md = _prep_auto_markdown(body.slides_md or [])
         if not combined_md.strip():
             raise HTTPException(status_code=400, detail="No slide content provided")
 
@@ -370,6 +482,44 @@ async def edit_text(
     except Exception as exc:
         logger.error("Text edit failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Text edit failed: {str(exc)}")
+
+
+@router.post("/re-render-session")
+async def re_render_session(
+    body: ReRenderSessionRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Frontend-compatible re-render endpoint."""
+    session = _get_session_or_404(body.session_id)
+    session._edits["frontend_edits"] = body.edits or []
+    session._edits["slide_images"] = body.slide_images or []
+    return _frontend_session_payload(session)
+
+
+@router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}:
+        ext = ".png"
+    asset_id = f"{uuid.uuid4().hex}{ext}"
+    path = _editor_asset_dir() / asset_id
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Uploaded image is empty")
+    path.write_bytes(data)
+    return {
+        "asset_id": asset_id,
+        "url": f"/api/slides/editor/assets/{asset_id}",
+    }
+
+
+@router.get("/assets/{asset_id}")
+async def get_uploaded_image(asset_id: str):
+    path = _resolve_editor_asset(asset_id)
+    return FileResponse(path)
 
 
 # ---------------------------------------------------------------------------

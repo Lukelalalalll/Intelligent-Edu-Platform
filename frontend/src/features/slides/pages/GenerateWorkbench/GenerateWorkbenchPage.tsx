@@ -103,6 +103,7 @@ export default function GenerateWorkbenchPage() {
     const resolvedModel = result?.provider_model || String(llmSpec.llm_model || '');
     const providerSource = result?.provider_source || String(llmSpec.provider_source || '');
     const qualityReport = result?.quality_report || deck?.quality_report;
+    const pptxExport = result?.exports?.pptx || deck?.exports?.pptx;
     const slides: SvgDeckSlide[] = useMemo(() => {
         if (deck?.slides?.length) return deck.slides;
         return result?.slides || [];
@@ -246,6 +247,11 @@ export default function GenerateWorkbenchPage() {
                     <button type="button" className={styles.secondaryButton} onClick={() => navigate('/slides/quick-process')}>
                         <i className="fas fa-file-import" aria-hidden="true" /> Source
                     </button>
+                    {pptxExport?.download_url && (
+                        <a className={styles.primaryButton} href={pptxExport.download_url}>
+                            <i className="fas fa-download" aria-hidden="true" /> Download PPTX
+                        </a>
+                    )}
                     <button type="button" className={styles.primaryButton} onClick={openLegacyEditor} disabled={!pptSchema}>
                         <i className="fas fa-table-columns" aria-hidden="true" /> Legacy Editor
                     </button>

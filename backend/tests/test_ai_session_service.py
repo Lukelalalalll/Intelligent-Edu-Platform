@@ -60,6 +60,40 @@ async def test_get_session_for_user_returns_rich_message_fields(monkeypatch):
     assert message["tool_progresses"][0]["status"] == "done"
 
 
+async def test_get_session_for_user_returns_tail_window_and_history_start(monkeypatch):
+    session_oid = ObjectId()
+    all_messages = [{"role": "user", "content": f"m-{idx}"} for idx in range(20)]
+
+    async def fake_load_session_doc(session_id: str):
+        return session_oid, {
+            "_id": session_oid,
+            "userId": "user-1",
+            "title": "Tail Session",
+            "messages": [],
+            "bucketCount": 1,
+            "messageCount": len(all_messages),
+            "createdAt": "created",
+            "updatedAt": "updated",
+        }
+
+    async def fake_load_all_messages(session_id: str, inline_messages: list[dict]):
+        return list(all_messages)
+
+    monkeypatch.setattr(ai_session_service, "_load_session_doc", fake_load_session_doc)
+    monkeypatch.setattr(ai_session_service, "load_all_messages", fake_load_all_messages)
+
+    result = await ai_session_service.get_session_for_user(
+        session_id=str(session_oid),
+        user_id="user-1",
+        limit=5,
+    )
+
+    assert [msg["content"] for msg in result["messages"]] == [f"m-{idx}" for idx in range(15, 20)]
+    assert result["historyStart"] == 15
+    assert result["hasMoreMessages"] is True
+    assert result["messageCount"] == 20
+
+
 async def test_generate_chat_response_uses_forced_response_before_provider_dispatch(monkeypatch):
     async def unexpected_provider(*args, **kwargs):
         raise AssertionError("provider dispatch should not run when forced response is present")
@@ -280,6 +314,74 @@ async def test_update_session_for_user_allows_legacy_session_without_revision(mo
     assert seen["current_revision"] == 0
     assert seen["update_fields"]["revision"] == 1
     assert seen["bucket_messages"][0]["content"] == "Hello"
+    assert seen["asset_user_id"] == "user-1"
+
+
+async def test_update_session_for_user_appends_without_rewriting_buckets(monkeypatch):
+    session_oid = ObjectId()
+    seen: dict = {}
+    existing_messages = [
+        {"role": "system", "content": "System"},
+        {"role": "user", "content": "Hello"},
+    ]
+
+    async def fake_load_session_doc(session_id: str):
+        return session_oid, {
+            "_id": session_oid,
+            "userId": "user-1",
+            "title": "Existing Session",
+            "messages": list(existing_messages),
+            "bucketCount": 2,
+            "messageCount": len(existing_messages),
+            "revision": 3,
+        }
+
+    async def fake_load_all_messages(session_id: str, inline_messages: list[dict]):
+        return list(existing_messages)
+
+    async def fake_append_messages_bucketed(session_id: str, delta_messages: list[dict], *, existing_inline_messages, existing_bucket_count):
+        seen["append_session_id"] = session_id
+        seen["delta_messages"] = delta_messages
+        seen["existing_inline_messages"] = existing_inline_messages
+        seen["existing_bucket_count"] = existing_bucket_count
+        return {"inline_messages": existing_inline_messages + delta_messages, "bucket_count": existing_bucket_count}
+
+    async def fake_save_messages_bucketed(session_id: str, messages: list[dict]):
+        raise AssertionError("full rewrite should not be used for pure append")
+
+    async def fake_update_with_revision(*, session_id, current_revision: int, update_fields: dict):
+        seen["update_fields"] = update_fields
+        return SimpleNamespace(matched_count=1, modified_count=1)
+
+    async def fake_sync_assets(user_id: str):
+        seen["asset_user_id"] = user_id
+
+    monkeypatch.setattr(ai_session_service, "_load_session_doc", fake_load_session_doc)
+    monkeypatch.setattr(ai_session_service, "load_all_messages", fake_load_all_messages)
+    monkeypatch.setattr(ai_session_service, "append_messages_bucketed", fake_append_messages_bucketed)
+    monkeypatch.setattr(ai_session_service, "save_messages_bucketed", fake_save_messages_bucketed)
+    monkeypatch.setattr(ai_session_service.ai_session_repo, "update_with_revision", fake_update_with_revision)
+    monkeypatch.setattr(ai_session_service, "ensure_ai_session_image_assets", fake_sync_assets)
+
+    payload = UpdateAiSessionSchema(
+        messages=[
+            {"role": "assistant", "content": "Hi there"},
+        ],
+        history_start=2,
+    )
+
+    result = await ai_session_service.update_session_for_user(
+        session_id=str(session_oid),
+        payload=payload,
+        user={"id": "user-1", "_id": "user-1"},
+        request_id="req-append",
+        idempotency_key="",
+    )
+
+    assert result == {"ok": True}
+    assert seen["delta_messages"] == [{"role": "assistant", "content": "Hi there", "reasoning": "", "images": [], "files": [], "citations": [], "ui_elements": [], "tool_progresses": []}]
+    assert seen["update_fields"]["messageCount"] == 3
+    assert seen["update_fields"]["bucketCount"] == 2
     assert seen["asset_user_id"] == "user-1"
 
 

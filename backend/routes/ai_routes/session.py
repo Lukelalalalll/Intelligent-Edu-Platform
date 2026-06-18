@@ -8,6 +8,7 @@ from backend.services.ai_session_service import (
     create_session_for_user,
     delete_session_for_user,
     get_session_for_user,
+    get_session_preview_for_user,
     list_sessions_for_user,
     update_session_for_user,
 )
@@ -57,6 +58,11 @@ async def delete_session(session_id: str, user: dict = Depends(get_current_user)
 
 
 @ai_router.get("/sessions/{session_id}")
-async def get_session(session_id: str, user: dict = Depends(get_current_user)):
-    """Return a single session with full messages."""
-    return await get_session_for_user(session_id=session_id, user_id=str(user["id"]))
+async def get_session(session_id: str, limit: int | None = None, user: dict = Depends(get_current_user)):
+    """Return a single session with a tail window of messages by default."""
+    return await get_session_for_user(session_id=session_id, user_id=str(user["id"]), limit=limit)
+
+
+@ai_router.get("/sessions/{session_id}/preview")
+async def get_session_preview(session_id: str, limit: int = 12, user: dict = Depends(get_current_user)):
+    return await get_session_preview_for_user(session_id=session_id, user_id=str(user["id"]), limit=limit)

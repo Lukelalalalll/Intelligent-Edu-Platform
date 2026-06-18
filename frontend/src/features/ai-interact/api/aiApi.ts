@@ -29,11 +29,18 @@ interface AIMemoryResponse {
     memory: AIMemory;
 }
 
+export interface AISessionWindowResponse extends AISession {
+    historyStart?: number;
+    pageSize?: number;
+    previewLimit?: number;
+}
+
 export const aiSessionApi = {
     list: (): Promise<AISessionListResponse> => client.get('/ai/sessions').then(r => r.data),
-    get: (id: string): Promise<AISession> => client.get(`/ai/sessions/${id}`).then(r => r.data),
+    get: (id: string, limit?: number): Promise<AISessionWindowResponse> => client.get(`/ai/sessions/${id}`, { params: limit ? { limit } : undefined }).then(r => r.data),
+    preview: (id: string, limit?: number): Promise<AISessionWindowResponse> => client.get(`/ai/sessions/${id}/preview`, { params: limit ? { limit } : undefined }).then(r => r.data),
     create: (): Promise<AISession> => client.post('/ai/sessions').then(r => r.data),
-    update: (id: string, payload: { title?: string; messages?: ChatMessage[] }) => client.put(`/ai/sessions/${id}`, payload).then(r => r.data),
+    update: (id: string, payload: { title?: string; messages?: ChatMessage[]; history_start?: number }) => client.put(`/ai/sessions/${id}`, payload).then(r => r.data),
     remove: (id: string) => client.delete(`/ai/sessions/${id}`).then(r => r.data),
 };
 

@@ -66,14 +66,29 @@ export function useAISessionManager({
             return list.map(s => {
                 if (s.id !== id) return s;
                 if (s._needFetch) {
-                    return { ...s, title: data.title || s.title, messages: data.messages || s.messages, _needFetch: false };
+                    return {
+                        ...s,
+                        title: data.title || s.title,
+                        messages: data.messages || s.messages,
+                        historyStart: data.historyStart ?? s.historyStart ?? 0,
+                        messageCount: data.messageCount ?? s.messageCount ?? data.messages?.length ?? s.messages.length,
+                        hasMoreMessages: data.hasMoreMessages ?? s.hasMoreMessages ?? false,
+                        _needFetch: false,
+                    };
                 }
                 const fetchedMsgs = data.messages || [];
                 if (fetchedMsgs.length === 0) return s;
                 const localKeys = new Set(s.messages.map(m => `${m.role}:${(m.content || '').slice(0, 120)}`));
                 const missing = fetchedMsgs.filter(m => !localKeys.has(`${m.role}:${(m.content || '').slice(0, 120)}`));
                 if (missing.length === 0) return s;
-                return { ...s, title: data.title || s.title, messages: [...missing, ...s.messages] };
+                return {
+                    ...s,
+                    title: data.title || s.title,
+                    messages: [...missing, ...s.messages],
+                    historyStart: data.historyStart ?? Math.max(0, (s.historyStart ?? 0) - missing.length),
+                    messageCount: data.messageCount ?? s.messageCount,
+                    hasMoreMessages: data.hasMoreMessages ?? s.hasMoreMessages,
+                };
             });
         });
     }, []);
@@ -118,12 +133,16 @@ export function useAISessionManager({
 
     const syncToServer = useCallback(async (id: string, data: AISession) => {
         if (!id || !data) return;
+        const normalizedMessages = (data.messages || []).map((msg) => ({
+            ...msg,
+            content: mergeMessageContent(msg),
+        }));
         try {
-            const normalizedMessages = (data.messages || []).map((msg) => ({
-                ...msg,
-                content: mergeMessageContent(msg),
-            }));
-            await aiSessionApi.update(id, { title: data.title, messages: normalizedMessages });
+            await aiSessionApi.update(id, {
+                title: data.title,
+                messages: normalizedMessages,
+                history_start: data.historyStart ?? 0,
+            });
         } catch (err: unknown) {
             const status = (err as { response?: { status?: number } })?.response?.status;
             if (status === 422 || status === 413) {
@@ -132,7 +151,11 @@ export function useAISessionManager({
                         ...msg,
                         content: mergeMessageContent(msg),
                     }));
-                    await aiSessionApi.update(id, { title: data.title, messages: trimmed });
+                    await aiSessionApi.update(id, {
+                        title: data.title,
+                        messages: trimmed,
+                        history_start: Math.max(0, (data.historyStart ?? 0) + Math.max(0, normalizedMessages.length - trimmed.length)),
+                    });
                 } catch {
                     // give up — local state is source of truth
                 }
@@ -300,6 +323,9 @@ export function useAISessionManager({
             return {
                 ...s,
                 _needFetch: false,
+                historyStart: s.historyStart ?? 0,
+                messageCount: (s.messageCount ?? s.messages.length) + 2,
+                hasMoreMessages: s.hasMoreMessages ?? false,
                 title,
                 messages: [
                     ...s.messages,
@@ -350,6 +376,7 @@ export function useAISessionManager({
                 if (streamResult?.content) {
                     const patched: AISession = {
                         ...final,
+                        messageCount: final.messageCount ?? final.messages.length,
                         messages: final.messages.map((m, i, arr) =>
                             i === arr.length - 1 && m.role === 'assistant'
                                 ? {

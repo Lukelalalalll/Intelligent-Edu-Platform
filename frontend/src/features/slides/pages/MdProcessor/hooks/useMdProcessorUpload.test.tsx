@@ -96,4 +96,30 @@ describe('useMdProcessorUpload', () => {
     expect(result.current.errorMsg).toBe('Please log in first');
     expect(result.current.uploadStatus).toBe('error');
   });
+
+  it('hydrates restored wizard state for filename, headers, and section picks', () => {
+    const { result } = renderHook(() => useMdProcessorUpload());
+
+    act(() => {
+      result.current.hydrateState({
+        currentFilename: 'restored.md',
+        headers: [
+          { index: 1, level: 1, text: 'Intro' },
+          { index: 2, level: 2, text: 'Details' },
+        ],
+        selectedIndices: [2],
+        useLLM: true,
+        headerLlmProvider: 'deepseek',
+      });
+    });
+
+    expect(result.current.currentFilename).toBe('restored.md');
+    expect(result.current.headers).toEqual([
+      { index: 1, level: 1, text: 'Intro' },
+      { index: 2, level: 2, text: 'Details' },
+    ]);
+    expect(result.current.selectedIndices).toEqual([2]);
+    expect(result.current.useLLM).toBe(true);
+    expect(result.current.headerLlmProvider).toBe('deepseek');
+  });
 });

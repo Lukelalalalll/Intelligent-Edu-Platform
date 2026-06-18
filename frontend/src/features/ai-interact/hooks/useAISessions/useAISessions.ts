@@ -18,6 +18,8 @@ export function useAISessions() {
         selectedProvider: preferences.selectedProvider,
         setSelectedProvider: preferences.setSelectedProvider,
         providerHealth: preferences.providerHealth,
+        shouldCheckHealth: preferences.shouldCheckHealth,
+        setShouldCheckHealth: preferences.setShouldCheckHealth,
         tutorMode: preferences.tutorMode,
         setTutorMode: preferences.setTutorMode,
         webSearch: preferences.webSearch,
@@ -33,16 +35,31 @@ export function useAIMemory() {
     const [memory, setMemory] = useState<any>({});
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+
+    const load = useCallback(async () => {
+        if (loaded) return;
+        try {
+            const d = await aiMemoryApi.get();
+            setMemory(d.memory || {});
+            setLoaded(true);
+        } catch {
+            // swallow, allow retry on next open
+        }
+    }, [loaded]);
 
     useEffect(() => {
-        aiMemoryApi.get().then(d => setMemory(d.memory || {})).catch(() => {});
-    }, []);
+        if (open) {
+            load();
+        }
+    }, [open, load]);
 
     const save = useCallback(async (form: Record<string, unknown>) => {
         setSaving(true);
         try {
             const res = await aiMemoryApi.update(form);
             setMemory((res.memory || form) as Record<string, unknown>);
+            setLoaded(true);
             setOpen(false);
         } catch {
             // keep modal open for retry
@@ -51,5 +68,5 @@ export function useAIMemory() {
         }
     }, []);
 
-    return { memory, open, setOpen, saving, save };
+    return { memory, open, setOpen, saving, save, loaded, load };
 }

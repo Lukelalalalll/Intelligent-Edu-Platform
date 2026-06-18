@@ -31,8 +31,12 @@ export function usePersistAiPreferences(selectedProvider: string, tutorMode: str
 export function useProviderHealthCheck(
     selectedProvider: AIProvider,
     setProviderHealth: (value: AIProviderHealth) => void,
+    enabled = true,
 ): void {
     useEffect(() => {
+        if (!enabled) {
+            return;
+        }
         let cancelled = false;
         setProviderHealth({
             provider: selectedProvider,
@@ -63,7 +67,7 @@ export function useProviderHealthCheck(
         return () => {
             cancelled = true;
         };
-    }, [selectedProvider, setProviderHealth]);
+    }, [selectedProvider, setProviderHealth, enabled]);
 }
 
 export function useInitialSessionsLoad(
@@ -78,7 +82,9 @@ export function useInitialSessionsLoad(
                 if (cancelled) return;
                 const list = (data.sessions || []).map((s) => ({
                     ...buildSession(s),
-                    _needFetch: true,
+                    messages: s.previewMessages?.length ? s.previewMessages : buildSession(s).messages,
+                    historyStart: s.historyStart ?? Math.max(0, (s.messageCount ?? s.previewMessages?.length ?? 0) - (s.previewMessages?.length ?? 0)),
+                    _needFetch: !!s.hasMoreMessages,
                 }));
                 if (list.length === 0) {
                     const ns = await aiSessionApi.create();
@@ -116,7 +122,7 @@ export function useLazyFetchSessionMessages(
         let cancelled = false;
         (async () => {
             try {
-                const data = await aiSessionApi.get(currentSessionId);
+                const data = await aiSessionApi.get(currentSessionId, 80);
                 if (cancelled) return;
                 applyFetchedSession(currentSessionId, data);
             } catch {

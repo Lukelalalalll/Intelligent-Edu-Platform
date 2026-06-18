@@ -5,6 +5,7 @@ import logging
 import asyncio
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 from fastapi import HTTPException, Depends, Request
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
@@ -26,11 +27,28 @@ from backend.services.slides import (
     ChapterSummarizer,
     generate_talking_script_word,
 )
+from backend.services.slides_pipeline_service import create_ppt as create_ppt_from_schema
 from backend.services.slides.svg_pipeline import build_svg_deck
 from .router import slides_router, SlidesDeliveryJobSchema
 
 logger = logging.getLogger(__name__)
 SLIDES_GENERATE_V2_JOB_TYPE = "slides.generate_v2"
+
+
+def _attach_pptx_export(deck_manifest: dict, pptx_filename: str) -> dict:
+    exports = {
+        "pptx": {
+            "available": True,
+            "kind": "native_pptx",
+            "source": "ppt_schema",
+            "filename": pptx_filename,
+            "download_url": f"/api/slides/download_ppt/{pptx_filename}",
+        }
+    }
+    deck_manifest["exports"] = exports
+    manifest_path = Path(Config.PPT_RESULTS_FOLDER) / "svg_decks" / deck_manifest["deck_id"] / "manifest.json"
+    manifest_path.write_text(json.dumps(deck_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return exports
 
 
 @slides_router.post("/delivery/jobs")
@@ -103,9 +121,17 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runti
                                              f"Generated content for {len(slides_results)} slides", progress=78)
 
         title = (req.presentation_title or "").strip() or "Generated Presentation"
+        ppt_schema_slides = [
+            {
+                **slide,
+                "tables": slide.get("tables") or [],
+                "layout": slide.get("layout") or {"name": "Title and Content"},
+            }
+            for slide in slides_results
+        ]
         ppt_schema = {
             "presentation_title": title,
-            "slides": [{**slide, "tables": slide.get("tables") or []} for slide in slides_results],
+            "slides": ppt_schema_slides,
             "metadata": {
                 "provider": resolved_provider,
                 "model": runtime.model,
@@ -125,10 +151,27 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runti
         await PresentonTaskService.add_event(task_id, "step_done", "svg_deck",
                                              "SVG deck artifacts generated", progress=84)
 
+        await PresentonTaskService.add_event(
+            task_id,
+            "step_start",
+            "pptx_export",
+            "Finalizing PPTX export",
+            progress=86,
+        )
+        pptx_filename = await asyncio.to_thread(create_ppt_from_schema, ppt_schema)
+        _attach_pptx_export(deck_manifest, pptx_filename)
+        await PresentonTaskService.add_event(
+            task_id,
+            "step_done",
+            "pptx_export",
+            "PPTX export finalized",
+            progress=92,
+        )
+
         script_payload = None
         if req.generate_talking_script:
             await PresentonTaskService.add_event(task_id, "step_start", "script",
-                                                 "Generating talking script", progress=84)
+                                                 "Generating talking script", progress=94)
             summarizer = ChapterSummarizer()
             scripts = await summarizer.generate_talking_script(slides_results, req.script_style,
                                                                provider=resolved_provider)
@@ -150,10 +193,10 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runti
                     "download_url": f"/slides/download_script/{filename}",
                 }
             await PresentonTaskService.add_event(task_id, "step_done", "script",
-                                                 "Talking script generated", progress=92)
+                                                 "Talking script generated", progress=98)
 
         await PresentonTaskService.add_event(task_id, "step_done", "complete",
-                                             "Packaging response", progress=98)
+                                             "Packaging response", progress=99)
 
         runtime_public = runtime.public_dict()
         result = {

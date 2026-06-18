@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import client from '@/shared/api/client';
+import type { MdProcessorHeaderState } from './mdProcessorWizardState';
 
 export function useMdProcessorUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -9,7 +10,7 @@ export function useMdProcessorUpload() {
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'start' | 'success' | 'error'>('idle');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [currentFilename, setCurrentFilename] = useState('');
-    const [headers, setHeaders] = useState<unknown[]>([]);
+    const [headers, setHeaders] = useState<MdProcessorHeaderState[]>([]);
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
@@ -53,6 +54,20 @@ export function useMdProcessorUpload() {
         setSelectedIndices([]);
         setErrorMsg('');
         if (fileInputRef.current) fileInputRef.current.value = '';
+    }, []);
+
+    const hydrateState = useCallback((state: {
+        currentFilename?: string;
+        headers?: MdProcessorHeaderState[];
+        selectedIndices?: number[];
+        useLLM?: boolean;
+        headerLlmProvider?: 'local_ollama' | 'coze' | 'deepseek';
+    }) => {
+        if (typeof state.useLLM === 'boolean') setUseLLM(state.useLLM);
+        if (state.headerLlmProvider) setHeaderLlmProvider(state.headerLlmProvider);
+        if (typeof state.currentFilename === 'string') setCurrentFilename(state.currentFilename);
+        if (Array.isArray(state.headers)) setHeaders(state.headers);
+        if (Array.isArray(state.selectedIndices)) setSelectedIndices(state.selectedIndices);
     }, []);
 
     const processFile = useCallback(async (targetFile: File) => {
@@ -167,5 +182,6 @@ export function useMdProcessorUpload() {
         currentFilename, headers, selectedIndices, loading, errorMsg, setErrorMsg,
         fileInputRef, handleDragOver, handleDragLeave, handleDrop, onFileChange,
         clearFile, processFile, handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
+        hydrateState,
     };
 }

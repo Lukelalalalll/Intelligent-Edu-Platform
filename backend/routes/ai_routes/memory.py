@@ -9,6 +9,14 @@ from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
 from backend.services.ai_memory_service import get_ai_memory as get_user_ai_memory
 from backend.services.ai_memory_service import update_ai_memory as update_user_ai_memory
+from backend.services.ai_interact_runtime_cache import (
+    get_provider_health_cache,
+    get_role_info_cache,
+    invalidate_provider_health_cache,
+    invalidate_role_info_cache,
+    set_provider_health_cache,
+    set_role_info_cache,
+)
 
 from .router import ai_router, _SUPPORTED_PROVIDERS
 from .chat_context_helpers import _extract_text_from_pdf_bytes, _PDF_EXTRACT_MAX_CHARS
@@ -21,6 +29,9 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
     selected = str(provider or "local_ollama").strip().lower()
     if selected not in _SUPPORTED_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {selected}")
+    cached = get_provider_health_cache(user, selected)
+    if cached is not None:
+        return cached
     if selected == "deepseek":
         from backend.services.llm_service.deepseek_service import DeepSeekService
         from backend.services.user_profile_service import load_deepseek_runtime_config
@@ -28,11 +39,15 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
         ok, detail = await DeepSeekService.from_config(
             await load_deepseek_runtime_config(user)
         ).health_check()
-        return {"provider": selected, "ok": ok, "detail": detail}
+        result = {"provider": selected, "ok": ok, "detail": detail}
+        set_provider_health_cache(user, selected, result)
+        return result
 
     ai_gateway_service = get_ai_gateway_service()
     ok, detail = await ai_gateway_service.check_provider_health(selected)
-    return {"provider": selected, "ok": ok, "detail": detail}
+    result = {"provider": selected, "ok": ok, "detail": detail}
+    set_provider_health_cache(user, selected, result)
+    return result
 
 
 @ai_router.post("/extract-pdf-text")
@@ -58,6 +73,9 @@ async def extract_pdf_text(file: UploadFile = File(...), user: dict = Depends(ge
 @ai_router.get("/role-info")
 async def get_ai_role_info(user: dict = Depends(get_current_user)):
     """Return the user's role and whether Socratic/RAG mode is active."""
+    cached = get_role_info_cache(user)
+    if cached is not None:
+        return cached
     role = user.get("role", "student")
     is_student = role not in ("teacher", "admin")
     user_id = str(user.get("_id") or user.get("id") or "")
@@ -88,12 +106,14 @@ async def get_ai_role_info(user: dict = Depends(get_current_user)):
             user_id,
             str(exc)[:240],
         )
-    return {
+    result = {
         "role": role,
         "mode": "socratic" if is_student else "direct",
         "rag_active": len(rag_indexed_courses) > 0,
         "rag_courses": rag_indexed_courses,
     }
+    set_role_info_cache(user, result)
+    return result
 
 
 @ai_router.get("/memory")
@@ -107,4 +127,6 @@ async def get_ai_memory(user: dict = Depends(get_current_user)):
 async def update_ai_memory(body: dict, user: dict = Depends(get_current_user)):
     """Update the user's AI memory profile. Accepts { name, major, year, preferences }."""
     sanitized = await update_user_ai_memory(str(user.get("_id") or user.get("id") or ""), body)
+    invalidate_role_info_cache(user)
+    invalidate_provider_health_cache(user)
     return {"memory": sanitized}

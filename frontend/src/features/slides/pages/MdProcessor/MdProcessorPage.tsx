@@ -7,18 +7,72 @@ import Button from '../../../../shared/components/Button/Button';
 import Card from '../../../../shared/components/Card/Card';
 import { useMdProcessorUpload } from './hooks/useMdProcessorUpload';
 import { useMdProcessorTextInput } from './hooks/useMdProcessorTextInput';
-import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import mdStyles from './styles/mdProcessor.module.css';
 import s from '../../../../styles/history.module.css';
+import PptGeneratorShell from '../../components/PptGeneratorShell';
+import { loadMdProcessorWizardState, saveMdProcessorWizardState } from './hooks/mdProcessorWizardState';
 
 export default function MdProcessor() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const transferConsumedRef = useRef(false);
     const [activeView, setActiveView] = useState<'workflow' | 'history'>('workflow');
+    const hydrationRef = useRef(false);
+    const [hydrationReady, setHydrationReady] = useState(false);
 
     const upload = useMdProcessorUpload();
     const textInput = useMdProcessorTextInput();
+
+    useEffect(() => {
+        const state = loadMdProcessorWizardState();
+        if (!hydrationRef.current && state) {
+            hydrationRef.current = true;
+            setActiveView(state.activeView || 'workflow');
+            textInput.setInputMode(state.inputMode || 'file');
+            textInput.setTextContent(state.textContent || '');
+            textInput.setTextTitle(state.textTitle || '');
+            textInput.setSeedContent(state.seedContent || '');
+            textInput.setProvider(state.provider || 'local_ollama');
+            upload.hydrateState({
+                currentFilename: state.currentFilename || '',
+                headers: state.headers || [],
+                selectedIndices: state.selectedIndices || [],
+                useLLM: Boolean(state.useLLM),
+                headerLlmProvider: state.headerLlmProvider || 'local_ollama',
+            });
+        }
+        setHydrationReady(true);
+    }, []);
+
+    useEffect(() => {
+        if (!hydrationReady) return;
+        saveMdProcessorWizardState({
+            activeView,
+            inputMode: textInput.inputMode,
+            textContent: textInput.textContent,
+            textTitle: textInput.textTitle,
+            seedContent: textInput.seedContent,
+            provider: textInput.provider,
+            currentFilename: upload.currentFilename,
+            headers: upload.headers,
+            selectedIndices: upload.selectedIndices,
+            useLLM: upload.useLLM,
+            headerLlmProvider: upload.headerLlmProvider,
+        });
+    }, [
+        activeView,
+        textInput.inputMode,
+        textInput.textContent,
+        textInput.textTitle,
+        textInput.seedContent,
+        textInput.provider,
+        upload.currentFilename,
+        upload.headers,
+        upload.selectedIndices,
+        upload.useLLM,
+        upload.headerLlmProvider,
+        hydrationReady,
+    ]);
 
     // Transfer auto-consumption
     useEffect(() => {
@@ -109,22 +163,18 @@ export default function MdProcessor() {
         </div>
     );
 
+    const workflowContent = (
+        <MdProcessorView {...pageProps} hideBanner viewSwitchSlot={null} />
+    );
+
     return (
-        <div className="container">
-            <WelcomeBanner
-                title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
-                subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
-                className={mdStyles.pageHeader}
-                as="header"
-                variant="workspace"
-            />
-            {viewSwitchJSX}
-            {activeView === 'workflow' && <MdProcessorView {...pageProps} hideBanner viewSwitchSlot={null} />}
+        <PptGeneratorShell className="container" currentStep={0} toolbar={viewSwitchJSX} contentClassName={mdStyles.pageContent}>
+            {activeView === 'workflow' && workflowContent}
             {activeView === 'history' && (
                 <Card className={s.historyViewCard} glass>
                     <HistoryPanel onReplay={() => setActiveView('workflow')} />
                 </Card>
             )}
-        </div>
+        </PptGeneratorShell>
     );
 }

@@ -111,8 +111,32 @@ class GenerateRenderRequest(BaseModel):
     md_content: str
     base_style: str = "minimalist"
     custom_style_prompt: str = ""
-    provider: Optional[AIProvider] = "local_ollama"
+    provider: Optional[AIProvider] = "auto"
     title: str = "Presentation"
+
+
+class ThemeDraftSlideSchema(BaseModel):
+    id: str = ""
+    heading: str = ""
+    body: str = ""
+    bullets: List[str] = []
+    accent_text: str = ""
+    layout: Literal["cover", "content", "split", "quote"] = "content"
+    align: Literal["left", "center"] = "left"
+
+
+class ExportRenderDraftRequest(BaseModel):
+    title: str = "Presentation"
+    css_content: str
+    slides: List[ThemeDraftSlideSchema]
+
+
+class RenderDraftPreviewRequest(BaseModel):
+    title: str = "Presentation"
+    css_content: str
+    slides: List[ThemeDraftSlideSchema]
+    selected_slide_id: Optional[str] = None
+    selected_index: Optional[int] = None
 
 
 class ThemeListResponse(BaseModel):

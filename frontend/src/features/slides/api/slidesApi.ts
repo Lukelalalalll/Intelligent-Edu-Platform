@@ -5,6 +5,14 @@
 import client from '@/shared/api/client';
 import type { AIProvider } from '../../../shared/aiProvider';
 import type { GenerationHistoryItem } from '../../../types/api';
+import type {
+    ExportRenderDraftPayload,
+    ExportRenderDraftResponse,
+    GenerateRenderPayload,
+    GenerateRenderResponse,
+    RenderDraftPreviewPayload,
+    RenderDraftPreviewResponse,
+} from '../pages/AIThemeConfig/types';
 
 // ── Delivery Types ──
 
@@ -95,7 +103,20 @@ export interface SvgDeckManifest {
     quality_report: SlidesQualityReport;
     design_spec_url: string;
     spec_lock: Record<string, unknown>;
-    exports: Record<string, unknown>;
+    exports: SlidesExports;
+}
+
+export interface SlidesPptxExport {
+    available: boolean;
+    kind: string;
+    source: string;
+    filename: string;
+    download_url: string;
+}
+
+export interface SlidesExports {
+    pptx?: SlidesPptxExport;
+    [key: string]: unknown;
 }
 
 export type SlidesGenerateV2Payload = {
@@ -151,7 +172,7 @@ export type SlidesGenerateV2TaskStatusResponse = {
         spec_lock?: Record<string, unknown>;
         quality_report?: SlidesQualityReport;
         slides?: SvgDeckSlide[];
-        exports?: Record<string, unknown>;
+        exports?: SlidesExports;
         total_scripts?: number;
         estimated_total_duration?: string;
         word_document?: {
@@ -214,6 +235,18 @@ export const slidesGenerationApi = {
     },
     async getDesignSpec(deckId: string): Promise<string> {
         const res = await client.get(`/slides/decks/${deckId}/design-spec`, { responseType: 'text' });
+        return res.data;
+    },
+    async generateRender(payload: GenerateRenderPayload): Promise<GenerateRenderResponse> {
+        const res = await client.post('/slides/generate-render', payload);
+        return res.data;
+    },
+    async exportRenderDraft(payload: ExportRenderDraftPayload): Promise<ExportRenderDraftResponse> {
+        const res = await client.post('/slides/export-render-draft', payload);
+        return res.data;
+    },
+    async renderDraftPreview(payload: RenderDraftPreviewPayload): Promise<RenderDraftPreviewResponse> {
+        const res = await client.post('/slides/render-draft-preview', payload);
         return res.data;
     },
 };
@@ -282,7 +315,7 @@ export const slidesEditorApi = {
         theme: string;
         ppt_schema: Record<string, unknown>;
     }): Promise<{ ppt_schema: Record<string, unknown> }> {
-        const res = await client.post('/slides/auto-assign-layouts', payload);
+        const res = await client.post('/slides/editor/auto-assign-layouts', payload);
         return res.data;
     },
 
@@ -290,7 +323,7 @@ export const slidesEditorApi = {
         theme: string;
         ppt_schema: Record<string, unknown>;
     }): Promise<EditorSession> {
-        const res = await client.post('/slides/render-editor-session', payload);
+        const res = await client.post('/slides/editor/render-editor-session', payload);
         return res.data;
     },
 
@@ -299,7 +332,7 @@ export const slidesEditorApi = {
         edits: EditorEdit[];
         slide_images?: SlideImage[];
     }): Promise<EditorSession> {
-        const res = await client.post('/slides/re-render-session', payload);
+        const res = await client.post('/slides/editor/re-render-session', payload);
         return res.data;
     },
 
@@ -310,14 +343,14 @@ export const slidesEditorApi = {
         edits?: EditorEdit[];
         slide_images?: SlideImage[];
     }): Promise<Blob> {
-        const res = await client.post('/slides/export-pptx', payload, { responseType: 'blob' });
+        const res = await client.post('/slides/editor/export-pptx', payload, { responseType: 'blob' });
         return res.data;
     },
 
     async uploadImage(file: File): Promise<{ asset_id: string; url: string }> {
         const form = new FormData();
         form.append('file', file);
-        const res = await client.post('/slides/upload-image', form);
+        const res = await client.post('/slides/editor/upload-image', form);
         return res.data;
     },
 };

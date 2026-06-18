@@ -67,5 +67,6 @@ export function useMdProcessorTextInput() {
         provider, setProvider,
         handleCozeGenerate,
         handleProcessText,
+        resetGeneratedText: () => setTextContent(''),
     };
 }

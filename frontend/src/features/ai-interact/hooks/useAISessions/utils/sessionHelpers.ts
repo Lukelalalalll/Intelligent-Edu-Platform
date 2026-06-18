@@ -16,7 +16,11 @@ export function buildSession(raw: Partial<AISession>): AISession {
     return {
         id: raw.id || `local_${Date.now()}`,
         title: raw.title || 'New Conversation',
-        messages: raw.messages || [SYSTEM_MSG],
+        messages: raw.messages || raw.previewMessages || [SYSTEM_MSG],
+        historyStart: raw.historyStart ?? 0,
+        messageCount: raw.messageCount ?? (raw.messages?.length ?? raw.previewMessages?.length ?? 1),
+        hasMoreMessages: raw.hasMoreMessages ?? false,
+        previewMessages: raw.previewMessages,
     };
 }
 

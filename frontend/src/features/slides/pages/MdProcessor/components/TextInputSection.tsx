@@ -115,7 +115,7 @@ export default function TextInputSection({
                         {textProcessing ? (
                             <><i className="fas fa-spinner fa-spin"></i> Processing...</>
                         ) : (
-                            <><i className="fas fa-magic"></i> AI Theme & Generate</>
+                            <><i className="fas fa-wand-magic-sparkles"></i> Continue to Style Config</>
                         )}
                     </button>
                     <button
@@ -123,7 +123,7 @@ export default function TextInputSection({
                         onClick={() => handleProcessText('/slides/ai-theme-config')}
                         disabled={!textContent.trim() || textProcessing}
                     >
-                        <i className="fas fa-bolt"></i> Quick Generate
+                        <i className="fas fa-bolt"></i> Quick Continue
                     </button>
                 </div>
             </div>

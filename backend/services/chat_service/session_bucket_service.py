@@ -97,6 +97,56 @@ async def save_messages_bucketed(
     }
 
 
+async def append_messages_bucketed(
+    session_id: str,
+    delta_messages: list[dict[str, Any]],
+    *,
+    existing_inline_messages: list[dict[str, Any]] | None = None,
+    existing_bucket_count: int = 0,
+) -> dict[str, Any]:
+    """Append new messages to the current inline tail without rewriting old buckets."""
+    inline_messages = list(existing_inline_messages or [])
+    if not delta_messages:
+        return {
+            "inline_messages": inline_messages,
+            "bucket_count": int(existing_bucket_count or 0),
+        }
+
+    combined = [*inline_messages, *delta_messages]
+    if len(combined) <= BUCKET_SIZE:
+        return {
+            "inline_messages": combined,
+            "bucket_count": int(existing_bucket_count or 0),
+        }
+
+    remainder = len(combined) % BUCKET_SIZE or BUCKET_SIZE
+    promote_count = len(combined) - remainder
+    promote_messages = combined[:promote_count]
+    next_inline_messages = combined[promote_count:]
+    next_bucket_index = int(existing_bucket_count or 0)
+    now = datetime.now(timezone.utc)
+
+    bucket_docs = []
+    for start in range(0, promote_count, BUCKET_SIZE):
+        chunk = promote_messages[start:start + BUCKET_SIZE]
+        bucket_docs.append({
+            "sessionId": ObjectId(session_id),
+            "bucketIndex": next_bucket_index,
+            "messages": chunk,
+            "messageCount": len(chunk),
+            "createdAt": now,
+        })
+        next_bucket_index += 1
+
+    if bucket_docs:
+        await db[BUCKET_COLLECTION].insert_many(bucket_docs)
+
+    return {
+        "inline_messages": next_inline_messages,
+        "bucket_count": next_bucket_index,
+    }
+
+
 async def load_all_messages(session_id: str, inline_messages: list[dict]) -> list[dict]:
     """Reconstruct the full message list from buckets + inline tail.
 

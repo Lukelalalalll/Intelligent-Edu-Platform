@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from backend.repositories import ai_session_repo
 from backend.schemas import UpdateAiSessionSchema
 from backend.services.chat_service.session_bucket_service import (
+    append_messages_bucketed,
     delete_session_buckets,
     load_all_messages,
     save_messages_bucketed,
@@ -22,6 +23,7 @@ DEFAULT_TITLE = "New Conversation"
 ERR_INVALID_ID = "Invalid session id"
 ERR_NOT_FOUND = "Session not found"
 ERR_FORBIDDEN = "Not your session"
+SESSION_PREVIEW_LIMIT = 12
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,12 @@ def _serialize_session_summary(doc: dict[str, Any]) -> dict[str, Any]:
         "title": doc.get("title", DEFAULT_TITLE),
         "createdAt": doc.get("createdAt", ""),
         "updatedAt": doc.get("updatedAt", ""),
+        "messageCount": int(doc.get("messageCount", len(doc.get("messages", []) or [])) or 0),
+        "hasMoreMessages": bool(doc.get("bucketCount", 0)),
+        "previewMessages": [
+            _serialize_session_message(item)
+            for item in (doc.get("messages", []) or [])[:SESSION_PREVIEW_LIMIT]
+        ],
     }
 
 
@@ -106,8 +114,28 @@ def _serialize_session_message(item: dict[str, Any]) -> dict[str, Any]:
     return message
 
 
+def _messages_match_prefix(existing: list[dict[str, Any]], incoming: list[dict[str, Any]], prefix_len: int) -> bool:
+    if prefix_len < 0 or prefix_len > len(existing):
+        return False
+    if prefix_len > len(incoming):
+        return False
+    for idx in range(prefix_len):
+        if _serialize_session_message(existing[idx]) != _serialize_session_message(incoming[idx]):
+            return False
+    return True
+
+
+def _slice_tail_messages(messages: list[dict[str, Any]], limit: int | None = None) -> tuple[list[dict[str, Any]], int]:
+    safe_limit = max(1, int(limit or SESSION_PREVIEW_LIMIT))
+    start = max(0, len(messages) - safe_limit)
+    return messages[start:], start
+
+
 async def list_sessions_for_user(user_id: str) -> list[dict[str, Any]]:
-    docs = await ai_session_repo.list_for_user(user_id, projection={"messages": 0})
+    docs = await ai_session_repo.list_for_user(
+        user_id,
+        projection={"messages": 1, "bucketCount": 1, "messageCount": 1, "title": 1, "createdAt": 1, "updatedAt": 1, "clientId": 1},
+    )
     return [_serialize_session_summary(doc) for doc in docs]
 
 
@@ -130,6 +158,8 @@ async def create_session_for_user(*, user_id: str, system_content: str) -> dict[
         "createdAt": now,
         "updatedAt": now,
         "revision": 0,
+        "messageCount": 1,
+        "hasMoreMessages": False,
     }
 
 
@@ -185,9 +215,37 @@ async def update_session_for_user(
     update_fields["lastWriteRequestId"] = request_id
 
     if "messages" in update_fields:
-        bucket_result = await save_messages_bucketed(session_id, update_fields["messages"])
+        history_start = int(update_fields.pop("history_start", 0) or 0)
+        inline_messages = list(existing.get("messages", []) or [])
+        existing_messages = (
+            await load_all_messages(session_id, inline_messages)
+            if int(existing.get("bucketCount", 0) or 0) > 0
+            else inline_messages
+        )
+        incoming_messages = list(update_fields["messages"])
+        can_append = (
+            history_start >= len(existing_messages)
+            or (
+                history_start >= 0
+                and history_start <= len(existing_messages)
+                and _messages_match_prefix(existing_messages, existing_messages[:history_start], history_start)
+                and history_start == len(existing_messages)
+            )
+        )
+        merged_messages = existing_messages[:history_start] + incoming_messages
+        if can_append and history_start == len(existing_messages):
+            bucket_result = await append_messages_bucketed(
+                session_id,
+                incoming_messages,
+                existing_inline_messages=inline_messages,
+                existing_bucket_count=int(existing.get("bucketCount", 0) or 0),
+            )
+        else:
+            bucket_result = await save_messages_bucketed(session_id, merged_messages)
         update_fields["messages"] = bucket_result["inline_messages"]
         update_fields["bucketCount"] = bucket_result["bucket_count"]
+        update_fields["messageCount"] = len(merged_messages)
+        update_fields.pop("history_start", None)
 
     try:
         current_revision = int(existing.get("revision", 0) or 0)
@@ -220,7 +278,7 @@ async def delete_session_for_user(*, session_id: str, user_id: str) -> None:
     await delete_session_buckets(session_id)
 
 
-async def get_session_for_user(*, session_id: str, user_id: str) -> dict[str, Any]:
+async def get_session_for_user(*, session_id: str, user_id: str, limit: int | None = None) -> dict[str, Any]:
     _, doc = await _load_session_doc(session_id)
     _assert_session_owner(doc, user_id=user_id)
 
@@ -231,7 +289,8 @@ async def get_session_for_user(*, session_id: str, user_id: str) -> dict[str, An
         else inline_messages
     )
 
-    messages = [_serialize_session_message(item) for item in all_messages]
+    selected_messages, history_start = _slice_tail_messages(all_messages, limit)
+    messages = [_serialize_session_message(item) for item in selected_messages]
 
     return {
         "id": str(doc["_id"]),
@@ -239,6 +298,34 @@ async def get_session_for_user(*, session_id: str, user_id: str) -> dict[str, An
         "messages": messages,
         "createdAt": doc.get("createdAt", ""),
         "updatedAt": doc.get("updatedAt", ""),
+        "messageCount": int(doc.get("messageCount", len(all_messages)) or len(all_messages)),
+        "hasMoreMessages": history_start > 0,
+        "historyStart": history_start,
+        "pageSize": len(messages),
+    }
+
+
+async def get_session_preview_for_user(*, session_id: str, user_id: str, limit: int = SESSION_PREVIEW_LIMIT) -> dict[str, Any]:
+    _, doc = await _load_session_doc(session_id)
+    _assert_session_owner(doc, user_id=user_id)
+
+    inline_messages = doc.get("messages", [])
+    all_messages = (
+        await load_all_messages(session_id, inline_messages)
+        if int(doc.get("bucketCount", 0) or 0) > 0
+        else inline_messages
+    )
+    preview, history_start = _slice_tail_messages(all_messages, limit)
+    return {
+        "id": str(doc["_id"]),
+        "title": doc.get("title", DEFAULT_TITLE),
+        "messages": [_serialize_session_message(item) for item in preview],
+        "createdAt": doc.get("createdAt", ""),
+        "updatedAt": doc.get("updatedAt", ""),
+        "messageCount": int(doc.get("messageCount", len(all_messages)) or len(all_messages)),
+        "hasMoreMessages": history_start > 0,
+        "historyStart": history_start,
+        "previewLimit": limit,
     }
 
 

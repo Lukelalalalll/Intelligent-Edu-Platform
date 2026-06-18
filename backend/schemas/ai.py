@@ -41,6 +41,7 @@ class UpdateAiSessionSchema(BaseModel):
 
     title: Optional[str] = Field(default=None, max_length=200)
     messages: Optional[List[SessionMessageSchema]] = Field(default=None, max_length=500)
+    history_start: Optional[int] = Field(default=None, ge=0, le=50000)
 
 
 class RagChunkSchema(BaseModel):

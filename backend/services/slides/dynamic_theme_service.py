@@ -90,9 +90,10 @@ class DynamicThemeService:
         base_css_content: str,
         user_custom_theme_prompt: str,
         provider: str = "local_ollama",
+        runtime=None,
     ) -> str:
         """Send the base CSS + user prompt to an LLM and return the customised CSS."""
-        return await customize_theme(base_css_content, user_custom_theme_prompt, provider)
+        return await customize_theme(base_css_content, user_custom_theme_prompt, provider, runtime)
 
 
 # ── Module-level functions (kept for backward compatibility) ──
@@ -209,6 +210,7 @@ async def customize_theme(
     base_css_content: str,
     user_custom_theme_prompt: str,
     provider: str = "local_ollama",
+    runtime=None,
 ) -> str:
     """Send the base CSS + user prompt to an LLM and return the customised CSS.
 
@@ -247,11 +249,19 @@ async def customize_theme(
 
         ai_service = get_ai_gateway_service()
         context = {"system_override": system}
-        response = await ai_service.chat_with_provider(
-            message="Generate the complete customised CSS now.",
-            context=context,
-            provider=provider,
-        )
+        if runtime is not None:
+            response = await ai_service.chat_with_runtime(
+                message="Generate the complete customised CSS now.",
+                context=context,
+                runtime=runtime,
+                allow_fallback=False,
+            )
+        else:
+            response = await ai_service.chat_with_provider(
+                message="Generate the complete customised CSS now.",
+                context=context,
+                provider=provider,
+            )
     except Exception as exc:
         logger.error("LLM theme customisation failed: %s", exc)
         logger.info("Falling back to base theme CSS.")
