@@ -126,7 +126,7 @@ export default function AIConfigPage() {
     const resetDeepSeekDefaults = () => {
         setDeepSeekForm((current) => ({
             ...DEFAULT_DEEPSEEK_CONFIG,
-            api_key: '',
+            api_key: current.api_key,
             api_key_set: current.api_key_set,
             updated_at: current.updated_at,
         }));
@@ -135,7 +135,7 @@ export default function AIConfigPage() {
     const resetOpenAIDefaults = () => {
         setOpenAIForm((current) => ({
             ...DEFAULT_OPENAI_CONFIG,
-            api_key: '',
+            api_key: current.api_key,
             api_key_set: current.api_key_set,
             updated_at: current.updated_at,
         }));

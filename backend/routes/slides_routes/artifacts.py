@@ -34,6 +34,12 @@ def download_combined(filename: str, user: dict = Depends(get_current_user)):
     return build_file_response(path)
 
 
+@slides_router.get("/download_source/{filename}")
+def download_source(filename: str, user: dict = Depends(get_current_user)):
+    path = resolve_artifact_path(filename, Config.SUB1_UPLOAD_FOLDER)
+    return build_file_response(path)
+
+
 @slides_router.get("/download_script/{filename}")
 def download_script(filename: str, user: dict = Depends(get_current_user)):
     path = resolve_artifact_path(filename, Config.SCRIPT_RESULTS_FOLDER)

@@ -223,10 +223,19 @@ export interface Sub2GenerateResponse {
 export interface GenerationHistoryItem {
   id: string;
   tool?: string;
+  tool_key?: string;
   created_at?: string;
   preview?: string;
   params?: Record<string, any>;
   result?: any;
+  source?: Record<string, any>;
+  slides_detail?: {
+    request_id?: string;
+    workflow?: Record<string, unknown> | null;
+    source_artifacts?: Record<string, unknown>;
+    result_artifacts?: Record<string, unknown>;
+    result_data?: unknown;
+  };
 }
 
 /* ── Sub4 / Diagram Tool ───────────────────────────────── */

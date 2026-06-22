@@ -34,7 +34,12 @@
 
     /* Path resolution */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "next": ["./src/presenton/shims/next.ts"],
+      "next/navigation": ["./src/presenton/shims/next-navigation.ts"],
+      "next/link": ["./src/presenton/shims/next-link.tsx"],
+      "next/image": ["./src/presenton/shims/next-image.tsx"],
+      "next/headers": ["./src/presenton/shims/next-headers.ts"]
     }
   },
   "include": ["src"]

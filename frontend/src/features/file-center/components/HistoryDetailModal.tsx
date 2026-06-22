@@ -6,6 +6,7 @@ import ConfirmModal from '../../../shared/components/ConfirmModal';
 import type { HistoryItem, HistoryDetail } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
 import styles from '../styles/fileCenter.module.css';
+import { renderSlidesHistoryDetailContent } from '@/features/slides/history/slidesHistoryPresenter';
 
 interface Props {
     item: HistoryItem;
@@ -65,6 +66,10 @@ export default function HistoryDetailModal({ item, tool, onClose, onDelete }: Pr
     const renderResult = () => {
         if (loading) return <p>Loading...</p>;
         if (!detail?.result) return <p style={{ color: '#94a3b8' }}>No result data available.</p>;
+
+        if (tool === 'slides') {
+            return renderSlidesHistoryDetailContent(detail, handleDownload);
+        }
 
         let parsed: any = null;
         let isString = typeof detail.result === 'string';
@@ -137,6 +142,18 @@ export default function HistoryDetailModal({ item, tool, onClose, onDelete }: Pr
     };
 
     const renderFooter = () => {
+        if (tool === 'slides') {
+            return (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+                    {onDelete && (
+                        <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setConfirmDelete(true)}>
+                            <i className="fas fa-trash" /> Delete Record
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
         let isString = typeof detail?.result === 'string';
         let parsed: any = null;
         try { parsed = isString ? JSON.parse(detail?.result as string) : detail?.result; } catch {}

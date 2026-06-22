@@ -3,7 +3,7 @@
 from fastapi import Depends, HTTPException, Query
 
 from backend.core.security import get_current_user
-from backend.services.history_service import get_history_document, list_history, serialize_history_doc
+from backend.services.history_service import enrich_slides_history_detail, get_history_document, list_history, serialize_history_doc
 
 from .router import slides_router
 
@@ -38,7 +38,10 @@ async def get_generation_detail(history_id: str, user: dict = Depends(get_curren
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Record not found")
-    return {"success": True, **serialize_history_doc(doc, include_result=True)}
+    payload = serialize_history_doc(doc, include_result=True)
+    if payload.get("tool_key") == "slides":
+        payload = await enrich_slides_history_detail(payload)
+    return {"success": True, **payload}
 
 
 @slides_router.post("/generation_history/{history_id}/replay")

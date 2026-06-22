@@ -32,6 +32,25 @@ def test_serialize_history_doc_includes_tool_collection_and_result():
     assert payload["created_at"] == created_at.isoformat()
 
 
+def test_serialize_history_doc_preserves_source_metadata():
+    created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    payload = history_service.serialize_history_doc(
+        {
+            "_id": "abc123",
+            "_tool_key": "slides",
+            "_collection_name": "sub1_generation_history",
+            "tool": "generate_render",
+            "params": {"provider": "openai"},
+            "source": {"source_filename": "stored.pdf", "source_display_name": "Lecture.pdf"},
+            "result_preview": "preview",
+            "created_at": created_at,
+        }
+    )
+
+    assert payload["source"]["source_filename"] == "stored.pdf"
+    assert payload["source"]["source_display_name"] == "Lecture.pdf"
+
+
 def test_list_history_single_tool_uses_shared_repo(monkeypatch):
     docs = [{"_id": "doc1", "created_at": datetime.now(timezone.utc)}]
     find_many = AsyncMock(return_value=docs)
@@ -60,3 +79,74 @@ def test_list_history_single_tool_uses_shared_repo(monkeypatch):
     assert find_args[1]["deleted_at"] == {"$exists": False}
     assert "$or" in find_args[1]
     count.assert_awaited_once()
+
+
+def test_enrich_slides_history_detail_uses_task_tracker(monkeypatch):
+    get_task = AsyncMock(return_value={"request_id": "req-1", "status": "success", "steps": [{"step": "render", "status": "success"}]})
+    monkeypatch.setattr(history_service.TaskTracker, "get_task", get_task)
+
+    payload = asyncio.run(history_service.enrich_slides_history_detail({
+        "params": {"request_id": "req-1"},
+        "source": {
+            "kind": "upload",
+            "source_filename": "stored.pdf",
+            "source_display_name": "Lecture.pdf",
+            "source_download_url": "/api/slides/download_source/stored.pdf",
+        },
+        "result": '{"pptx_download_url": "/api/slides/download_ppt/deck.pptx", "page_count": 4}',
+    }))
+
+    assert payload["slides_detail"]["workflow"]["request_id"] == "req-1"
+    assert payload["slides_detail"]["source_artifacts"]["source_display_name"] == "Lecture.pdf"
+    assert payload["slides_detail"]["result_artifacts"]["pptx_download_url"] == "/api/slides/download_ppt/deck.pptx"
+
+
+def test_enrich_slides_history_detail_supports_legacy_records(monkeypatch):
+    get_task = AsyncMock(return_value=None)
+    monkeypatch.setattr(history_service.TaskTracker, "get_task", get_task)
+
+    payload = asyncio.run(history_service.enrich_slides_history_detail({
+        "params": {
+            "source_kind": "upload",
+            "source_filename": "stored.pdf",
+            "source_display_name": "Lecture.pdf",
+            "base_style": "neon_tech",
+        },
+        "result": {
+            "title": "Deck",
+            "page_count": 4,
+            "pptx_download_url": "/api/slides/download_ppt/deck.pptx",
+            "html_preview_url": "/api/slides/download_html/deck.html",
+        },
+    }))
+
+    assert payload["slides_detail"]["workflow"] is None
+    assert payload["slides_detail"]["source_artifacts"]["source_download_url"] == "/api/slides/download_source/stored.pdf"
+    assert payload["slides_detail"]["result_artifacts"]["pptx_filename"] == "deck.pptx"
+    assert payload["slides_detail"]["result_artifacts"]["html_preview_filename"] == "deck.html"
+
+
+def test_enrich_slides_history_detail_falls_back_to_persisted_workflow(monkeypatch):
+    get_task = AsyncMock(return_value=None)
+    monkeypatch.setattr(history_service.TaskTracker, "get_task", get_task)
+
+    payload = asyncio.run(history_service.enrich_slides_history_detail({
+        "params": {"request_id": "req-presenton"},
+        "source": {
+            "workflow": {
+                "request_id": "req-presenton",
+                "task_type": "presenton_generate_v2",
+                "status": "failed",
+                "steps": [{"step": "outline", "status": "failed", "error": "boom"}],
+            },
+            "result_artifacts": {
+                "pptx_download_url": "/api/slides/download_ppt/presenton.pptx",
+                "pptx_filename": "presenton.pptx",
+            },
+        },
+        "result": {"status": "failed", "error": "boom"},
+    }))
+
+    assert payload["slides_detail"]["workflow"]["task_type"] == "presenton_generate_v2"
+    assert payload["slides_detail"]["workflow"]["steps"][0]["step"] == "outline"
+    assert payload["slides_detail"]["result_artifacts"]["pptx_filename"] == "presenton.pptx"

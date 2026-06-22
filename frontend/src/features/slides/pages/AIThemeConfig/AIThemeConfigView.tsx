@@ -21,10 +21,21 @@ import type { ThemeConfigProviderOption } from './hooks/useThemeConfig';
 import client from '@/shared/api/client';
 import { resolveApiRoot } from '@/shared/api/root';
 import styles from './styles/aiThemeConfig.module.css';
-import PptGeneratorShell from '../../components/PptGeneratorShell';
+import PptGeneratorShell, { PPT_GENERATOR_STEPS, type PptGeneratorStep } from '../../components/PptGeneratorShell';
 import RenderedMarkdown from '@/shared/markdown/RenderedMarkdown';
+import MdProcessorView from '../MdProcessor/MdProcessorView';
+import HistoryPanel from '../MdProcessor/components/HistoryPanel';
+import Card from '../../../../shared/components/Card/Card';
+import historyStyles from '../../../../styles/history.module.css';
+
+type MdProcessorInlineViewProps = React.ComponentProps<typeof MdProcessorView>;
 
 interface AIThemeConfigViewProps {
+  activeView: 'workflow' | 'history';
+  currentStep: number;
+  stepperLeading?: React.ReactNode;
+  topRailMode?: 'split' | 'unified';
+  mdProcessorViewProps: MdProcessorInlineViewProps;
   content: string;
   fetching: boolean;
   baseTheme: BaseTheme;
@@ -58,7 +69,8 @@ interface AIThemeConfigViewProps {
   updateSlide: (slideId: string, patch: Partial<ThemeDraftSlide>) => void;
   updateBullets: (slideId: string, bulletsText: string) => void;
   setSlideLayout: (slideId: string, layout: ThemeDraftLayout) => void;
-  onBack: () => void;
+  onReturnToPrepare: () => void;
+  onHistoryReplay: () => void;
 }
 
 function buildFullUrl(path: string): string {
@@ -279,16 +291,55 @@ function sanitizePreviewHtml(html: string, selectedIndex: number): string {
 (function () {
   var slides = document.querySelectorAll('.viewport .slide');
   var activeIndex = ${Math.max(0, selectedIndex)};
+  var activeSlide = null;
   slides.forEach(function (slide, index) {
-    slide.classList.toggle('active', index === activeIndex);
-    slide.style.display = index === activeIndex ? 'flex' : 'none';
+    var isActive = index === activeIndex;
+    slide.classList.toggle('active', isActive);
+    slide.style.display = isActive ? 'flex' : 'none';
+    if (isActive) activeSlide = slide;
   });
   var nav = document.querySelector('.slide-nav');
   if (nav) nav.style.display = 'none';
   var viewport = document.querySelector('.viewport');
+  var root = document.documentElement;
+  var body = document.body;
+  if (root) {
+    root.style.width = '100%';
+    root.style.height = '100%';
+    root.style.overflow = 'hidden';
+    root.style.background = '#ffffff';
+  }
+  if (body) {
+    body.style.margin = '0';
+    body.style.width = '100%';
+    body.style.height = '100%';
+    body.style.overflow = 'hidden';
+    body.style.background = '#ffffff';
+  }
   if (viewport) {
     viewport.style.padding = '0';
-    viewport.style.minHeight = '100vh';
+    viewport.style.width = '100%';
+    viewport.style.height = '100%';
+    viewport.style.minHeight = '100%';
+    viewport.style.display = 'flex';
+    viewport.style.alignItems = 'center';
+    viewport.style.justifyContent = 'center';
+    viewport.style.overflow = 'hidden';
+    viewport.style.background = '#ffffff';
+  }
+  if (activeSlide && viewport) {
+    var slideWidth = activeSlide.offsetWidth || 1280;
+    var slideHeight = activeSlide.offsetHeight || 720;
+    var viewportWidth = viewport.clientWidth || window.innerWidth || slideWidth;
+    var viewportHeight = viewport.clientHeight || window.innerHeight || slideHeight;
+    var scale = Math.min(viewportWidth / slideWidth, viewportHeight / slideHeight);
+    if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+    activeSlide.style.transformOrigin = 'center center';
+    activeSlide.style.transform = 'scale(' + scale + ')';
+    activeSlide.style.flex = '0 0 auto';
+    activeSlide.style.margin = '0';
+    activeSlide.style.maxWidth = 'none';
+    activeSlide.style.maxHeight = 'none';
   }
 })();
 </script>`;
@@ -348,6 +399,11 @@ function WorkflowOverlay({
 }
 
 export default function AIThemeConfigView({
+  activeView,
+  currentStep,
+  stepperLeading,
+  topRailMode = 'split',
+  mdProcessorViewProps,
   content,
   fetching,
   baseTheme,
@@ -381,11 +437,12 @@ export default function AIThemeConfigView({
   updateSlide,
   updateBullets,
   setSlideLayout,
-  onBack,
+  onReturnToPrepare,
+  onHistoryReplay,
 }: AIThemeConfigViewProps) {
   const [activeSlideId, setActiveSlideId] = useState<string>('');
   const [draftTitle, setDraftTitle] = useState(title);
-  const currentStep = getCurrentStep(workflowStage);
+  const stageStep = getCurrentStep(workflowStage);
   const canReturnToConfigure = workflowStage === 'markdown' || workflowStage === 'editing' || workflowStage === 'exporting' || workflowStage === 'complete';
   const canReturnToMarkdown = workflowStage === 'editing' || workflowStage === 'exporting' || workflowStage === 'complete';
   const canReturnToEditing = (workflowStage === 'complete' || workflowStage === 'markdown') && draftSlides.length > 0;
@@ -417,12 +474,12 @@ export default function AIThemeConfigView({
     setDraftTitle(title);
   }, [title]);
 
-  const topBar = (
+  const topBar = activeView === 'workflow' && currentStep > 0 ? (
     <div className={styles.topBar}>
-      <button className={styles.backBtn} onClick={onBack}>
+      <button className={styles.backBtn} onClick={onReturnToPrepare}>
         <i className="fas fa-arrow-left" /> Back to Prepare Content
       </button>
-      {workflowStage === 'configure' && draftSlides.length > 0 ? (
+      {stageStep === 1 && draftSlides.length > 0 ? (
         <button className={styles.secondaryActionBtn} onClick={returnToEditing}>
           <i className="fas fa-pen-to-square" /> Back to Preview &amp; Edit
         </button>
@@ -438,11 +495,11 @@ export default function AIThemeConfigView({
         </button>
       ) : null}
     </div>
-  );
+  ) : null;
 
   const handleStepSelect = (stepIndex: number) => {
     if (stepIndex === 0) {
-      onBack();
+      onReturnToPrepare();
       return;
     }
     if (stepIndex === 1 && canReturnToConfigure) {
@@ -458,10 +515,37 @@ export default function AIThemeConfigView({
     }
   };
 
+  const shellSteps = useMemo<PptGeneratorStep[]>(() => (
+    PPT_GENERATOR_STEPS.map((label, index) => ({
+      key: label,
+      label,
+      isClickable: index < currentStep,
+    }))
+  ), [currentStep]);
+
   return (
     <div className={styles.pageShell}>
-      <PptGeneratorShell currentStep={currentStep} onStepSelect={handleStepSelect} toolbar={topBar} dense>
+      <PptGeneratorShell currentStep={currentStep} steps={shellSteps} onStepSelect={handleStepSelect} toolbar={topBar} stepperLeading={stepperLeading} topRailMode={topRailMode} showStepper={activeView === 'workflow'} dense>
         <div className={styles.shellContent}>
+          {activeView === 'history' ? (
+            <Card className={historyStyles.historyViewCard} glass>
+              <HistoryPanel onReplay={onHistoryReplay} />
+            </Card>
+          ) : null}
+          {activeView === 'workflow' && currentStep === 0 ? (
+            <section className={styles.prepareStage}>
+              <div className={styles.configHeader}>
+                <div>
+                  <div className={styles.kicker}>Step 1</div>
+                  <h2>Prepare Content</h2>
+                  <p>Upload a document, select sections, or generate markdown from raw notes. Once your source content is ready, continue into style configuration.</p>
+                </div>
+              </div>
+              <MdProcessorView {...mdProcessorViewProps} hideBanner viewSwitchSlot={null} />
+            </section>
+          ) : null}
+          {activeView !== 'workflow' || currentStep === 0 ? null : (
+            <>
           {fetching ? (
             <div className={styles.statusBar}>
               <i className="fas fa-spinner fa-spin" /> Loading document content...
@@ -478,7 +562,7 @@ export default function AIThemeConfigView({
             </div>
           ) : null}
 
-          {(workflowStage === 'configure' || workflowStage === 'generating') && (
+          {currentStep >= 1 && (workflowStage === 'configure' || workflowStage === 'generating') && (
             <section className={`${styles.configCard} ${styles.stepContainer}`}>
               <div className={styles.configHeader}>
                 <div>
@@ -626,7 +710,7 @@ export default function AIThemeConfigView({
             </section>
           )}
 
-          {workflowStage === 'markdown' ? (
+          {currentStep >= 2 && workflowStage === 'markdown' ? (
             <MarkdownDraftWorkbench
               title={draftTitle}
               markdown={markdownDraft}
@@ -644,7 +728,7 @@ export default function AIThemeConfigView({
             />
           ) : null}
 
-          {(workflowStage === 'editing' || workflowStage === 'exporting') && activeSlide && (
+          {currentStep >= 3 && (workflowStage === 'editing' || workflowStage === 'exporting') && activeSlide && (
             <section className={styles.editorStage}>
               <div className={styles.editorShell}>
                 <div className={styles.editorToolbar}>
@@ -791,7 +875,7 @@ export default function AIThemeConfigView({
             </section>
           )}
 
-          {workflowStage === 'complete' && exportResult ? (
+          {currentStep >= 4 && workflowStage === 'complete' && exportResult ? (
             <section className={styles.resultSection}>
               <div className={styles.resultCard}>
                 <div className={styles.resultThumbPane}>
@@ -834,6 +918,8 @@ export default function AIThemeConfigView({
             progress={exportProgress}
             icon="fa-file-export"
           />
+            </>
+          )}
         </div>
       </PptGeneratorShell>
     </div>

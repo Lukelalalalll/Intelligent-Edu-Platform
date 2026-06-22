@@ -1,0 +1,230 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.metaInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.metaText {
+  font-size: 0.84rem;
+  color: var(--text-sub, #667085);
+}
+
+.limitChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 123, 85, 0.12);
+  background: rgba(0, 123, 85, 0.06);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary-color, #007b55);
+}
+
+.clearButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #c2410c;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.clearButton:hover {
+  color: #9a3412;
+}
+
+.dropZone {
+  display: block;
+  cursor: pointer;
+  border: 2px dashed rgba(0, 123, 85, 0.18);
+  border-radius: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(243, 247, 246, 0.94) 100%
+  );
+  padding: 1.1rem 0.95rem;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.dropZone:hover,
+.dropZoneActive {
+  border-color: var(--primary-color, #007b55);
+  background: rgba(0, 123, 85, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px -28px rgba(0, 123, 85, 0.42);
+}
+
+.dropInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  text-align: center;
+}
+
+.dropIconOuter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  background: rgba(0, 123, 85, 0.1);
+  color: var(--primary-color, #007b55);
+}
+
+.dropIconInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--primary-color, #007b55);
+  color: #fff;
+}
+
+.dropTitle {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--text-main, #111827);
+}
+
+.dropHint {
+  max-width: 24rem;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-sub, #667085);
+}
+
+.typeList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.typeChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.32rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475467;
+}
+
+.fileList {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.45);
+}
+
+.previewImage,
+.previewFallback {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 14px;
+}
+
+.previewImage {
+  object-fit: cover;
+}
+
+.previewFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 123, 85, 0.08);
+  color: var(--primary-color, #007b55);
+}
+
+.fileBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main, #111827);
+}
+
+.fileMeta {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-sub, #667085);
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.removeButton:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+}
+
+.warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+@media (min-width: 768px) {
+  .fileList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

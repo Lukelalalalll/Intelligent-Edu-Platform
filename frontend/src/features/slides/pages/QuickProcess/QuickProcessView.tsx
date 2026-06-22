@@ -10,7 +10,8 @@ export default function QuickProcess({
     results, talkingScriptResult,
     taskId, taskProgress, taskStep, taskEvents,
     provider, providerOptions, setProvider, providerHealth, checkProviderHealth,
-    handleSubmit, handleProceed, handleDownloadScript
+    handleSubmit, handleProceed, handleDownloadScript,
+    bannerTitle, bannerSubtitle, submitLabel, resultTitle, proceedLabel,
 }) {
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -34,8 +35,8 @@ export default function QuickProcess({
     return (
         <div className={styles.container}>
             <WelcomeBanner
-                title={<><i className="fas fa-magic"></i> Quick Content Processor</>}
-                subtitle="Auto-generate structured PPT content and scripts from all chapters"
+                title={bannerTitle || <><i className="fas fa-magic"></i> Quick Content Processor</>}
+                subtitle={bannerSubtitle || "Auto-generate structured PPT content and scripts from all chapters"}
                 as="header"
                 variant="workspace"
             />
@@ -190,7 +191,7 @@ export default function QuickProcess({
                                     )}
 
                                     <button type="submit" className="btn btn-primary w-100" style={{ marginTop: '20px' }} disabled={loading || contentLoading}>
-                                        {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> Generate SVG Deck</>}
+                                        {loading ? <><i className="fas fa-spinner fa-spin"></i> Generating...</> : <><i className="fas fa-play"></i> {submitLabel || 'Generate SVG Deck'}</>}
                                     </button>
                                 </form>
                             </div>
@@ -202,10 +203,10 @@ export default function QuickProcess({
                 {currentStep === 2 && (loading || results) && (
                     <div className={`card ${styles.resultsCard}`}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 className={styles.cardTitle} style={{ margin: 0 }}><i className="fas fa-list-check"></i> Generated Results</h2>
+                            <h2 className={styles.cardTitle} style={{ margin: 0 }}><i className="fas fa-list-check"></i> {resultTitle || 'Generated Results'}</h2>
                             {results && (
                                 <button className={styles.btnProceed} onClick={handleProceed} style={{ margin: 0, padding: '0.6rem 1.2rem', fontSize: '0.9rem' }}>
-                                    Open Workbench <i className="fas fa-arrow-right"></i>
+                                    {proceedLabel || 'Open Workbench'} <i className="fas fa-arrow-right"></i>
                                 </button>
                             )}
                         </div>
@@ -250,7 +251,7 @@ export default function QuickProcess({
 
                                 <div className={styles.proceedWrap}>
                                     <button className={styles.btnProceed} onClick={handleProceed}>
-                                        Open Generate Workbench <i className="fas fa-arrow-right"></i>
+                                        {proceedLabel || 'Open Generate Workbench'} <i className="fas fa-arrow-right"></i>
                                     </button>
                                 </div>
                             </div>

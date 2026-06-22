@@ -25,6 +25,10 @@ export interface GenerateRenderPayload {
   custom_style_prompt: string;
   provider: 'auto' | 'local_ollama' | 'coze' | 'deepseek' | 'openai';
   title?: string;
+  source_kind?: 'upload' | 'text';
+  source_filename?: string;
+  source_display_name?: string;
+  combined_markdown_filename?: string;
 }
 
 export interface GenerateRenderResponse {

@@ -8,12 +8,14 @@ export type MdProcessorHeaderState = {
 
 export type MdProcessorWizardState = {
     activeView: 'workflow' | 'history';
+    currentStep: number;
     inputMode: 'file' | 'text';
     textContent: string;
     textTitle: string;
     seedContent: string;
     provider: AIProvider;
     currentFilename: string;
+    currentDisplayFilename: string;
     headers: MdProcessorHeaderState[];
     selectedIndices: number[];
     useLLM: boolean;

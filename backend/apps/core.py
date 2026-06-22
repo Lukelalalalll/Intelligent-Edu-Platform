@@ -12,6 +12,7 @@ from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.chat_routes import chat_router
 from backend.routes.homework_routes import router as homework_router
 from backend.routes.file_center_routes import file_center_router
+from backend.presenton_integration import PRESENTON_APP_DATA_ROOT, mount_presenton
 from backend.routes.slides_routes import slides_router, public_slides_router, legacy_sub1_router
 
 from .factory import create_app
@@ -45,6 +46,7 @@ app = create_app(
         ("/grading_annotated", ANNOTATED_PDF_ROOT, "grading_annotated"),
         ("/uploads", UPLOADS_ROOT, "uploads"),
         ("/generated/sub1", GENERATED_SUB1_ROOT, "generated_sub1"),
+        ("/app_data", str(PRESENTON_APP_DATA_ROOT), "presenton_app_data"),
     ),
     require_gateway_token=True,
     ensure_indexes_on_startup=True,
@@ -53,3 +55,5 @@ app = create_app(
     enable_rag_preload=None,
     limiter=limiter,
 )
+
+mount_presenton(app)

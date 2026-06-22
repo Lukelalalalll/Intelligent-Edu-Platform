@@ -14,6 +14,11 @@ interface AuthSessionItem {
     expiresAt: string | null;
     current: boolean;
     amr: string[];
+    deviceLabel?: string;
+    browser?: string;
+    os?: string;
+    deviceType?: string;
+    ipLabel?: string;
 }
 
 interface SecurityState {
@@ -122,6 +127,48 @@ export default function ProfilePage() {
         return date.toLocaleString();
     };
 
+    const formatSessionOs = (value?: string | null) => {
+        switch (value) {
+            case 'Windows':
+                return 'Windows';
+            case 'macOS':
+                return 'macOS';
+            case 'Linux':
+                return 'Linux';
+            case 'iOS':
+                return 'iOS';
+            case 'Android':
+                return 'Android';
+            default:
+                return t('profile.deviceUnknownOs');
+        }
+    };
+
+    const formatSessionDeviceType = (value?: string | null) => {
+        switch (value) {
+            case 'mobile':
+                return t('profile.deviceType.mobile');
+            case 'tablet':
+                return t('profile.deviceType.tablet');
+            default:
+                return t('profile.deviceType.desktop');
+        }
+    };
+
+    const formatSessionBrowser = (value?: string | null) => {
+        if (!value || value.toLowerCase().includes('unknown')) {
+            return t('profile.deviceUnknownBrowser');
+        }
+        return value;
+    };
+
+    const formatSessionDeviceLabel = (session: AuthSessionItem) => {
+        if (session.deviceLabel && !session.deviceLabel.toLowerCase().includes('unknown')) {
+            return session.deviceLabel;
+        }
+        return `${formatSessionBrowser(session.browser)} / ${formatSessionOs(session.os)}`;
+    };
+
     const loadAuthSessions = async (isMounted?: () => boolean) => {
         try {
             setSessionsLoading(true);
@@ -146,9 +193,9 @@ export default function ProfilePage() {
         try {
             await client.delete(`/sessions/${sessionId}`);
             setAuthSessions((prev) => prev.filter((item) => item.sessionId !== sessionId));
-            toast.success('Session revoked');
+            toast.success(t('profile.sessionRevoked'));
         } catch (error: any) {
-            toast.error(error.response?.data?.detail || 'Failed to revoke session');
+            toast.error(error.response?.data?.detail || t('profile.sessionRevokeFailed'));
         } finally {
             setRevokingSessionId('');
         }
@@ -159,10 +206,10 @@ export default function ProfilePage() {
         try {
             await client.post('/logout-all');
             logout();
-            toast.success('All sessions signed out');
+            toast.success(t('profile.allSessionsSignedOut'));
             setTimeout(() => navigate('/login'), 300);
         } catch (error: any) {
-            toast.error(error.response?.data?.detail || 'Failed to sign out all sessions');
+            toast.error(error.response?.data?.detail || t('profile.signOutAllFailed'));
         } finally {
             setLoggingOutAll(false);
         }
@@ -600,28 +647,31 @@ export default function ProfilePage() {
                         <div className={`${styles.profileLane} ${styles.profileLaneSingle}`}>
                             <div className={styles.profileEditCard}>
                                 <div className={styles.cardHeader}>
-                                    <h3><i className="fas fa-laptop"></i> Active Sessions</h3>
-                                    <p className={styles.editSubtitle}>Review devices with active refresh access.</p>
+                                    <h3><i className="fas fa-laptop"></i> {t('profile.sessionsTitle')}</h3>
+                                    <p className={styles.editSubtitle}>{t('profile.sessionsSubtitle')}</p>
                                 </div>
 
                                 <div className={styles.cardScrollArea}>
                                     {sessionsLoading ? (
-                                        <div className={styles.courseState}>Loading sessions...</div>
+                                        <div className={styles.courseState}>{t('profile.sessionsLoading')}</div>
                                     ) : authSessions.length ? (
                                         <div className={styles.courseList}>
                                             {authSessions.map((session) => (
                                                 <div className={styles.courseItem} key={session.sessionId}>
                                                     <div className={styles.courseMainInfo}>
                                                         <div className={styles.courseCode}>
-                                                            {session.current ? 'Current session' : 'Active session'}
+                                                            {session.current ? t('profile.sessionsCurrent') : t('profile.sessionsActive')}
                                                         </div>
-                                                        <div className={styles.courseName}>
-                                                            Last active {formatSessionTime(session.lastSeenAt)}
-                                                        </div>
+                                                        <div className={styles.courseName}>{formatSessionDeviceLabel(session)}</div>
                                                     </div>
                                                     <div className={styles.courseMeta}>
-                                                        <span>Created {formatSessionTime(session.createdAt)}</span>
-                                                        <span>Refresh expires {formatSessionTime(session.expiresAt)}</span>
+                                                        <span>{formatSessionOs(session.os)}</span>
+                                                        <span>{formatSessionDeviceType(session.deviceType)}</span>
+                                                        <span>{formatSessionBrowser(session.browser)}</span>
+                                                        {session.ipLabel ? <span>{session.ipLabel}</span> : null}
+                                                        <span>{t('profile.sessionsLastActive', { time: formatSessionTime(session.lastSeenAt) })}</span>
+                                                        <span>{t('profile.sessionsCreated', { time: formatSessionTime(session.createdAt) })}</span>
+                                                        <span>{t('profile.sessionsExpires', { time: formatSessionTime(session.expiresAt) })}</span>
                                                     </div>
                                                     {!session.current && (
                                                         <button
@@ -630,18 +680,22 @@ export default function ProfilePage() {
                                                             disabled={revokingSessionId === session.sessionId}
                                                             onClick={() => handleRevokeSession(session.sessionId)}
                                                         >
-                                                            {revokingSessionId === session.sessionId ? 'Revoking...' : 'Revoke'}
+                                                            {revokingSessionId === session.sessionId
+                                                                ? t('profile.sessionsRevoking')
+                                                                : t('profile.sessionsRevoke')}
                                                         </button>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className={styles.courseState}>No active sessions found.</div>
+                                        <div className={styles.courseState}>{t('profile.sessionsEmpty')}</div>
                                     )}
 
                                     <button className={styles.btnSave} disabled={loggingOutAll} onClick={handleLogoutAll}>
-                                        {loggingOutAll ? <><i className="fas fa-spinner fa-spin"></i> Signing out...</> : <><i className="fas fa-power-off"></i> Sign out all sessions</>}
+                                        {loggingOutAll
+                                            ? <><i className="fas fa-spinner fa-spin"></i> {t('profile.sessionsSigningOut')}</>
+                                            : <><i className="fas fa-power-off"></i> {t('profile.sessionsSignOutAll')}</>}
                                     </button>
                                 </div>
                             </div>

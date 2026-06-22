@@ -67,6 +67,8 @@ from backend.schemas.slides import (  # noqa: F401
     SummarizeChaptersSchema,
     PptProcessSchema,
     SlidesGenerateV2Schema,
+    PresentonOutlineRequestSchema,
+    PresentonAssistantMessageSchema,
     SlidesTaskResponseSchema,
     SlidesTaskStatusSchema,
     GenerateRenderRequest,

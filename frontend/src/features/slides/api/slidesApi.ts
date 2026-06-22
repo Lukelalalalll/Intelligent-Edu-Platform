@@ -119,10 +119,54 @@ export interface SlidesExports {
     [key: string]: unknown;
 }
 
+export interface SlidesThemeItem {
+    name: string;
+    description?: string;
+    base_theme?: string;
+    preview_theme?: string;
+    source?: string;
+    source_group?: string;
+    layout_count?: number;
+}
+
+export interface PresentonOutlineSlide {
+    id?: string;
+    index: number;
+    title?: string;
+    objective?: string;
+    key_points?: string[];
+    content: string;
+}
+
+export interface PresentonOutlineRequestPayload {
+    provider?: SlidesRuntimeProvider;
+    content?: string;
+    chapterData?: Array<{ sectionTitle?: string; text?: string }>;
+    total_pages: number;
+    presentation_title?: string;
+    source_kind?: 'upload' | 'text';
+    source_filename?: string;
+    source_display_name?: string;
+    combined_markdown_filename?: string;
+}
+
+export interface PresentonOutlineResponse {
+    success: boolean;
+    request_id: string;
+    title: string;
+    provider_requested?: SlidesRuntimeProvider;
+    provider_resolved?: Exclude<SlidesRuntimeProvider, 'auto'>;
+    provider_source?: string;
+    provider_model?: string;
+    slides: PresentonOutlineSlide[];
+}
+
 export type SlidesGenerateV2Payload = {
     provider?: SlidesRuntimeProvider;
     content?: string;
     chapterData?: Array<{ sectionTitle?: string; text?: string }>;
+    outlineSlides?: Array<Record<string, unknown>>;
+    theme?: string;
     total_pages: number;
     num_of_bullets: number;
     words_each_bullet: number;
@@ -130,6 +174,10 @@ export type SlidesGenerateV2Payload = {
     script_style?: string;
     generate_talking_script?: boolean;
     generate_word_document?: boolean;
+    source_kind?: 'upload' | 'text';
+    source_filename?: string;
+    source_display_name?: string;
+    combined_markdown_filename?: string;
 };
 
 export type SlidesGenerateV2TaskCreateResponse = {
@@ -168,11 +216,13 @@ export type SlidesGenerateV2TaskStatusResponse = {
         provider_model?: string;
         fallback_events?: Array<Record<string, unknown>>;
         deck_id?: string;
+        outline_slides?: PresentonOutlineSlide[];
         design_spec_url?: string;
         spec_lock?: Record<string, unknown>;
         quality_report?: SlidesQualityReport;
         slides?: SvgDeckSlide[];
         exports?: SlidesExports;
+        theme?: string;
         total_scripts?: number;
         estimated_total_duration?: string;
         word_document?: {
@@ -215,6 +265,10 @@ export const slidesGenerationApi = {
         const res = await client.post('/slides/generate_v2', payload);
         return res.data;
     },
+    async generatePresentonOutline(payload: PresentonOutlineRequestPayload): Promise<PresentonOutlineResponse> {
+        const res = await client.post('/slides/presenton/outline', payload);
+        return res.data;
+    },
     async getTask(taskId: string): Promise<SlidesGenerateV2TaskStatusResponse> {
         const res = await client.get(`/slides/tasks/${taskId}`);
         return res.data;
@@ -228,6 +282,18 @@ export const slidesGenerationApi = {
     async listProviders(): Promise<{ providers: SlidesProviderStatus[] }> {
         const res = await client.get('/slides/providers');
         return res.data;
+    },
+    async getThemes(): Promise<SlidesThemeItem[]> {
+        const res = await client.get('/slides/get_themes');
+        return Array.isArray(res.data) ? res.data : [];
+    },
+    async downloadMarkdown(filename: string): Promise<string> {
+        const res = await client.get(`/slides/download/${filename}`);
+        return typeof res.data === 'string' ? res.data : res.data?.content || '';
+    },
+    async downloadSourceText(filename: string): Promise<string> {
+        const res = await client.get(`/slides/download_source/${filename}`);
+        return typeof res.data === 'string' ? res.data : res.data?.content || '';
     },
     async getDeck(deckId: string): Promise<SvgDeckManifest> {
         const res = await client.get(`/slides/decks/${deckId}`);

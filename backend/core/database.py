@@ -410,6 +410,31 @@ async def ensure_indexes() -> None:
             # TTL: auto-delete records older than 30 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
         ])
+        await db.presenton_presentations.create_indexes([
+            IndexModel([("presentonPresentationId", ASCENDING)], unique=True),
+            IndexModel([("ownerUserId", ASCENDING), ("updatedAt", DESCENDING)]),
+            IndexModel([("ownerUserId", ASCENDING), ("createdAt", DESCENDING)]),
+        ])
+        await db.presenton_slides.create_indexes([
+            IndexModel(
+                [("presentonPresentationId", ASCENDING), ("index", ASCENDING)],
+                unique=True,
+            ),
+            IndexModel([("ownerUserId", ASCENDING), ("presentonPresentationId", ASCENDING)]),
+        ])
+        await db.presenton_chat_messages.create_indexes([
+            IndexModel(
+                [
+                    ("presentonPresentationId", ASCENDING),
+                    ("conversationId", ASCENDING),
+                    ("position", ASCENDING),
+                ],
+                unique=True,
+            ),
+            IndexModel(
+                [("ownerUserId", ASCENDING), ("presentonPresentationId", ASCENDING), ("createdAt", DESCENDING)]
+            ),
+        ])
 
         # ── file assets registry ──────────────────────────────────────────────
         await db.file_assets.create_indexes([

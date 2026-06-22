@@ -9,6 +9,7 @@ async def test_generate_render_uses_resolved_runtime_and_returns_draft_slides(mo
     from backend.routes.slides_routes import generation
 
     monkeypatch.setattr(generation.Config, "PPT_RESULTS_FOLDER", str(tmp_path))
+    saved_history: dict = {}
 
     runtime = type(
         "Runtime",
@@ -62,7 +63,11 @@ async def test_generate_render_uses_resolved_runtime_and_returns_draft_slides(mo
         assert require_healthy is True
         return runtime
 
+    async def fake_save_slides_history(**kwargs):
+        saved_history.update(kwargs)
+
     monkeypatch.setattr(generation, "resolve_provider_runtime", fake_resolve_provider_runtime)
+    monkeypatch.setattr(generation, "_save_slides_history", fake_save_slides_history)
     monkeypatch.setattr("backend.services.slides.dynamic_theme_service.DynamicThemeService", _FakeThemeService)
     monkeypatch.setattr("backend.services.slides.html_renderer.SlidesHtmlRenderer", _FakeRenderer)
     async def fake_ensure_browser_renderer(*, smoke_test: bool = True, use_cache: bool = True):
@@ -77,6 +82,10 @@ async def test_generate_render_uses_resolved_runtime_and_returns_draft_slides(mo
             custom_style_prompt="more contrast please",
             provider="openai",
             title="Deck",
+            source_kind="upload",
+            source_filename="stored.pdf",
+            source_display_name="Lecture.pdf",
+            combined_markdown_filename="combined_stored.md",
         ),
         user={"id": "u1", "username": "demo"},
     )
@@ -86,6 +95,10 @@ async def test_generate_render_uses_resolved_runtime_and_returns_draft_slides(mo
     assert response["provider_source"] == "user_ai_config"
     assert response["provider_model"] == "gpt-5.5"
     assert response["draft_slides"][0]["heading"] == "Intro"
+    assert saved_history["params"]["request_id"] == response["request_id"]
+    assert saved_history["source"]["source_filename"] == "stored.pdf"
+    assert saved_history["source"]["source_display_name"] == "Lecture.pdf"
+    assert saved_history["source"]["result_artifacts"]["pptx_download_url"] == "/api/slides/download_ppt/test.pptx"
 
 
 @pytest.mark.asyncio

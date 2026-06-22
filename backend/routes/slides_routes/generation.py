@@ -20,7 +20,7 @@ from backend.schemas import (
     SummarizeRequestSchema,
 )
 from backend.services.history_service import save_history_record
-from backend.services.slides import StepStatus, TaskTracker
+from backend.services.slides.infra.task_tracker import StepStatus, TaskTracker
 from backend.services.slides_pipeline_service import create_ppt as _create_ppt_impl
 from backend.services.slides_pipeline_service import generate_outline as _svc_generate_outline
 from backend.services.slides_pipeline_service import generate_script as _svc_generate_script
@@ -44,7 +44,7 @@ async def _save_slides_history(
     result_preview: str,
     result_full,
     source: dict | None = None,
-) -> None:
+    ) -> None:
     await save_history_record(
         tool="slides",
         user_id=user_id,
@@ -55,6 +55,42 @@ async def _save_slides_history(
         source=source,
         expires_at=await compute_history_expires_at(user_id),
     )
+
+
+def _build_generate_render_source(req: GenerateRenderRequest) -> dict:
+    source_kind = (req.source_kind or "").strip() or "text"
+    source_filename = str(req.source_filename or "").strip()
+    source_display_name = str(req.source_display_name or "").strip()
+    combined_filename = str(req.combined_markdown_filename or "").strip()
+    source: dict[str, str] = {
+        "kind": source_kind,
+        "title": req.title,
+    }
+    if source_filename:
+        source["source_filename"] = source_filename
+        source["source_download_url"] = f"/api/slides/download_source/{source_filename}"
+    if source_display_name:
+        source["source_display_name"] = source_display_name
+    if combined_filename:
+        source["combined_markdown_filename"] = combined_filename
+        source["combined_markdown_download_url"] = f"/api/slides/download/{combined_filename}"
+    return source
+
+
+def _build_generate_render_result_metadata(req: GenerateRenderRequest, result: dict, request_id: str) -> dict:
+    pptx_download_url = str(result.get("pptx_download_url") or "").strip()
+    html_preview_url = str(result.get("html_preview_url") or "").strip()
+    pptx_filename = pptx_download_url.rsplit("/", 1)[-1] if pptx_download_url else ""
+    html_filename = html_preview_url.rsplit("/", 1)[-1] if html_preview_url else ""
+    return {
+        "request_id": request_id,
+        "title": req.title,
+        "page_count": result.get("page_count"),
+        "pptx_filename": pptx_filename,
+        "pptx_download_url": pptx_download_url,
+        "html_preview_filename": html_filename,
+        "html_preview_url": html_preview_url,
+    }
 
 
 @slides_router.post("/process-ppt")
@@ -413,6 +449,9 @@ async def generate_render(
         tracker.finish(StepStatus.SUCCESS)
         tracker.result_metadata["page_count"] = result["page_count"]
         tracker.result_metadata["base_style"] = base_style
+        tracker.result_metadata["title"] = req.title
+        tracker.result_metadata["pptx_download_url"] = result.get("pptx_download_url", "")
+        tracker.result_metadata["html_preview_url"] = result.get("html_preview_url", "")
         await tracker.save()
 
         response_data = {
@@ -443,8 +482,13 @@ async def generate_render(
                     "base_style": base_style,
                     "provider": req.provider,
                     "has_custom_prompt": bool(req.custom_style_prompt.strip()),
+                    "request_id": tracker.request_id,
+                    "source_kind": req.source_kind or "text",
                 },
-                source={"title": req.title},
+                source={
+                    **_build_generate_render_source(req),
+                    "result_artifacts": _build_generate_render_result_metadata(req, result, tracker.request_id),
+                },
                 result_preview=f"Generated {result['page_count']} slides with '{THEME_NAMES.get(base_style, base_style)}' theme",
                 result_full=result,
             )

@@ -15,6 +15,7 @@ interface SidebarProps {
   user: User | null;
   isAuthPage: boolean;
   sidebarOpen: boolean;
+  sidebarAnimating: boolean;
 }
 
 function getToneClassName(tone?: string): string {
@@ -32,7 +33,7 @@ function isLinkActive(to: string, pathname: string, search: string): boolean {
   return pathname === to;
 }
 
-export default function Sidebar({ user, isAuthPage, sidebarOpen }: SidebarProps) {
+export default function Sidebar({ user, isAuthPage, sidebarOpen, sidebarAnimating }: SidebarProps) {
   const location = useLocation();
   const { t } = useI18n();
   const totalUnread = useChatStore((s) =>
@@ -62,37 +63,47 @@ export default function Sidebar({ user, isAuthPage, sidebarOpen }: SidebarProps)
   })();
 
   return (
-    <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarCollapsed}`}>
-      <nav className={styles.sidebarNav}>
-        {sections.map((section) => (
-          <div key={section.titleKey} className={styles.sidebarSection}>
-            <div className={styles.sectionTitle}>
-              <span className={styles.sectionTitleText}>{t(section.titleKey)}</span>
+    <aside
+      className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarCollapsed}`}
+      data-sidebar-open={sidebarOpen ? 'true' : 'false'}
+      data-sidebar-animating={sidebarAnimating ? 'true' : 'false'}
+    >
+      <div className={styles.sidebarInner}>
+        <nav className={styles.sidebarNav}>
+          {sections.map((section) => (
+            <div key={section.titleKey} className={styles.sidebarSection}>
+              <div className={styles.sectionTitle}>
+                <span className={styles.sectionTitleClip}>
+                  <span className={styles.sectionTitleText}>{t(section.titleKey)}</span>
+                </span>
+              </div>
+              {section.links.map((item) => {
+                const label = t(item.labelKey);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`${styles.sidebarLink} ${getToneClassName(item.tone)} ${isLinkActive(item.to, location.pathname, location.search) ? styles.sidebarLinkActive : ''}`}
+                    title={label}
+                  >
+                    <span className={styles.navIconWrapper}>
+                      <i className={`fas ${item.icon}`}></i>
+                      {item.to === '/chat' && totalUnread > 0 && (
+                        <span className={styles.navBadge}>
+                          {totalUnread > 99 ? '99+' : totalUnread}
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.linkTextClip}>
+                      <span className={styles.linkText}>{label}</span>
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
-            {section.links.map((item) => {
-              const label = t(item.labelKey);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`${styles.sidebarLink} ${getToneClassName(item.tone)} ${isLinkActive(item.to, location.pathname, location.search) ? styles.sidebarLinkActive : ''}`}
-                  title={label}
-                >
-                  <span className={styles.navIconWrapper}>
-                    <i className={`fas ${item.icon}`}></i>
-                    {item.to === '/chat' && totalUnread > 0 && (
-                      <span className={styles.navBadge}>
-                        {totalUnread > 99 ? '99+' : totalUnread}
-                      </span>
-                    )}
-                  </span>
-                  <span className={styles.linkText}>{label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      </div>
     </aside>
   );
 }

@@ -6,7 +6,7 @@ import path from 'path'
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const internalGatewayToken = String(env.INTERNAL_GATEWAY_TOKEN || '').trim()
-  const backendTarget = String(env.VITE_DEV_BACKEND_TARGET || 'http://localhost:5009').trim()
+  const backendTarget = String(env.VITE_DEV_BACKEND_TARGET || 'http://127.0.0.1:5009').trim()
   const proxyHeaders = internalGatewayToken
     ? { 'X-Internal-Gateway': internalGatewayToken }
     : {}
@@ -22,6 +22,11 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
+        'next/navigation': path.resolve(__dirname, 'src/presenton/shims/next-navigation.ts'),
+        'next/link': path.resolve(__dirname, 'src/presenton/shims/next-link.tsx'),
+        'next/image': path.resolve(__dirname, 'src/presenton/shims/next-image.tsx'),
+        'next/headers': path.resolve(__dirname, 'src/presenton/shims/next-headers.ts'),
+        'next': path.resolve(__dirname, 'src/presenton/shims/next.ts'),
       },
     },
     build: {
@@ -86,6 +91,12 @@ export default defineConfig(({ command, mode }) => {
           headers: proxyHeaders,
         },
         '/static': {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          headers: proxyHeaders,
+        },
+        '/app_data': {
           target: backendTarget,
           changeOrigin: true,
           secure: false,

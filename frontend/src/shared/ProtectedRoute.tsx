@@ -4,6 +4,24 @@ import { Navigate, useLocation } from 'react-router-dom';
 import RouteSkeleton from './RouteSkeleton';
 import { useAuthStore } from './store/useAuthStore';
 
+function isPresentonRoute(pathname: string) {
+  return (
+    pathname.startsWith('/slides/presenton') ||
+    [
+      '/upload',
+      '/documents-preview',
+      '/outline',
+      '/presentation',
+      '/dashboard',
+      '/templates',
+      '/theme',
+      '/settings',
+      '/template-preview',
+      '/custom-template',
+    ].includes(pathname)
+  );
+}
+
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
@@ -11,7 +29,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
 
   if (status === 'unknown' || (isSessionLoading && !user)) {
-    return <RouteSkeleton />;
+    return <RouteSkeleton tone={isPresentonRoute(location.pathname) ? 'presenton' : 'default'} />;
   }
 
   if (!user || status === 'anonymous') {

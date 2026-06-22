@@ -41,6 +41,9 @@ PRESENTON_GROUP_MAP = {
     "education": "Classic",
     "report": "Business",
     "code": "Dark",
+    "pitch-deck": "Business",
+    "pitchdeck": "Business",
+    "product-overview": "Business",
     "productoverview": "Business",
 }
 
@@ -49,14 +52,17 @@ PRESENTON_LAYOUT_COUNTS = {
     "modern": 10,
     "standard": 11,
     "swift": 9,
-    "neo-general": 24,
+    "code": 16,
+    "education": 14,
+    "product-overview": 21,
+    "productoverview": 21,
+    "report": 22,
+    "pitch-deck": 25,
+    "pitchdeck": 25,
+    "neo-general": 29,
     "neo-modern": 17,
     "neo-standard": 17,
     "neo-swift": 15,
-    "education": 10,
-    "report": 12,
-    "code": 8,
-    "productoverview": 10,
 }
 
 ENABLE_PRESENTON_THEME_ALIASES = (

@@ -6,7 +6,7 @@ import Layout from './shared/Layout';
 import { ErrorBoundary } from './shared/ErrorBoundary';
 import RouteErrorBoundary from './shared/RouteErrorBoundary';
 import ProtectedRoute from './shared/ProtectedRoute';
-import { useAuthBootstrap } from './shared/hooks/useAuthBootstrap';
+import { shouldBypassAuthBootstrap, useAuthBootstrap } from './shared/hooks/useAuthBootstrap';
 import { useAuthStore } from './shared/store/useAuthStore';
 import { ROUTES, type RouteConfig } from './router/routes';
 import RouteSkeleton from './shared/RouteSkeleton';
@@ -58,11 +58,31 @@ function wrapRoute(route: RouteConfig) {
 const layoutRoutes = ROUTES.filter((r) => !r.fullScreen);
 const fullScreenRoutes = ROUTES.filter((r) => r.fullScreen);
 
-function App() {
-  useAuthBootstrap();
+function isPresentonRoutePath(pathname: string) {
+  return (
+    pathname.startsWith('/slides/presenton') ||
+    [
+      '/upload',
+      '/documents-preview',
+      '/outline',
+      '/presentation',
+      '/dashboard',
+      '/templates',
+      '/theme',
+      '/settings',
+      '/template-preview',
+      '/custom-template',
+    ].includes(pathname)
+  );
+}
+
+function AppShell() {
+  const location = useLocation();
+  useAuthBootstrap({ enabled: !shouldBypassAuthBootstrap(location.pathname) });
+  const suspenseTone = isPresentonRoutePath(location.pathname) ? 'presenton' : 'default';
 
   return (
-    <BrowserRouter>
+    <>
       <Toaster
         position="top-center"
         toastOptions={{
@@ -78,7 +98,7 @@ function App() {
       />
       <ErrorBoundary>
         <ScrollToTop />
-        <Suspense fallback={<RouteSkeleton />}>
+        <Suspense fallback={<RouteSkeleton tone={suspenseTone} />}>
           <Routes>
             <Route path="/" element={<Layout />}>
               {layoutRoutes.map((route) => (
@@ -92,7 +112,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
 
-            {/* Full-screen routes — outside <Layout> (no sidebar/navbar) */}
+            {/* Full-screen routes - outside <Layout> (no sidebar/navbar) */}
             {fullScreenRoutes.map((route) => (
               <Route
                 key={route.path}
@@ -103,6 +123,14 @@ function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   );
 }

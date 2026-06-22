@@ -33,7 +33,7 @@ export function normalizeDeepSeekConfig(config: DeepSeekConfig, fallback: DeepSe
     return {
         ...fallback,
         ...config,
-        api_key: '',
+        api_key: config?.api_key ?? '',
         api_key_set: Boolean(config?.api_key_set),
     };
 }
@@ -42,7 +42,7 @@ export function normalizeOpenAIConfig(config: OpenAIConfig, fallback: OpenAIConf
     return {
         ...fallback,
         ...config,
-        api_key: '',
+        api_key: config?.api_key ?? '',
         api_key_set: Boolean(config?.api_key_set),
     };
 }

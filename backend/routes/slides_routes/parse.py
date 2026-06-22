@@ -3,20 +3,25 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-
+import uuid
+	
 from fastapi import Depends, File, Form, HTTPException, Request, UploadFile
-from werkzeug.utils import secure_filename
-
+	
 from backend.config import Config
 from backend.core.security import get_current_user
 from backend.schemas import CombineSchema
-from backend.services.slides import StepStatus, TaskTracker
+from backend.services.slides.infra.task_tracker import StepStatus, TaskTracker
 from backend.services.slides_pipeline_service import combine_sections as _svc_combine_sections
 from backend.services.slides_pipeline_service import get_parsed_data_with_cache as _get_parsed_data_with_cache
 
 from .router import slides_router
 
 logger = logging.getLogger(__name__)
+
+
+def _build_stored_upload_name(filename: str) -> str:
+    ext = os.path.splitext(filename)[1]
+    return f"{uuid.uuid4().hex}{ext.lower()}"
 
 
 @slides_router.post("/parse-md")
@@ -29,24 +34,25 @@ async def parse_md(
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No selected file")
-
+	
     request_id = request.headers.get("X-Request-ID") if request else None
     tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="parse")
     try:
-        filename = secure_filename(file.filename)
-        if not filename:
+        display_filename = os.path.basename(file.filename).strip()
+        if not display_filename:
             raise HTTPException(status_code=400, detail="Invalid filename")
 
         os.makedirs(Config.SUB1_UPLOAD_FOLDER, exist_ok=True)
         os.makedirs(Config.SUB1_MD_FOLDER, exist_ok=True)
-        upload_path = os.path.join(Config.SUB1_UPLOAD_FOLDER, filename)
+        stored_filename = _build_stored_upload_name(display_filename)
+        upload_path = os.path.join(Config.SUB1_UPLOAD_FOLDER, stored_filename)
         with open(upload_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        if filename.lower().endswith(".pdf"):
-            md_filename = filename.rsplit(".", 1)[0] + ".md"
+        if display_filename.lower().endswith(".pdf"):
+            md_filename = stored_filename.rsplit(".", 1)[0] + ".md"
             target_md_path = os.path.join(Config.SUB1_MD_FOLDER, md_filename)
-            with tracker.step("parse", filename=filename, use_llm=use_llm):
+            with tracker.step("parse", filename=display_filename, stored_filename=stored_filename, use_llm=use_llm):
                 from backend.services.slides.parsing.pdf2md import convert_pdf_to_md
 
                 convert_pdf_to_md(upload_path, target_md_path)
@@ -54,16 +60,19 @@ async def parse_md(
         else:
             parsing_path = upload_path
 
-        step_name = "parse" if not filename.lower().endswith(".pdf") else "header_extract"
-        with tracker.step(step_name, filename=filename):
+        step_name = "parse" if not display_filename.lower().endswith(".pdf") else "header_extract"
+        with tracker.step(step_name, filename=display_filename, stored_filename=stored_filename):
             result = _get_parsed_data_with_cache(parsing_path, use_llm, header_llm_provider)
 
         tracker.finish(StepStatus.SUCCESS)
         tracker.result_metadata["headers_count"] = len(result.get("headers", []))
+        tracker.result_metadata["source_filename"] = stored_filename
+        tracker.result_metadata["source_display_name"] = display_filename
         await tracker.save()
         return {
             "status": "success",
-            "filename": filename,
+            "filename": stored_filename,
+            "display_filename": display_filename,
             "headers": result["headers"],
             "tables": result["tables"],
             "request_id": tracker.request_id,

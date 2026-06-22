@@ -16,11 +16,25 @@ type QuickProcessFormState = {
     generateWordDocument: boolean;
 };
 
-export function useQuickProcess(navigate: NavigateFunction) {
+type QuickProcessOptions = {
+    missingContentRedirect?: string;
+};
+
+function resolvePreferredProvider(options: SlidesProviderStatus[], stored: SlidesProvider): SlidesProvider {
+    const storedHealthy = options.find((item) => item.id === stored && item.available && item.configured);
+    if (stored !== 'auto' && storedHealthy) {
+        return stored;
+    }
+    const firstHealthyConfigured = options.find((item) => item.id !== 'auto' && item.available && item.configured);
+    return firstHealthyConfigured?.id || 'auto';
+}
+
+export function useQuickProcess(navigate: NavigateFunction, options: QuickProcessOptions = {}) {
     const [contentLoading, setContentLoading] = useState(true);
     const [loading, setLoading] = useState(false);
     const [sections, setSections] = useState<SlidesSection[]>([]);
     const [currentFilename, setCurrentFilename] = useState('');
+    const [currentDisplayFilename, setCurrentDisplayFilename] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
     const [formState, setFormState] = useState<QuickProcessFormState>({
@@ -47,8 +61,15 @@ export function useQuickProcess(navigate: NavigateFunction) {
     useEffect(() => {
         const fetchContent = async () => {
             const filename = localStorage.getItem('combinedFilename');
-            if (!filename) { navigate('/slides/md-processor'); return; }
+            if (!filename) {
+                navigate(options.missingContentRedirect || '/slides/ai-theme-config');
+                return;
+            }
             setCurrentFilename(filename);
+            const displayFilename = localStorage.getItem('slidesSourceDisplayName')
+                || localStorage.getItem('currentDisplayFilename')
+                || filename;
+            setCurrentDisplayFilename(displayFilename);
 
             try {
                 const res = await client.get(`/slides/download/${filename}`, { responseType: 'text' });
@@ -71,7 +92,7 @@ export function useQuickProcess(navigate: NavigateFunction) {
                 setFormState(prev => ({
                     ...prev,
                     totalPages: parsed.length,
-                    presentationTitle: filename.replace(/\.[^/.]+$/, '') + ' - Script',
+                    presentationTitle: displayFilename.replace(/\.[^/.]+$/, '') + ' - Script',
                 }));
             } catch {
                 setErrorMsg('Failed to load content');
@@ -80,7 +101,7 @@ export function useQuickProcess(navigate: NavigateFunction) {
             }
         };
         fetchContent();
-    }, [navigate]);
+    }, [navigate, options.missingContentRedirect]);
 
     useEffect(() => {
         let cancelled = false;
@@ -93,10 +114,7 @@ export function useQuickProcess(navigate: NavigateFunction) {
                 setProviderOptions(nextOptions);
 
                 const stored = getStoredSlidesProvider();
-                const storedStatus = nextOptions.find((item) => item.id === stored);
-                const nextProvider = stored === 'auto' || (storedStatus?.available && storedStatus?.configured)
-                    ? stored
-                    : 'auto';
+                const nextProvider = resolvePreferredProvider(nextOptions, stored);
                 setProvider(nextProvider);
                 setStoredSlidesProvider(nextProvider);
             } catch (error: any) {
@@ -151,16 +169,26 @@ export function useQuickProcess(navigate: NavigateFunction) {
             if (selected && provider !== 'auto' && (!selected.configured || !selected.available)) {
                 throw new Error(selected.message || `${selected.label} is not available`);
             }
+            const sourceKind = (localStorage.getItem('slidesSourceKind') || '').trim();
+            const sourceFilename = localStorage.getItem('slidesSourceFilename') || '';
+            const sourceDisplayName = localStorage.getItem('slidesSourceDisplayName')
+                || currentDisplayFilename
+                || currentFilename;
+            const combinedFilename = localStorage.getItem('combinedFilename') || currentFilename;
             const res = await slidesGenerationApi.createTask({
                 provider,
                 chapterData: sections.map(s => ({ sectionTitle: s.title, text: s.content })),
                 total_pages: Number(formState.totalPages),
                 num_of_bullets: Number(formState.numOfBullets),
                 words_each_bullet: Number(formState.wordsEachBullet),
-                presentation_title: currentFilename.replace(/\.[^/.]+$/, ''),
+                presentation_title: (currentDisplayFilename || currentFilename).replace(/\.[^/.]+$/, ''),
                 script_style: formState.scriptStyle,
                 generate_talking_script: Boolean(formState.generateTalkingScript),
                 generate_word_document: Boolean(formState.generateWordDocument),
+                source_kind: sourceKind === 'upload' ? 'upload' : 'text',
+                source_filename: sourceFilename,
+                source_display_name: sourceDisplayName,
+                combined_markdown_filename: combinedFilename,
             });
             setTaskId(res.task_id);
             localStorage.setItem('slides_last_task_id', res.task_id);

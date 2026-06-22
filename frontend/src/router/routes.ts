@@ -1,11 +1,12 @@
 import type { ComponentType, LazyExoticComponent } from 'react';
 import { lazy } from 'react';
+import { PresentonDashboardRoute } from '@/presenton/routes';
 
 export type AuthMode = 'protected' | 'public' | 'none';
 
 export interface RouteConfig {
   path: string;
-  Component: LazyExoticComponent<ComponentType<any>>;
+  Component: ComponentType<any> | LazyExoticComponent<ComponentType<any>>;
   auth: AuthMode;
   fullScreen?: boolean;
   keyParam?: string;
@@ -32,9 +33,32 @@ export const ROUTES: RouteConfig[] = [
   { path: 'chat', Component: lazy(() => import('@/features/chat/pages/ChatPage')), auth: 'protected' },
   { path: 'chat/room/:roomId', Component: lazy(() => import('@/features/chat/pages/ChatPage')), auth: 'protected' },
 
-  { path: 'slides/md-processor', Component: lazy(() => import('@/features/slides/pages/MdProcessor/MdProcessorPage')), auth: 'protected' },
   { path: 'slides/highlighter', Component: lazy(() => import('@/features/slides/pages/Highlighter/HighlighterPage')), auth: 'protected' },
   { path: 'slides/specify', Component: lazy(() => import('@/features/slides/pages/Specify/SpecifyPage')), auth: 'protected' },
+  { path: 'slides/presenton', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonUploadRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/documents-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonDocumentsPreviewRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/outline', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonOutlineRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/presentation', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPresentationRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/dashboard', Component: PresentonDashboardRoute, auth: 'protected' },
+  { path: 'slides/presenton/templates', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatesRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/theme', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonThemeRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/settings', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonSettingsRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/template-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatePreviewRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/custom-template', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonCustomTemplateRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/pdf-maker', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPdfMakerRoute }))), auth: 'none', fullScreen: true },
+  { path: 'slides/presenton/workspace', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonLegacyRedirectRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/quick-process', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonLegacyRedirectRoute }))), auth: 'protected' },
+  { path: 'upload', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonUploadRoute }))), auth: 'protected' },
+  { path: 'documents-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonDocumentsPreviewRoute }))), auth: 'protected' },
+  { path: 'outline', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonOutlineRoute }))), auth: 'protected' },
+  { path: 'presentation', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPresentationRoute }))), auth: 'protected' },
+  { path: 'dashboard', Component: PresentonDashboardRoute, auth: 'protected' },
+  { path: 'templates', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatesRoute }))), auth: 'protected' },
+  { path: 'theme', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonThemeRoute }))), auth: 'protected' },
+  { path: 'settings', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonSettingsRoute }))), auth: 'protected' },
+  { path: 'template-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatePreviewRoute }))), auth: 'protected' },
+  { path: 'custom-template', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonCustomTemplateRoute }))), auth: 'protected' },
+  { path: 'pdf-maker', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPdfMakerRoute }))), auth: 'none', fullScreen: true },
   { path: 'slides/quick-process', Component: lazy(() => import('@/features/slides/pages/QuickProcess/QuickProcessPage')), auth: 'protected' },
   { path: 'slides/generate-workbench', Component: lazy(() => import('@/features/slides/pages/GenerateWorkbench/GenerateWorkbenchPage')), auth: 'protected' },
   { path: 'slides/ppt-template', Component: lazy(() => import('@/features/slides/pages/PptTemplate/PptTemplatePage')), auth: 'protected' },

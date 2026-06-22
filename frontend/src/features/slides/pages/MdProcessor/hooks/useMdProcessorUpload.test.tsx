@@ -50,7 +50,8 @@ describe('useMdProcessorUpload', () => {
     getMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
     postMock.mockResolvedValue({
       data: {
-        filename: 'test.md',
+        filename: 'stored-test.md',
+        display_filename: 'Lecture Notes.md',
         headers: [],
         tables: [],
       },
@@ -72,7 +73,9 @@ describe('useMdProcessorUpload', () => {
     expect(url).toBe('/slides/parse-md');
     expect(formData).toBeInstanceOf(FormData);
     expect(config).not.toHaveProperty('headers');
-    expect(result.current.currentFilename).toBe('test.md');
+    expect(result.current.currentFilename).toBe('stored-test.md');
+    expect(result.current.currentDisplayFilename).toBe('Lecture Notes.md');
+    expect(localStorage.getItem('currentDisplayFilename')).toBe('Lecture Notes.md');
     expect(result.current.errorMsg).toBe('');
   });
 
@@ -103,6 +106,7 @@ describe('useMdProcessorUpload', () => {
     act(() => {
       result.current.hydrateState({
         currentFilename: 'restored.md',
+        currentDisplayFilename: 'Lecture Notes.md',
         headers: [
           { index: 1, level: 1, text: 'Intro' },
           { index: 2, level: 2, text: 'Details' },
@@ -114,6 +118,7 @@ describe('useMdProcessorUpload', () => {
     });
 
     expect(result.current.currentFilename).toBe('restored.md');
+    expect(result.current.currentDisplayFilename).toBe('Lecture Notes.md');
     expect(result.current.headers).toEqual([
       { index: 1, level: 1, text: 'Intro' },
       { index: 2, level: 2, text: 'Details' },

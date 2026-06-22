@@ -6,7 +6,10 @@ used by any theme creator or tested independently.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+import pptx
 
 from pptx.util import Pt
 from PIL import Image
@@ -18,13 +21,29 @@ from .theme_catalog import resolve_base_theme
 
 def get_template_path(template_base_path: str, theme: str) -> str:
     """Resolve *theme* to a ``.pptx`` file path under *template_base_path*."""
-    available_themes = [
-        os.path.splitext(name)[0]
-        for name in os.listdir(template_base_path)
-        if name.endswith(".pptx")
-    ]
-    resolved_theme = resolve_base_theme(theme, available_themes)
-    return os.path.join(template_base_path, f"{resolved_theme}.pptx")
+    available_themes = []
+    if os.path.isdir(template_base_path):
+        available_themes = [
+            os.path.splitext(name)[0]
+            for name in os.listdir(template_base_path)
+            if name.endswith(".pptx")
+        ]
+
+    if available_themes:
+        resolved_theme = resolve_base_theme(theme, available_themes)
+        candidate = os.path.join(template_base_path, f"{resolved_theme}.pptx")
+        if os.path.exists(candidate):
+            return candidate
+
+    # Fallback to python-pptx's built-in default theme when local templates are absent.
+    default_template = Path(pptx.__file__).resolve().parent / "templates" / "default.pptx"
+    if default_template.exists():
+        return str(default_template)
+
+    raise FileNotFoundError(
+        f"No PPT template found for theme '{theme}' in '{template_base_path}', "
+        "and python-pptx default template is unavailable."
+    )
 
 
 def find_layout_by_name(prs, layout_name: str):
@@ -173,4 +192,5 @@ def should_use_specialized_creator(template_base_path: str, theme: str) -> bool:
         resolved_theme = resolve_base_theme(theme, available_themes)
     except Exception:
         resolved_theme = theme
-    return resolved_theme.lower() in THEME_CREATOR_MAPPING
+    candidate = os.path.join(template_base_path, f"{resolved_theme}.pptx")
+    return resolved_theme.lower() in THEME_CREATOR_MAPPING and os.path.exists(candidate)

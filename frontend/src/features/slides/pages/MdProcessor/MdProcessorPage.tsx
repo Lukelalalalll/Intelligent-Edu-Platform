@@ -12,7 +12,21 @@ import s from '../../../../styles/history.module.css';
 import PptGeneratorShell from '../../components/PptGeneratorShell';
 import { loadMdProcessorWizardState, saveMdProcessorWizardState } from './hooks/mdProcessorWizardState';
 
-export default function MdProcessor() {
+export type MdProcessorPageProps = {
+    nextRoute?: string;
+    bannerTitle?: React.ReactNode;
+    bannerSubtitle?: string;
+    continueLabel?: string;
+    quickContinueLabel?: string;
+};
+
+export default function MdProcessor({
+    nextRoute = '/slides/ai-theme-config',
+    bannerTitle,
+    bannerSubtitle,
+    continueLabel,
+    quickContinueLabel,
+}: MdProcessorPageProps) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const transferConsumedRef = useRef(false);
@@ -35,6 +49,7 @@ export default function MdProcessor() {
             textInput.setProvider(state.provider || 'local_ollama');
             upload.hydrateState({
                 currentFilename: state.currentFilename || '',
+                currentDisplayFilename: state.currentDisplayFilename || '',
                 headers: state.headers || [],
                 selectedIndices: state.selectedIndices || [],
                 useLLM: Boolean(state.useLLM),
@@ -48,12 +63,14 @@ export default function MdProcessor() {
         if (!hydrationReady) return;
         saveMdProcessorWizardState({
             activeView,
+            currentStep: 0,
             inputMode: textInput.inputMode,
             textContent: textInput.textContent,
             textTitle: textInput.textTitle,
             seedContent: textInput.seedContent,
             provider: textInput.provider,
             currentFilename: upload.currentFilename,
+            currentDisplayFilename: upload.currentDisplayFilename,
             headers: upload.headers,
             selectedIndices: upload.selectedIndices,
             useLLM: upload.useLLM,
@@ -67,6 +84,7 @@ export default function MdProcessor() {
         textInput.seedContent,
         textInput.provider,
         upload.currentFilename,
+        upload.currentDisplayFilename,
         upload.headers,
         upload.selectedIndices,
         upload.useLLM,
@@ -110,6 +128,7 @@ export default function MdProcessor() {
         loading: upload.loading,
         errorMsg: upload.errorMsg,
         currentFilename: upload.currentFilename,
+        currentDisplayFilename: upload.currentDisplayFilename,
         fileInputRef: upload.fileInputRef,
         setUseLLM: upload.setUseLLM,
         setHeaderLlmProvider: upload.setHeaderLlmProvider,
@@ -120,17 +139,17 @@ export default function MdProcessor() {
         clearFile: upload.clearFile,
         handleUpload: upload.handleUpload,
         handleCheckboxChange: upload.handleCheckboxChange,
-        combineSections: async (redirectUrl: string) => {
+        combineSections: async () => {
             if (textInput.textContent) {
                 localStorage.setItem('slidesContentMD', textInput.textContent);
             }
-            upload.combineSections(redirectUrl, navigate);
+            upload.combineSections(nextRoute, navigate);
         },
-        proceedWithFullDoc: async (redirectUrl: string) => {
+        proceedWithFullDoc: async () => {
             if (textInput.textContent) {
                 localStorage.setItem('slidesContentMD', textInput.textContent);
             }
-            upload.proceedWithFullDoc(redirectUrl, navigate);
+            upload.proceedWithFullDoc(nextRoute, navigate);
         },
         inputMode: textInput.inputMode,
         setInputMode: textInput.setInputMode,
@@ -146,10 +165,14 @@ export default function MdProcessor() {
         provider: textInput.provider,
         setProvider: textInput.setProvider,
         handleCozeGenerate: textInput.handleCozeGenerate,
-        handleProcessText: async (redirectUrl: string) => {
+        handleProcessText: async () => {
             localStorage.setItem('slidesContentMD', textInput.textContent);
-            textInput.handleProcessText(redirectUrl, navigate, upload.setErrorMsg);
+            textInput.handleProcessText(nextRoute, navigate, upload.setErrorMsg);
         },
+        bannerTitle,
+        bannerSubtitle,
+        continueLabel,
+        quickContinueLabel,
     };
 
     const viewSwitchJSX = (

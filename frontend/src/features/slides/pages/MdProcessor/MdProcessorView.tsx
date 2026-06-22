@@ -18,6 +18,7 @@ const formatFileSize = (bytes) => {
 export default function MdProcessor({
     file, useLLM, headerLlmProvider, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
     currentFilename,
+    currentDisplayFilename,
     fileInputRef, setUseLLM, setHeaderLlmProvider, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
     handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
     // Tab 2 props
@@ -27,17 +28,21 @@ export default function MdProcessor({
     handleCozeGenerate, handleProcessText,
     viewSwitchSlot,
     hideBanner,
+    bannerTitle,
+    bannerSubtitle,
+    continueLabel,
+    quickContinueLabel,
 }) {
     const showUploadCard = !currentFilename;
-    const displayFilename = file?.name || currentFilename;
+    const displayFilename = file?.name || currentDisplayFilename || currentFilename;
     const showParsedEmptyState = Boolean(currentFilename) && headers.length === 0;
 
     return (
         <div className={hideBanner ? undefined : "container"}>
             {!hideBanner && (
                 <WelcomeBanner
-                    title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
-                    subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
+                    title={bannerTitle || <><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
+                    subtitle={bannerSubtitle || "Process and enhance your PDF and Markdown files with intelligent section extraction"}
                     className={styles.pageHeader}
                     as="header"
                     variant="workspace"
@@ -167,27 +172,27 @@ export default function MdProcessor({
 
                         {headers.length > 0 && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/slides/ai-theme-config')}>
+                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={combineSections}>
                                     <i className="fas fa-layer-group" aria-hidden="true"></i> Build Selected Markdown
                                 </button>
-                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/slides/ai-theme-config')}>
-                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Continue to Style Config
+                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={combineSections}>
+                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> {continueLabel || 'Continue to Style Config'}
                                 </button>
                                 <button id="quickProceedBtn" className="btn btn-secondary"
-                                    onClick={() => combineSections('/slides/ai-theme-config')}>
-                                    <i className="fas fa-bolt"></i> Quick Continue
+                                    onClick={combineSections}>
+                                    <i className="fas fa-bolt"></i> {quickContinueLabel || 'Quick Continue'}
                                 </button>
                             </div>
                         )}
 
                         {headers.length === 0 && currentFilename && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
-                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Continue to Style Config
+                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={proceedWithFullDoc}>
+                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> {continueLabel || 'Continue to Style Config'}
                                 </button>
                                 <button className="btn btn-secondary"
-                                    onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
-                                    <i className="fas fa-bolt"></i> Quick Continue
+                                    onClick={proceedWithFullDoc}>
+                                    <i className="fas fa-bolt"></i> {quickContinueLabel || 'Quick Continue'}
                                 </button>
                             </div>
                         )}

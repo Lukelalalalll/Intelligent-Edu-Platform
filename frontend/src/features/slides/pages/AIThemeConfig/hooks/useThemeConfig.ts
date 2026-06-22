@@ -23,23 +23,23 @@ export type ThemeConfigProviderOption = {
 };
 
 const DEFAULT_TITLE = 'Presentation';
-const DRAFT_STORAGE_KEY = 'slides_md_draft_content';
-const DRAFT_TITLE_KEY = 'slides_md_draft_title';
+export const THEME_DRAFT_STORAGE_KEY = 'slides_md_draft_content';
+export const THEME_DRAFT_TITLE_KEY = 'slides_md_draft_title';
 
 function readStoredDraft() {
   if (typeof window === 'undefined') {
     return { content: null as string | null, title: '' };
   }
   return {
-    content: window.localStorage.getItem(DRAFT_STORAGE_KEY),
-    title: window.localStorage.getItem(DRAFT_TITLE_KEY) || '',
+    content: window.localStorage.getItem(THEME_DRAFT_STORAGE_KEY),
+    title: window.localStorage.getItem(THEME_DRAFT_TITLE_KEY) || '',
   };
 }
 
 function writeStoredDraft(content: string, title: string) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(DRAFT_STORAGE_KEY, content);
-  window.localStorage.setItem(DRAFT_TITLE_KEY, title);
+  window.localStorage.setItem(THEME_DRAFT_STORAGE_KEY, content);
+  window.localStorage.setItem(THEME_DRAFT_TITLE_KEY, title);
 }
 
 function buildProviderOptions(
@@ -140,7 +140,7 @@ function getApiErrorMessage(error: unknown, fallbackPrefix: string): string {
     return detail;
   }
   if (detail && typeof detail === 'object') {
-    const structured = [detail.message, detail.details, detail.renderer?.message].find(
+    const structured = [detail.details, detail.renderer?.message, detail.suggestion, detail.message].find(
       (value) => typeof value === 'string' && value.trim(),
     );
     if (structured) {
@@ -270,7 +270,26 @@ export function useThemeConfig() {
     writeStoredDraft(content, nextTitle);
   }, []);
 
-  const generate = useCallback(async (content: string, titleOverride?: string) => {
+  const replaceSourceDraft = useCallback((content: string, draftTitle: string) => {
+    commitMarkdownDraft(content, draftTitle);
+    setErrorMsg('');
+    setResult(null);
+    setExportResult(null);
+    setDraftSlides([]);
+    setCustomCss('');
+    setPreviewResult(null);
+    setPreviewLoading(false);
+    setWorkflowStage('configure');
+    setGenerationProgress(0);
+    setExportProgress(0);
+  }, [commitMarkdownDraft]);
+
+  const generate = useCallback(async (content: string, titleOverride?: string, sourceMeta?: {
+    sourceKind?: 'upload' | 'text';
+    sourceFilename?: string;
+    sourceDisplayName?: string;
+    combinedMarkdownFilename?: string;
+  }) => {
     if (!content.trim()) {
       setErrorMsg('No content to generate slides from. Please go back and upload a document first.');
       return;
@@ -290,6 +309,10 @@ export function useThemeConfig() {
         custom_style_prompt: userCustomThemePrompt,
         provider: selectedProvider,
         title: resolvedTitle,
+        source_kind: sourceMeta?.sourceKind,
+        source_filename: sourceMeta?.sourceFilename,
+        source_display_name: sourceMeta?.sourceDisplayName,
+        combined_markdown_filename: sourceMeta?.combinedMarkdownFilename,
       });
       const normalizedSlides = normalizeDraftSlides(response.draft_slides || []);
       setTitle(response.title || resolvedTitle);
@@ -414,6 +437,7 @@ export function useThemeConfig() {
     openMarkdownDraft,
     editMarkdownDraft,
     commitMarkdownDraft,
+    replaceSourceDraft,
     exportDraft,
     resetToConfigure,
     returnToEditing,

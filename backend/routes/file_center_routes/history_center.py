@@ -7,6 +7,7 @@ from backend.services.history_service import (
     TOOL_COLLECTIONS,
     batch_hard_delete_history,
     batch_soft_delete_history,
+    enrich_slides_history_detail,
     get_history_document,
     hard_delete_history,
     list_history,
@@ -63,7 +64,10 @@ async def tool_history_detail(
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Record not found")
-    return {"success": True, **serialize_history_doc(doc, include_result=True)}
+    payload = serialize_history_doc(doc, include_result=True)
+    if tool == "slides":
+        payload = await enrich_slides_history_detail(payload)
+    return {"success": True, **payload}
 
 
 @file_center_router.delete("/tool-history/{history_id}")

@@ -1,11 +1,30 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Provider } from 'react-redux'
 import './index.css'
+import './presenton/presenton-globals.css'
 import './styles/base.css'
 import './styles/utilities.css'
 import App from './App'
 import { applyLocale, detectInitialLocale, I18nProvider } from '@/shared/i18n'
 import { log } from './shared/utils/logger'
+import AppToaster from '@/components/ui/AppToaster'
+import { store } from '@/store/store'
+
+type BrowserProcessShim = {
+  env: Record<string, string | undefined>
+}
+
+const globalWithProcess = globalThis as typeof globalThis & {
+  process?: BrowserProcessShim
+}
+
+// Presenton's browser-side AST editor code expects a minimal Node-like process.env.
+if (!globalWithProcess.process) {
+  globalWithProcess.process = { env: {} }
+} else if (!globalWithProcess.process.env) {
+  globalWithProcess.process.env = {}
+}
 
 // Apply theme before first paint to prevent flash of wrong theme
 const storedTheme = localStorage.getItem('theme');
@@ -33,8 +52,11 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <I18nProvider>
-      <App />
-    </I18nProvider>
+    <Provider store={store}>
+      <I18nProvider>
+        <App />
+        <AppToaster />
+      </I18nProvider>
+    </Provider>
   </StrictMode>,
 )

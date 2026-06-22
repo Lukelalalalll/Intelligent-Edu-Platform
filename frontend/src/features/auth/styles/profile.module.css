@@ -86,45 +86,6 @@
     /* Ensures content stacks above the ambient orb */
 }
 
-.profileContainer::before,
-.profileContainer::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--profile-edge-blur);
-    z-index: 3;
-    pointer-events: none;
-    backdrop-filter: blur(18px) saturate(1.18);
-    -webkit-backdrop-filter: blur(18px) saturate(1.18);
-    opacity: 0.92;
-    will-change: backdrop-filter, opacity;
-}
-
-.profileContainer::before {
-    left: 0;
-    background: linear-gradient(
-        90deg,
-        rgba(0, 111, 82, 0.42) 0%,
-        rgba(0, 111, 82, 0.2) 52%,
-        rgba(0, 111, 82, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-    mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-}
-
-.profileContainer::after {
-    right: 0;
-    background: linear-gradient(
-        270deg,
-        rgba(10, 127, 104, 0.42) 0%,
-        rgba(10, 127, 104, 0.2) 52%,
-        rgba(10, 127, 104, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-    mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-}
-
 .profileRail {
     width: 100%;
     position: relative;
@@ -139,31 +100,8 @@
     overflow-y: hidden;
     padding: 2px 2px 8px;
     scroll-snap-type: x proximity;
-    scroll-padding-inline: var(--profile-edge-fade);
     scrollbar-gutter: stable;
     overscroll-behavior-x: contain;
-    -webkit-mask-image: linear-gradient(
-        90deg,
-        transparent 0,
-        rgba(0, 0, 0, 0.18) 12px,
-        #000 var(--profile-edge-fade),
-        #000 calc(100% - var(--profile-edge-fade)),
-        rgba(0, 0, 0, 0.18) calc(100% - 12px),
-        transparent 100%
-    );
-    mask-image: linear-gradient(
-        90deg,
-        transparent 0,
-        rgba(0, 0, 0, 0.18) 12px,
-        #000 var(--profile-edge-fade),
-        #000 calc(100% - var(--profile-edge-fade)),
-        rgba(0, 0, 0, 0.18) calc(100% - 12px),
-        transparent 100%
-    );
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
 }
 
 .profileLane {

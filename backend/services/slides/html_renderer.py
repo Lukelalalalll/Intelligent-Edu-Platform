@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
 RENDERER_ERROR_CODE = "browser_renderer_unavailable"
 _RENDERER_CACHE_TTL_SECONDS = 30.0
 _renderer_health_cache: dict[str, tuple[float, dict]] = {}
+_PLAYWRIGHT_LAUNCH_ARGS = [
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+]
 
 # ── Template paths ──
 _TEMPLATE_DIR = os.path.join(
@@ -114,6 +120,83 @@ def build_renderer_error_payload(
     }
 
 
+def _format_exception(exc: Exception) -> str:
+    message = str(exc).strip()
+    return message or exc.__class__.__name__
+
+
+def _renderer_unavailable(stage: str, message: str) -> dict:
+    return {
+        "available": False,
+        "mode": "unavailable",
+        "message": message,
+        "stage": stage,
+    }
+
+
+def _should_use_threaded_playwright() -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    selector_loop_type = getattr(asyncio, "SelectorEventLoop", None)
+    return bool(selector_loop_type and isinstance(loop, selector_loop_type))
+
+
+def _should_retry_playwright_in_thread(exc: Exception) -> bool:
+    return os.name == "nt" and isinstance(exc, NotImplementedError)
+
+
+def _check_browser_renderer_sync(smoke_test: bool) -> dict:
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:
+        return _renderer_unavailable(
+            "playwright_import",
+            f"Playwright import failed: {_format_exception(exc)}",
+        )
+
+    try:
+        with sync_playwright() as playwright:
+            try:
+                browser = playwright.chromium.launch(args=_PLAYWRIGHT_LAUNCH_ARGS)
+            except Exception as exc:
+                return _renderer_unavailable(
+                    "chromium_launch",
+                    f"Chromium launch failed: {_format_exception(exc)}",
+                )
+
+            try:
+                if smoke_test:
+                    page = browser.new_page(viewport={"width": 320, "height": 180})
+                    page.set_content(
+                        "<!DOCTYPE html><html><body><div style='width:100px;height:60px;background:#0f766e;color:white'>ok</div></body></html>",
+                        wait_until="load",
+                        timeout=30000,
+                    )
+                    page.screenshot(type="png")
+            except Exception as exc:
+                return _renderer_unavailable(
+                    "screenshot_smoke_test",
+                    f"Chromium screenshot smoke test failed: {_format_exception(exc)}",
+                )
+            finally:
+                browser.close()
+    except Exception as exc:
+        return _renderer_unavailable(
+            "renderer_check",
+            f"Browser renderer health check failed: {_format_exception(exc)}",
+        )
+
+    return {
+        "available": True,
+        "mode": "browser",
+        "stage": "ready",
+    }
+
+
 def _renderer_cache_key(smoke_test: bool) -> str:
     return "smoke_test" if smoke_test else "launch"
 
@@ -145,39 +228,33 @@ async def check_browser_renderer(*, smoke_test: bool = True, use_cache: bool = T
         if cached is not None:
             return cached
 
+    if _should_use_threaded_playwright():
+        logger.info("Using threaded Playwright renderer check because the current event loop cannot spawn subprocesses.")
+        status = await asyncio.to_thread(_check_browser_renderer_sync, smoke_test)
+        return _write_renderer_cache(smoke_test, status)
+
     try:
         from playwright.async_api import async_playwright
     except Exception as exc:
         return _write_renderer_cache(
             smoke_test,
-            {
-                "available": False,
-                "mode": "unavailable",
-                "message": f"Playwright import failed: {exc}",
-                "stage": "playwright_import",
-            },
+            _renderer_unavailable(
+                "playwright_import",
+                f"Playwright import failed: {_format_exception(exc)}",
+            ),
         )
 
     try:
         async with async_playwright() as playwright:
             try:
-                browser = await playwright.chromium.launch(
-                    args=[
-                        "--disable-gpu",
-                        "--disable-dev-shm-usage",
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                    ]
-                )
+                browser = await playwright.chromium.launch(args=_PLAYWRIGHT_LAUNCH_ARGS)
             except Exception as exc:
                 return _write_renderer_cache(
                     smoke_test,
-                    {
-                        "available": False,
-                        "mode": "unavailable",
-                        "message": f"Chromium launch failed: {exc}",
-                        "stage": "chromium_launch",
-                    },
+                    _renderer_unavailable(
+                        "chromium_launch",
+                        f"Chromium launch failed: {_format_exception(exc)}",
+                    ),
                 )
 
             try:
@@ -192,24 +269,24 @@ async def check_browser_renderer(*, smoke_test: bool = True, use_cache: bool = T
             except Exception as exc:
                 return _write_renderer_cache(
                     smoke_test,
-                    {
-                        "available": False,
-                        "mode": "unavailable",
-                        "message": f"Chromium screenshot smoke test failed: {exc}",
-                        "stage": "screenshot_smoke_test",
-                    },
+                    _renderer_unavailable(
+                        "screenshot_smoke_test",
+                        f"Chromium screenshot smoke test failed: {_format_exception(exc)}",
+                    ),
                 )
             finally:
                 await browser.close()
     except Exception as exc:
+        if _should_retry_playwright_in_thread(exc):
+            logger.warning("Async Playwright renderer check hit an unsupported subprocess loop; retrying in a worker thread.")
+            status = await asyncio.to_thread(_check_browser_renderer_sync, smoke_test)
+            return _write_renderer_cache(smoke_test, status)
         return _write_renderer_cache(
             smoke_test,
-            {
-                "available": False,
-                "mode": "unavailable",
-                "message": f"Browser renderer health check failed: {exc}",
-                "stage": "renderer_check",
-            },
+            _renderer_unavailable(
+                "renderer_check",
+                f"Browser renderer health check failed: {_format_exception(exc)}",
+            ),
         )
 
     return _write_renderer_cache(
@@ -554,62 +631,107 @@ def heading_html_escape(value: str) -> str:
 
 # ── Playwright screenshotting ──
 
+def _screenshot_slides_sync(html: str, slide_count: int) -> list[bytes]:
+    from playwright.sync_api import sync_playwright
+
+    screenshots: list[bytes] = []
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(args=_PLAYWRIGHT_LAUNCH_ARGS)
+        try:
+            page = browser.new_page(
+                viewport={"width": SLIDE_WIDTH, "height": SLIDE_HEIGHT}
+            )
+
+            page.set_content(html, wait_until="load", timeout=30000)
+            time.sleep(0.5)
+
+            for slide_index in range(slide_count):
+                page.evaluate(
+                    """
+                    (currentSlideIndex) => {
+                        document.querySelectorAll('.viewport .slide').forEach((s, i) => {
+                            if (i === currentSlideIndex) {
+                                s.style.display = 'flex';
+                                s.scrollIntoView({ behavior: 'instant', block: 'start' });
+                            } else {
+                                s.style.display = 'none';
+                            }
+                        });
+                        var nav = document.querySelector('.slide-nav');
+                        if (nav) nav.style.display = 'none';
+                    }
+                    """,
+                    slide_index,
+                )
+
+                time.sleep(0.4)
+                screenshots.append(page.screenshot(type="png", full_page=False))
+
+            return screenshots
+        finally:
+            browser.close()
+
+
 async def _screenshot_slides(html: str, slide_count: int) -> list[bytes]:
     """Render each slide individually and capture PNG screenshots.
 
     Returns a list of PNG image bytes (one per slide).
     """
+    if _should_use_threaded_playwright():
+        logger.info("Using threaded Playwright slide capture because the current event loop cannot spawn subprocesses.")
+        return await asyncio.to_thread(_screenshot_slides_sync, html, slide_count)
+
     from playwright.async_api import async_playwright
 
     screenshots: list[bytes] = []
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            args=[
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-            ]
-        )
-        try:
-            page = await browser.new_page(
-                viewport={"width": SLIDE_WIDTH, "height": SLIDE_HEIGHT}
-            )
-
-            # Set content once with a reasonable timeout, not networkidle
-            # (networkidle hangs on Google Fonts imports)
-            await page.set_content(html, wait_until="load", timeout=30000)
-            await asyncio.sleep(0.5)
-
-            for slide_index in range(slide_count):
-                # Show only the current slide, hide nav UI
-                await page.evaluate(
-                    f"""
-                    () => {{
-                        document.querySelectorAll('.viewport .slide').forEach((s, i) => {{
-                            if (i === {slide_index}) {{
-                                s.style.display = 'flex';
-                                s.scrollIntoView({{ behavior: 'instant', block: 'start' }});
-                            }} else {{
-                                s.style.display = 'none';
-                            }}
-                        }});
-                        // Hide navigation bar during screenshot
-                        var nav = document.querySelector('.slide-nav');
-                        if (nav) nav.style.display = 'none';
-                    }}
-                    """
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(args=_PLAYWRIGHT_LAUNCH_ARGS)
+            try:
+                page = await browser.new_page(
+                    viewport={"width": SLIDE_WIDTH, "height": SLIDE_HEIGHT}
                 )
 
-                await asyncio.sleep(0.4)
+                # Set content once with a reasonable timeout, not networkidle
+                # (networkidle hangs on Google Fonts imports)
+                await page.set_content(html, wait_until="load", timeout=30000)
+                await asyncio.sleep(0.5)
 
-                screenshot = await page.screenshot(type="png", full_page=False)
-                screenshots.append(screenshot)
+                for slide_index in range(slide_count):
+                    # Show only the current slide, hide nav UI
+                    await page.evaluate(
+                        f"""
+                        () => {{
+                            document.querySelectorAll('.viewport .slide').forEach((s, i) => {{
+                                if (i === {slide_index}) {{
+                                    s.style.display = 'flex';
+                                    s.scrollIntoView({{ behavior: 'instant', block: 'start' }});
+                                }} else {{
+                                    s.style.display = 'none';
+                                }}
+                            }});
+                            // Hide navigation bar during screenshot
+                            var nav = document.querySelector('.slide-nav');
+                            if (nav) nav.style.display = 'none';
+                        }}
+                        """
+                    )
 
-            return screenshots
-        finally:
-            await browser.close()
+                    await asyncio.sleep(0.4)
+
+                    screenshot = await page.screenshot(type="png", full_page=False)
+                    screenshots.append(screenshot)
+
+                return screenshots
+            finally:
+                await browser.close()
+    except Exception as exc:
+        if _should_retry_playwright_in_thread(exc):
+            logger.warning("Async Playwright slide capture hit an unsupported subprocess loop; retrying in a worker thread.")
+            return await asyncio.to_thread(_screenshot_slides_sync, html, slide_count)
+        raise
 
 
 # ── PPTX packaging ──
@@ -749,10 +871,10 @@ async def _save_single_slide_screenshots(html: str, slide_count: int) -> list[by
     try:
         return await _screenshot_slides(html, slide_count)
     except Exception as exc:
-        logger.error("Playwright screenshot failed: %s", exc)
+        logger.error("Playwright screenshot failed: %s", _format_exception(exc))
         raise BrowserRendererUnavailableError(
             stage="slide_screenshot",
-            summary=f"Playwright screenshot failed: {exc}",
+            summary=f"Playwright screenshot failed: {_format_exception(exc)}",
             renderer=status,
         ) from exc
 

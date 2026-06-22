@@ -16,7 +16,7 @@ from .router import auth_router
 
 @auth_router.get("/profile/ai-config")
 async def get_ai_config(current_user: dict = Depends(get_current_user)):
-    return await load_ai_config(current_user)
+    return await load_ai_config(current_user, include_api_keys=True)
 
 
 @auth_router.post("/profile/ai-config/deepseek")

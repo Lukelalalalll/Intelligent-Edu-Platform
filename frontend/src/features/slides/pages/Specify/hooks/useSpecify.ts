@@ -18,6 +18,7 @@ export function useSpecify(navigate: NavigateFunction) {
     const [highlightsData, setHighlightsData] = useState<any[]>([]);
     const [currentTables, setCurrentTables] = useState<any[]>([]);
     const [currentFilename, setCurrentFilename] = useState('');
+    const [currentDisplayFilename, setCurrentDisplayFilename] = useState('');
     const [tablesBySection, setTablesBySection] = useState<Record<string, any[]>>({});
 
     // --- State: Form ---
@@ -43,18 +44,23 @@ export function useSpecify(navigate: NavigateFunction) {
         const storedHighlights = JSON.parse(localStorage.getItem('highlightsData') || '[]');
         const storedTables = JSON.parse(localStorage.getItem('currentTables') || '[]');
         let storedFilename = localStorage.getItem('currentFilename') || '';
+        let storedDisplayFilename = localStorage.getItem('currentDisplayFilename') || storedFilename;
 
         if (storedFilename.startsWith('"') && storedFilename.endsWith('"')) {
             storedFilename = storedFilename.slice(1, -1);
+        }
+        if (storedDisplayFilename.startsWith('"') && storedDisplayFilename.endsWith('"')) {
+            storedDisplayFilename = storedDisplayFilename.slice(1, -1);
         }
 
         setHighlightsData(storedHighlights);
         setCurrentTables(storedTables);
         setCurrentFilename(storedFilename);
+        setCurrentDisplayFilename(storedDisplayFilename);
 
         setFormState(prev => ({
             ...prev,
-            presentationTitle: storedFilename ? storedFilename.replace(/\.[^/.]+$/, '') + ' - Script' : '',
+            presentationTitle: storedDisplayFilename ? storedDisplayFilename.replace(/\.[^/.]+$/, '') + ' - Script' : '',
         }));
 
         if (storedTables.length > 0 && storedHighlights.length > 0) {
@@ -84,7 +90,8 @@ export function useSpecify(navigate: NavigateFunction) {
 
     // 3. Build PPT schema from slide results
     const createPptSchema = (slideResults: any[]) => {
-        const fileNameWithoutExt = currentFilename ? currentFilename.replace(/\.[^/.]+$/, '') : 'Presentation';
+        const titleSource = currentDisplayFilename || currentFilename;
+        const fileNameWithoutExt = titleSource ? titleSource.replace(/\.[^/.]+$/, '') : 'Presentation';
         const currentDate = new Date().toISOString().split('T')[0];
 
         const fullSelectedTables: any[] = [];

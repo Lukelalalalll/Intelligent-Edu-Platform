@@ -1,0 +1,26 @@
+"""Paths relative to the FastAPI process working directory.
+
+The web stack starts FastAPI with cwd set to the `backend/` project root.
+Writable caches and generated files should prefer ``APP_DATA_DIRECTORY`` when set.
+"""
+
+from __future__ import annotations
+
+import os
+
+
+def get_resource_path(relative_path: str) -> str:
+    """Absolute path to bundled read-only assets (e.g. ``static/``, ``assets/``)."""
+    return os.path.abspath(os.path.join(os.getcwd(), relative_path))
+
+
+def get_writable_path(relative_path: str) -> str:
+    """Absolute path for caches and generated files; ensures the directory exists."""
+    app_data = (os.getenv("APP_DATA_DIRECTORY") or "").strip()
+    if app_data:
+        base = app_data
+    else:
+        base = os.getcwd()
+    path = os.path.abspath(os.path.join(base, relative_path))
+    os.makedirs(path, exist_ok=True)
+    return path

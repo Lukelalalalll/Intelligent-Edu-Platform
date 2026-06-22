@@ -113,12 +113,18 @@ async def save_history_settings(current_user: dict, ttl: int) -> dict:
     return {"message": "History settings updated", "history_ttl_days": ttl}
 
 
-async def load_ai_config(current_user: dict) -> dict:
+async def load_ai_config(current_user: dict, *, include_api_keys: bool = False) -> dict:
     user_doc = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
     ai_config = (user_doc or {}).get("ai_config") or {}
     return {
-        "deepseek": build_deepseek_response(ai_config.get("deepseek")),
-        "openai": build_openai_response(ai_config.get("openai")),
+        "deepseek": build_deepseek_response(
+            ai_config.get("deepseek"),
+            include_api_key=include_api_keys,
+        ),
+        "openai": build_openai_response(
+            ai_config.get("openai"),
+            include_api_key=include_api_keys,
+        ),
     }
 
 
@@ -160,7 +166,10 @@ async def save_deepseek_config(current_user: dict, payload) -> dict:
         {"_id": current_user["_id"]},
         {"$set": {"ai_config.deepseek": update_doc}},
     )
-    return {"message": "DeepSeek config updated", "deepseek": build_deepseek_response(update_doc)}
+    return {
+        "message": "DeepSeek config updated",
+        "deepseek": build_deepseek_response(update_doc, include_api_key=True),
+    }
 
 
 async def save_openai_config(current_user: dict, payload) -> dict:
@@ -185,7 +194,10 @@ async def save_openai_config(current_user: dict, payload) -> dict:
         {"_id": current_user["_id"]},
         {"$set": {"ai_config.openai": update_doc}},
     )
-    return {"message": "OpenAI config updated", "openai": build_openai_response(update_doc)}
+    return {
+        "message": "OpenAI config updated",
+        "openai": build_openai_response(update_doc, include_api_key=True),
+    }
 
 
 async def get_profile_security_state(current_user: dict) -> dict:
