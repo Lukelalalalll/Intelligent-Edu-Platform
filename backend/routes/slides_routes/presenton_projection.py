@@ -1,20 +1,20 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.core.security import get_current_user
-from backend.services.presenton_projection_query_service import (
+from backend.services.presenton.presenton_projection_query_service import (
     PRESENTON_PROJECTION_QUERY_SERVICE,
 )
 
-from .router import slides_router
+router = APIRouter()
 
 
 def _resolve_owner_user_id(current_user: dict) -> str:
     return str(current_user.get("id") or current_user.get("_id") or "").strip()
 
 
-@slides_router.get("/presenton/presentations/search")
+@router.get("/presenton/presentations/search")
 async def search_presenton_presentations(
     q: str = Query("", alias="q"),
     page: int = Query(1, ge=1),
@@ -38,7 +38,7 @@ async def search_presenton_presentations(
     }
 
 
-@slides_router.get("/presenton/presentations")
+@router.get("/presenton/presentations")
 async def list_presenton_presentations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -59,7 +59,7 @@ async def list_presenton_presentations(
     }
 
 
-@slides_router.get("/presenton/presentations/{presentation_id}")
+@router.get("/presenton/presentations/{presentation_id}")
 async def get_presenton_presentation_detail(
     presentation_id: str,
     current_user: dict = Depends(get_current_user),
@@ -75,3 +75,4 @@ async def get_presenton_presentation_detail(
         "success": True,
         **detail,
     }
+

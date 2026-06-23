@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
@@ -13,7 +13,7 @@ from backend.schemas import (
     PasswordResetRequestSchema,
     SelfUpdateProfileSchema,
 )
-from backend.services.password_security_service import (
+from backend.services.auth.password_security_service import (
     ensure_password_strength,
     hash_password,
     hash_password_reset_token,
@@ -24,8 +24,8 @@ from backend.services.password_security_service import (
     utcnow,
     verify_password,
 )
-from backend.services.auth_session_service import revoke_all_sessions_for_user
-from backend.services.auth_risk_service import (
+from backend.services.auth.auth_session_service import revoke_all_sessions_for_user
+from backend.services.auth.auth_risk_service import (
     LOGIN_SCOPE_IP,
     LOGIN_SCOPE_PRINCIPAL,
     PASSWORD_RESET_SCOPE_IDENTIFIER,
@@ -352,3 +352,4 @@ async def update_current_profile(*, current_user: dict, payload: SelfUpdateProfi
     current_user.update(update_data)
     if payload.password:
         await revoke_all_sessions_for_user(str(current_user["_id"]), reason="password-changed")
+

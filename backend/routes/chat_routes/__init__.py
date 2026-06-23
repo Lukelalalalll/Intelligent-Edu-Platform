@@ -1,14 +1,11 @@
-"""chat_routes package — drop-in replacement for the old chat_routes.py single file.
+"""chat_routes package with explicit router aggregation."""
 
-External code only needs:
-    from backend.routes.chat_routes import chat_router
-"""
-
+from .ai_actions import router as ai_actions_router
+from .contacts import router as contacts_router
+from .messages import router as messages_router
+from .rooms import router as rooms_router
 from .router import chat_router  # noqa: F401
+from .ws import router as ws_router
 
-# Import sub-modules so their @chat_router decorators register the endpoints.
-from . import contacts  # noqa: F401
-from . import rooms  # noqa: F401
-from . import messages  # noqa: F401
-from . import ai_actions  # noqa: F401
-from . import ws  # noqa: F401
+for router in (contacts_router, rooms_router, messages_router, ai_actions_router, ws_router):
+    chat_router.include_router(router)

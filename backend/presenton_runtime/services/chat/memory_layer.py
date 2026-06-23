@@ -1,11 +1,11 @@
-import copy
+﻿import copy
 import json
 import logging
 import re
 import uuid
 from typing import Any
 
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_MONGO_PROJECTION_SERVICE,
 )
 from jsonschema import Draft202012Validator
@@ -1366,3 +1366,4 @@ class PresentationChatMemoryLayer:
         # Relative luminance approximation.
         luma = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
         return luma < 0.5
+

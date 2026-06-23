@@ -13,7 +13,8 @@ from backend.schemas.slide_schema import RenderOptions, SceneAssets, SceneModel,
 from backend.services.history_service import save_history_record
 from backend.services.video_service import get_task, new_task, run_video_pipeline
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 from .shared import ALLOWED_EXT, ALLOWED_IMG_EXT, UPLOAD_TMP
 
 logger = logging.getLogger(__name__)

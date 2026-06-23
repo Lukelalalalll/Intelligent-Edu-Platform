@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 import hmac
@@ -12,8 +12,8 @@ from jose import JWTError, jwt
 
 from backend.config import Config
 from backend.repositories import session_repo, user_repo
-from backend.services.mfa_security_service import step_up_expires_at
-from backend.services.password_security_service import utcnow
+from backend.services.auth.mfa_security_service import step_up_expires_at
+from backend.services.auth.password_security_service import utcnow
 
 _ACCESS_ISSUER = "intelligent-edu-platform"
 _ACCESS_AUDIENCE = "intelligent-edu-web"
@@ -437,3 +437,4 @@ async def mark_session_step_up(session_id: str, *, method: str) -> dict[str, Any
         },
     )
     return {"verifiedAt": now, "expiresAt": expires_at, "amr": amr}
+

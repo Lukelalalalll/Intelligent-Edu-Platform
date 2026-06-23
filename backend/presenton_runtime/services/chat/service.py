@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 import logging
 import uuid
@@ -19,7 +19,7 @@ from llmai.shared import (  # type: ignore[import-not-found]
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_MONGO_PROJECTION_SERVICE,
 )
 from models.sql.presentation import PresentationModel
@@ -597,3 +597,4 @@ class PresentationChatService:
             elif role == "assistant":
                 messages.append(AssistantMessage(content=[content]))
         return messages
+

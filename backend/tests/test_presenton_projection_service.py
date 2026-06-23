@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
@@ -6,7 +6,7 @@ import types
 import uuid
 from unittest.mock import AsyncMock
 
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_CHAT_MESSAGES_COLLECTION,
     PRESENTON_MONGO_PROJECTION_SERVICE,
     PRESENTON_PRESENTATIONS_COLLECTION,
@@ -158,7 +158,7 @@ def _build_message(
 
 def test_sync_presentation_bundle_upserts_and_prunes_slides(monkeypatch):
     fake_db = _FakeDatabase()
-    monkeypatch.setattr("backend.services.presenton_projection_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_service.db", fake_db)
 
     presentation = _build_presentation()
     slides = [_build_slide(presentation.id, 0), _build_slide(presentation.id, 1)]
@@ -186,7 +186,7 @@ def test_sync_presentation_bundle_upserts_and_prunes_slides(monkeypatch):
 
 def test_sync_chat_conversation_uses_compound_projection_key(monkeypatch):
     fake_db = _FakeDatabase()
-    monkeypatch.setattr("backend.services.presenton_projection_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_service.db", fake_db)
 
     presentation = _build_presentation()
     conversation_id = uuid.uuid4()
@@ -215,7 +215,7 @@ def test_sync_chat_conversation_uses_compound_projection_key(monkeypatch):
 
 def test_sync_presentation_bundle_is_idempotent_for_slide_replacement(monkeypatch):
     fake_db = _FakeDatabase()
-    monkeypatch.setattr("backend.services.presenton_projection_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_service.db", fake_db)
 
     presentation = _build_presentation()
     first_session = _FakeSession(
@@ -253,7 +253,7 @@ def test_sync_presentation_bundle_is_idempotent_for_slide_replacement(monkeypatc
 def test_safe_sync_enqueue_repair_job_on_mongo_failure(monkeypatch):
     fake_db = _FakeDatabase()
     fake_db[PRESENTON_PRESENTATIONS_COLLECTION].raise_on_update = True
-    monkeypatch.setattr("backend.services.presenton_projection_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_service.db", fake_db)
 
     enqueued = []
     spawned = []
@@ -270,7 +270,7 @@ def test_safe_sync_enqueue_repair_job_on_mongo_failure(monkeypatch):
         return None
 
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service.background_job_dispatcher",
+        "backend.services.presenton.presenton_projection_service.background_job_dispatcher",
         types.SimpleNamespace(
             enqueue=_fake_enqueue,
             claim=AsyncMock(return_value=None),
@@ -279,7 +279,7 @@ def test_safe_sync_enqueue_repair_job_on_mongo_failure(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service.spawn_background_coro",
+        "backend.services.presenton.presenton_projection_service.spawn_background_coro",
         _fake_spawn,
     )
 
@@ -319,7 +319,7 @@ def test_repair_dispatch_job_marks_done_after_success(monkeypatch):
     mark_failed = AsyncMock()
 
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service.background_job_dispatcher",
+        "backend.services.presenton.presenton_projection_service.background_job_dispatcher",
         types.SimpleNamespace(
             claim=AsyncMock(return_value=claimed),
             mark_done=mark_done,
@@ -327,7 +327,7 @@ def test_repair_dispatch_job_marks_done_after_success(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service._replay_presenton_projection_payload",
+        "backend.services.presenton.presenton_projection_service._replay_presenton_projection_payload",
         AsyncMock(return_value={"status": "done"}),
     )
 
@@ -352,7 +352,7 @@ def test_repair_dispatch_job_marks_failed_after_replay_error(monkeypatch):
     mark_failed = AsyncMock()
 
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service.background_job_dispatcher",
+        "backend.services.presenton.presenton_projection_service.background_job_dispatcher",
         types.SimpleNamespace(
             claim=AsyncMock(return_value=claimed),
             mark_done=mark_done,
@@ -360,7 +360,7 @@ def test_repair_dispatch_job_marks_failed_after_replay_error(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        "backend.services.presenton_projection_service._replay_presenton_projection_payload",
+        "backend.services.presenton.presenton_projection_service._replay_presenton_projection_payload",
         AsyncMock(side_effect=RuntimeError("boom")),
     )
 
@@ -368,3 +368,4 @@ def test_repair_dispatch_job_marks_failed_after_replay_error(monkeypatch):
 
     assert mark_done.await_count == 0
     assert mark_failed.await_count == 1
+

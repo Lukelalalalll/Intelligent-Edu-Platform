@@ -16,7 +16,8 @@ from backend.services.video_service import (
     smart_extract,
 )
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 from .shared import ALLOWED_EXT, UPLOAD_TMP
 
 logger = logging.getLogger(__name__)

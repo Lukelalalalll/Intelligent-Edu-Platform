@@ -1,4 +1,4 @@
-"""
+﻿"""
 Async indexing job service.
 
 Manages background document indexing tasks with status tracking in MongoDB.
@@ -19,8 +19,8 @@ from backend.core.database import db
 from backend.repositories import indexing_job_repo
 from backend.services.background_job_dispatcher import background_job_dispatcher
 from backend.services.background_job_runtime import spawn_background_coro
-from backend.services.file_asset_service import register_file_asset
-from backend.services.indexing_job_extractors import (
+from backend.services.files.file_asset_service import register_file_asset
+from backend.services.rag.indexing_job_extractors import (
     ParsedDocumentArtifact,
     ParsedDocumentResult,
     extract_document_payload,
@@ -650,3 +650,4 @@ async def _verify_index_build(course_id: str, filename: str, index_version: str)
     if not ids:
         return {"ok": False, "error": "No vector nodes found for indexed document"}
     return {"ok": True, "error": ""}
+

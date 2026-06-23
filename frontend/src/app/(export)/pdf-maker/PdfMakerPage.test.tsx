@@ -12,14 +12,23 @@ const mockGetPresentation = vi.fn();
 const mockNotifyError = vi.fn();
 const mockNotifyWarning = vi.fn();
 const mockTrackEvent = vi.fn();
-const mockApplyPresentationThemeToElement = vi.fn(() => ({
-  loaded: [],
-  skipped: [],
-}));
-const mockUseFontLoader = vi.fn(() => ({
-  loaded: [],
-  skipped: [],
-}));
+const mockApplyPresentationThemeToElement = vi.fn(
+  (_element?: HTMLElement | null, _theme?: unknown) => {
+    void _element;
+    void _theme;
+    return {
+      loaded: [],
+      skipped: [],
+    };
+  }
+);
+const mockUseFontLoader = vi.fn((_fonts?: Record<string, string>) => {
+  void _fonts;
+  return {
+    loaded: [],
+    skipped: [],
+  };
+});
 let mockPresentationData = {
   slides: [
     {
@@ -62,14 +71,14 @@ vi.mock("@/app/(presentation-generator)/services/api/api-error-handler", () => (
 }));
 
 vi.mock("@/app/(presentation-generator)/hooks/useFontLoad", () => ({
-  useFontLoader: (...args: unknown[]) => mockUseFontLoader(...args),
+  useFontLoader: (fonts: Record<string, string>) => mockUseFontLoader(fonts),
 }));
 
 vi.mock(
   "@/app/(presentation-generator)/presentation/utils/applyPresentationThemeDom",
   () => ({
-    applyPresentationThemeToElement: (...args: unknown[]) =>
-      mockApplyPresentationThemeToElement(...args),
+    applyPresentationThemeToElement: (element: HTMLElement | null, theme: unknown) =>
+      mockApplyPresentationThemeToElement(element, theme),
   })
 );
 

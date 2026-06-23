@@ -1,4 +1,4 @@
-"""Request parsing for /ai/chat."""
+﻿"""Request parsing for /ai/chat."""
 from __future__ import annotations
 
 from typing import Any
@@ -7,8 +7,8 @@ from fastapi import HTTPException
 
 from backend.config import Config
 from backend.schemas import AiChatSchema
-from backend.services.ai_memory_service import load_ai_memory_text
-from backend.services.ai_session_service import hydrate_request_messages_from_session
+from backend.services.ai.ai_memory_service import load_ai_memory_text
+from backend.services.ai.ai_session_service import hydrate_request_messages_from_session
 
 from .chat_context_helpers import _compact_chat_history, _split_user_prompt_and_attachment_text
 from .chat_models import ParsedRequest
@@ -85,3 +85,4 @@ async def hydrate_chat_request(parsed: ParsedRequest, req: AiChatSchema, user: d
         parsed.session_backfilled = used_backfill
     parsed.memory_text = await load_ai_memory_text(user)
     return parsed
+

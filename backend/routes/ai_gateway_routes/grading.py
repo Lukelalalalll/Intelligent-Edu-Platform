@@ -16,7 +16,8 @@ from backend.core.dependencies import (
 from backend.schemas import AnalyzeSubmissionSchema, AnnotateSchema, FeedbackSchema, RegradeQuestionSchema
 from backend.services.ai_gateway_service import AIGatewayService
 from backend.services.grading_service import load_annotations
-from .router import ai_gateway_router
+from fastapi import APIRouter
+router = APIRouter()
 from .grading_context_helpers import (
     _get_submission_bundle,
     _read_submission_text,
@@ -34,7 +35,7 @@ from .grading_context_helpers import (
 logger = logging.getLogger(__name__)
 
 
-@ai_gateway_router.post("/analyze")
+@router.post("/analyze")
 async def analyze_submission(
     payload: AnalyzeSubmissionSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
@@ -61,7 +62,7 @@ async def analyze_submission(
     }
 
 
-@ai_gateway_router.post("/analyze/regrade-question")
+@router.post("/analyze/regrade-question")
 async def regrade_question(
     payload: RegradeQuestionSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
@@ -91,7 +92,7 @@ async def regrade_question(
     }
 
 
-@ai_gateway_router.post("/annotate")
+@router.post("/annotate")
 async def request_annotation(
     payload: AnnotateSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
@@ -154,7 +155,7 @@ async def request_annotation(
     }
 
 
-@ai_gateway_router.post("/rag/debug")
+@router.post("/rag/debug")
 async def debug_rag(
     payload: FeedbackSchema,
     process_pool: ProcessPoolExecutor = Depends(get_process_pool),

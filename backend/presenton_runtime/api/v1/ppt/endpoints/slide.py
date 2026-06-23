@@ -1,9 +1,9 @@
-from typing import Annotated, Optional
+﻿from typing import Annotated, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_MONGO_PROJECTION_SERVICE,
 )
 from models.sql.presentation import PresentationModel
@@ -146,3 +146,4 @@ async def edit_slide_html(
     )
 
     return slide
+

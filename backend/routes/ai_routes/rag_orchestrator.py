@@ -1,4 +1,4 @@
-"""RAG orchestration: query rewrite, retrieval, evidence packing."""
+﻿"""RAG orchestration: query rewrite, retrieval, evidence packing."""
 
 from __future__ import annotations
 
@@ -26,19 +26,28 @@ from .chat_context_helpers import (
 logger = logging.getLogger(__name__)
 
 _enrollment_cache: TTLCache[str, list[str]] = TTLCache(maxsize=1024, ttl=300)
-_REFERENCE_HINTS = re.compile(r"(module\s*\d+|chapter|section|lecture|章节|模块|第\s*[一二三四五六七八九十0-9]+\s*[章节讲])", re.IGNORECASE)
-_CLEAR_QUESTION_HINTS = re.compile(r"(what is|how to|explain|why|什么是|如何|解释|为什么)", re.IGNORECASE)
-_ANAPHORA_HINTS = re.compile(r"\b(it|this|that|they|these|those)\b|这个|那个|它们|这些|那些", re.IGNORECASE)
+_REFERENCE_HINTS = re.compile(
+    r"(module\s*\d+|chapter|section|lecture|章节|模块|第\s*[一二三四五六七八九十0-9]+\s*[章节讲])",
+    re.IGNORECASE,
+)
+_CLEAR_QUESTION_HINTS = re.compile(
+    r"(what is|how to|explain|why|什么是|如何|解释|为什么)",
+    re.IGNORECASE,
+)
+_ANAPHORA_HINTS = re.compile(
+    r"\b(it|this|that|they|these|those)\b|这个|那个|它们|这些|那些",
+    re.IGNORECASE,
+)
 _GREETING_ONLY_RE = re.compile(
-    r"^\s*(?:hello|hi|hey|hey there|hello there|yo|sup|你好|您好|嗨|哈喽|哈囉|早上好|中午好|下午好|晚上好|在吗|在嘛)(?:\s+(?:deepseek|coze|ollama|ai|chat|模型))?\s*[!,.?~，。！？]*\s*$",
+    r"^\s*(?:hello|hi|hey|hey there|hello there|yo|sup|你好|您好|哈喽|嗨|早上好|中午好|下午好|晚上好|在吗|在嘛)(?:\s+(?:deepseek|coze|ollama|ai|chat|模型))?\s*[!,.?~，。！？]*\s*$",
     re.IGNORECASE,
 )
 _SANITY_CHECK_RE = re.compile(
-    r"^\s*(?:(?:test(?:ing)?|ping|check|smoke\s*test|try)\s*(?:the\s+)?(?:deepseek|coze|ollama|ai|chat|model)?|(?:测试(?:一下)?|试一下|试试|看看|检查一下)\s*(?:deepseek|coze|ollama|ai|聊天|模型)?|(?:deepseek|coze|ollama)\s*(?:test(?:ing)?|ping|check|测试(?:一下)?|试一下|试试))\s*[!,.?~，。！？]*\s*$",
+    r"^\s*(?:(?:test(?:ing)?|ping|check|smoke\s*test|try)\s*(?:the\s+)?(?:deepseek|coze|ollama|ai|chat|model)?|(?:测试(?:一下)?|试一试|试试看|看看|检查一下)\s*(?:deepseek|coze|ollama|ai|聊天|模型)?|(?:deepseek|coze|ollama)\s*(?:test(?:ing)?|ping|check|测试(?:一下)?))\s*[!,.?~，。！？]*\s*$",
     re.IGNORECASE,
 )
 _IDENTITY_QUERY_RE = re.compile(
-    r"^\s*(?:(?:who\s+are\s+you|what\s+are\s+you)(?:\s+are\s+you\s+(?:deepseek|coze|ollama))?|are\s+you\s+(?:deepseek|coze|ollama)|what(?:'s|\s+is)?\s+your\s+model|which\s+model\s+are\s+you|what\s+model\s+are\s+you|introduce\s+yourself|你是谁|介绍一下你自己|你是(?:不是)?\s*(?:deepseek|coze|ollama)(?:\s*吗)?|你用的是(?:什么|哪个)模型|你是什么模型)\s*[!,.?~，。！？]*\s*$",
+    r"^\s*(?:(?:who\s+are\s+you|what\s+are\s+you)(?:\s+are\s+you\s+(?:deepseek|coze|ollama))?|are\s+you\s+(?:deepseek|coze|ollama)|what(?:'s|\s+is)?\s+your\s+model|which\s+model\s+are\s+you|what\s+model\s+are\s+you|introduce\s+yourself|你是谁|介绍一下你自己|你是不是\s*(?:deepseek|coze|ollama)|你用的是(?:什么|哪个)模型|你是什么模型)\s*[!,.?~，。！？]*\s*$",
     re.IGNORECASE,
 )
 _CAPABILITY_QUERY_RE = re.compile(
@@ -73,7 +82,7 @@ def _should_bypass_course_rag(question: str, uploaded_attachment_text: str = "")
 
 async def _resolve_student_course_scope(user: dict) -> dict[str, list[str]]:
     from backend.services.course_rag_service import course_rag_service
-    from backend.services.enrollment_service import get_user_course_profile
+    from backend.services.student.enrollment_service import get_user_course_profile
 
     user_id_str = str(user.get("_id") or user.get("id") or "")
     cached_ids = _enrollment_cache.get(user_id_str)
@@ -209,7 +218,7 @@ def _resolve_history_keep_pairs(question: str, tutor_mode: str) -> int:
     base = int(getattr(Config, "RAG_CHAT_HISTORY_KEEP_PAIRS", 6) or 6)
     if tutor_mode == "hint_only":
         return max(4, min(base, 6))
-    if any(k in q for k in ("derive", "proof", "compare", "比较", "区别", "推导", "证明")):
+    if any(k in q for k in ("derive", "proof", "compare", "姣旇緝", "鍖哄埆", "鎺ㄥ", "璇佹槑")):
         return max(base, 8)
     return base
 
@@ -464,7 +473,7 @@ async def run_student_rag(
     if Config.SEARXNG_ENABLED and web_requested:
         if (retrieval_confidence.get("label") or "incorrect") in {"ambiguous", "incorrect"}:
             try:
-                from backend.services.web_search_service import search_web
+                from backend.services.rag.web_search_service import search_web
 
                 web_results = await search_web(
                     rag_retrieval_query or effective_question,
@@ -542,3 +551,4 @@ async def run_student_rag(
         "fallback_reason": fallback_reason,
         "evidence_spans": evidence_spans,
     }
+

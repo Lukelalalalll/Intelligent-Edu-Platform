@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import re
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
-from backend.services.presenton_projection_query_service import (
+from backend.services.presenton.presenton_projection_query_service import (
     PRESENTON_CHAT_MESSAGES_COLLECTION,
     PRESENTON_PRESENTATIONS_COLLECTION,
     PRESENTON_PROJECTION_QUERY_SERVICE,
@@ -289,7 +289,7 @@ def _build_fake_db():
 
 def test_list_presentations_filters_by_owner_and_sorts_latest_first(monkeypatch):
     fake_db = _build_fake_db()
-    monkeypatch.setattr("backend.services.presenton_projection_query_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_query_service.db", fake_db)
 
     items, total = asyncio.run(
         PRESENTON_PROJECTION_QUERY_SERVICE.list_presentations(
@@ -306,7 +306,7 @@ def test_list_presentations_filters_by_owner_and_sorts_latest_first(monkeypatch)
 
 def test_get_presentation_detail_returns_sorted_slides_and_grouped_chats(monkeypatch):
     fake_db = _build_fake_db()
-    monkeypatch.setattr("backend.services.presenton_projection_query_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_query_service.db", fake_db)
 
     detail = asyncio.run(
         PRESENTON_PROJECTION_QUERY_SERVICE.get_presentation_detail(
@@ -326,7 +326,7 @@ def test_get_presentation_detail_returns_sorted_slides_and_grouped_chats(monkeyp
 
 def test_search_presentations_matches_slide_projection_text(monkeypatch):
     fake_db = _build_fake_db()
-    monkeypatch.setattr("backend.services.presenton_projection_query_service.db", fake_db)
+    monkeypatch.setattr("backend.services.presenton.presenton_projection_query_service.db", fake_db)
 
     items, total = asyncio.run(
         PRESENTON_PROJECTION_QUERY_SERVICE.search_presentations(
@@ -341,3 +341,4 @@ def test_search_presentations_matches_slide_projection_text(monkeypatch):
     assert items[0]["presentonPresentationId"] == "pres-b"
     assert items[0]["matchedSlidesCount"] == 1
     assert items[0]["matchedSlides"][0]["contentText"] == "metal rod thermodynamics contact"
+

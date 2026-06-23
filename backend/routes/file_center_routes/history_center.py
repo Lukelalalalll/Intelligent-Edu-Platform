@@ -17,17 +17,18 @@ from backend.services.history_service import (
     summarize_tools,
 )
 
-from .router import file_center_router
+from fastapi import APIRouter
+router = APIRouter()
 
 ALL_TOOLS = list(TOOL_COLLECTIONS.keys())
 
 
-@file_center_router.get("/tool-history/summary")
+@router.get("/tool-history/summary")
 async def tool_history_summary(user: dict = Depends(get_current_user)):
     return {"success": True, "tools": await summarize_tools(user_id=user.get("id", ""))}
 
 
-@file_center_router.get("/tool-history")
+@router.get("/tool-history")
 async def tool_history_list(
     tool: str = Query(..., description="Tool key, e.g. slides"),
     page: int = Query(1, ge=1),
@@ -51,7 +52,7 @@ async def tool_history_list(
     }
 
 
-@file_center_router.get("/tool-history/{history_id}")
+@router.get("/tool-history/{history_id}")
 async def tool_history_detail(
     history_id: str,
     tool: str = Query(...),
@@ -70,7 +71,7 @@ async def tool_history_detail(
     return {"success": True, **payload}
 
 
-@file_center_router.delete("/tool-history/{history_id}")
+@router.delete("/tool-history/{history_id}")
 async def tool_history_soft_delete(
     history_id: str,
     tool: str = Query(...),
@@ -81,7 +82,7 @@ async def tool_history_soft_delete(
     return {"success": True}
 
 
-@file_center_router.post("/tool-history/batch-delete")
+@router.post("/tool-history/batch-delete")
 async def tool_history_batch_delete(
     body: dict,
     user: dict = Depends(get_current_user),
@@ -94,12 +95,12 @@ async def tool_history_batch_delete(
     return {"success": True, "deleted_count": deleted_count}
 
 
-@file_center_router.get("/admin/tool-history/users")
+@router.get("/admin/tool-history/users")
 async def admin_list_history_users(admin: dict = Depends(get_admin_user)):
     return {"success": True, "users": await list_history_users()}
 
 
-@file_center_router.get("/admin/tool-history")
+@router.get("/admin/tool-history")
 async def admin_tool_history_list(
     tool: str = Query(...),
     user_id: str = Query("", description="Filter by user ID"),
@@ -124,7 +125,7 @@ async def admin_tool_history_list(
     }
 
 
-@file_center_router.get("/admin/tool-history/summary")
+@router.get("/admin/tool-history/summary")
 async def admin_tool_history_summary(
     user_id: str = Query("", description="Optional user filter"),
     admin: dict = Depends(get_admin_user),
@@ -132,7 +133,7 @@ async def admin_tool_history_summary(
     return {"success": True, "tools": await summarize_tools(user_id=user_id or None)}
 
 
-@file_center_router.delete("/admin/tool-history/{history_id}")
+@router.delete("/admin/tool-history/{history_id}")
 async def admin_tool_history_hard_delete(
     history_id: str,
     tool: str = Query(...),
@@ -143,7 +144,7 @@ async def admin_tool_history_hard_delete(
     return {"success": True}
 
 
-@file_center_router.post("/admin/tool-history/batch-delete")
+@router.post("/admin/tool-history/batch-delete")
 async def admin_tool_history_batch_hard_delete(
     body: dict,
     admin: dict = Depends(get_admin_user),

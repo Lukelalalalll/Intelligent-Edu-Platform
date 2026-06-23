@@ -19,10 +19,12 @@ from backend.services.ai_gateway_service import get_ai_gateway_service
 from backend.services.questions import (
     extract_text_from_image, extract_pdf_text_with_loader,
 )
-from .router import questions_router, _get_task
+from .router import _get_task
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@questions_router.post("/suggest_constraints")
+@router.post("/suggest_constraints")
 async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Request, user: dict = Depends(get_current_user)):
     """Suggest Step3 additional requirements from current task source content."""
     resolved_provider = resolve_provider(req.provider, feature="questions.generate", user=user)
@@ -123,7 +125,7 @@ async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Requ
             return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@questions_router.post("/export_questions")
+@router.post("/export_questions")
 def export_questions_route(request: Request, task_id: str = Query(None), user: dict = Depends(get_current_user)):
     """Export generated questions as a Markdown file download."""
     try:
@@ -152,7 +154,7 @@ def export_questions_route(request: Request, task_id: str = Query(None), user: d
         return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@questions_router.post("/upload_screenshot")
+@router.post("/upload_screenshot")
 def upload_screenshot(req: UploadScreenshotSchema, user: dict = Depends(get_current_user)):
     try:
         img_data = base64.b64decode(req.image.split(',')[1])

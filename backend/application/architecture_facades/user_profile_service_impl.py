@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import copy
 from datetime import datetime, timezone
@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from backend.core.database import db
 from backend.repositories import user_repo
-from backend.services.mfa_security_service import (
+from backend.services.auth.mfa_security_service import (
     assert_step_up_recent,
     build_backup_code_records,
     consume_backup_code,
@@ -19,7 +19,7 @@ from backend.services.mfa_security_service import (
     normalize_mfa_code,
     verify_totp_code,
 )
-from backend.services.password_security_service import utcnow, verify_password
+from backend.services.auth.password_security_service import utcnow, verify_password
 from backend.services.secret_storage import decrypt_secret, encrypt_secret
 
 DEFAULT_HISTORY_TTL_DAYS = 90
@@ -78,7 +78,7 @@ def build_openai_response(raw_config: dict | None, *, include_api_key: bool = Fa
 
 
 async def load_profile_courses(current_user: dict) -> dict:
-    from backend.services.enrollment_service import get_user_course_profile
+    from backend.services.student.enrollment_service import get_user_course_profile
 
     return await get_user_course_profile(current_user)
 
@@ -402,7 +402,7 @@ async def verify_step_up_for_session(*, current_user: dict, session_doc: dict, c
 
         invalidate_user_cache(str(fresh_user["_id"]))
 
-    from backend.services.auth_session_service import mark_session_step_up
+    from backend.services.auth.auth_session_service import mark_session_step_up
 
     result = await mark_session_step_up(str(session_doc.get("session_id") or ""), method=method)
     assert_step_up_recent(
@@ -417,3 +417,4 @@ async def verify_step_up_for_session(*, current_user: dict, session_doc: dict, c
         "expiresAt": result["expiresAt"].isoformat(),
         "method": method,
     }
+

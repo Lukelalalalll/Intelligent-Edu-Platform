@@ -127,6 +127,10 @@
     grid-template-rows: minmax(0, 1fr);
 }
 
+.profileLaneSecurity {
+    grid-template-rows: minmax(0, 1.08fr) minmax(0, 0.92fr);
+}
+
 .cardScrollArea {
     min-height: 0;
     flex: 1;
@@ -545,6 +549,93 @@
     line-height: 1.45;
 }
 
+.connectedAccountSummary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised) 74%, transparent);
+    border: 1px solid var(--line-soft);
+}
+
+.connectedAccountAvatar,
+.connectedAccountAvatarFallback {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    flex: 0 0 46px;
+}
+
+.connectedAccountAvatar {
+    object-fit: cover;
+}
+
+.connectedAccountAvatarFallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 123, 85, 0.12);
+    color: var(--primary-color);
+    font-weight: 800;
+}
+
+.connectedAccountMeta {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.connectedAccountMeta strong,
+.connectedAccountMeta span {
+    overflow-wrap: anywhere;
+}
+
+.connectedAccountMeta strong {
+    color: var(--text-main);
+    font-size: 0.92rem;
+}
+
+.connectedAccountMeta span {
+    color: var(--text-sub);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.connectedAccountProvider {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(0, 123, 85, 0.1);
+    border: 1px solid rgba(0, 123, 85, 0.18);
+    color: var(--primary-dark);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.accountBindingHint {
+    margin: 0;
+    color: var(--text-sub);
+    font-size: 0.83rem;
+    line-height: 1.5;
+}
+
+.profileGoogleButtonWrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.profileGoogleButtonContainer {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    justify-content: center;
+}
+
 .backupCodeGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
@@ -813,8 +904,18 @@
 
     .courseItem,
     .securityBox,
-    .securitySummary {
+    .securitySummary,
+    .connectedAccountSummary {
         border-radius: 14px;
+    }
+
+    .connectedAccountSummary {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .connectedAccountProvider {
+        grid-column: 1 / -1;
+        justify-self: start;
     }
 }
 

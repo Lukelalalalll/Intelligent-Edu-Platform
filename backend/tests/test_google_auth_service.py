@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import timedelta
 from types import SimpleNamespace
@@ -6,8 +6,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from backend.services import google_auth_service
-from backend.services.password_security_service import utcnow
+from backend.services.auth import google_auth_service
+from backend.services.auth.password_security_service import utcnow
 
 
 def _claims(**overrides):
@@ -304,3 +304,122 @@ async def test_complete_google_signup_rejects_expired_ticket(monkeypatch):
         await google_auth_service.complete_google_signup(ticket_id="expired", username="late-user")
 
     assert exc_info.value.status_code == 401
+
+
+def test_build_google_account_summary_includes_available_google_identity():
+    linked_at = utcnow()
+    summary = google_auth_service.build_google_account_summary(
+        {
+            "password_hash": "hashed-password",
+            "google_auth": {
+                "sub": "google-sub-summary",
+                "email": "alice@example.com",
+                "name": "Alice Example",
+                "picture": "https://example.com/avatar.png",
+                "linked_at": linked_at,
+            },
+        }
+    )
+
+    assert summary == {
+        "linked": True,
+        "email": "alice@example.com",
+        "name": "Alice Example",
+        "avatarUrl": "https://example.com/avatar.png",
+        "linkedAt": linked_at.isoformat(),
+        "canUnlink": True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_link_google_account_for_user_binds_current_session_user(monkeypatch):
+    user = {
+        "_id": "user-7",
+        "email": "alice@example.com",
+        "status": "active",
+        "password_hash": "hashed-password",
+    }
+    updates = []
+    invalidations = []
+
+    monkeypatch.setattr(google_auth_service, "verify_google_credential", lambda credential: _claims(sub="google-sub-7"))
+
+    async def _find_by_google_sub(sub):
+        return None
+
+    async def _update_by_id(user_id, update):
+        updates.append((user_id, update))
+        return SimpleNamespace(matched_count=1)
+
+    monkeypatch.setattr(google_auth_service.user_repo, "find_by_google_sub", _find_by_google_sub)
+    monkeypatch.setattr(google_auth_service.user_repo, "update_by_id", _update_by_id)
+    monkeypatch.setattr(google_auth_service, "invalidate_user_cache", invalidations.append)
+
+    result = await google_auth_service.link_google_account_for_user(user_doc=user, credential="credential")
+
+    assert result["google_auth"]["sub"] == "google-sub-7"
+    assert updates
+    assert invalidations == ["user-7"]
+
+
+@pytest.mark.asyncio
+async def test_link_google_account_for_user_rejects_google_identity_bound_elsewhere(monkeypatch):
+    user = {
+        "_id": "user-8",
+        "email": "alice@example.com",
+        "status": "active",
+        "password_hash": "hashed-password",
+    }
+
+    monkeypatch.setattr(google_auth_service, "verify_google_credential", lambda credential: _claims(sub="google-sub-shared"))
+
+    async def _find_by_google_sub(sub):
+        return {"_id": "another-user"}
+
+    monkeypatch.setattr(google_auth_service.user_repo, "find_by_google_sub", _find_by_google_sub)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await google_auth_service.link_google_account_for_user(user_doc=user, credential="credential")
+
+    assert exc_info.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_unlink_google_account_for_user_clears_google_auth(monkeypatch):
+    user = {
+        "_id": "user-9",
+        "status": "active",
+        "password_hash": "hashed-password",
+        "google_auth": {"sub": "google-sub-9"},
+    }
+    updates = []
+    invalidations = []
+
+    async def _update_by_id(user_id, update):
+        updates.append((user_id, update))
+        return SimpleNamespace(matched_count=1)
+
+    monkeypatch.setattr(google_auth_service.user_repo, "update_by_id", _update_by_id)
+    monkeypatch.setattr(google_auth_service, "invalidate_user_cache", invalidations.append)
+
+    result = await google_auth_service.unlink_google_account_for_user(user_doc=user)
+
+    assert result["google_auth"] is None
+    assert updates
+    assert invalidations == ["user-9"]
+
+
+@pytest.mark.asyncio
+async def test_unlink_google_account_for_user_requires_password_for_google_only_account():
+    user = {
+        "_id": "user-10",
+        "status": "active",
+        "password_hash": None,
+        "google_auth": {"sub": "google-sub-10"},
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        await google_auth_service.unlink_google_account_for_user(user_doc=user)
+
+    assert exc_info.value.status_code == 409
+

@@ -1,16 +1,16 @@
 """Pipeline observability: stats, task timeline, checkpoints, audit log."""
 import logging
 from typing import Optional
-from fastapi import HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.security import get_current_user
 from backend.services.slides import TaskTracker
-from .router import slides_router
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
 
 
-@slides_router.get("/pipeline-stats")
+@router.get("/pipeline-stats")
 async def get_pipeline_stats(hours: int = 24, user: dict = Depends(get_current_user)):
     try:
         return await TaskTracker.get_stats(hours=hours)
@@ -19,7 +19,7 @@ async def get_pipeline_stats(hours: int = 24, user: dict = Depends(get_current_u
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@slides_router.get("/task/{request_id}")
+@router.get("/task/{request_id}")
 async def get_task_timeline(request_id: str, user: dict = Depends(get_current_user)):
     doc = await TaskTracker.get_task(request_id)
     if not doc:
@@ -27,7 +27,7 @@ async def get_task_timeline(request_id: str, user: dict = Depends(get_current_us
     return doc
 
 
-@slides_router.get("/checkpoints/{task_id}")
+@router.get("/checkpoints/{task_id}")
 async def get_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
     from backend.services.slides.infra.checkpoint_manager import CheckpointManager
     cps = await CheckpointManager.get_task_checkpoints(task_id)
@@ -35,7 +35,7 @@ async def get_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
     return {"task_id": task_id, "checkpoints": cps, "last_successful_step": resumable}
 
 
-@slides_router.get("/checkpoint/{task_id}/{step}")
+@router.get("/checkpoint/{task_id}/{step}")
 async def get_checkpoint_output(task_id: str, step: str, user: dict = Depends(get_current_user)):
     from backend.services.slides.infra.checkpoint_manager import CheckpointManager
     doc = await CheckpointManager.load(task_id=task_id, step=step)
@@ -45,14 +45,14 @@ async def get_checkpoint_output(task_id: str, step: str, user: dict = Depends(ge
     return doc
 
 
-@slides_router.delete("/checkpoints/{task_id}")
+@router.delete("/checkpoints/{task_id}")
 async def delete_checkpoints(task_id: str, user: dict = Depends(get_current_user)):
     from backend.services.slides.infra.checkpoint_manager import CheckpointManager
     count = await CheckpointManager.delete_task(task_id)
     return {"deleted": count}
 
 
-@slides_router.get("/audit-log")
+@router.get("/audit-log")
 async def get_audit_log(
     hours: int = 24,
     action: Optional[str] = None,

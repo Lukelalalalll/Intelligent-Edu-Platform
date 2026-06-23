@@ -103,3 +103,10 @@ infra/opensearch/runtime/
 infra/opensearch/opensearch-*/
 .codegraph/
 .codex-logs/
+.codex-tmp/
+backend/app_data/
+backend-start*.log
+frontend-*.log
+frontend-dev-*.log
+frontend-start*.log
+frontend-theme-*.log

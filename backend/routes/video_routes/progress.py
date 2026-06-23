@@ -8,7 +8,8 @@ from fastapi.responses import StreamingResponse
 
 from backend.services.video_service import _tasks, get_script_job
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 
 
 @router.get("/script-progress/{job_id}")

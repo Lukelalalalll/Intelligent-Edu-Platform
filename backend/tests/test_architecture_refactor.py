@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import pytest
 from fastapi.routing import APIRoute, APIWebSocketRoute
@@ -13,6 +14,28 @@ _ROUTE_DB_IMPORT_ALLOWLIST = {
     "routes/admin_routes/db_console.py",
 }
 
+_SERVICE_DOMAIN_NAMES = {
+    "admin",
+    "ai",
+    "auth",
+    "files",
+    "homework",
+    "presenton",
+    "rag",
+    "slides",
+    "student",
+    "study",
+}
+
+_SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST = {
+    ("services/admin/admin_security_service.py", "auth"),
+    ("services/admin/admin_user_service.py", "auth"),
+    ("services/ai/ai_session_service.py", "auth"),
+    ("services/ai/ai_session_service.py", "files"),
+    ("services/student/student_assignment_service.py", "auth"),
+    ("services/student/student_assignment_service.py", "files"),
+}
+
 _LONG_FILE_ALLOWLIST = {
     "routes/admin_routes/rag_eval.py",
     "routes/ai_gateway_routes/grading_context_helpers.py",
@@ -21,21 +44,17 @@ _LONG_FILE_ALLOWLIST = {
     "routes/ai_routes/rag_orchestrator.py",
     "routes/questions_routes/generate.py",
     "routes/questions_routes/validators.py",
-    "routes/slides_routes/delivery.py",
-    "routes/slides_routes/editor.py",
-    "routes/slides_routes/generation.py",
     "services/chat_service/room_service.py",
     "services/chat_service/transfer_dispatch_service.py",
+    "services/ai/ai_session_service.py",
+    "services/auth/google_auth_service.py",
+    "services/presenton/presenton_projection_service.py",
     "services/rag_service/rag_eval_wizard_service.py",
-    "services/slides/generation/chapter_summarizer.py",
-    "services/slides/generation/diagram_generator.py",
-    "services/slides/generation/img_chart_processor.py",
     "services/slides/html_renderer.py",
     "services/slides/infra/task_tracker.py",
     "services/slides/output/business_ppt_creator.py",
-    "services/slides/output/editor_session/core.py",
     "services/slides/output/ppt_creator/core.py",
-    "services/student_assignment_service.py",
+    "services/student/student_assignment_service.py",
     "services/video_service/render/html_renderer.py",
     "services/video_service/script.py",
 }
@@ -129,6 +148,27 @@ def test_service_layer_does_not_import_route_packages():
             offenders.append(str(path.relative_to(services_root.parent)))
 
     assert offenders == []
+
+
+def test_domain_services_only_use_explicitly_allowlisted_cross_domain_imports():
+    pattern = re.compile(r"(?:from|import)\s+backend\.services\.([a-z_]+)\b")
+    offenders: set[tuple[str, str]] = set()
+
+    for domain_root in sorted(_SERVICE_DOMAIN_NAMES):
+        root = _SERVICES_ROOT / domain_root
+        if not root.exists():
+            continue
+        for path in root.rglob("*.py"):
+            relative_path = _relative_backend_path(path)
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for imported_domain in pattern.findall(text):
+                if imported_domain not in _SERVICE_DOMAIN_NAMES or imported_domain == domain_root:
+                    continue
+                entry = (relative_path, imported_domain)
+                if entry not in _SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST:
+                    offenders.add(entry)
+
+    assert offenders == set()
 
 
 def test_core_app_mounts_expected_router_topology():
@@ -236,6 +276,88 @@ def test_route_layer_db_imports_are_allowlisted_only():
 
     unexpected = offenders - _ROUTE_DB_IMPORT_ALLOWLIST
     assert unexpected == set()
+
+
+def test_slides_routes_use_explicit_router_aggregation():
+    slides_routes_root = _ROUTES_ROOT / "slides_routes"
+    package_init = (slides_routes_root / "__init__.py").read_text(encoding="utf-8", errors="ignore")
+
+    assert "include_router(" in package_init
+    assert "slides_router.include_router(router)" in package_init
+    assert "public_slides_router.include_router(router)" in package_init
+    assert "legacy_sub1_router.include_router(legacy_router)" in package_init
+
+    offenders: set[str] = set()
+    for path in slides_routes_root.rglob("*.py"):
+        if path.name in {"__init__.py", "router.py"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "from .router import slides_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "from .router import public_slides_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "from .router import legacy_sub1_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "slides_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+        if "public_slides_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+        if "legacy_sub1_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+
+    assert offenders == set()
+
+
+def test_route_packages_do_not_use_import_side_effect_registration():
+    package_inits = [
+        _ROUTES_ROOT / "auth_routes" / "__init__.py",
+        _ROUTES_ROOT / "chat_routes" / "__init__.py",
+        _ROUTES_ROOT / "questions_routes" / "__init__.py",
+        _ROUTES_ROOT / "ai_routes" / "__init__.py",
+        _ROUTES_ROOT / "admin_routes" / "__init__.py",
+        _ROUTES_ROOT / "ai_gateway_routes" / "__init__.py",
+        _ROUTES_ROOT / "file_center_routes" / "__init__.py",
+        _ROUTES_ROOT / "video_routes" / "__init__.py",
+    ]
+
+    for path in package_inits:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        assert "from . import " not in text
+        assert "include_router(" in text
+
+
+def test_runtime_layers_do_not_import_settings_leaf_modules_directly():
+    allowed_roots = {
+        _BACKEND_ROOT / "core" / "config.py",
+        _BACKEND_ROOT / "core" / "settings",
+    }
+    offenders: set[str] = set()
+
+    for root in (
+        _BACKEND_ROOT / "routes",
+        _BACKEND_ROOT / "services",
+        _BACKEND_ROOT / "apps",
+        _BACKEND_ROOT / "presenton_host",
+    ):
+        for path in root.rglob("*.py"):
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "backend.core.settings" not in text:
+                continue
+            if any(str(path).startswith(str(allowed_root)) for allowed_root in allowed_roots):
+                continue
+            offenders.add(_relative_backend_path(path))
+
+    assert offenders == set()
+
+
+def test_presenton_runtime_mount_defers_runtime_router_wiring():
+    path = _BACKEND_ROOT / "presenton_host" / "runtime_mount.py"
+    text = path.read_text(encoding="utf-8", errors="ignore")
+
+    assert "def ensure_presenton_router_wired" in text
+    assert "load_presenton_runtime().API_V1_PPT_ROUTER" in text
+    assert "app.include_router(ensure_presenton_router_wired())" in text
+    assert "PRESENTON_HOST_ROUTER.include_router(\n    load_presenton_runtime().API_V1_PPT_ROUTER" not in text
 
 
 def test_direct_ai_gateway_instantiation_only_happens_in_provider_factory():

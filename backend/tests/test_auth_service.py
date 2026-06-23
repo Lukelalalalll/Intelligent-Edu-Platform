@@ -1,4 +1,4 @@
-"""Tests for auth-related logic: JWT tokens, refresh tokens, password validation rules."""
+﻿"""Tests for auth-related logic: JWT tokens, refresh tokens, password validation rules."""
 from datetime import timedelta
 from types import SimpleNamespace
 
@@ -6,25 +6,25 @@ import pytest
 from jose import jwt
 
 from backend.config import Config
-from backend.services import auth_account_service
-from backend.services.auth_risk_service import (
+from backend.services.auth import auth_account_service
+from backend.services.auth.auth_risk_service import (
     LOGIN_SCOPE_IP,
     LOGIN_SCOPE_PRINCIPAL,
 )
-from backend.services.security_audit import build_security_event
-from backend.services.auth_session_service import (
+from backend.services.auth.security_audit import build_security_event
+from backend.services.auth.auth_session_service import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
     hash_refresh_token,
 )
-from backend.services.login_challenge_service import create_login_challenge
-from backend.services.admin_security_service import _serialize_lockout
-from backend.services.admin_security_service import update_user_security_status
-from backend.services.password_security_service import utcnow
+from backend.services.auth.login_challenge_service import create_login_challenge
+from backend.services.admin.admin_security_service import _serialize_lockout
+from backend.services.admin.admin_security_service import update_user_security_status
+from backend.services.auth.password_security_service import utcnow
 
 
-# ── JWT round-trip ──────────────────────────────────────────────────
+# 鈹€鈹€ JWT round-trip 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 def test_create_access_token_roundtrip():
     token = create_access_token({"sub": "user123", "sid": "session123", "role": "student"})
@@ -98,7 +98,7 @@ def test_serialize_session_user_includes_google_fields():
     assert payload["avatarUrl"] == "https://example.com/avatar.png"
 
 
-# ── Password validation rules (tested via the route constraints) ───
+# 鈹€鈹€ Password validation rules (tested via the route constraints) 鈹€鈹€鈹€
 
 def test_password_too_short():
     """Password must be >= 8 chars."""
@@ -155,7 +155,7 @@ async def test_create_login_challenge_records_primary_auth_method(monkeypatch):
         captured.update(document)
         return SimpleNamespace(inserted_id="challenge-1")
 
-    monkeypatch.setattr("backend.services.login_challenge_service.login_challenge_repo.insert_challenge", _insert_challenge)
+    monkeypatch.setattr("backend.services.auth.login_challenge_service.login_challenge_repo.insert_challenge", _insert_challenge)
 
     result = await create_login_challenge(
         user={"_id": "user-1"},
@@ -170,11 +170,11 @@ async def test_create_login_challenge_records_primary_auth_method(monkeypatch):
 @pytest.mark.asyncio
 async def test_authenticate_user_with_guards_locks_out_after_repeated_failures(monkeypatch):
     fake_counters = _FakeCounterCollection()
-    monkeypatch.setattr("backend.services.auth_risk_service.db", SimpleNamespace(auth_attempt_counters=fake_counters))
+    monkeypatch.setattr("backend.services.auth.auth_risk_service.db", SimpleNamespace(auth_attempt_counters=fake_counters))
     async def _auth_fail(username, password):
         return None
 
-    monkeypatch.setattr("backend.services.auth_account_service.authenticate_user", _auth_fail)
+    monkeypatch.setattr("backend.services.auth.auth_account_service.authenticate_user", _auth_fail)
     monkeypatch.setattr(Config, "AUTH_LOGIN_PRINCIPAL_MAX_FAILURES", 2)
     monkeypatch.setattr(Config, "AUTH_LOGIN_IP_MAX_FAILURES", 2)
     monkeypatch.setattr(Config, "AUTH_LOGIN_PRINCIPAL_WINDOW_MINUTES", 15)
@@ -204,7 +204,7 @@ async def test_authenticate_user_with_guards_locks_out_after_repeated_failures(m
 @pytest.mark.asyncio
 async def test_authenticate_user_with_guards_clears_counters_on_success(monkeypatch):
     fake_counters = _FakeCounterCollection()
-    monkeypatch.setattr("backend.services.auth_risk_service.db", SimpleNamespace(auth_attempt_counters=fake_counters))
+    monkeypatch.setattr("backend.services.auth.auth_risk_service.db", SimpleNamespace(auth_attempt_counters=fake_counters))
 
     async def _auth_fail(username, password):
         return None
@@ -212,12 +212,12 @@ async def test_authenticate_user_with_guards_clears_counters_on_success(monkeypa
     async def _auth_success(username, password):
         return {"_id": "u1", "status": "active", "username": username}
 
-    monkeypatch.setattr("backend.services.auth_account_service.authenticate_user", _auth_fail)
+    monkeypatch.setattr("backend.services.auth.auth_account_service.authenticate_user", _auth_fail)
     request = _FakeRequest()
     await auth_account_service.authenticate_user_with_guards("Alice", "bad-pass", request=request)
     assert fake_counters.docs
 
-    monkeypatch.setattr("backend.services.auth_account_service.authenticate_user", _auth_success)
+    monkeypatch.setattr("backend.services.auth.auth_account_service.authenticate_user", _auth_success)
     user_doc = await auth_account_service.authenticate_user_with_guards("Alice", "good-pass", request=request)
     assert user_doc["status"] == "active"
     assert fake_counters.docs == {}
@@ -284,12 +284,13 @@ async def test_update_user_security_status_revokes_sessions_for_non_active(monke
     async def _revoke_all_sessions(user_id, reason):
         revoked_reasons.append(reason)
 
-    monkeypatch.setattr("backend.services.admin_security_service.user_repo.find_by_id", _find_by_id)
-    monkeypatch.setattr("backend.services.admin_security_service.user_repo.update_by_id", _update_by_id)
-    monkeypatch.setattr("backend.services.admin_security_service.revoke_all_sessions_for_user", _revoke_all_sessions)
-    monkeypatch.setattr("backend.services.admin_security_service.invalidate_user_cache", lambda user_id: None)
+    monkeypatch.setattr("backend.services.admin.admin_security_service.user_repo.find_by_id", _find_by_id)
+    monkeypatch.setattr("backend.services.admin.admin_security_service.user_repo.update_by_id", _update_by_id)
+    monkeypatch.setattr("backend.services.admin.admin_security_service.revoke_all_sessions_for_user", _revoke_all_sessions)
+    monkeypatch.setattr("backend.services.admin.admin_security_service.invalidate_user_cache", lambda user_id: None)
 
     result = await update_user_security_status(user_id="user-1", status="suspended")
     assert result is not None
     assert result["status"] == "suspended"
     assert revoked_reasons == ["status:suspended"]
+

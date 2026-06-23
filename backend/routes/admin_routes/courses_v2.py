@@ -11,10 +11,11 @@ from backend.services.grading_service import (
     create_assignment as v2_create_assignment, update_assignment as v2_update_assignment,
     delete_assignment as v2_delete_assignment, list_assignments as v2_list_assignments,
 )
-from .router import admin_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@admin_router.get("/v2/courses")
+@router.get("/v2/courses")
 async def list_courses_v2(admin: dict = Depends(get_admin_user)):
     courses = await list_course_sections()
     for c in courses:
@@ -25,7 +26,7 @@ async def list_courses_v2(admin: dict = Depends(get_admin_user)):
     return {"courses": courses}
 
 
-@admin_router.post("/v2/courses")
+@router.post("/v2/courses")
 async def create_course_v2(req: dict, admin: dict = Depends(get_admin_user)):
     from backend.schemas import CourseSectionSchema
     data = CourseSectionSchema(**req).model_dump()
@@ -38,7 +39,7 @@ async def create_course_v2(req: dict, admin: dict = Depends(get_admin_user)):
     return {"message": "Course created", "course": course}
 
 
-@admin_router.put("/v2/courses/{section_id}")
+@router.put("/v2/courses/{section_id}")
 async def update_course_v2(section_id: str, req: dict, admin: dict = Depends(get_admin_user)):
     from backend.schemas import CourseSectionSchema
     data = CourseSectionSchema(**req).model_dump()
@@ -48,7 +49,7 @@ async def update_course_v2(section_id: str, req: dict, admin: dict = Depends(get
     return {"message": "Course updated", "course": course}
 
 
-@admin_router.delete("/v2/courses/{section_id}")
+@router.delete("/v2/courses/{section_id}")
 async def delete_course_v2(section_id: str, admin: dict = Depends(get_admin_user)):
     deleted = await delete_course_section(section_id)
     if not deleted:
@@ -56,7 +57,7 @@ async def delete_course_v2(section_id: str, admin: dict = Depends(get_admin_user
     return {"message": "Course deleted"}
 
 
-@admin_router.get("/v2/courses/{section_id}/enrollments")
+@router.get("/v2/courses/{section_id}/enrollments")
 async def list_course_enrollments(section_id: str, admin: dict = Depends(get_admin_user)):
     enrolls = await list_enrollments(course_section_id=section_id)
     # Enrich with user info
@@ -68,7 +69,7 @@ async def list_course_enrollments(section_id: str, admin: dict = Depends(get_adm
     return {"enrollments": enrolls}
 
 
-@admin_router.post("/v2/courses/{section_id}/enrollments")
+@router.post("/v2/courses/{section_id}/enrollments")
 async def enroll_user_v2(section_id: str, req: dict, admin: dict = Depends(get_admin_user)):
     user_id = req.get("userId", "").strip()
     role = req.get("roleInCourse", "student")
@@ -78,7 +79,7 @@ async def enroll_user_v2(section_id: str, req: dict, admin: dict = Depends(get_a
     return {"message": "User enrolled", "enrollment": enrollment}
 
 
-@admin_router.delete("/v2/courses/{section_id}/enrollments/{user_id}")
+@router.delete("/v2/courses/{section_id}/enrollments/{user_id}")
 async def unenroll_user_v2(section_id: str, user_id: str, admin: dict = Depends(get_admin_user)):
     removed = await unenroll_user(section_id, user_id)
     if not removed:
@@ -86,13 +87,13 @@ async def unenroll_user_v2(section_id: str, user_id: str, admin: dict = Depends(
     return {"message": "User unenrolled"}
 
 
-@admin_router.get("/v2/courses/{section_id}/assignments")
+@router.get("/v2/courses/{section_id}/assignments")
 async def list_assignments_v2(section_id: str, admin: dict = Depends(get_admin_user)):
     assignments = await v2_list_assignments(section_id)
     return {"assignments": assignments}
 
 
-@admin_router.post("/v2/courses/{section_id}/assignments")
+@router.post("/v2/courses/{section_id}/assignments")
 async def create_assignment_v2(section_id: str, req: dict, admin: dict = Depends(get_admin_user)):
     from backend.schemas import AssignmentSchema
     data = AssignmentSchema(courseSectionId=section_id, **{k: v for k, v in req.items() if k != "courseSectionId"}).model_dump()
@@ -100,7 +101,7 @@ async def create_assignment_v2(section_id: str, req: dict, admin: dict = Depends
     return {"message": "Assignment created", "assignment": assignment}
 
 
-@admin_router.put("/v2/assignments/{assignment_id}")
+@router.put("/v2/assignments/{assignment_id}")
 async def update_assignment_v2(assignment_id: str, req: dict, admin: dict = Depends(get_admin_user)):
     assignment = await v2_update_assignment(assignment_id, req)
     if not assignment:
@@ -108,7 +109,7 @@ async def update_assignment_v2(assignment_id: str, req: dict, admin: dict = Depe
     return {"message": "Assignment updated", "assignment": assignment}
 
 
-@admin_router.delete("/v2/assignments/{assignment_id}")
+@router.delete("/v2/assignments/{assignment_id}")
 async def delete_assignment_v2(assignment_id: str, admin: dict = Depends(get_admin_user)):
     deleted = await v2_delete_assignment(assignment_id)
     if not deleted:
@@ -116,7 +117,7 @@ async def delete_assignment_v2(assignment_id: str, admin: dict = Depends(get_adm
     return {"message": "Assignment deleted"}
 
 
-@admin_router.get("/v2/relations/overview")
+@router.get("/v2/relations/overview")
 async def get_relations_overview_v2(admin: dict = Depends(get_admin_user)):
     """Comprehensive relations overview using v2 flat model."""
     users = await db.users.find().to_list(2000)

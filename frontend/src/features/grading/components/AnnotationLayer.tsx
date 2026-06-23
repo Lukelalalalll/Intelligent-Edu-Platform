@@ -1,4 +1,12 @@
-export default function AnnotationLayer({ annotations, onSelect, selectedId }) {
+import type { WorkbenchAnnotation } from '../types/workbench';
+
+interface AnnotationLayerProps {
+    annotations: WorkbenchAnnotation[];
+    onSelect?: (annotation: WorkbenchAnnotation) => void;
+    selectedId?: string | null;
+}
+
+export default function AnnotationLayer({ annotations, onSelect, selectedId }: AnnotationLayerProps) {
     return (
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             {annotations.map((ann, idx) => (

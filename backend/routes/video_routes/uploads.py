@@ -7,7 +7,8 @@ from fastapi import Depends, File, HTTPException, UploadFile
 
 from backend.core.security import get_current_user
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 from .shared import ALLOWED_IMG_EXT, UPLOAD_TMP
 
 

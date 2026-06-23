@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import asyncio
@@ -9,7 +9,7 @@ import backend.presenton_integration  # noqa: F401
 from sqlalchemy import distinct
 from sqlmodel import select
 
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_MONGO_PROJECTION_SERVICE,
 )
 
@@ -103,3 +103,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

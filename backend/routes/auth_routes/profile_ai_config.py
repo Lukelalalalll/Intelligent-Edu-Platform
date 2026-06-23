@@ -1,25 +1,26 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import Depends
 
 from backend.core.security import get_current_user
 from backend.schemas import DeepSeekConfigSchema, OpenAIConfigSchema
-from backend.services.ai_interact_runtime_cache import invalidate_provider_health_cache
+from backend.services.ai.ai_interact_runtime_cache import invalidate_provider_health_cache
 from backend.services.user_profile_service import (
     load_ai_config,
     save_deepseek_config,
     save_openai_config,
 )
 
-from .router import auth_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@auth_router.get("/profile/ai-config")
+@router.get("/profile/ai-config")
 async def get_ai_config(current_user: dict = Depends(get_current_user)):
     return await load_ai_config(current_user, include_api_keys=True)
 
 
-@auth_router.post("/profile/ai-config/deepseek")
+@router.post("/profile/ai-config/deepseek")
 async def update_deepseek_config(
     payload: DeepSeekConfigSchema,
     current_user: dict = Depends(get_current_user),
@@ -29,7 +30,7 @@ async def update_deepseek_config(
     return result
 
 
-@auth_router.post("/profile/ai-config/openai")
+@router.post("/profile/ai-config/openai")
 async def update_openai_config(
     payload: OpenAIConfigSchema,
     current_user: dict = Depends(get_current_user),
@@ -37,3 +38,4 @@ async def update_openai_config(
     result = await save_openai_config(current_user, payload)
     invalidate_provider_health_cache(current_user, "openai")
     return result
+

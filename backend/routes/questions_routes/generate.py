@@ -22,7 +22,9 @@ from backend.services.questions import (
     extract_pdf_text_with_loader, format_extracted_text,
     save_upload_file,
 )
-from .router import questions_router, _get_task, _set_task
+from .router import _get_task, _set_task
+from fastapi import APIRouter
+router = APIRouter()
 from .validators import (
     _build_question_type_format_hint, _question_type_key,
     _estimate_generated_question_count, _validate_output_by_type,
@@ -30,7 +32,7 @@ from .validators import (
 )
 
 
-@questions_router.post("/upload")
+@router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     try:
         upload_result = await save_upload_file(file)
@@ -57,7 +59,7 @@ async def upload_file(request: Request, file: UploadFile = File(...), user: dict
         return JSONResponse(content={"error": str(exc)}, status_code=500)
 
 
-@questions_router.post("/extract_questions")
+@router.post("/extract_questions")
 async def extract_questions_route(req: ExtractQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
     resolved_provider = resolve_provider(getattr(req, 'provider', None), feature="questions.extract", user=user)
     timer = TelemetryTimer(
@@ -98,7 +100,7 @@ async def extract_questions_route(req: ExtractQuestionsSchema, request: Request,
     return {'success': True, 'data': {'result': {'llm_json': structured_data}}}
 
 
-@questions_router.post("/generate_questions")
+@router.post("/generate_questions")
 async def generate_questions_route(req: GenerateQuestionsSchema, request: Request, user: dict = Depends(get_current_user)):
     resolved_provider = resolve_provider(req.provider, feature="questions.generate", user=user)
     timer = TelemetryTimer(

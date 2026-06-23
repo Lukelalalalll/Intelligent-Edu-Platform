@@ -1,6 +1,6 @@
 
 
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Edit3, Save, Sparkles } from "lucide-react";
 import { ProcessedSlide } from "../../types";
@@ -13,18 +13,6 @@ interface Step4TemplateCreationProps {
   slides: ProcessedSlide[];
   setSlides: React.Dispatch<React.SetStateAction<ProcessedSlide[]>>;
   retrySlide: (index: number) => void;
-  onSlideUpdate: (index: number, updatedSlideData: Partial<ProcessedSlide>) => void;
-
-  // Schema editor state
-  schemaEditorSlideIndex: number | null;
-  onOpenSchemaEditor: (index: number | null) => void;
-  onCloseSchemaEditor: () => void;
-  onSchemaEditorSave: (updatedReact: string) => void;
-
-  // Schema preview state
-  schemaPreviewData: Record<number, Record<string, any>>;
-  onSchemaPreviewContent: (content: Record<string, any>) => void;
-  onClearSchemaPreview: (slideIndex: number) => void;
   isCompleted: boolean;
   isSavingLayout: boolean;
   isProcessingSlides: boolean;
@@ -37,14 +25,6 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
   slides,
   setSlides,
   retrySlide,
-  onSlideUpdate,
-  schemaEditorSlideIndex,
-  onOpenSchemaEditor,
-  onCloseSchemaEditor,
-  onSchemaEditorSave,
-  schemaPreviewData,
-  onSchemaPreviewContent,
-  onClearSchemaPreview,
   isCompleted,
   isSavingLayout,
   isProcessingSlides,
@@ -52,6 +32,64 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
   totalSlides,
   onOpenSaveModal,
 }) => {
+  const [schemaEditorSlideIndex, setSchemaEditorSlideIndex] = useState<number | null>(null);
+  const [schemaPreviewData, setSchemaPreviewData] = useState<Record<number, Record<string, any>>>({});
+
+  const handleSlideUpdate = useCallback(
+    (index: number, updatedSlideData: Partial<ProcessedSlide>) => {
+      setSlides((prevSlides) =>
+        prevSlides.map((slide, slideIndex) =>
+          slideIndex === index
+            ? { ...slide, ...updatedSlideData, modified: true }
+            : slide
+        )
+      );
+    },
+    [setSlides]
+  );
+
+  const handleOpenSchemaEditor = useCallback((index: number | null) => {
+    setSchemaEditorSlideIndex(index);
+  }, []);
+
+  const handleCloseSchemaEditor = useCallback(() => {
+    setSchemaEditorSlideIndex(null);
+  }, []);
+
+  const handleSchemaEditorSave = useCallback(
+    (updatedReact: string) => {
+      if (schemaEditorSlideIndex !== null) {
+        setSlides((prev) =>
+          prev.map((slide, index) =>
+            index === schemaEditorSlideIndex ? { ...slide, react: updatedReact } : slide
+          )
+        );
+      }
+      setSchemaEditorSlideIndex(null);
+    },
+    [schemaEditorSlideIndex, setSlides]
+  );
+
+  const handleSchemaPreviewContent = useCallback(
+    (content: Record<string, any>) => {
+      if (schemaEditorSlideIndex !== null) {
+        setSchemaPreviewData((prev) => ({
+          ...prev,
+          [schemaEditorSlideIndex]: content,
+        }));
+      }
+    },
+    [schemaEditorSlideIndex]
+  );
+
+  const handleClearSchemaPreview = useCallback((slideIndex: number) => {
+    setSchemaPreviewData((prev) => {
+      const next = { ...prev };
+      delete next[slideIndex];
+      return next;
+    });
+  }, []);
+
   const schemaEditorSlide = schemaEditorSlideIndex !== null ? slides[schemaEditorSlideIndex] : null;
   const isSchemaEditorOpen = schemaEditorSlideIndex !== null;
   const progress = totalSlides > 0 ? Math.round((completedSlides / totalSlides) * 100) : 0;
@@ -64,11 +102,11 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
               slides={slides}
               setSlides={setSlides}
               retrySlide={retrySlide}
-              onSlideUpdate={onSlideUpdate}
-              onOpenSchemaEditor={onOpenSchemaEditor}
+              onSlideUpdate={handleSlideUpdate}
+              onOpenSchemaEditor={handleOpenSchemaEditor}
               schemaEditorSlideIndex={schemaEditorSlideIndex}
               schemaPreviewData={schemaPreviewData}
-              onClearSchemaPreview={onClearSchemaPreview}
+              onClearSchemaPreview={handleClearSchemaPreview}
               isSchemaEditorOpen={isSchemaEditorOpen}
             />
         </div>
@@ -118,9 +156,9 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
                   <SchemaEditorPanel
                     slide={schemaEditorSlide}
                     slideIndex={schemaEditorSlideIndex}
-                    onSave={onSchemaEditorSave}
-                    onCancel={onCloseSchemaEditor}
-                    onFillContent={onSchemaPreviewContent}
+                    onSave={handleSchemaEditorSave}
+                    onCancel={handleCloseSchemaEditor}
+                    onFillContent={handleSchemaPreviewContent}
                   />
               </div>
             </section>

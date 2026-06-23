@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from types import SimpleNamespace
@@ -12,7 +12,7 @@ from backend.routes.ai_routes.memory import get_ai_role_info
 from backend.routes.ai_routes.chat_models import ParsedRequest, RAGResult, StreamMeta
 from backend.routes.ai_routes.chat_providers import SSE_DONE, generate_chat_response
 from backend.schemas.ai import UpdateAiSessionSchema
-from backend.services import ai_session_service
+from backend.services.ai import ai_session_service
 from backend.services.llm_service.deepseek_service import DeepSeekService
 from backend.repositories import ai_session_repo
 
@@ -418,10 +418,10 @@ async def test_update_with_revision_matches_legacy_revisionless_sessions(monkeyp
     [
         "Hello",
         "hi",
-        "测试一下 deepseek",
+        "娴嬭瘯涓€涓?deepseek",
         "who are you are you deepseek",
-        "你是谁",
-        "你是 deepseek 吗",
+        "浣犳槸璋?,
+        "浣犳槸 deepseek 鍚?,
     ],
 )
 async def test_run_student_rag_does_not_force_response_for_small_talk(monkeypatch, question: str):
@@ -431,7 +431,7 @@ async def test_run_student_rag_does_not_force_response_for_small_talk(monkeypatc
         return {"courses": []}
 
     monkeypatch.setattr(
-        "backend.services.enrollment_service.get_user_course_profile",
+        "backend.services.student.enrollment_service.get_user_course_profile",
         fake_get_user_course_profile,
     )
 
@@ -455,7 +455,7 @@ async def test_run_student_rag_falls_back_gracefully_when_no_course_materials_ex
         return {"courses": []}
 
     monkeypatch.setattr(
-        "backend.services.enrollment_service.get_user_course_profile",
+        "backend.services.student.enrollment_service.get_user_course_profile",
         fake_get_user_course_profile,
     )
 
@@ -492,7 +492,7 @@ async def test_run_student_rag_marks_empty_retrieval_without_forcing_hard_refusa
         )
 
     monkeypatch.setattr(
-        "backend.services.enrollment_service.get_user_course_profile",
+        "backend.services.student.enrollment_service.get_user_course_profile",
         fake_get_user_course_profile,
     )
     monkeypatch.setattr(
@@ -547,7 +547,7 @@ async def test_run_student_rag_preserves_course_grounding_when_retrieval_hits(mo
         )
 
     monkeypatch.setattr(
-        "backend.services.enrollment_service.get_user_course_profile",
+        "backend.services.student.enrollment_service.get_user_course_profile",
         fake_get_user_course_profile,
     )
     monkeypatch.setattr(
@@ -592,7 +592,7 @@ async def test_get_ai_role_info_only_counts_indexed_courses_from_user_profile(mo
         raising=False,
     )
     monkeypatch.setattr(
-        "backend.services.enrollment_service.get_user_course_profile",
+        "backend.services.student.enrollment_service.get_user_course_profile",
         fake_get_user_course_profile,
     )
 
@@ -600,3 +600,4 @@ async def test_get_ai_role_info_only_counts_indexed_courses_from_user_profile(mo
 
     assert result["rag_active"] is True
     assert result["rag_courses"] == ["course-3"]
+

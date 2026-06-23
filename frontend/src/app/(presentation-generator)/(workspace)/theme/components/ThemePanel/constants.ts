@@ -1,6 +1,7 @@
+import { Theme } from '@/app/(presentation-generator)/services/api/types'
+import { ThemeFontOption, ThemeStepMeta } from './types'
 
-
-export const FONT_OPTIONS: any[] = [
+export const FONT_OPTIONS: ThemeFontOption[] = [
   { name: 'Inter', displayName: 'Inter', cssUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap' },
   { name: 'DM Sans', displayName: 'DM Sans', cssUrl: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap' },
   { name: 'Overpass', displayName: 'Overpass', cssUrl: 'https://fonts.googleapis.com/css2?family=Overpass:wght@100..900&display=swap' },
@@ -26,15 +27,15 @@ export const FONT_OPTIONS: any[] = [
   { name: 'Roboto', displayName: 'Roboto', cssUrl: 'https://fonts.googleapis.com/css2?family=Roboto:wght@100..900&display=swap' }
 ]
 
-export const DEFAULT_THEMES: any[] = [
+export const DEFAULT_THEMES: Theme[] = [
   {
     id: "edge-yellow",
     name: "Edge Yellow",
     description: "Yellow and dark theme for professionalish and edge.",
-    logo: null,
-    logo_url: null,
-    company_name: null,
-
+    user: "system",
+    logo: "",
+    logo_url: "",
+    company_name: "",
     data: {
       colors: {
         primary: "#f5f547",
@@ -66,10 +67,10 @@ export const DEFAULT_THEMES: any[] = [
     id: "light-rose",
     name: "Light Rose",
     description: "Rose background with punchy font",
-    logo: null,
-    logo_url: null,
-    company_name: null,
-
+    user: "system",
+    logo: "",
+    logo_url: "",
+    company_name: "",
     data: {
       colors: {
         "primary": "#030204",
@@ -101,10 +102,10 @@ export const DEFAULT_THEMES: any[] = [
     id: "mint-blue",
     name: "Mint Blue",
     description: "Mint Greent with blue heading.",
-    logo: null,
-    logo_url: null,
-    company_name: null,
-
+    user: "system",
+    logo: "",
+    logo_url: "",
+    company_name: "",
     data: {
       colors: {
         primary: "#3b3172",
@@ -136,10 +137,10 @@ export const DEFAULT_THEMES: any[] = [
     id: "professional-blue",
     name: "Professional Blue",
     description: "Clean and professional blue theme",
-    logo: null,
-    logo_url: null,
-    company_name: null,
-
+    user: "system",
+    logo: "",
+    logo_url: "",
+    company_name: "",
     data: {
       colors: {
         primary: "#161616",
@@ -171,10 +172,10 @@ export const DEFAULT_THEMES: any[] = [
     id: "professional-dark",
     name: "Professional Dark",
     description: "Clean and professional for dark corporate usage.",
-    logo: null,
-    logo_url: null,
-    company_name: null,
-
+    user: "system",
+    logo: "",
+    logo_url: "",
+    company_name: "",
     data: {
       colors: {
         primary: "#eff5f1",
@@ -203,3 +204,66 @@ export const DEFAULT_THEMES: any[] = [
     }
   }
 ]
+
+export const FALLBACK_THEME: Theme = {
+  id: 'standard',
+  name: 'Standard',
+  description: 'Standard theme',
+  user: 'system',
+  logo: '',
+  logo_url: '',
+  company_name: '',
+  data: {
+    colors: {
+      primary: '#2563eb',
+      background: '#ffffff',
+      card: '#f8fafc',
+      stroke: '#e5e7eb',
+      primary_text: '#1e293b',
+      background_text: '#475569',
+      graph_0: '#2563eb',
+      graph_1: '#1d4ed8',
+      graph_2: '#1e40af',
+      graph_3: '#1e40af',
+      graph_4: '#1e40af',
+      graph_5: '#1e40af',
+      graph_6: '#1e40af',
+      graph_7: '#1e40af',
+      graph_8: '#1e40af',
+      graph_9: '#1e40af',
+    },
+    fonts: {
+      textFont: {
+        name: 'Inter',
+        url: 'https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap',
+      },
+    },
+  },
+}
+
+export const THEME_EDITOR_STEP_META: Record<number, ThemeStepMeta> = {
+  1: {
+    title: 'Anchor the brand colors',
+    description: 'Pick the primary and background pair that drives the palette direction.',
+  },
+  2: {
+    title: 'Tune the full palette',
+    description: 'Refine text, card, and chart colors while the preview updates live.',
+  },
+  3: {
+    title: 'Choose the type system',
+    description: 'Upload a brand font or select one of the shared presets for the deck voice.',
+  },
+  4: {
+    title: 'Add brand identity',
+    description: 'Set the company name and logo that should travel with this custom theme.',
+  },
+}
+
+export const PREVIEW_BASE_WIDTH = 1280
+export const PREVIEW_BASE_HEIGHT = 720
+export const PREVIEW_VIEWPORT_GUTTER = 40
+export const PREVIEW_SCROLLBAR_WIDTH = 8
+export const PREVIEW_FALLBACK_SCALE = 0.62
+export const PREVIEW_MIN_SCALE = 0.42
+export const PREVIEW_MAX_SCALE = 0.74

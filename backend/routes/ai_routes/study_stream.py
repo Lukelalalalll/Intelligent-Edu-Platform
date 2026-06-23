@@ -24,7 +24,9 @@ from backend.core.ai_provider import AIProvider, resolve_provider
 from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
 from backend.schemas.ai import ChatMessageSchema
-from .router import ai_router, _limiter
+from .router import _limiter
+from fastapi import APIRouter
+router = APIRouter()
 from .prompting import _STUDY_COZE_SYSTEM
 from .chat_context_helpers import _build_evidence_cards, _get_rag_context_for_study
 from .study_modes import get_study_mode_suffix
@@ -40,7 +42,7 @@ class StudyStreamSchema(BaseModel):
     messages: Optional[List[ChatMessageSchema]] = Field(None, max_length=20)
 
 
-@ai_router.post("/study-stream")
+@router.post("/study-stream")
 @_limiter.limit("20/minute")
 async def study_stream(
     request: Request,

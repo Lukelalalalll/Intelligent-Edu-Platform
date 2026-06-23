@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import Depends, HTTPException, Query, Request
 
 from backend.core.security import get_admin_user
 from backend.schemas import AdminSecurityUnlockSchema, AdminUserStatusUpdateSchema
-from backend.services.admin_security_service import (
+from backend.services.admin.admin_security_service import (
     clear_lockout,
     get_security_overview,
     list_active_lockouts,
@@ -12,17 +12,18 @@ from backend.services.admin_security_service import (
     list_user_security_statuses,
     update_user_security_status,
 )
-from backend.services.security_audit import record_security_event
+from backend.services.auth.security_audit import record_security_event
 
-from .router import admin_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@admin_router.get("/security/overview")
+@router.get("/security/overview")
 async def admin_security_overview(admin: dict = Depends(get_admin_user)):
     return await get_security_overview()
 
 
-@admin_router.get("/security/events")
+@router.get("/security/events")
 async def admin_security_events(
     limit: int = Query(default=50, ge=1, le=200),
     action: str = Query(default="", max_length=120),
@@ -33,7 +34,7 @@ async def admin_security_events(
     return await list_security_events(limit=limit, action=action, level=level, user_id=user_id)
 
 
-@admin_router.get("/security/lockouts")
+@router.get("/security/lockouts")
 async def admin_security_lockouts(
     limit: int = Query(default=100, ge=1, le=200),
     admin: dict = Depends(get_admin_user),
@@ -41,7 +42,7 @@ async def admin_security_lockouts(
     return await list_active_lockouts(limit=limit)
 
 
-@admin_router.post("/security/lockouts/clear")
+@router.post("/security/lockouts/clear")
 async def admin_security_clear_lockout(
     request: Request,
     payload: AdminSecurityUnlockSchema,
@@ -61,7 +62,7 @@ async def admin_security_clear_lockout(
     return result
 
 
-@admin_router.get("/security/users")
+@router.get("/security/users")
 async def admin_security_users(
     limit: int = Query(default=100, ge=1, le=200),
     status: str = Query(default="", max_length=20),
@@ -71,7 +72,7 @@ async def admin_security_users(
     return await list_user_security_statuses(limit=limit, status=status, query=q)
 
 
-@admin_router.post("/security/users/{user_id}/status")
+@router.post("/security/users/{user_id}/status")
 async def admin_security_update_user_status(
     user_id: str,
     payload: AdminUserStatusUpdateSchema,
@@ -96,3 +97,4 @@ async def admin_security_update_user_status(
         extra={"target_user_id": user_id, "target_status": payload.status},
     )
     return {"user": updated}
+

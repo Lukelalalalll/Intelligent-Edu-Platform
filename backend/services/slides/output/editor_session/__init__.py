@@ -1,4 +1,4 @@
-"""EditorSession package — server-side PPTX editing, rendering, and preview."""
+"""EditorSession package for server-side PPTX editing, rendering, and preview."""
 
 from .core import EditorSession
 

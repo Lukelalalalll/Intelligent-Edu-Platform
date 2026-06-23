@@ -1,21 +1,19 @@
-"""Database browser / console endpoints."""
+﻿"""Database browser / console endpoints."""
 from __future__ import annotations
 
 from bson.objectid import ObjectId
-from fastapi import Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.core.database import db
 from backend.core.security import get_admin_user
 from backend.schemas import AdminDbDocumentSchema
-from backend.services.admin_query_service import build_admin_collection_search_filter
-from .router import (
-    admin_router,
-    _validate_collection_name, _check_write_access,
-    _is_object_id, _serialize_mongo_value,
-)
+from backend.services.admin.admin_query_service import build_admin_collection_search_filter
+from .router import _check_write_access, _is_object_id, _serialize_mongo_value, _validate_collection_name
+
+router = APIRouter()
 
 
-@admin_router.get("/db/collections")
+@router.get("/db/collections")
 async def list_db_collections(admin: dict = Depends(get_admin_user)):
     names = await db.list_collection_names()
     visible = [name for name in names if not name.startswith("system.")]
@@ -26,7 +24,7 @@ async def list_db_collections(admin: dict = Depends(get_admin_user)):
     return {"collections": stats}
 
 
-@admin_router.get("/db/{collection_name}/documents")
+@router.get("/db/{collection_name}/documents")
 async def list_db_documents(
     collection_name: str,
     limit: int = Query(default=50, ge=1, le=200),
@@ -47,7 +45,7 @@ async def list_db_documents(
     }
 
 
-@admin_router.post("/db/{collection_name}/documents")
+@router.post("/db/{collection_name}/documents")
 async def create_db_document(
     collection_name: str,
     req: AdminDbDocumentSchema,
@@ -63,7 +61,7 @@ async def create_db_document(
     return {"message": "Document created", "document": _serialize_mongo_value(created)}
 
 
-@admin_router.put("/db/{collection_name}/documents/{document_id}")
+@router.put("/db/{collection_name}/documents/{document_id}")
 async def update_db_document(
     collection_name: str,
     document_id: str,
@@ -86,7 +84,7 @@ async def update_db_document(
     return {"message": "Document updated", "document": _serialize_mongo_value(updated)}
 
 
-@admin_router.delete("/db/{collection_name}/documents/{document_id}")
+@router.delete("/db/{collection_name}/documents/{document_id}")
 async def delete_db_document(
     collection_name: str,
     document_id: str,
@@ -101,3 +99,4 @@ async def delete_db_document(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Document deleted"}
+

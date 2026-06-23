@@ -4,19 +4,18 @@ import logging
 import os
 import shutil
 import uuid
-	
-from fastapi import Depends, File, Form, HTTPException, Request, UploadFile
+		
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 	
 from backend.config import Config
 from backend.core.security import get_current_user
 from backend.schemas import CombineSchema
 from backend.services.slides.infra.task_tracker import StepStatus, TaskTracker
-from backend.services.slides_pipeline_service import combine_sections as _svc_combine_sections
-from backend.services.slides_pipeline_service import get_parsed_data_with_cache as _get_parsed_data_with_cache
-
-from .router import slides_router
+from backend.services.slides.pipeline_service import combine_sections as _svc_combine_sections
+from backend.services.slides.pipeline_service import get_parsed_data_with_cache as _get_parsed_data_with_cache
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
 
 
 def _build_stored_upload_name(filename: str) -> str:
@@ -24,7 +23,7 @@ def _build_stored_upload_name(filename: str) -> str:
     return f"{uuid.uuid4().hex}{ext.lower()}"
 
 
-@slides_router.post("/parse-md")
+@router.post("/parse-md")
 async def parse_md(
     file: UploadFile = File(...),
     use_llm: bool = Form(False),
@@ -87,7 +86,7 @@ async def parse_md(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@slides_router.post("/combine")
+@router.post("/combine")
 def combine_sections(req: CombineSchema, user: dict = Depends(get_current_user)):
     try:
         new_filename = _svc_combine_sections(req.filename, req.selected_indices, req.use_llm, req.header_llm_provider)

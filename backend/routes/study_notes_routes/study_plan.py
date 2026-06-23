@@ -1,17 +1,17 @@
-"""Study plan generation and spaced-repetition review endpoints."""
+﻿"""Study plan generation and spaced-repetition review endpoints."""
 from fastapi import Depends
 
 from backend.core.security import get_current_user
-from backend.services.study_plan_service import (
+from backend.services.study.study_plan_service import (
     generate_study_plan as generate_study_plan_service,
 )
-from backend.services.study_plan_service import (
+from backend.services.study.study_plan_service import (
     get_next_review_item as get_next_review_item_service,
 )
-from backend.services.study_plan_service import (
+from backend.services.study.study_plan_service import (
     get_study_plan as get_study_plan_service,
 )
-from backend.services.study_plan_service import (
+from backend.services.study.study_plan_service import (
     submit_review_feedback as submit_review_feedback_service,
 )
 from .helpers import (
@@ -42,3 +42,4 @@ async def get_next_review_item(plan_id: str | None = None, current_user: dict = 
 @study_notes_router.post("/review/submit")
 async def submit_review_feedback(payload: StudyReviewSubmitSchema, current_user: dict = Depends(get_current_user)):
     return await submit_review_feedback_service(payload=payload, current_user=current_user)
+

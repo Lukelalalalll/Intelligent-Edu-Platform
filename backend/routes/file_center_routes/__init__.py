@@ -1,4 +1,6 @@
+from .history_center import router as history_center_router
 from .router import file_center_router
-from . import history_center  # registers all @file_center_router routes  # noqa: F401
+
+file_center_router.include_router(history_center_router)
 
 __all__ = ["file_center_router"]

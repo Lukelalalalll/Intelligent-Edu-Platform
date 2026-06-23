@@ -1,4 +1,4 @@
-"""WebSocket endpoint for real-time chat."""
+﻿"""WebSocket endpoint for real-time chat."""
 
 import logging
 
@@ -6,11 +6,13 @@ from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
 from backend.config import Config
-from backend.services.auth_session_service import decode_access_token, get_active_session_for_access
+from backend.services.auth.auth_session_service import decode_access_token, get_active_session_for_access
 from backend.services.chat_service.message_service import create_message, mark_room_read_for_member
 from backend.services.chat_service.query_service import get_chat_user_by_id, get_room_for_member
 
-from .router import chat_router, manager
+from .router import manager
+from fastapi import APIRouter
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ async def _authenticate_ws(token: str) -> dict | None:
         return None
 
 
-@chat_router.websocket("/ws")
+@router.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     token = ws.cookies.get(Config.JWT_ACCESS_COOKIE_NAME, "")
     user = await _authenticate_ws(token) if token else None
@@ -117,3 +119,4 @@ async def websocket_endpoint(ws: WebSocket):
         logger.exception("WS error: user=%s", uid)
     finally:
         manager.disconnect(uid)
+

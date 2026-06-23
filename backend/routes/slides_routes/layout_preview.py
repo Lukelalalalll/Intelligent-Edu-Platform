@@ -17,13 +17,14 @@ import time
 import zipfile
 from pathlib import Path
 
-from fastapi import HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from backend.config import Config
-from .router import slides_router, public_slides_router
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
+public_router = APIRouter()
 
 STATIC_IMG_ROOT = os.path.join(os.path.dirname(Config.PPT_TEMPLATES_FOLDER), "img")
 SOFFICE_BIN = shutil.which("soffice") or shutil.which("libreoffice")
@@ -152,8 +153,8 @@ def _render_layout_png(theme: str, layout_name: str) -> str:
 
 # ── Route ─────────────────────────────────────────────────────────────────────
 
-@slides_router.get("/layout-preview")
-@public_slides_router.get("/layout-preview", include_in_schema=False)
+@router.get("/layout-preview")
+@public_router.get("/layout-preview", include_in_schema=False)
 def get_layout_preview(
     theme: str = Query(..., description="Theme name, e.g. 'Business'"),
     layout: str = Query(..., description="Layout name, e.g. 'Section-1'"),

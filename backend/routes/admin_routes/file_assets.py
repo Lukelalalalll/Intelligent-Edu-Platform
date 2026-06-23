@@ -1,4 +1,4 @@
-"""File asset CRUD, download, audit, and stats endpoints."""
+﻿"""File asset CRUD, download, audit, and stats endpoints."""
 from __future__ import annotations
 
 import base64
@@ -10,15 +10,16 @@ from fastapi.responses import FileResponse, Response
 from backend.config import Config
 from backend.core.security import get_admin_user
 from backend.repositories import ai_session_repo, file_asset_repo
-from backend.services.file_asset_service import (
+from backend.services.files.file_asset_service import (
     list_assets, get_asset, soft_delete_asset,
     restore_asset, hard_delete_asset, run_audit,
     _absolute_from_storage_path,
 )
-from .router import admin_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@admin_router.get("/files/assets")
+@router.get("/files/assets")
 async def list_file_assets(
     file_type: str = Query(default="", max_length=64),
     status: str = Query(default="", max_length=32),
@@ -43,7 +44,7 @@ async def list_file_assets(
     return data
 
 
-@admin_router.get("/files/assets/{asset_id}")
+@router.get("/files/assets/{asset_id}")
 async def get_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
     asset = await get_asset(asset_id)
     if not asset:
@@ -51,7 +52,7 @@ async def get_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
     return {"asset": asset}
 
 
-@admin_router.post("/files/assets/{asset_id}/soft-delete")
+@router.post("/files/assets/{asset_id}/soft-delete")
 async def soft_delete_file_asset(asset_id: str, req: dict, admin: dict = Depends(get_admin_user)):
     actor_id = str(admin.get("_id", ""))
     reason = str((req or {}).get("reason", "") or "").strip()
@@ -61,7 +62,7 @@ async def soft_delete_file_asset(asset_id: str, req: dict, admin: dict = Depends
     return {"asset": asset}
 
 
-@admin_router.post("/files/assets/{asset_id}/restore")
+@router.post("/files/assets/{asset_id}/restore")
 async def restore_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
     actor_id = str(admin.get("_id", ""))
     asset = await restore_asset(asset_id, actor_id=actor_id)
@@ -70,7 +71,7 @@ async def restore_file_asset(asset_id: str, admin: dict = Depends(get_admin_user
     return {"asset": asset}
 
 
-@admin_router.post("/files/assets/{asset_id}/hard-delete")
+@router.post("/files/assets/{asset_id}/hard-delete")
 async def hard_delete_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
     actor_id = str(admin.get("_id", ""))
     result = await hard_delete_asset(asset_id, actor_id=actor_id)
@@ -81,7 +82,7 @@ async def hard_delete_file_asset(asset_id: str, admin: dict = Depends(get_admin_
     return {"asset": result}
 
 
-@admin_router.get("/files/assets/{asset_id}/download")
+@router.get("/files/assets/{asset_id}/download")
 async def download_file_asset(asset_id: str, admin: dict = Depends(get_admin_user)):
     asset = await get_asset(asset_id)
     if not asset:
@@ -112,13 +113,13 @@ async def download_file_asset(asset_id: str, admin: dict = Depends(get_admin_use
     return FileResponse(path, filename=asset.get("filename", "download"))
 
 
-@admin_router.get("/files/audit")
+@router.get("/files/audit")
 async def audit_file_assets(admin: dict = Depends(get_admin_user)):
     result = await run_audit()
     return result
 
 
-@admin_router.get("/files/stats")
+@router.get("/files/stats")
 async def file_asset_stats(admin: dict = Depends(get_admin_user)):
     rows = []
     for item in await file_asset_repo.aggregate_stats_by_type_and_status():
@@ -129,3 +130,4 @@ async def file_asset_stats(admin: dict = Depends(get_admin_user)):
             "total_size": int(item.get("total_size", 0) or 0),
         })
     return {"rows": rows}
+

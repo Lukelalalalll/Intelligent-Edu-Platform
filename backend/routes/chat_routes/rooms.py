@@ -23,18 +23,20 @@ from backend.services.chat_service.room_service import (
     list_rooms_for_user,
 )
 
-from .router import chat_router, manager
+from .router import manager
+from fastapi import APIRouter
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
 
-@chat_router.get("/rooms")
+@router.get("/rooms")
 async def get_rooms(user: dict = Depends(get_current_user)):
     """Get all chat rooms the current user is a member of."""
     return {"rooms": await list_rooms_for_user(str(user["id"]))}
 
 
-@chat_router.post("/rooms")
+@router.post("/rooms")
 async def create_group_room(body: ChatCreateRoomSchema, user: dict = Depends(get_current_user)):
     """Create a group chat room."""
     room_id = await create_group_chat_room(
@@ -46,14 +48,14 @@ async def create_group_room(body: ChatCreateRoomSchema, user: dict = Depends(get
     return {"ok": True, "roomId": room_id}
 
 
-@chat_router.post("/rooms/direct")
+@router.post("/rooms/direct")
 async def create_or_get_direct_room(body: ChatCreateDirectRoomSchema, user: dict = Depends(get_current_user)):
     """Find or create a direct message room between two users (atomic upsert)."""
     room_id = await create_direct_room(actor_id=str(user["id"]), target_user_id=body.targetUserId)
     return {"ok": True, "roomId": room_id}
 
 
-@chat_router.post("/rooms/from-course")
+@router.post("/rooms/from-course")
 async def create_room_from_course(
     body: ChatCreateCourseGroupSchema,
     user: dict = Depends(get_current_user),
@@ -69,20 +71,20 @@ async def create_room_from_course(
     return {"ok": True, "roomId": result["roomId"], "isExisting": result["isExisting"]}
 
 
-@chat_router.get("/rooms/from-course/list")
+@router.get("/rooms/from-course/list")
 async def list_courses_for_group(user: dict = Depends(get_current_user)):
     """List courses the current user can create group chats for."""
     return {"courses": await list_group_chat_courses(user)}
 
 
-@chat_router.get("/rooms/{room_id}/info")
+@router.get("/rooms/{room_id}/info")
 async def get_room_info(room_id: str, user: dict = Depends(get_current_user)):
     """Get detailed room info including member profiles."""
     result = await load_room_info(room_id=room_id, user_id=str(user["id"]))
     return {"ok": True, "room": result["room"], "members": result["members"], "isOwner": result["isOwner"]}
 
 
-@chat_router.post("/rooms/{room_id}/members/add")
+@router.post("/rooms/{room_id}/members/add")
 async def add_room_member(room_id: str, body: dict, user: dict = Depends(get_current_user)):
     """Add a member to a group room. Only the owner can add members."""
     result = await add_group_member(
@@ -97,7 +99,7 @@ async def add_room_member(room_id: str, body: dict, user: dict = Depends(get_cur
     return {"ok": True}
 
 
-@chat_router.post("/rooms/{room_id}/members/kick")
+@router.post("/rooms/{room_id}/members/kick")
 async def kick_room_member(room_id: str, body: dict, user: dict = Depends(get_current_user)):
     """Remove a member from a group room. Only the owner can kick members."""
     result = await remove_group_member(
@@ -111,7 +113,7 @@ async def kick_room_member(room_id: str, body: dict, user: dict = Depends(get_cu
     return {"ok": True}
 
 
-@chat_router.post("/rooms/{room_id}/leave")
+@router.post("/rooms/{room_id}/leave")
 async def leave_room(room_id: str, user: dict = Depends(get_current_user)):
     """Leave a group room. Owner cannot leave (must transfer or delete)."""
     result = await leave_group_room(
@@ -125,7 +127,7 @@ async def leave_room(room_id: str, user: dict = Depends(get_current_user)):
     return {"ok": True}
 
 
-@chat_router.delete("/rooms/{room_id}")
+@router.delete("/rooms/{room_id}")
 async def delete_room(room_id: str, user: dict = Depends(get_current_user)):
     """Delete a chat room (hide for current user; owner can delete group entirely)."""
     result = await delete_chat_room(room_id=room_id, actor_id=str(user["id"]))

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import Depends
 
@@ -10,7 +10,7 @@ from backend.schemas import (
     MfaEnrollmentStartSchema,
     StepUpVerifySchema,
 )
-from backend.services.mfa_security_service import assert_step_up_recent
+from backend.services.auth.mfa_security_service import assert_step_up_recent
 from backend.services.user_profile_service import (
     disable_mfa_for_user,
     generate_new_backup_codes_for_user,
@@ -20,15 +20,16 @@ from backend.services.user_profile_service import (
     verify_step_up_for_session,
 )
 
-from .router import auth_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@auth_router.get("/profile/security")
+@router.get("/profile/security")
 async def get_profile_security(current_user: dict = Depends(get_current_user)):
     return await get_profile_security_state(current_user)
 
 
-@auth_router.post("/profile/security/mfa/start")
+@router.post("/profile/security/mfa/start")
 async def start_mfa_enrollment(
     payload: MfaEnrollmentStartSchema,
     current_user: dict = Depends(get_current_user),
@@ -36,7 +37,7 @@ async def start_mfa_enrollment(
     return await start_mfa_enrollment_for_user(current_user, password=payload.current_password)
 
 
-@auth_router.post("/profile/security/mfa/confirm")
+@router.post("/profile/security/mfa/confirm")
 async def confirm_mfa_enrollment(
     payload: MfaConfirmSchema,
     current_user: dict = Depends(get_current_user),
@@ -44,7 +45,7 @@ async def confirm_mfa_enrollment(
     return await verify_mfa_enrollment_for_user(current_user, code=payload.code)
 
 
-@auth_router.post("/profile/security/mfa/disable")
+@router.post("/profile/security/mfa/disable")
 async def disable_mfa(
     payload: MfaDisableSchema,
     current_user: dict = Depends(get_current_user),
@@ -52,7 +53,7 @@ async def disable_mfa(
     return await disable_mfa_for_user(current_user, password=payload.current_password, code=payload.code)
 
 
-@auth_router.post("/profile/security/mfa/backup-codes/regenerate")
+@router.post("/profile/security/mfa/backup-codes/regenerate")
 async def regenerate_backup_codes(
     payload: BackupCodeRegenSchema,
     current_user: dict = Depends(get_current_user),
@@ -62,10 +63,11 @@ async def regenerate_backup_codes(
     return await generate_new_backup_codes_for_user(current_user, password=payload.current_password)
 
 
-@auth_router.post("/step-up/verify")
+@router.post("/step-up/verify")
 async def verify_step_up(
     payload: StepUpVerifySchema,
     current_user: dict = Depends(get_current_user),
     session_doc: dict = Depends(get_current_session),
 ):
     return await verify_step_up_for_session(current_user=current_user, session_doc=session_doc, code=payload.code)
+

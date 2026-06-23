@@ -1,10 +1,10 @@
-"""Message CRUD, recall, translate, batch-delete, and forward endpoints."""
+﻿"""Message CRUD, recall, translate, batch-delete, and forward endpoints."""
 
 import logging
 import os
 import uuid
 
-from fastapi import Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from backend.core.dependencies import get_ai_gateway_service
 from backend.core.security import get_current_user
@@ -24,7 +24,7 @@ from backend.services.chat_service.message_service import (
     translate_message_text,
 )
 from backend.services.chat_service.query_service import get_room_for_member
-from backend.services.file_asset_service import register_file_asset
+from backend.services.files.file_asset_service import register_file_asset
 
 from .router import (
     ALLOWED_EXTENSIONS,
@@ -32,14 +32,15 @@ from .router import (
     MAX_UPLOAD_SIZE,
     _MAGIC_SIGNATURES,
     _storage_path_from_file_url,
-    chat_router,
     manager,
 )
+
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
 
-@chat_router.get("/rooms/{room_id}/messages")
+@router.get("/rooms/{room_id}/messages")
 async def get_messages(
     room_id: str,
     before: str = Query(None),
@@ -55,7 +56,7 @@ async def get_messages(
     )
 
 
-@chat_router.post("/rooms/{room_id}/messages")
+@router.post("/rooms/{room_id}/messages")
 async def send_message_rest(
     room_id: str,
     body: ChatSendMessageSchema,
@@ -85,14 +86,14 @@ async def send_message_rest(
     return {"ok": True, "message": message}
 
 
-@chat_router.post("/rooms/{room_id}/read")
+@router.post("/rooms/{room_id}/read")
 async def mark_read(room_id: str, user: dict = Depends(get_current_user)):
     """Mark all messages in a room as read by current user."""
     await mark_room_read(room_id=room_id, user_id=str(user["id"]))
     return {"ok": True}
 
 
-@chat_router.post("/messages/{message_id}/recall")
+@router.post("/messages/{message_id}/recall")
 async def recall_message(message_id: str, user: dict = Depends(get_current_user)):
     """Recall (delete for everyone) a message within 2 minutes of sending."""
     result = await recall_room_message(message_id=message_id, user_id=str(user["id"]))
@@ -105,7 +106,7 @@ async def recall_message(message_id: str, user: dict = Depends(get_current_user)
     return {"ok": True}
 
 
-@chat_router.post("/messages/translate")
+@router.post("/messages/translate")
 async def translate_message(
     body: ChatTranslateSchema,
     user: dict = Depends(get_current_user),
@@ -122,7 +123,7 @@ async def translate_message(
     return {"ok": True, "translated": translated}
 
 
-@chat_router.post("/messages/batch-delete")
+@router.post("/messages/batch-delete")
 async def batch_delete_messages(
     body: ChatBatchDeleteSchema,
     user: dict = Depends(get_current_user),
@@ -132,7 +133,7 @@ async def batch_delete_messages(
     return {"ok": True, "deleted": deleted}
 
 
-@chat_router.post("/rooms/{room_id}/forward")
+@router.post("/rooms/{room_id}/forward")
 async def forward_messages(
     room_id: str,
     body: ChatForwardSchema,
@@ -153,7 +154,7 @@ async def forward_messages(
     return {"ok": True, "forwarded": len(forwarded)}
 
 
-@chat_router.post("/rooms/{room_id}/upload")
+@router.post("/rooms/{room_id}/upload")
 async def upload_file(
     room_id: str,
     file: UploadFile = File(...),
@@ -214,3 +215,4 @@ async def upload_file(
         "fileSize": len(data),
         "mimeType": file.content_type or "application/octet-stream",
     }
+

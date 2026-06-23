@@ -20,7 +20,9 @@ from backend.core.dependencies import (
 )
 from backend.schemas import FeedbackSchema
 from backend.services.ai_gateway_service import AIGatewayService
-from .router import ai_gateway_router, STREAM_CHUNK_DELAY_SECONDS, STREAM_MAX_WAIT_SECONDS
+from .router import STREAM_CHUNK_DELAY_SECONDS, STREAM_MAX_WAIT_SECONDS
+from fastapi import APIRouter
+router = APIRouter()
 from .grading_context_helpers import (
     _get_submission_bundle,
     _compact_chat_history,
@@ -36,7 +38,7 @@ from .grading_context_helpers import (
 logger = logging.getLogger(__name__)
 
 
-@ai_gateway_router.post("/feedback")
+@router.post("/feedback")
 async def request_feedback(
     payload: FeedbackSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),
@@ -95,7 +97,7 @@ async def request_feedback(
     }
 
 
-@ai_gateway_router.post("/feedback/stream")
+@router.post("/feedback/stream")
 async def request_feedback_stream(  # NOSONAR
     payload: FeedbackSchema,
     ai_gateway_service: AIGatewayService = Depends(get_ai_gateway_service),

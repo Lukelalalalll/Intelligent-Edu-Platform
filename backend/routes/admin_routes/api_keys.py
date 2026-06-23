@@ -8,13 +8,14 @@ from fastapi import Depends, HTTPException
 
 from backend.config import Config
 from backend.core.security import get_admin_user
-from .router import admin_router
+from fastapi import APIRouter
+router = APIRouter()
 
 # Allowed env var names for API key updates (whitelist)
 _EDITABLE_KEY_ALIASES = {"COZE_TOKEN", "DEEPSEEK_API_KEY", "ZHIPU_API_KEY", "SERP_API_KEY"}
 
 
-@admin_router.post("/verify-password")
+@router.post("/verify-password")
 async def verify_admin_password(
     req: dict,
     admin: dict = Depends(get_admin_user),
@@ -29,7 +30,7 @@ async def verify_admin_password(
     return {"verified": True}
 
 
-@admin_router.get("/api-keys")
+@router.get("/api-keys")
 async def get_api_keys(admin: dict = Depends(get_admin_user)):
     """Return configured API key metadata (masked). Never returns raw keys."""
     keys = [
@@ -41,7 +42,7 @@ async def get_api_keys(admin: dict = Depends(get_admin_user)):
     return {"keys": keys}
 
 
-@admin_router.put("/api-keys")
+@router.put("/api-keys")
 async def update_api_key(
     req: dict,
     admin: dict = Depends(get_admin_user),

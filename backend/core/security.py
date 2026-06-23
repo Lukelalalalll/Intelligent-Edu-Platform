@@ -1,12 +1,12 @@
-from jose import JWTError
+﻿from jose import JWTError
 from fastapi import Request, HTTPException, Depends
 from cachetools import TTLCache
 from backend.config import Config
 from backend.repositories import session_repo
 from backend.repositories import user_repo
-from backend.services.auth_session_service import decode_access_token, get_active_session_for_access
+from backend.services.auth.auth_session_service import decode_access_token, get_active_session_for_access
 
-# In-memory user cache — avoids hitting MongoDB on every authenticated request.
+# In-memory user cache 鈥?avoids hitting MongoDB on every authenticated request.
 # TTL=30s keeps it fresh enough; maxsize prevents unbounded growth.
 _user_cache: TTLCache = TTLCache(maxsize=512, ttl=30)
 
@@ -82,7 +82,7 @@ async def require_step_up(
     expires_at = session_doc.get("step_up_expires_at")
     if not expires_at:
         raise HTTPException(status_code=403, detail="Step-up authentication required")
-    from backend.services.password_security_service import utcnow
+    from backend.services.auth.password_security_service import utcnow
 
     if expires_at <= utcnow():
         raise HTTPException(status_code=403, detail="Step-up authentication required")
@@ -95,11 +95,11 @@ def get_admin_user(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
-# ── Shared authorization helpers ──────────────────────────────────────
+# 鈹€鈹€ Shared authorization helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 def teacher_owns_course(user: dict, course: dict) -> bool:
     user_id = str(user.get("id") or user.get("_id") or "")
-    # Check all teacher id fields — v2 uses ownerTeacherId, legacy uses teacherId
+    # Check all teacher id fields 鈥?v2 uses ownerTeacherId, legacy uses teacherId
     for field in ("teacherId", "ownerTeacherId"):
         tid = str(course.get(field) or "")
         if user_id and tid and user_id == tid:
@@ -157,3 +157,4 @@ def can_access_course(course: dict, user: dict) -> bool:
     if user.get("role") != "teacher":
         return False
     return teacher_owns_course(user, course)
+

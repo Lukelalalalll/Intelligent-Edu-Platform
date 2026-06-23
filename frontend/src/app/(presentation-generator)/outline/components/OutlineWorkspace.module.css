@@ -1,3 +1,5 @@
+/* Page shell */
+
 .page {
   width: 100%;
   min-height: calc(100dvh - var(--nav-height, 60px));
@@ -23,6 +25,8 @@
   flex-direction: column;
   gap: 1rem;
 }
+
+/* Shared surfaces and text styles */
 
 .surfaceCard {
   position: relative;
@@ -58,24 +62,17 @@
   box-shadow: 0 22px 42px -24px rgba(0, 123, 85, 0.14);
 }
 
-.controlCard,
 .contentCard,
 .sideCard,
 .footerInner {
   padding: 1.35rem;
 }
 
-.controlCard {
+.contentCard,
+.sideCard,
+.templateGroup {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-}
-
-.controlTop {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
 }
 
@@ -88,7 +85,6 @@
 
 .badge,
 .mutedBadge,
-.statusBadge,
 .footerBadge,
 .itemPill,
 .itemStatus {
@@ -102,7 +98,6 @@
 
 .badge,
 .mutedBadge,
-.statusBadge,
 .footerBadge {
   padding: 0.45rem 0.85rem;
   font-size: 0.72rem;
@@ -123,42 +118,21 @@
   color: #667085;
 }
 
-.statusBadge {
-  border: 1px solid rgba(12, 74, 110, 0.12);
-  background: rgba(239, 248, 255, 0.92);
-  color: #175cd3;
-}
-
 .footerBadge {
   border: 1px solid rgba(0, 123, 85, 0.14);
   background: rgba(237, 248, 242, 0.96);
   color: #0b6b4b;
 }
 
-.controlTitle,
 .sectionTitle,
 .sideTitle,
-.metricValue,
 .footerTitle,
 .groupTitle {
   margin: 0;
   color: #101828;
-}
-
-.controlTitle,
-.sectionTitle,
-.sideTitle,
-.footerTitle,
-.groupTitle {
   font-family: var(--heading-font-family, var(--font-unbounded), sans-serif);
   font-weight: 500;
   letter-spacing: 0;
-}
-
-.controlTitle {
-  max-width: 16ch;
-  font-size: clamp(1.85rem, 2.8vw, 2.6rem);
-  line-height: 1.05;
 }
 
 .sectionTitle {
@@ -172,18 +146,7 @@
   line-height: 1.2;
 }
 
-.metricValue {
-  font-family: var(--font-unbounded), var(--font-instrument-sans), sans-serif;
-  font-size: clamp(1.3rem, 1.65vw, 1.6rem);
-  line-height: 1;
-  font-weight: 500;
-}
-
-.controlDescription,
 .sectionDescription,
-.tabNote,
-.metricLabel,
-.metricMeta,
 .sideDescription,
 .summaryLabel,
 .summaryValue,
@@ -196,13 +159,6 @@
   color: #667085;
 }
 
-.controlDescription {
-  max-width: 64ch;
-  font-size: 1rem;
-  line-height: 1.78;
-}
-
-.tabNote,
 .sectionDescription,
 .sideDescription,
 .helperText,
@@ -211,45 +167,7 @@
   line-height: 1.72;
 }
 
-.metricGrid {
-  display: grid;
-  flex: 0 1 540px;
-  min-width: min(100%, 320px);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
-.metricCard {
-  display: flex;
-  min-height: 112px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.8rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.74);
-  padding: 1rem;
-}
-
-.metricLabel {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.metricMeta {
-  font-size: 0.88rem;
-  line-height: 1.6;
-}
-
-.tabsBar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
+/* Tabs, layout, and surrounding panels */
 
 .tabsRail {
   display: flex;
@@ -265,10 +183,10 @@
 
 .tabsList {
   display: inline-flex;
-  height: auto;
-  min-height: 3.35rem;
   width: fit-content;
   max-width: 100%;
+  min-height: 3.35rem;
+  height: auto;
   flex-wrap: wrap;
   align-items: stretch;
   justify-content: flex-start;
@@ -286,13 +204,13 @@
   min-height: 44px;
   border: 1px solid transparent;
   border-radius: 999px;
+  background: transparent;
   padding: 0 1.1rem;
+  color: #475467;
+  box-shadow: none;
   font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #475467;
-  background: transparent;
-  box-shadow: none;
   transition:
     transform 180ms ease,
     border-color 180ms ease,
@@ -319,32 +237,21 @@
 
 .workspaceGrid {
   display: grid;
+  align-items: start;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
-  align-items: start;
-}
-
-.mainColumn,
-.sideColumn,
-.contentCard,
-.sideCard,
-.templateGroup {
-  display: flex;
-  flex-direction: column;
 }
 
 .mainColumn,
 .sideColumn {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
   gap: 1rem;
 }
 
 .tabPanel {
   margin: 0;
-}
-
-.contentCard {
-  gap: 1rem;
 }
 
 .fullWidthPanel {
@@ -359,6 +266,8 @@
   justify-content: space-between;
   gap: 1rem;
 }
+
+/* Outline panel */
 
 .statusRow {
   display: flex;
@@ -380,10 +289,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
+  color: #0b6b4b;
   font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0b6b4b;
 }
 
 .statusDot {
@@ -400,6 +309,7 @@
   min-width: 220px;
 }
 
+/* Keep the scroll behavior isolated to the outline panel so the page frame stays still. */
 .listViewport {
   min-height: 320px;
   max-height: min(68vh, 920px);
@@ -419,10 +329,14 @@
   background-clip: padding-box;
 }
 
-.listStack {
+.listStack,
+.skeletonWrap {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.listStack {
   padding-bottom: 0.35rem;
 }
 
@@ -446,10 +360,10 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.94);
   padding: 0 1rem;
+  color: #0b6b4b;
   font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
   font-size: 0.92rem;
   font-weight: 700;
-  color: #0b6b4b;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
@@ -469,11 +383,7 @@
   opacity: 0.6;
 }
 
-.skeletonWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
+/* Loading and empty states */
 
 .skeletonCard {
   display: flex;
@@ -515,12 +425,16 @@
   width: 58%;
 }
 
-.emptyState {
+.emptyState,
+.loadingState {
   display: flex;
-  min-height: 320px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.emptyState {
+  min-height: 320px;
   gap: 0.9rem;
   border: 1px dashed rgba(15, 23, 42, 0.12);
   border-radius: 22px;
@@ -530,15 +444,26 @@
 }
 
 .emptyIcon {
+  display: inline-flex;
   width: 3.5rem;
   height: 3.5rem;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   background: rgba(0, 123, 85, 0.08);
   color: #0b6b4b;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
+
+.loadingState {
+  min-height: 180px;
+  gap: 0.8rem;
+  border: 1px dashed rgba(15, 23, 42, 0.12);
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.55);
+  padding: 1.5rem;
+}
+
+/* Outline item cards */
 
 .itemCard {
   position: relative;
@@ -604,7 +529,8 @@
   gap: 0.75rem;
 }
 
-.itemHandle {
+.itemHandle,
+.itemDeleteButton {
   display: inline-flex;
   width: 36px;
   height: 36px;
@@ -623,6 +549,26 @@
 
 .itemHandleStatic {
   cursor: default;
+}
+
+.itemDeleteButton {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.itemDeleteButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(248, 113, 113, 0.24);
+  color: #b42318;
+  box-shadow: 0 16px 28px -26px rgba(180, 35, 24, 0.42);
+}
+
+.itemDeleteButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .itemMeta {
@@ -666,36 +612,6 @@
   color: #475467;
 }
 
-.itemDeleteButton {
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  color: #344054;
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.itemDeleteButton:hover {
-  transform: translateY(-1px);
-  border-color: rgba(248, 113, 113, 0.24);
-  color: #b42318;
-  box-shadow: 0 16px 28px -26px rgba(180, 35, 24, 0.42);
-}
-
-.itemDeleteButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .itemBody {
   padding-top: 0.95rem;
 }
@@ -708,12 +624,12 @@
 
 .itemStreamingBody {
   min-height: 124px;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
   word-break: break-word;
-  overflow-wrap: anywhere;
+  color: #1f2937;
   font-size: 0.97rem;
   line-height: 1.84;
-  color: #1f2937;
 }
 
 .itemStreamingBodyActive {
@@ -725,9 +641,9 @@
   align-items: center;
   gap: 0.45rem;
   margin-top: 0.85rem;
+  color: #0b6b4b;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #0b6b4b;
 }
 
 .streamCaret {
@@ -774,10 +690,10 @@
 .markdownBody :global(h2),
 .markdownBody :global(h3) {
   margin: 0 0 0.75rem;
-  font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
   color: #101828;
-  line-height: 1.3;
+  font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .markdownBody :global(h1) {
@@ -814,8 +730,8 @@
 }
 
 .emptyText {
-  font-size: 0.96rem;
   color: #667085;
+  font-size: 0.96rem;
 }
 
 .itemTextarea {
@@ -826,10 +742,10 @@
   border-radius: 16px;
   background: rgba(251, 252, 253, 0.98);
   padding: 0.95rem 1rem;
+  box-shadow: none;
+  color: #101828;
   font-size: 0.96rem;
   line-height: 1.78;
-  color: #101828;
-  box-shadow: none;
 }
 
 .itemTextarea:focus-visible {
@@ -837,9 +753,7 @@
   box-shadow: 0 0 0 4px rgba(124, 81, 248, 0.12);
 }
 
-.sideCard {
-  gap: 1rem;
-}
+/* Template, summary, and footer areas */
 
 .summaryList {
   display: flex;
@@ -869,10 +783,10 @@
 }
 
 .summaryValue {
+  color: #101828;
   text-align: right;
   font-size: 0.92rem;
   line-height: 1.55;
-  color: #101828;
 }
 
 .sideList {
@@ -935,30 +849,14 @@
   gap: 1rem;
 }
 
-.templateGroup {
-  gap: 1rem;
-}
-
-.templateGrid,
-.templatePreviewGrid {
+.templateGrid {
   display: grid;
+  align-items: stretch;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  align-items: stretch;
 }
 
-.loadingState {
-  display: flex;
-  min-height: 180px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  border: 1px dashed rgba(15, 23, 42, 0.12);
-  border-radius: 20px;
-  background: rgba(248, 250, 252, 0.55);
-  padding: 1.5rem;
-}
+/* Motion and responsive adjustments */
 
 @keyframes shimmer {
   0% {
@@ -1043,20 +941,10 @@
     padding-inline: 0.65rem;
   }
 
-  .controlCard,
   .contentCard,
   .sideCard,
   .footerInner {
     padding: 1.05rem;
-  }
-
-  .controlTitle {
-    max-width: 100%;
-    font-size: 1.7rem;
-  }
-
-  .metricGrid {
-    grid-template-columns: 1fr;
   }
 
   .tabsList {

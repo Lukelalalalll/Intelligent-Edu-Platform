@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from contextlib import suppress
 from datetime import datetime
 import json
@@ -14,7 +14,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from backend.presenton_runtime_context import resolve_presenton_owner_user_id
-from backend.services.presenton_projection_service import (
+from backend.services.presenton.presenton_projection_service import (
     PRESENTON_MONGO_PROJECTION_SERVICE,
 )
 from constants.presentation import DEFAULT_TEMPLATES, MAX_NUMBER_OF_SLIDES
@@ -1361,3 +1361,4 @@ async def derive_presentation_from_existing_one(
         **presentation_and_path.model_dump(),
         edit_path=f"/presentation?id={new_presentation.id}",
     )
+

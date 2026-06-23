@@ -17,7 +17,7 @@ import SlideScale from "../../components/PresentationRender";
 import type { Theme } from "../../services/api/types";
 import { applyPresentationThemeToElement } from "../utils/applyPresentationThemeDom";
 
-interface PresentationModeProps {
+export interface PresentationModeProps {
   slides: Slide[];
   currentSlide: number;
   theme?: Theme | null;

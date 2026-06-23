@@ -1,21 +1,11 @@
 import React from 'react';
-
-export interface AnnotationData {
-    id?: string;
-    pageNumber?: number;
-    x?: number;
-    y?: number;
-    title?: string;
-    comment?: string;
-    aiSuggestion?: string;
-    timestamp?: string;
-}
+import type { WorkbenchAnnotation } from '../types/workbench';
 
 interface LabelEditorProps {
-    annotation: AnnotationData;
+    annotation: WorkbenchAnnotation;
     saving?: boolean;
     localError?: string;
-    onChangeAnnotation: (fn: (prev: AnnotationData) => AnnotationData) => void;
+    onChangeAnnotation: (fn: (prev: WorkbenchAnnotation) => WorkbenchAnnotation) => void;
     onSave: () => void;
     onDelete: () => void;
     onClose: () => void;

@@ -1,6 +1,6 @@
 // frontend/src/features/chat/components/MessageBubble.tsx
 
-import React, { memo, useState, useCallback, useRef } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import type { ChatMessage } from '../types';
 import globalStyles from '../styles/globals.module.css';
@@ -37,6 +37,22 @@ interface Props {
     onEnterMultiSelect: (id: string) => void;
     onTransfer?: (msg: ChatMessage) => void;
 }
+
+type AnchorRect = {
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+};
+
+type ContextMenuState = {
+    x: number;
+    y: number;
+    anchorRect: AnchorRect;
+    preferredSide: 'left' | 'right';
+};
 
 function formatMsgTime(iso: string): string {
     if (!iso) return '';
@@ -95,107 +111,380 @@ function buildDownloadName(name?: string, mimeType?: string, fileUrl?: string): 
     return `${raw}.${hintedExt}`;
 }
 
-function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onToggleSelect, onQuote, onEnterMultiSelect, onTransfer }: Props) {
+function buildContextMenuState(
+    bubbleEl: HTMLDivElement | null,
+    isOwn: boolean,
+    fallbackPoint?: { x: number; y: number },
+): ContextMenuState | null {
+    const preferredSide = isOwn ? 'left' : 'right';
+
+    if (bubbleEl) {
+        const rect = bubbleEl.getBoundingClientRect();
+        return {
+            x: isOwn ? rect.left : rect.right,
+            y: rect.top + rect.height / 2,
+            anchorRect: {
+                top: rect.top,
+                left: rect.left,
+                right: rect.right,
+                bottom: rect.bottom,
+                width: rect.width,
+                height: rect.height,
+            },
+            preferredSide,
+        };
+    }
+
+    if (!fallbackPoint) return null;
+
+    return {
+        x: fallbackPoint.x,
+        y: fallbackPoint.y,
+        anchorRect: {
+            top: fallbackPoint.y,
+            left: fallbackPoint.x,
+            right: fallbackPoint.x,
+            bottom: fallbackPoint.y,
+            width: 0,
+            height: 0,
+        },
+        preferredSide,
+    };
+}
+
+function renderSystemMessage(content: string) {
+    return (
+        <div className={styles.systemMessage}>
+            <span className={styles.systemMessageText}>{content}</span>
+        </div>
+    );
+}
+
+function renderRecalledMessage(isOwn: boolean, senderName: string) {
+    return (
+        <div className={`${styles.messageRow} ${isOwn ? styles.messageRowOwn : styles.messageRowOther}`}>
+            <div className={`${styles.messageBubble} ${styles.recalledBubble}`}>
+                <i className="fas fa-ban" style={{ marginRight: 6, opacity: 0.5 }} />
+                <span className={styles.recalledText}>
+                    {isOwn ? 'You recalled this message' : `${senderName} recalled a message`}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function MessageBubbleHeader({
+    isOwn,
+    showSender,
+    senderName,
+    forwardedFrom,
+    replyTo,
+}: {
+    isOwn: boolean;
+    showSender: boolean;
+    senderName: string;
+    forwardedFrom?: string | null;
+    replyTo?: ChatMessage['replyTo'];
+}) {
+    return (
+        <>
+            {!isOwn && showSender && (
+                <div className={styles.messageSender}>{senderName}</div>
+            )}
+
+            {forwardedFrom && (
+                <div className={styles.forwardedLabel}>
+                    <i className="fas fa-share" style={{ marginRight: 4, fontSize: '0.7rem' }} />
+                    Forwarded from {forwardedFrom}
+                </div>
+            )}
+
+            {replyTo && (
+                <div className={styles.replySnippet}>
+                    <div className={styles.replySnippetName}>{replyTo.senderName}</div>
+                    <div className={styles.replySnippetText}>{replyTo.content}</div>
+                </div>
+            )}
+        </>
+    );
+}
+
+function MessageBubbleAttachment({
+    message,
+    fileUrl,
+    isImage,
+    canTransfer,
+    onDownload,
+    onTransfer,
+}: {
+    message: ChatMessage;
+    fileUrl: string;
+    isImage: boolean;
+    canTransfer: boolean;
+    onDownload: React.MouseEventHandler<HTMLElement>;
+    onTransfer?: (msg: ChatMessage) => void;
+}) {
+    if (isImage) {
+        return (
+            <div className={styles.imageMsgWrapper}>
+                <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <img
+                        src={fileUrl}
+                        alt={message.fileName || 'image'}
+                        className={styles.imageMsgThumb}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                            // Preserve the current broken-image marker without changing the UI contract.
+                            (e.currentTarget.closest(`.${styles.imageMsgWrapper}`) as HTMLElement | null)
+                                ?.setAttribute('data-broken', 'true');
+                        }}
+                    />
+                </a>
+                <div className={styles.imageMsgMeta}>
+                    <span className={styles.imageMsgName}>{message.fileName}</span>
+                    <button
+                        className={styles.imageMsgDownload}
+                        onClick={onDownload}
+                        title="Download"
+                    >
+                        <i className="fas fa-download" />
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.fileCard}>
+            <div
+                className={styles.fileCardMain}
+                onClick={onDownload}
+                role="button"
+                tabIndex={0}
+                aria-busy={false}
+            >
+                <i className={`fas ${getFileIcon(message.mimeType)} ${styles.fileCardIcon}`} />
+                <div className={styles.fileCardInfo}>
+                    <span className={styles.fileCardName}>{message.fileName}</span>
+                    <span className={styles.fileCardSize}>{formatFileSize(message.fileSize)}</span>
+                </div>
+                <i className="fas fa-download" style={{ marginLeft: 'auto', opacity: 0.6 }} />
+            </div>
+            {canTransfer && (
+                <button
+                    className={styles.transferBtn}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onTransfer?.(message);
+                    }}
+                    title="Send to module"
+                >
+                    <i className="fas fa-exchange-alt" style={{ marginRight: 4 }} />
+                    Transfer
+                </button>
+            )}
+        </div>
+    );
+}
+
+function MessageBubbleBody({
+    message,
+    isFile,
+    isImage,
+    fileUrl,
+    canTransfer,
+    onDownload,
+    onTransfer,
+}: {
+    message: ChatMessage;
+    isFile: boolean;
+    isImage: boolean;
+    fileUrl: string;
+    canTransfer: boolean;
+    onDownload: React.MouseEventHandler<HTMLElement>;
+    onTransfer?: (msg: ChatMessage) => void;
+}) {
+    if (!isFile) {
+        return <div>{message.content}</div>;
+    }
+
+    return (
+        <MessageBubbleAttachment
+            message={message}
+            fileUrl={fileUrl}
+            isImage={isImage}
+            canTransfer={canTransfer}
+            onDownload={onDownload}
+            onTransfer={onTransfer}
+        />
+    );
+}
+
+function MessageBubbleStatus({ sentAt }: { sentAt: string }) {
+    return <div className={styles.messageTime}>{formatMsgTime(sentAt)}</div>;
+}
+
+function MessageBubbleActions({
+    children,
+    multiSelect,
+    selected,
+    messageId,
+    onToggleSelect,
+    showRecallButton,
+    onRecall,
+    contextMenu,
+    contextMenuProps,
+}: {
+    children: React.ReactNode;
+    multiSelect: boolean;
+    selected: boolean;
+    messageId: string;
+    onToggleSelect: (id: string) => void;
+    showRecallButton: boolean;
+    onRecall: () => void | Promise<void>;
+    contextMenu: ContextMenuState | null;
+    contextMenuProps: {
+        isOwn: boolean;
+        canRecall: boolean;
+        messageContent: string;
+        messageId: string;
+        onClose: () => void;
+        onCopy: () => void;
+        onQuote: () => void;
+        onRecall: () => void | Promise<void>;
+        onMultiSelect: () => void;
+    };
+}) {
+    return (
+        <>
+            {multiSelect && (
+                <div className={styles.multiSelectCheck}>
+                    <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => onToggleSelect(messageId)}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+
+            {showRecallButton && (
+                <button
+                    className={styles.recallBtn}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        void onRecall();
+                    }}
+                    title="Recall message"
+                >
+                    <i className="fas fa-undo-alt" />
+                </button>
+            )}
+
+            {children}
+
+            {contextMenu && (
+                <MessageContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    anchorRect={contextMenu.anchorRect}
+                    preferredSide={contextMenu.preferredSide}
+                    isOwn={contextMenuProps.isOwn}
+                    canRecall={contextMenuProps.canRecall}
+                    messageContent={contextMenuProps.messageContent}
+                    messageId={contextMenuProps.messageId}
+                    onClose={contextMenuProps.onClose}
+                    onCopy={contextMenuProps.onCopy}
+                    onQuote={contextMenuProps.onQuote}
+                    onRecall={contextMenuProps.onRecall}
+                    onMultiSelect={contextMenuProps.onMultiSelect}
+                />
+            )}
+        </>
+    );
+}
+
+function MessageBubble({
+    message,
+    isOwn,
+    showSender,
+    multiSelect,
+    selected,
+    onToggleSelect,
+    onQuote,
+    onEnterMultiSelect,
+    onTransfer,
+}: Props) {
     const [hovering, setHovering] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{
-        x: number;
-        y: number;
-        anchorRect: { top: number; left: number; right: number; bottom: number; width: number; height: number };
-        preferredSide: 'left' | 'right';
-    } | null>(null);
+    const [canRecallAtInteraction, setCanRecallAtInteraction] = useState(false);
+    const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const bubbleRef = useRef<HTMLDivElement>(null);
     const recallMsg = useChatStore((s) => s.recallMessage);
 
-    const canRecall = (() => {
-        if (!isOwn || message.recalled) return false;
-        const diff = (Date.now() - new Date(message.sentAt).getTime()) / 1000;
-        return diff < 120;
-    })();
+    const isFile = message.messageType === 'file';
+    const isImage = isFile && isImageFile(message.mimeType, message.fileName);
+    const fileUrl = chatApi.toAbsoluteFileUrl(message.fileUrl || '');
+    const isPersistedMessage = !String(message.id || '').startsWith('optimistic-');
+    const canTransfer = Boolean(onTransfer && !multiSelect && isPersistedMessage && !message.failed);
+    const canRecall = canRecallAtInteraction;
+    const canOpenMenu = !multiSelect && !message.recalled && message.type !== 'system';
+    const showRecallButton = !multiSelect && isOwn && canRecall && hovering;
 
-    const handleRecall = async () => {
+    const isRecallableNow = useCallback(() => {
+        if (!isOwn || message.recalled) return false;
+        const sentAt = new Date(message.sentAt).getTime();
+        if (Number.isNaN(sentAt)) return false;
+        return Date.now() - sentAt < 120000;
+    }, [isOwn, message.recalled, message.sentAt]);
+
+    const handleRecall = useCallback(async () => {
         try {
             await chatApi.recallMessage(message.id);
             recallMsg(message.roomId, message.id);
         } catch {
             // silently ignore
         }
-    };
+    }, [message.id, message.roomId, recallMsg]);
 
     const handleCopy = useCallback(() => {
         navigator.clipboard.writeText(message.content || '').catch(() => {});
     }, [message.content]);
 
+    const openContextMenu = useCallback((fallbackPoint?: { x: number; y: number }) => {
+        const nextState = buildContextMenuState(bubbleRef.current, isOwn, fallbackPoint);
+        if (nextState) {
+            setContextMenu(nextState);
+        }
+    }, [isOwn]);
+
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (multiSelect || message.recalled || message.type === 'system') return;
-        // Position menu next to the bubble.
-        if (bubbleRef.current) {
-            const rect = bubbleRef.current.getBoundingClientRect();
-            const x = isOwn ? rect.left : rect.right;
-            const y = rect.top + rect.height / 2;
-            setContextMenu({
-                x,
-                y,
-                anchorRect: {
-                    top: rect.top,
-                    left: rect.left,
-                    right: rect.right,
-                    bottom: rect.bottom,
-                    width: rect.width,
-                    height: rect.height,
-                },
-                preferredSide: isOwn ? 'left' : 'right',
-            });
-        } else {
-            setContextMenu({
-                x: e.clientX,
-                y: e.clientY,
-                anchorRect: {
-                    top: e.clientY,
-                    left: e.clientX,
-                    right: e.clientX,
-                    bottom: e.clientY,
-                    width: 0,
-                    height: 0,
-                },
-                preferredSide: isOwn ? 'left' : 'right',
-            });
-        }
-    }, [multiSelect, message.recalled, message.type, isOwn]);
+        if (!canOpenMenu) return;
+        setCanRecallAtInteraction(isRecallableNow());
+        openContextMenu({ x: e.clientX, y: e.clientY });
+    }, [canOpenMenu, isRecallableNow, openContextMenu]);
 
     const handleBubbleClick = useCallback((e: React.MouseEvent) => {
-        if (multiSelect) return; // handled by row click
-        if (message.recalled || message.type === 'system') return;
+        if (!canOpenMenu) return;
         e.stopPropagation();
-        // Position menu next to the bubble.
-        if (bubbleRef.current) {
-            const rect = bubbleRef.current.getBoundingClientRect();
-            const x = isOwn ? rect.left : rect.right;
-            const y = rect.top + rect.height / 2;
-            setContextMenu({
-                x,
-                y,
-                anchorRect: {
-                    top: rect.top,
-                    left: rect.left,
-                    right: rect.right,
-                    bottom: rect.bottom,
-                    width: rect.width,
-                    height: rect.height,
-                },
-                preferredSide: isOwn ? 'left' : 'right',
-            });
-        }
-    }, [multiSelect, message.recalled, message.type, isOwn]);
+        setCanRecallAtInteraction(isRecallableNow());
+        openContextMenu();
+    }, [canOpenMenu, isRecallableNow, openContextMenu]);
 
     const handleClick = useCallback(() => {
         if (multiSelect && !message.recalled && message.type !== 'system') {
             onToggleSelect(message.id);
         }
-    }, [multiSelect, message.id, message.recalled, message.type, onToggleSelect]);
+    }, [message.id, message.recalled, message.type, multiSelect, onToggleSelect]);
 
-    const handleDownload = async (e: React.MouseEvent) => {
+    const handleDownload = useCallback<React.MouseEventHandler<HTMLElement>>(async (e) => {
         e.preventDefault();
         if (!fileUrl) return;
         const downloadName = buildDownloadName(message.fileName, message.mimeType, message.fileUrl);
@@ -223,172 +512,89 @@ function MessageBubble({ message, isOwn, showSender, multiSelect, selected, onTo
                 toast.error('Download failed. Please try again and verify your login session.');
             }
         }
-    };
+    }, [fileUrl, message.fileName, message.fileUrl, message.mimeType]);
+
+    const handleCloseContextMenu = useCallback(() => {
+        setContextMenu(null);
+    }, []);
+
+    const handleQuote = useCallback(() => {
+        onQuote(message);
+    }, [message, onQuote]);
+
+    const handleEnterMultiSelectMode = useCallback(() => {
+        onEnterMultiSelect(message.id);
+    }, [message.id, onEnterMultiSelect]);
+
+    const handleMouseEnter = useCallback(() => {
+        setHovering(true);
+        setCanRecallAtInteraction(isRecallableNow());
+    }, [isRecallableNow]);
+
+    const handleMouseLeave = useCallback(() => {
+        setHovering(false);
+    }, []);
 
     if (message.type === 'system') {
-        return (
-            <div className={styles.systemMessage}>
-                <span className={styles.systemMessageText}>{message.content}</span>
-            </div>
-        );
+        return renderSystemMessage(message.content);
     }
 
     if (message.recalled) {
-        return (
-            <div className={`${styles.messageRow} ${isOwn ? styles.messageRowOwn : styles.messageRowOther}`}>
-                <div className={`${styles.messageBubble} ${styles.recalledBubble}`}>
-                    <i className="fas fa-ban" style={{ marginRight: 6, opacity: 0.5 }} />
-                    <span className={styles.recalledText}>
-                        {isOwn ? 'You recalled this message' : `${message.senderName} recalled a message`}
-                    </span>
-                </div>
-            </div>
-        );
+        return renderRecalledMessage(isOwn, message.senderName);
     }
-
-    const isFile = message.messageType === 'file';
-    const isImage = isFile && isImageFile(message.mimeType, message.fileName);
-    const isPersistedMessage = !String(message.id || '').startsWith('optimistic-');
-    const canTransfer = Boolean(onTransfer && !multiSelect && isPersistedMessage && !message.failed);
-
-    const fileUrl = chatApi.toAbsoluteFileUrl(message.fileUrl || '');
 
     return (
         <div
             className={`${styles.messageRow} ${isOwn ? styles.messageRowOwn : styles.messageRowOther} ${multiSelect ? styles.messageRowMultiSelect : ''} ${selected ? styles.messageRowSelected : ''}`}
-            onMouseEnter={() => setHovering(true)}
-            onMouseLeave={() => setHovering(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onContextMenu={handleContextMenu}
             onClick={handleClick}
         >
-            {multiSelect && (
-                <div className={styles.multiSelectCheck}>
-                    <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => onToggleSelect(message.id)}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
-
-            {!multiSelect && isOwn && canRecall && hovering && (
-                <button className={styles.recallBtn} onClick={(e) => { e.stopPropagation(); handleRecall(); }} title="Recall message">
-                    <i className="fas fa-undo-alt" />
-                </button>
-            )}
-            <div
-                ref={bubbleRef}
-                className={`${styles.messageBubble} ${isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther}`}
-                onClick={handleBubbleClick}
+            <MessageBubbleActions
+                multiSelect={multiSelect}
+                selected={selected}
+                messageId={message.id}
+                onToggleSelect={onToggleSelect}
+                showRecallButton={showRecallButton}
+                onRecall={handleRecall}
+                contextMenu={contextMenu}
+                contextMenuProps={{
+                    isOwn,
+                    canRecall,
+                    messageContent: message.content || '',
+                    messageId: message.id,
+                    onClose: handleCloseContextMenu,
+                    onCopy: handleCopy,
+                    onQuote: handleQuote,
+                    onRecall: handleRecall,
+                    onMultiSelect: handleEnterMultiSelectMode,
+                }}
             >
-                {!isOwn && showSender && (
-                    <div className={styles.messageSender}>{message.senderName}</div>
-                )}
-
-                {message.forwardedFrom && (
-                    <div className={styles.forwardedLabel}>
-                        <i className="fas fa-share" style={{ marginRight: 4, fontSize: '0.7rem' }} />
-                        Forwarded from {message.forwardedFrom}
-                    </div>
-                )}
-
-                {message.replyTo && (
-                    <div className={styles.replySnippet}>
-                        <div className={styles.replySnippetName}>{message.replyTo.senderName}</div>
-                        <div className={styles.replySnippetText}>{message.replyTo.content}</div>
-                    </div>
-                )}
-
-                {isFile ? (
-                    isImage ? (
-                        /* ── Image thumbnail ── */
-                        <div className={styles.imageMsgWrapper}>
-                            <a
-                                href={fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <img
-                                    src={fileUrl}
-                                    alt={message.fileName || 'image'}
-                                    className={styles.imageMsgThumb}
-                                    loading="lazy"
-                                    decoding="async"
-                                    onError={(e) => {
-                                        // Fallback to file card on broken image
-                                        (e.currentTarget.closest(`.${styles.imageMsgWrapper}`) as HTMLElement | null)
-                                            ?.setAttribute('data-broken', 'true');
-                                    }}
-                                />
-                            </a>
-                            <div className={styles.imageMsgMeta}>
-                                <span className={styles.imageMsgName}>{message.fileName}</span>
-                                <button
-                                    className={styles.imageMsgDownload}
-                                    onClick={handleDownload}
-                                    title="Download"
-                                >
-                                    <i className="fas fa-download" />
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        /* ── Generic file card ── */
-                        <div className={styles.fileCard}>
-                            <div
-                                className={styles.fileCardMain}
-                                onClick={handleDownload}
-                                role="button"
-                                tabIndex={0}
-                                aria-busy={false}
-                            >
-                                <i className={`fas ${getFileIcon(message.mimeType)} ${styles.fileCardIcon}`} />
-                                <div className={styles.fileCardInfo}>
-                                    <span className={styles.fileCardName}>{message.fileName}</span>
-                                    <span className={styles.fileCardSize}>{formatFileSize(message.fileSize)}</span>
-                                </div>
-                                <i
-                                    className={`fas fa-download`}
-                                    style={{ marginLeft: 'auto', opacity: 0.6 }}
-                                />
-                            </div>
-                            {canTransfer && (
-                                <button
-                                    className={styles.transferBtn}
-                                    onClick={(e) => { e.stopPropagation(); onTransfer?.(message); }}
-                                    title="Send to module"
-                                >
-                                    <i className="fas fa-exchange-alt" style={{ marginRight: 4 }} />
-                                    Transfer
-                                </button>
-                            )}
-                        </div>
-                    )
-                ) : (
-                    <div>{message.content}</div>
-                )}
-                <div className={styles.messageTime}>{formatMsgTime(message.sentAt)}</div>
-            </div>
-
-            {contextMenu && (
-                <MessageContextMenu
-                    x={contextMenu.x}
-                    y={contextMenu.y}
-                    anchorRect={contextMenu.anchorRect}
-                    preferredSide={contextMenu.preferredSide}
-                    isOwn={isOwn}
-                    canRecall={canRecall}
-                    messageContent={message.content || ''}
-                    messageId={message.id}
-                    onClose={() => setContextMenu(null)}
-                    onCopy={handleCopy}
-                    onQuote={() => onQuote(message)}
-                    onRecall={handleRecall}
-                    onMultiSelect={() => onEnterMultiSelect(message.id)}
-                />
-            )}
+                <div
+                    ref={bubbleRef}
+                    className={`${styles.messageBubble} ${isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther}`}
+                    onClick={handleBubbleClick}
+                >
+                    <MessageBubbleHeader
+                        isOwn={isOwn}
+                        showSender={showSender}
+                        senderName={message.senderName}
+                        forwardedFrom={message.forwardedFrom}
+                        replyTo={message.replyTo}
+                    />
+                    <MessageBubbleBody
+                        message={message}
+                        isFile={isFile}
+                        isImage={isImage}
+                        fileUrl={fileUrl}
+                        canTransfer={canTransfer}
+                        onDownload={handleDownload}
+                        onTransfer={onTransfer}
+                    />
+                    <MessageBubbleStatus sentAt={message.sentAt} />
+                </div>
+            </MessageBubbleActions>
         </div>
     );
 }

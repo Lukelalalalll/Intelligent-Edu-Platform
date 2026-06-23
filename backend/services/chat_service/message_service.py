@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from backend.core.ai_provider import resolve_provider
 from backend.core.database import db
 from backend.core.utils import safe_object_id
-from backend.services.file_asset_service import register_file_asset
+from backend.services.files.file_asset_service import register_file_asset
 
 from .query_service import get_message_by_id, get_room_for_member, serialize_doc, utcnow_iso
 
@@ -299,3 +299,4 @@ async def forward_messages(
         )
 
     return {"room": room, "forwarded": forwarded}
+

@@ -10,10 +10,12 @@ from backend.config import Config
 from backend.core.security import get_current_user
 from backend.services.history_service import get_history_document, list_history, serialize_history_doc
 
-from .router import questions_router, _set_task
+from .router import _set_task
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@questions_router.get("/generation_history")
+@router.get("/generation_history")
 async def get_generation_history(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
@@ -34,7 +36,7 @@ async def get_generation_history(
     }
 
 
-@questions_router.get("/generation_history/{history_id}")
+@router.get("/generation_history/{history_id}")
 async def get_generation_detail(history_id: str, user: dict = Depends(get_current_user)):
     doc = await get_history_document(
         tools=("questions",),
@@ -46,7 +48,7 @@ async def get_generation_detail(history_id: str, user: dict = Depends(get_curren
     return {"success": True, **serialize_history_doc(doc, include_result=True)}
 
 
-@questions_router.post("/generation_history/{history_id}/replay")
+@router.post("/generation_history/{history_id}/replay")
 async def replay_generation_history(history_id: str, request: Request, user: dict = Depends(get_current_user)):
     """Rebuild a fresh sub2 task from a history record so replay can restore the uploaded source file context."""
     doc = await get_history_document(
