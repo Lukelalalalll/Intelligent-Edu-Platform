@@ -1,4 +1,4 @@
-"""Compatibility facade for the extracted implementation module."""
+"""Domain entrypoint for profile and per-user AI configuration services."""
 from __future__ import annotations
 
 from importlib import import_module as _import_module

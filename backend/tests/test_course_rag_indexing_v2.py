@@ -266,6 +266,21 @@ def test_extract_document_payload_fast_auto_skips_docling(monkeypatch, tmp_path)
     assert result.fallback_chain == []
 
 
+def test_normalize_markdown_collapses_blank_lines():
+    normalized = indexing_job_extractors._normalize_markdown("Line 1\r\n\r\n\r\nLine 2\r\n")
+    assert normalized == "Line 1\n\nLine 2"
+
+
+def test_structure_and_quality_helpers_classify_formula_blocks():
+    markdown = "# Algebra\n\nx = y + z\n\nReasoning paragraph with enough length to avoid poor quality."
+    structure = indexing_job_extractors._build_structure_from_markdown(markdown, "algebra.md")
+    assert any(block["element_type"] == "formula" for block in structure["blocks"])
+
+    quality_report = indexing_job_extractors._build_quality_report(markdown, structure)
+    assert quality_report["block_count"] >= 2
+    assert quality_report["section_count"] >= 1
+
+
 def test_build_structured_chunks_preserves_paragraphs_and_tables():
     text = "\n".join(
         [

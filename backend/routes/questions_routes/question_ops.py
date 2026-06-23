@@ -5,16 +5,10 @@ from fastapi import Depends, Query, Request
 
 from backend.core.security import get_current_user
 from backend.schemas import QuestionOpsDedupeApplySchema, QuestionOpsRunCreateSchema
-from backend.services.question_ops_service import (
+from backend.services.questions import (
     apply_question_ops_dedupe as apply_question_ops_dedupe_service,
-)
-from backend.services.question_ops_service import (
     create_question_ops_run as create_question_ops_run_service,
-)
-from backend.services.question_ops_service import (
     get_question_ops_items as get_question_ops_items_service,
-)
-from backend.services.question_ops_service import (
     get_question_ops_run as get_question_ops_run_service,
 )
 

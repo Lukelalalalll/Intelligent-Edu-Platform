@@ -1,5 +1,4 @@
 """Service helpers for sub3 image extraction."""
-
 from __future__ import annotations
 
 import base64
@@ -30,7 +29,6 @@ def img_md5(img: Image.Image) -> str:
 
 
 def collect_image_nodes(node, results):
-    """Recursively collect all image items from opendataloader_pdf JSON output."""
     if str(node.get("type", "")).lower() == "image":
         results.append(node)
     for child in node.get("kids", []):
@@ -38,7 +36,6 @@ def collect_image_nodes(node, results):
 
 
 def extract_images_opendataloader(data: bytes):
-    """Primary: use opendataloader_pdf (fast Java-based extraction)."""
     import glob
     import json
     import os
@@ -49,11 +46,9 @@ def extract_images_opendataloader(data: bytes):
     try:
         img_dir = os.path.join(tmp_dir, "images")
         os.makedirs(img_dir, exist_ok=True)
-
         pdf_path = os.path.join(tmp_dir, "input.pdf")
         with open(pdf_path, "wb") as handle:
             handle.write(data)
-
         convert_pdf(
             input_path=pdf_path,
             output_dir=tmp_dir,
@@ -63,7 +58,6 @@ def extract_images_opendataloader(data: bytes):
             image_dir=img_dir,
             quiet=True,
         )
-
         json_files = glob.glob(os.path.join(tmp_dir, "*.json"))
         page_map = {}
         if json_files:
@@ -90,15 +84,13 @@ def extract_images_opendataloader(data: bytes):
                 colors = pil_img.getcolors(maxcolors=2)
                 if colors and len(colors) == 1:
                     continue
-
                 pno = page_map.get(img_file, 0)
-                chapter = f"Page {pno}" if pno else "Unknown Page"
                 images.append(
                     {
                         "bytes": image_bytes,
                         "ext": "png",
                         "index": idx,
-                        "chapter": chapter,
+                        "chapter": f"Page {pno}" if pno else "Unknown Page",
                         "summary": "Extracted from PDF",
                         "caption": f"Image from page {pno}" if pno else "Image from PDF",
                     }
@@ -112,7 +104,6 @@ def extract_images_opendataloader(data: bytes):
 
 
 def extract_images_fitz(data: bytes):
-    """Fallback: use PyMuPDF (fitz) when opendataloader_pdf fails."""
     import fitz
 
     doc = fitz.open(stream=data, filetype="pdf")
@@ -120,7 +111,6 @@ def extract_images_fitz(data: bytes):
     idx = 0
     for pno in range(len(doc)):
         page = doc[pno]
-        chapter = f"Page {pno + 1}"
         try:
             image_list = page.get_images(full=True)
         except Exception:
@@ -147,7 +137,7 @@ def extract_images_fitz(data: bytes):
                         "bytes": image_bytes,
                         "ext": image_ext,
                         "index": idx,
-                        "chapter": chapter,
+                        "chapter": f"Page {pno + 1}",
                         "summary": "Extracted from PDF",
                         "caption": f"Image from page {pno + 1}",
                     }
@@ -172,7 +162,6 @@ def extract_images_with_info(data: bytes):
 
 
 def extract_images_from_pdf(abs_path: str) -> dict:
-    """Read a PDF from disk and extract images."""
     with open(abs_path, "rb") as handle:
         data = handle.read()
     images = extract_images_with_info(data)
@@ -193,8 +182,4 @@ def extract_images_from_pdf(abs_path: str) -> dict:
                 "caption": img["caption"],
             }
         )
-
-    return {
-        "totalImages": len(images),
-        "imagesByChapter": images_by_chapter,
-    }
+    return {"totalImages": len(images), "imagesByChapter": images_by_chapter}

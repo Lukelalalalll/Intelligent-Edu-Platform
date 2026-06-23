@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 
 from backend.core.database import compute_history_expires_at, db
 from backend.core.security import get_current_user
-from backend.services.diagram_extractor_service import extract_diagrams_from_file
+from backend.services.visual.diagram_extractor_service import extract_diagrams_from_file
 from backend.utils.svg_utils import get_sub4_paths
 from .router import diagram_router
 

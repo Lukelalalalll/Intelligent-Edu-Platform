@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import Depends
 
 from backend.core.security import get_current_user
-from backend.services.user_profile_service import load_profile_courses
+from backend.services.auth.user_profile_service import load_profile_courses
 
 from fastapi import APIRouter
 router = APIRouter()

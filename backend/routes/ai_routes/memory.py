@@ -36,7 +36,7 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
         return cached
     if selected == "deepseek":
         from backend.services.llm_service.deepseek_service import DeepSeekService
-        from backend.services.user_profile_service import load_deepseek_runtime_config
+        from backend.services.auth.user_profile_service import load_deepseek_runtime_config
 
         ok, detail = await DeepSeekService.from_config(
             await load_deepseek_runtime_config(user)

@@ -1,8 +1,8 @@
-"""Tests for backend.services.diagram_service — SVG generation pipeline."""
+"""Tests for backend.services.visual.diagram_service — SVG generation pipeline."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.services.diagram_service import generate_svg
+from backend.services.visual.diagram_service import generate_svg
 from backend.utils.svg_utils import (
     build_fallback_svg,
     estimate_svg_quality,

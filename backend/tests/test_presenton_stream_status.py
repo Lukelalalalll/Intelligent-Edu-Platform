@@ -1,17 +1,28 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import pathlib
+import sys
 import unittest
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 PRESENTATION_ENDPOINT = (
-    ROOT / "backend" / "presenton_runtime" / "api" / "v1" / "ppt" / "endpoints" / "presentation.py"
+    ROOT / "backend" / "presenton_runtime" / "api" / "v1" / "ppt" / "endpoints" / "presentation" / "streaming.py"
 )
 
 
 class PresentonStreamStatusTests(unittest.TestCase):
+    def test_presentation_router_import_path_remains_available(self) -> None:
+        runtime_root = ROOT / "backend" / "presenton_runtime"
+        sys.path.insert(0, str(runtime_root))
+        try:
+            module = importlib.import_module("api.v1.ppt.endpoints.presentation")
+            self.assertTrue(hasattr(module, "PRESENTATION_ROUTER"))
+        finally:
+            sys.path.pop(0)
+
     def test_stream_inner_emits_starting_status_before_heavy_work(self) -> None:
         source = PRESENTATION_ENDPOINT.read_text(encoding="utf-8")
         module = ast.parse(source)

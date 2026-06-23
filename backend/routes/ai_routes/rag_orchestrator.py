@@ -246,7 +246,7 @@ async def _rewrite_query(
         reply = ""
         if resolved_provider == "deepseek":
             from backend.services.llm_service.deepseek_service import DeepSeekService, DeepSeekUnavailableError
-            from backend.services.user_profile_service import load_deepseek_runtime_config
+            from backend.services.auth.user_profile_service import load_deepseek_runtime_config
 
             svc = DeepSeekService.from_config(await load_deepseek_runtime_config(user))
             try:

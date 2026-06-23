@@ -293,7 +293,7 @@ async def _generate_via_deepseek(
         DeepSeekService,
         DeepSeekUnavailableError,
     )
-    from backend.services.user_profile_service import load_deepseek_runtime_config
+    from backend.services.auth.user_profile_service import load_deepseek_runtime_config
 
     deepseek = DeepSeekService.from_config(await load_deepseek_runtime_config(req.user))
     answer_t0 = time.perf_counter()

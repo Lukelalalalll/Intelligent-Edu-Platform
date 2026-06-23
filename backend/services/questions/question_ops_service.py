@@ -53,7 +53,6 @@ def _score_question_item(question: str) -> dict[str, Any]:
         tags.append("reasoning")
     if not tags:
         tags.append("general")
-
     return {
         "quality_score": quality,
         "coverage_tags": tags,
@@ -70,7 +69,6 @@ async def resolve_question_ops_source(
 ) -> str:
     if source_text and source_text.strip():
         return source_text.strip()
-
     if task_id:
         task = request.session.get("sub2_tasks", {}).get(task_id)
         if task:
@@ -82,7 +80,6 @@ async def resolve_question_ops_source(
     latest = await question_ops_repo.find_latest_generation_result_for_user(user.get("id", ""))
     if latest and latest.get("result_full"):
         return str(latest.get("result_full"))
-
     raise HTTPException(
         status_code=400,
         detail="No source content found. Generate questions first or provide source_text.",
@@ -108,7 +105,6 @@ async def create_question_ops_run(
     run_id = uuid.uuid4().hex
     now = datetime.now(timezone.utc)
     dedupe_threshold = float(payload.dedupe_threshold or 0.82)
-
     normalized_seen: dict[str, str] = {}
     items: list[dict[str, Any]] = []
     duplicate_count = 0
@@ -120,12 +116,10 @@ async def create_question_ops_run(
             duplicate_count += 1
         else:
             normalized_seen[normalized] = f"q{idx}"
-
-        item_id = f"q{idx}"
         items.append(
             {
                 "run_id": run_id,
-                "item_id": item_id,
+                "item_id": f"q{idx}",
                 "question": question,
                 "normalized": normalized,
                 "quality_score": base["quality_score"],
@@ -139,14 +133,13 @@ async def create_question_ops_run(
         )
 
     avg_quality = round(sum(item["quality_score"] for item in items) / len(items), 3)
-    source_digest = hashlib.sha256(source_text.encode("utf-8", errors="ignore")).hexdigest()
     run_doc = {
         "run_id": run_id,
         "user_id": user.get("id", ""),
         "course_id": payload.course_id,
         "task_id": payload.task_id,
         "status": "completed",
-        "source_digest": source_digest,
+        "source_digest": hashlib.sha256(source_text.encode("utf-8", errors="ignore")).hexdigest(),
         "dedupe_threshold": dedupe_threshold,
         "summary": {
             "question_count": len(items),
@@ -156,15 +149,9 @@ async def create_question_ops_run(
         "created_at": now,
         "updated_at": now,
     }
-
     await question_ops_repo.insert_run(run_doc)
     await question_ops_repo.insert_items(items)
-    return {
-        "success": True,
-        "run_id": run_id,
-        "status": "completed",
-        "summary": run_doc["summary"],
-    }
+    return {"success": True, "run_id": run_id, "status": "completed", "summary": run_doc["summary"]}
 
 
 async def get_question_ops_run(*, run_id: str, user_id: str) -> dict[str, Any]:
@@ -181,7 +168,6 @@ async def get_question_ops_items(*, run_id: str, user_id: str, limit: int) -> di
     run_doc = await question_ops_repo.find_run(run_id, user_id, {"_id": 1})
     if not run_doc:
         raise HTTPException(status_code=404, detail="QuestionOps run not found")
-
     items = await question_ops_repo.list_items(run_id, projection={"_id": 0, "normalized": 0}, limit=limit)
     for item in items:
         for key in ("created_at", "updated_at"):
@@ -199,7 +185,6 @@ async def apply_question_ops_dedupe(
     run_doc = await question_ops_repo.find_run(run_id, user_id)
     if not run_doc:
         raise HTTPException(status_code=404, detail="QuestionOps run not found")
-
     threshold = float(
         payload.dedupe_threshold
         if payload.dedupe_threshold is not None
@@ -232,10 +217,4 @@ async def apply_question_ops_dedupe(
         removed=removed,
         now=now,
     )
-    return {
-        "success": True,
-        "run_id": run_id,
-        "kept": kept,
-        "removed": removed,
-        "threshold": threshold,
-    }
+    return {"success": True, "run_id": run_id, "kept": kept, "removed": removed, "threshold": threshold}

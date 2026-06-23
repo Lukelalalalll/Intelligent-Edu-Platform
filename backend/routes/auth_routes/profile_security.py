@@ -11,7 +11,7 @@ from backend.schemas import (
     StepUpVerifySchema,
 )
 from backend.services.auth.mfa_security_service import assert_step_up_recent
-from backend.services.user_profile_service import (
+from backend.services.auth.user_profile_service import (
     disable_mfa_for_user,
     generate_new_backup_codes_for_user,
     get_profile_security_state,

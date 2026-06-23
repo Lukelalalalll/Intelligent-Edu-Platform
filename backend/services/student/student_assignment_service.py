@@ -21,7 +21,7 @@ from backend.services.grading_service import (
     list_submissions_for_student,
 )
 from backend.services.auth.security_audit import log_security_event
-from backend.services.user_profile_service import load_profile_courses
+from backend.services.auth.user_profile_service import load_profile_courses
 
 MAX_SUBMISSION_FILE_SIZE = 50 * 1024 * 1024
 

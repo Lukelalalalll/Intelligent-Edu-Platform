@@ -4,7 +4,7 @@ from fastapi import Request
 
 from backend.config import Config
 from backend.core.ai_provider import resolve_provider_runtime
-from backend.services.user_profile_service import (
+from backend.services.auth.user_profile_service import (
     load_deepseek_runtime_config,
     load_openai_runtime_config,
 )

@@ -56,7 +56,7 @@ async def generate_diagram(description: str, diagram_type: str = "flowchart") ->
     Returns a diagram element that the frontend will render."""
     import uuid
     try:
-        from backend.services.diagram_service import DiagramService
+        from backend.services.visual.diagram_service import DiagramService
 
         svc = DiagramService()
         task_id = str(uuid.uuid4())[:8]

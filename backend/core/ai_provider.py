@@ -85,7 +85,7 @@ async def _runtime_for_provider(
     if provider == "openai":
         config: dict[str, Any] = {}
         if user:
-            from backend.services.user_profile_service import load_openai_runtime_config
+            from backend.services.auth.user_profile_service import load_openai_runtime_config
             config = await load_openai_runtime_config(user)
         user_key = str(config.get("api_key") or "").strip()
         env_key = str(getattr(Config, "OPENAI_API_KEY", "") or "").strip()
@@ -114,7 +114,7 @@ async def _runtime_for_provider(
     if provider == "deepseek":
         config = {}
         if user:
-            from backend.services.user_profile_service import load_deepseek_runtime_config
+            from backend.services.auth.user_profile_service import load_deepseek_runtime_config
             config = await load_deepseek_runtime_config(user)
         user_key = str(config.get("api_key") or "").strip()
         env_key = str(Config.DEEPSEEK_API_KEY or "").strip()

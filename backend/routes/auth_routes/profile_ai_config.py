@@ -5,7 +5,7 @@ from fastapi import Depends
 from backend.core.security import get_current_user
 from backend.schemas import DeepSeekConfigSchema, OpenAIConfigSchema
 from backend.services.ai.ai_interact_runtime_cache import invalidate_provider_health_cache
-from backend.services.user_profile_service import (
+from backend.services.auth.user_profile_service import (
     load_ai_config,
     save_deepseek_config,
     save_openai_config,

@@ -199,7 +199,7 @@ async def test_generate_chat_response_uses_deepseek_user_config(monkeypatch):
         seen["phase"] = kwargs["phase"]
 
     monkeypatch.setattr(
-        "backend.services.user_profile_service.load_deepseek_runtime_config",
+        "backend.services.auth.user_profile_service.load_deepseek_runtime_config",
         fake_load_deepseek_runtime_config,
     )
     monkeypatch.setattr(

@@ -4,7 +4,7 @@ import os
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 
-from backend.services.user_profile_service import load_ai_config
+from backend.services.auth.user_profile_service import load_ai_config
 
 from .auth_bridge import get_presenton_current_user, resolve_request_public_origin
 from .bootstrap import ensure_presenton_ready

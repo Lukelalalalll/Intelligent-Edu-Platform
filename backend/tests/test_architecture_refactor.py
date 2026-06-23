@@ -9,6 +9,8 @@ from fastapi.routing import APIRoute, APIWebSocketRoute
 _BACKEND_ROOT = Path(__file__).resolve().parents[1]
 _ROUTES_ROOT = _BACKEND_ROOT / "routes"
 _SERVICES_ROOT = _BACKEND_ROOT / "services"
+_ARCHITECTURE_FACADES_ROOT = _BACKEND_ROOT / "application" / "architecture_facades"
+_PRESENTATION_ENDPOINT_ROOT = _BACKEND_ROOT / "presenton_runtime" / "api" / "v1" / "ppt" / "endpoints" / "presentation"
 
 _ROUTE_DB_IMPORT_ALLOWLIST = {
     "routes/admin_routes/db_console.py",
@@ -21,10 +23,12 @@ _SERVICE_DOMAIN_NAMES = {
     "files",
     "homework",
     "presenton",
+    "questions",
     "rag",
     "slides",
     "student",
     "study",
+    "visual",
 }
 
 _SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST = {
@@ -57,6 +61,28 @@ _LONG_FILE_ALLOWLIST = {
     "services/student/student_assignment_service.py",
     "services/video_service/render/html_renderer.py",
     "services/video_service/script.py",
+}
+
+_ROOT_SERVICE_FILE_ALLOWLIST = {
+    "__init__.py",
+    "background_job_dispatcher.py",
+    "background_job_runtime.py",
+    "grading_normalizer.py",
+    "history_service.py",
+    "mailbox_service.py",
+    "secret_storage.py",
+}
+
+_ARCHITECTURE_IMPL_LONG_ALLOWLIST = {
+    "application/architecture_facades/auth_account_service_impl.py",
+    "application/architecture_facades/auth_session_service_impl.py",
+    "application/architecture_facades/course_rag_chunking_impl.py",
+    "application/architecture_facades/course_rag_indexing_service_impl.py",
+    "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py",
+    "application/architecture_facades/course_rag_retrieval_helpers_impl.py",
+    "application/architecture_facades/course_rag_retrieval_service_impl.py",
+    "application/architecture_facades/course_rag_store_manager_impl.py",
+    "application/architecture_facades/user_profile_service_impl.py",
 }
 
 
@@ -148,6 +174,35 @@ def test_service_layer_does_not_import_route_packages():
             offenders.append(str(path.relative_to(services_root.parent)))
 
     assert offenders == []
+
+
+def test_root_services_only_expose_cross_domain_infra_modules():
+    actual = {path.name for path in _SERVICES_ROOT.glob("*.py")}
+    assert actual == _ROOT_SERVICE_FILE_ALLOWLIST
+
+
+def test_architecture_facades_do_not_import_route_packages():
+    offenders: set[str] = set()
+    for path in _ARCHITECTURE_FACADES_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "from backend.routes" in text or "import backend.routes" in text:
+            offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_architecture_facades_do_not_parse_http_request_shapes():
+    fastapi_pattern = re.compile(r"from\s+fastapi\s+import\s+[^\n]*\b(APIRouter|Body|Query|Path|Depends)\b")
+    offenders: dict[str, list[str]] = {}
+    for path in _ARCHITECTURE_FACADES_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        hits: list[str] = []
+        if fastapi_pattern.search(text):
+            hits.append("fastapi-http-schema-import")
+        if "Annotated[" in text:
+            hits.append("Annotated[")
+        if hits:
+            offenders[_relative_backend_path(path)] = hits
+    assert offenders == {}
 
 
 def test_domain_services_only_use_explicitly_allowlisted_cross_domain_imports():
@@ -360,6 +415,20 @@ def test_presenton_runtime_mount_defers_runtime_router_wiring():
     assert "PRESENTON_HOST_ROUTER.include_router(\n    load_presenton_runtime().API_V1_PPT_ROUTER" not in text
 
 
+def test_presenton_presentation_package_does_not_import_template_font_giants():
+    forbidden = (
+        "templates.pptx_font_utils",
+        "templates.fonts_and_slides_preview",
+    )
+    offenders: dict[str, list[str]] = {}
+    for path in _PRESENTATION_ENDPOINT_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        hits = [token for token in forbidden if token in text]
+        if hits:
+            offenders[_relative_backend_path(path)] = hits
+    assert offenders == {}
+
+
 def test_direct_ai_gateway_instantiation_only_happens_in_provider_factory():
     allowlist = {"services/ai_gateway_service/provider_factory.py"}
     offenders: set[str] = set()
@@ -372,6 +441,39 @@ def test_direct_ai_gateway_instantiation_only_happens_in_provider_factory():
 
     unexpected = offenders - allowlist
     assert unexpected == set()
+
+
+def test_architecture_impl_files_are_explicitly_bounded():
+    offenders: set[str] = set()
+    for path in _ARCHITECTURE_FACADES_ROOT.glob("*_impl.py"):
+        relative = _relative_backend_path(path)
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > 200 and relative not in _ARCHITECTURE_IMPL_LONG_ALLOWLIST:
+            offenders.add(relative)
+    assert offenders == set()
+
+
+def test_architecture_helper_modules_are_bounded():
+    helper_roots = (
+        _ARCHITECTURE_FACADES_ROOT / "indexing_job",
+        _ARCHITECTURE_FACADES_ROOT / "indexing_job_extractors",
+    )
+    offenders: set[str] = set()
+    for root in helper_roots:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_presentation_package_modules_are_bounded():
+    offenders: set[str] = set()
+    for path in _PRESENTATION_ENDPOINT_ROOT.rglob("*.py"):
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > 350:
+            offenders.add(_relative_backend_path(path))
+    assert offenders == set()
 
 
 @pytest.mark.parametrize(

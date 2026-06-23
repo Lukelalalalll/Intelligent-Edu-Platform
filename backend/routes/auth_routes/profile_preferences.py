@@ -4,7 +4,7 @@ from fastapi import Depends
 
 from backend.core.security import get_current_user
 from backend.schemas import TeacherPreferencesSchema
-from backend.services.user_profile_service import load_preferences, save_preferences
+from backend.services.auth.user_profile_service import load_preferences, save_preferences
 
 from fastapi import APIRouter
 router = APIRouter()

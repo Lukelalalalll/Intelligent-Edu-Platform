@@ -356,7 +356,7 @@ async def _dispatch_sub2(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub3 (image-extractor): extract-pdf-images logic."""
-    from backend.services.image_extractor_service import extract_images_from_pdf
+    from backend.services.visual.image_extractor_service import extract_images_from_pdf
 
     result = extract_images_from_pdf(abs_path)
     return {
@@ -367,7 +367,7 @@ async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub4(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub4 (diagram): upload_document logic."""
-    from backend.services.diagram_extractor_service import extract_diagrams_from_file
+    from backend.services.visual.diagram_extractor_service import extract_diagrams_from_file
 
     result = extract_diagrams_from_file(abs_path, file_name)
     return {
