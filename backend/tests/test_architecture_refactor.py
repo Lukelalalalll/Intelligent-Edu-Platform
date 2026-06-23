@@ -75,14 +75,29 @@ _ROOT_SERVICE_FILE_ALLOWLIST = {
 
 _ARCHITECTURE_IMPL_LONG_ALLOWLIST = {
     "application/architecture_facades/auth_account_service_impl.py",
-    "application/architecture_facades/auth_session_service_impl.py",
     "application/architecture_facades/course_rag_chunking_impl.py",
     "application/architecture_facades/course_rag_indexing_service_impl.py",
     "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py",
     "application/architecture_facades/course_rag_retrieval_helpers_impl.py",
-    "application/architecture_facades/course_rag_retrieval_service_impl.py",
     "application/architecture_facades/course_rag_store_manager_impl.py",
     "application/architecture_facades/user_profile_service_impl.py",
+}
+
+_ARCHITECTURE_HELPER_ROOTS = (
+    _ARCHITECTURE_FACADES_ROOT / "indexing_job",
+    _ARCHITECTURE_FACADES_ROOT / "indexing_job_extractors",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_retrieval",
+    _ARCHITECTURE_FACADES_ROOT / "auth_session",
+)
+
+_PRESENTON_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "export_task",
+)
+
+_EXPLICIT_LINE_BOUNDS = {
+    "application/architecture_facades/course_rag_retrieval_service_impl.py": 200,
+    "application/architecture_facades/auth_session_service_impl.py": 200,
+    "presenton_runtime/services/export_task_service.py": 200,
 }
 
 
@@ -454,12 +469,18 @@ def test_architecture_impl_files_are_explicitly_bounded():
 
 
 def test_architecture_helper_modules_are_bounded():
-    helper_roots = (
-        _ARCHITECTURE_FACADES_ROOT / "indexing_job",
-        _ARCHITECTURE_FACADES_ROOT / "indexing_job_extractors",
-    )
     offenders: set[str] = set()
-    for root in helper_roots:
+    for root in _ARCHITECTURE_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_HELPER_ROOTS:
         for path in root.rglob("*.py"):
             line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
             if line_count > 350:
@@ -473,6 +494,16 @@ def test_presenton_presentation_package_modules_are_bounded():
         line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
         if line_count > 350:
             offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_explicit_thin_entrypoints_stay_bounded():
+    offenders: set[str] = set()
+    for relative_path, threshold in _EXPLICIT_LINE_BOUNDS.items():
+        path = _BACKEND_ROOT / Path(relative_path)
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > threshold:
+            offenders.add(f"{relative_path}:{line_count}>{threshold}")
     assert offenders == set()
 
 
