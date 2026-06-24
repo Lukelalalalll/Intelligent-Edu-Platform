@@ -7,10 +7,11 @@ from typing import Any
 from bson import ObjectId
 
 from backend.core.database import db
-
-PRESENTON_PRESENTATIONS_COLLECTION = "presenton_presentations"
-PRESENTON_SLIDES_COLLECTION = "presenton_slides"
-PRESENTON_CHAT_MESSAGES_COLLECTION = "presenton_chat_messages"
+from backend.services.presenton.presenton_projection.constants import (
+    PRESENTON_CHAT_MESSAGES_COLLECTION,
+    PRESENTON_PRESENTATIONS_COLLECTION,
+    PRESENTON_SLIDES_COLLECTION,
+)
 
 
 def _serialize_value(value: Any) -> Any:
