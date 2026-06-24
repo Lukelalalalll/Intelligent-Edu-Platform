@@ -217,6 +217,7 @@ def test_memory_layer_save_create_replace_and_delete(monkeypatch):
         "services.chat.memory_layer_support.chat_memory_slide_ops"
     )
 
+    monkeypatch.setattr(slide_ops, "get_images_directory", lambda: "D:/tmp/images")
     monkeypatch.setattr(slide_ops, "ImageGenerationService", lambda *_args, **_kwargs: object())
     monkeypatch.setattr(slide_ops, "process_slide_and_fetch_assets", AsyncMock(return_value=[]))
     monkeypatch.setattr(

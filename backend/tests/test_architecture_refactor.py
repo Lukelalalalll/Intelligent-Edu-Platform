@@ -55,11 +55,9 @@ _LONG_FILE_ALLOWLIST = {
     "services/rag_service/rag_eval_wizard_service.py",
     "services/slides/html_renderer.py",
     "services/slides/infra/task_tracker.py",
-    "services/slides/output/business_ppt_creator.py",
     "services/slides/output/ppt_creator/core.py",
     "services/student/student_assignment_service.py",
     "services/video_service/render/html_renderer.py",
-    "services/video_service/script.py",
 }
 
 _ROOT_SERVICE_FILE_ALLOWLIST = {
@@ -73,10 +71,8 @@ _ROOT_SERVICE_FILE_ALLOWLIST = {
 }
 
 _ARCHITECTURE_IMPL_LONG_ALLOWLIST = {
-    "application/architecture_facades/auth_account_service_impl.py",
     "application/architecture_facades/course_rag_chunking_impl.py",
     "application/architecture_facades/course_rag_indexing_service_impl.py",
-    "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py",
     "application/architecture_facades/course_rag_retrieval_helpers_impl.py",
     "application/architecture_facades/course_rag_store_manager_impl.py",
 }
@@ -87,11 +83,15 @@ _ARCHITECTURE_HELPER_ROOTS = (
     _ARCHITECTURE_FACADES_ROOT / "course_rag_retrieval",
     _ARCHITECTURE_FACADES_ROOT / "auth_session",
     _ARCHITECTURE_FACADES_ROOT / "user_profile",
+    _ARCHITECTURE_FACADES_ROOT / "auth_account",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_opensearch_sparse_retriever",
 )
 
 _PRESENTON_HELPER_ROOTS = (
     _BACKEND_ROOT / "presenton_runtime" / "services" / "export_task",
     _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "memory_layer_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "service_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "tools_support",
     _BACKEND_ROOT / "services" / "presenton" / "presenton_projection",
 )
 
@@ -101,7 +101,14 @@ _PRESENTON_ENDPOINT_HELPER_ROOTS = (
 
 _PRESENTON_TEMPLATE_HELPER_ROOTS = (
     _BACKEND_ROOT / "presenton_runtime" / "templates" / "fonts_and_slides_preview_support",
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "get_layout_by_name_support",
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "handler_support",
     _BACKEND_ROOT / "presenton_runtime" / "templates" / "pptx_font_utils_support",
+)
+
+_SERVICE_HELPER_ROOTS = (
+    _BACKEND_ROOT / "services" / "video_service" / "script_support",
+    _BACKEND_ROOT / "services" / "slides" / "output" / "business_ppt_creator_support",
 )
 
 _EXPLICIT_LINE_BOUNDS = {
@@ -113,7 +120,15 @@ _EXPLICIT_LINE_BOUNDS = {
     "presenton_runtime/api/v1/ppt/endpoints/pptx_slides.py": 200,
     "services/presenton/presenton_projection_service.py": 200,
     "presenton_runtime/templates/fonts_and_slides_preview.py": 200,
+    "presenton_runtime/templates/handler.py": 200,
     "presenton_runtime/templates/pptx_font_utils.py": 200,
+    "presenton_runtime/services/chat/service.py": 200,
+    "presenton_runtime/services/chat/tools.py": 200,
+    "services/video_service/script.py": 200,
+    "services/slides/output/business_ppt_creator.py": 200,
+    "application/architecture_facades/auth_account_service_impl.py": 200,
+    "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py": 200,
+    "presenton_runtime/templates/get_layout_by_name.py": 200,
 }
 
 
@@ -497,6 +512,16 @@ def test_architecture_helper_modules_are_bounded():
 def test_presenton_helper_modules_are_bounded():
     offenders: set[str] = set()
     for root in _PRESENTON_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_service_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _SERVICE_HELPER_ROOTS:
         for path in root.rglob("*.py"):
             line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
             if line_count > 350:
