@@ -27,6 +27,11 @@ from utils.outline_utils import (
     get_no_of_toc_required_for_n_outlines,
     get_presentation_outline_model_with_toc,
 )
+from utils.presentation_request import infer_requested_slide_count
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
 from utils.ppt_utils import select_toc_or_list_slide_layout_index
 from utils.web_search import get_selected_web_search_provider, get_web_search_route
 
@@ -105,14 +110,26 @@ async def create_presentation(
     web_search: Annotated[bool, Body()] = False,
     sql_session: AsyncSession = Depends(get_async_session),
 ):
-    if n_slides is not None and n_slides < 1:
+    resolved_n_slides = (
+        n_slides
+        if n_slides is not None
+        else infer_requested_slide_count(content, maximum=MAX_NUMBER_OF_SLIDES)
+    )
+    if resolved_n_slides is not None and n_slides is None:
+        logger.info(
+            "Inferred presentation slide count from prompt: count=%s content=%r",
+            resolved_n_slides,
+            content[:200],
+        )
+
+    if resolved_n_slides is not None and resolved_n_slides < 1:
         raise HTTPException(status_code=400, detail="Number of slides must be greater than 0")
-    if n_slides is not None and n_slides > MAX_NUMBER_OF_SLIDES:
+    if resolved_n_slides is not None and resolved_n_slides > MAX_NUMBER_OF_SLIDES:
         raise HTTPException(
             status_code=400,
             detail=f"Number of slides cannot be greater than {MAX_NUMBER_OF_SLIDES}",
         )
-    if include_table_of_contents and n_slides is not None and n_slides < 3:
+    if include_table_of_contents and resolved_n_slides is not None and resolved_n_slides < 3:
         raise HTTPException(
             status_code=400,
             detail="Number of slides cannot be less than 3 if table of contents is included",
@@ -121,8 +138,8 @@ async def create_presentation(
     presentation = PresentationModel(
         id=uuid.uuid4(),
         content=content,
-        n_slides=n_slides if n_slides is not None else 0,
-        language=(language or "").strip(),
+        n_slides=resolved_n_slides if resolved_n_slides is not None else 0,
+        language=normalize_presentation_language(language) or AUTO_PRESENTATION_LANGUAGE,
         file_paths=TEMP_FILE_SERVICE.resolve_existing_temp_paths(file_paths) if file_paths else None,
         tone=tone.value,
         verbosity=verbosity.value,

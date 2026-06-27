@@ -11,8 +11,19 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    CANTONESE_TRADITIONAL_PRESENTATION_LANGUAGE,
+    CHINESE_SIMPLIFIED_PRESENTATION_LANGUAGE,
+    CHINESE_TRADITIONAL_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
+
 # Values must match `LanguageType` string literals in the upload UI.
 PRESENTATION_LANGUAGE_TO_TESSERACT: dict[str, str] = {
+    CHINESE_SIMPLIFIED_PRESENTATION_LANGUAGE: "chi_sim",
+    CHINESE_TRADITIONAL_PRESENTATION_LANGUAGE: "chi_tra",
+    CANTONESE_TRADITIONAL_PRESENTATION_LANGUAGE: "chi_tra",
     "English": "eng",
     "Spanish (Espa帽ol)": "spa",
     "French (Fran莽ais)": "fra",
@@ -112,13 +123,20 @@ _OCR_CODE_RE = re.compile(r"^[a-zA-Z0-9_,+]+$")
 
 def presentation_language_to_ocr_code(language: Optional[str]) -> str:
     """Resolve UI language label to a Tesseract language code; default English."""
-    if language is None:
+    normalized = normalize_presentation_language(language)
+    if normalized is None or normalized == AUTO_PRESENTATION_LANGUAGE:
         return "eng"
-    s = str(language).strip()
+    s = str(normalized).strip()
     if not s:
         return "eng"
     if s in PRESENTATION_LANGUAGE_TO_TESSERACT:
         code = PRESENTATION_LANGUAGE_TO_TESSERACT[s]
+    elif s.casefold().startswith("chinese (simplified"):
+        code = "chi_sim"
+    elif s.casefold().startswith("chinese (traditional"):
+        code = "chi_tra"
+    elif s.casefold().startswith("cantonese (traditional"):
+        code = "chi_tra"
     else:
         code = _LOWER_MAP.get(s.lower(), "eng")
     if not _OCR_CODE_RE.fullmatch(code):

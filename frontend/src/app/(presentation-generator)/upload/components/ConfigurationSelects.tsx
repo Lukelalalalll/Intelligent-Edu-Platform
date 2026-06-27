@@ -24,6 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import AdvanceSettings from "./AdvanceSettings";
+import { getGenerationLanguageLabel } from "../../utils/presentonLanguage";
+import { useI18n } from "@/shared/i18n";
 
 // Types
 interface ConfigurationSelectsProps {
@@ -45,6 +47,7 @@ const SlideCountSelect: React.FC<{
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }> = ({ value, onValueChange, open, onOpenChange }) => {
+    const { t } = useI18n();
     const [customInput, setCustomInput] = useState(
         value && !SLIDE_OPTIONS.includes(value as SlideOption) ? value : ""
     );
@@ -72,7 +75,9 @@ const SlideCountSelect: React.FC<{
         }
     };
 
-    const displayLabel = value ? `${value} slides` : "Auto slides";
+    const displayLabel = value
+        ? t("presenton.upload.slides.label", { count: value })
+        : t("presenton.upload.slides.auto");
 
     return (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -123,7 +128,7 @@ const SlideCountSelect: React.FC<{
                             placeholder="--"
                             className="h-8 w-16 px-2 text-sm"
                         />
-                        <span className="text-sm font-medium">slides</span>
+                        <span className="text-sm font-medium">{t("presenton.upload.slides.inputSuffix")}</span>
                     </div>
                 </div>
                 <Command>
@@ -132,7 +137,7 @@ const SlideCountSelect: React.FC<{
                             {SLIDE_OPTIONS.map((option) => (
                                 <CommandItem
                                     key={option}
-                                    value={`${option} slides`}
+                                    value={t("presenton.upload.slides.label", { count: option })}
                                     role="option"
                                     onSelect={() => {
                                         onValueChange(option);
@@ -147,7 +152,7 @@ const SlideCountSelect: React.FC<{
                                             value === option ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {option} slides
+                                    {t("presenton.upload.slides.label", { count: option })}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -167,6 +172,23 @@ const LanguageSelect: React.FC<{
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }> = ({ value, onValueChange, open, onOpenChange }) => (
+    <LanguageSelectInner
+        value={value}
+        onValueChange={onValueChange}
+        open={open}
+        onOpenChange={onOpenChange}
+    />
+);
+
+const LanguageSelectInner: React.FC<{
+    value: string | null;
+    onValueChange: (value: string) => void;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}> = ({ value, onValueChange, open, onOpenChange }) => {
+    const { t } = useI18n();
+
+    return (
     <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger asChild>
             <button
@@ -179,7 +201,7 @@ const LanguageSelect: React.FC<{
                 <Languages className="w-3.5 h-3.5" />
                 <span className="w-[40px] text-left">
                     <span className="text-xs font-medium truncate block">
-                        {value || "Select language"}
+                        {getGenerationLanguageLabel(value) || t("presenton.upload.language.select")}
                     </span>
                 </span>
                 <ChevronUp className="ml-2 h-4 w-4 shrink-0" />
@@ -189,11 +211,11 @@ const LanguageSelect: React.FC<{
         <PopoverContent className="w-[300px] p-0" align="end">
             <Command>
                 <CommandInput
-                    placeholder="Search language..."
+                    placeholder={t("presenton.upload.language.search")}
                     className="font-instrument_sans"
                 />
                 <CommandList>
-                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandEmpty>{t("presenton.upload.language.empty")}</CommandEmpty>
                     <CommandGroup>
                         {Object.values(LanguageType).map((language) => (
                             <CommandItem
@@ -220,7 +242,8 @@ const LanguageSelect: React.FC<{
             </Command>
         </PopoverContent>
     </Popover>
-);
+    );
+};
 
 export function ConfigurationSelects({
     config,

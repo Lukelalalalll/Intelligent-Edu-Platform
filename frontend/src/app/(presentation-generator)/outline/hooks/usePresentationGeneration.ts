@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import { notify } from "@/components/ui/sonner";
+import { useI18n } from "@/shared/i18n";
 import { clearPresentationData } from "@/store/slices/presentationGeneration";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import { LoadingState, TABS } from "../types/index";
@@ -25,6 +26,7 @@ export const usePresentationGeneration = (
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
   const [loadingState, setLoadingState] = useState<LoadingState>(
     DEFAULT_LOADING_STATE
   );
@@ -32,22 +34,22 @@ export const usePresentationGeneration = (
   const validateInputs = useCallback(() => {
     if (!outlines || outlines.length === 0) {
       notify.warning(
-        "Outlines not ready",
-        "Please wait for your outlines to finish generating before continuing."
+        t("presenton.outline.generate.notify.outlinesNotReady.title"),
+        t("presenton.outline.generate.notify.outlinesNotReady.body")
       );
       return false;
     }
 
     if (!selectedTemplate) {
       notify.warning(
-        "Layout not selected",
-        "Choose a layout group before generating your presentation."
+        t("presenton.outline.generate.notify.layoutNotSelected.title"),
+        t("presenton.outline.generate.notify.layoutNotSelected.body")
       );
       return false;
     }
 
     return true;
-  }, [outlines, selectedTemplate]);
+  }, [outlines, selectedTemplate, t]);
 
   const clearTheme = () => {
     const element = document.getElementById("presentation-page");
@@ -103,7 +105,7 @@ export const usePresentationGeneration = (
     });
 
     setLoadingState({
-      message: "Generating presentation data...",
+      message: t("presenton.outline.generate.loading.presentation"),
       isLoading: true,
       showProgress: true,
       duration: 30,
@@ -115,7 +117,7 @@ export const usePresentationGeneration = (
       // Check if it's a custom template (string = presentationId)
       if (typeof selectedTemplate === "string") {
         setLoadingState({
-          message: "Loading custom template...",
+          message: t("presenton.outline.generate.loading.customTemplate"),
           isLoading: true,
           showProgress: true,
           duration: 30,
@@ -130,12 +132,15 @@ export const usePresentationGeneration = (
           !customTemplateDetail ||
           customTemplateDetail.layouts.length === 0
         ) {
-          notify.error("Template error", "Failed to load custom template layouts.");
+          notify.error(
+            t("presenton.outline.generate.notify.templateError.title"),
+            t("presenton.outline.generate.notify.templateError.body")
+          );
           return;
         }
 
         setLoadingState({
-          message: "Generating presentation data...",
+          message: t("presenton.outline.generate.loading.presentation"),
           isLoading: true,
           showProgress: true,
           duration: 30,
@@ -189,8 +194,8 @@ export const usePresentationGeneration = (
     } catch (error: any) {
       console.error("Error In Presentation Generation(prepare).", error);
       notify.error(
-        "Generation error",
-        error.message || "Error in presentation generation."
+        t("presenton.outline.generate.notify.generationError.title"),
+        error.message || t("presenton.outline.generate.notify.generationError.body")
       );
     } finally {
       setLoadingState(DEFAULT_LOADING_STATE);
@@ -203,6 +208,8 @@ export const usePresentationGeneration = (
     router,
     selectedTemplate,
     pathname,
+    setActiveTab,
+    t,
   ]);
 
   return { loadingState, handleSubmit };

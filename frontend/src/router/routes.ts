@@ -1,6 +1,5 @@
 import type { ComponentType, LazyExoticComponent } from 'react';
 import { lazy } from 'react';
-import { PresentonDashboardRoute } from '@/presenton/routes';
 
 export type AuthMode = 'protected' | 'public' | 'none';
 
@@ -11,6 +10,10 @@ export interface RouteConfig {
   fullScreen?: boolean;
   keyParam?: string;
 }
+
+const PresentonDashboardRoute = lazy(() => import('@/presenton/routes/PresentonDashboardRoute'));
+const PresentonTemplatesRoute = lazy(() => import('@/presenton/routes/PresentonTemplatesRoute'));
+const PresentonThemeRoute = lazy(() => import('@/presenton/routes/PresentonThemeRoute'));
 
 export const ROUTES: RouteConfig[] = [
   { path: '', Component: lazy(() => import('@/features/home/pages/HomePage')), auth: 'protected' },
@@ -40,8 +43,8 @@ export const ROUTES: RouteConfig[] = [
   { path: 'slides/presenton/outline', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonOutlineRoute }))), auth: 'protected' },
   { path: 'slides/presenton/presentation', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPresentationRoute }))), auth: 'protected' },
   { path: 'slides/presenton/dashboard', Component: PresentonDashboardRoute, auth: 'protected' },
-  { path: 'slides/presenton/templates', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatesRoute }))), auth: 'protected' },
-  { path: 'slides/presenton/theme', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonThemeRoute }))), auth: 'protected' },
+  { path: 'slides/presenton/templates', Component: PresentonTemplatesRoute, auth: 'protected' },
+  { path: 'slides/presenton/theme', Component: PresentonThemeRoute, auth: 'protected' },
   { path: 'slides/presenton/settings', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonSettingsRoute }))), auth: 'protected' },
   { path: 'slides/presenton/template-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatePreviewRoute }))), auth: 'protected' },
   { path: 'slides/presenton/custom-template', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonCustomTemplateRoute }))), auth: 'protected' },
@@ -53,8 +56,8 @@ export const ROUTES: RouteConfig[] = [
   { path: 'outline', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonOutlineRoute }))), auth: 'protected' },
   { path: 'presentation', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonPresentationRoute }))), auth: 'protected' },
   { path: 'dashboard', Component: PresentonDashboardRoute, auth: 'protected' },
-  { path: 'templates', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatesRoute }))), auth: 'protected' },
-  { path: 'theme', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonThemeRoute }))), auth: 'protected' },
+  { path: 'templates', Component: PresentonTemplatesRoute, auth: 'protected' },
+  { path: 'theme', Component: PresentonThemeRoute, auth: 'protected' },
   { path: 'settings', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonSettingsRoute }))), auth: 'protected' },
   { path: 'template-preview', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonTemplatePreviewRoute }))), auth: 'protected' },
   { path: 'custom-template', Component: lazy(() => import('@/presenton/routes').then((module) => ({ default: module.PresentonCustomTemplateRoute }))), auth: 'protected' },

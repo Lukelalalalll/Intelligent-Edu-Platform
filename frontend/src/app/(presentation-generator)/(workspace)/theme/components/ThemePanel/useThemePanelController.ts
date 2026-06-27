@@ -5,9 +5,9 @@ import { notify } from '@/components/ui/sonner'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import { ImagesApi } from '@/app/(presentation-generator)/services/api/images'
 import ThemeApi from '@/app/(presentation-generator)/services/api/theme'
-import { getTemplatesByTemplateName } from '@/app/presentation-templates'
 import { usePathname, useRouter, useSearchParams } from '@/presenton/shims/next-navigation'
 import { useFontLoader as loadFontAssets } from '@/app/(presentation-generator)/hooks/useFontLoad'
+import { useI18n } from '@/shared/i18n'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
 import {
   FALLBACK_THEME,
@@ -28,6 +28,8 @@ import {
   mapGeneratedThemeColors,
   normalizeTheme,
 } from './themePanelHelpers'
+import { loadThemePreviewLayouts } from './themePreviewLoader'
+import type { ThemePreviewLayout } from './themePreviewLoader'
 import {
   ThemeColors,
   ThemeFonts,
@@ -43,6 +45,7 @@ type GenerateThemeOptions = {
 }
 
 export function useThemePanelController() {
+  const { t } = useI18n()
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -69,14 +72,16 @@ export function useThemePanelController() {
   const [isNewTheme, setIsNewTheme] = useState(false)
   const [userFonts, setUserFonts] = useState<UserFontLibrary>({ fonts: [] })
   const [slideContainerWidth, setSlideContainerWidth] = useState(0)
+  const [previewLayouts, setPreviewLayouts] = useState<ThemePreviewLayout[]>([])
+  const [isPreviewLayoutsLoading, setIsPreviewLayoutsLoading] = useState(false)
 
   const slideContainerRef = useRef<HTMLDivElement>(null)
   const previousSelectedThemeIdRef = useRef(selectedTheme.id)
 
   const currentStepMeta = THEME_EDITOR_STEP_META[currentStep]
   const activeTabDescription = tab === 'default'
-    ? 'Browse built-in themes from the shared Presenton library, then open one to customize and save as your own.'
-    : 'Reopen saved custom themes or start a fresh brand direction without leaving the Presenton workspace.'
+    ? t('presenton.theme.activeTab.builtIn')
+    : t('presenton.theme.activeTab.custom')
   const totalThemeCount = defaultThemes.length + customThemes.length
   const activeThemeCount = tab === 'default' ? defaultThemes.length : customThemes.length
   const previewScale = useMemo(
@@ -95,7 +100,6 @@ export function useThemePanelController() {
       }),
     [customBrandLogo, customColors, customFonts, selectedTheme, themeCompanyName]
   )
-  const template = useMemo(() => getTemplatesByTemplateName('neo-general'), [])
 
   const applyPreviewTheme = useCallback((theme: Theme) => {
     if (!slideContainerRef.current) return
@@ -111,6 +115,11 @@ export function useThemePanelController() {
   }, [pathname])
 
   useEffect(() => {
+    if (!isSheetOpen) {
+      setSlideContainerWidth(0)
+      return
+    }
+
     const element = slideContainerRef.current
     if (!element) return
 
@@ -123,6 +132,34 @@ export function useThemePanelController() {
 
     return () => resizeObserver.disconnect()
   }, [isSheetOpen])
+
+  useEffect(() => {
+    if (!isSheetOpen || previewLayouts.length > 0) return
+
+    let cancelled = false
+
+    const loadPreviewLayouts = async () => {
+      try {
+        setIsPreviewLayoutsLoading(true)
+        const layouts = await loadThemePreviewLayouts()
+        if (!cancelled) {
+          setPreviewLayouts(layouts)
+        }
+      } catch (error) {
+        console.error('Failed to load theme preview layouts', error)
+      } finally {
+        if (!cancelled) {
+          setIsPreviewLayoutsLoading(false)
+        }
+      }
+    }
+
+    void loadPreviewLayouts()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isSheetOpen, previewLayouts.length])
 
   useEffect(() => {
     if (!isSheetOpen) return
@@ -148,8 +185,8 @@ export function useThemePanelController() {
       } catch (error: any) {
         console.error('Failed to load custom themes', error)
         notify.error(
-          'Could not load themes',
-          error?.message || 'Your saved themes could not be loaded. Built-in themes are still available.'
+          t('presenton.theme.notify.loadThemes.title'),
+          error?.message || t('presenton.theme.notify.loadThemes.body')
         )
       } finally {
         if (!isCancelled) {
@@ -167,13 +204,13 @@ export function useThemePanelController() {
       } catch (error: any) {
         console.error('Failed to load user fonts', error)
         notify.error(
-          'Could not load fonts',
-          error?.message || 'Your uploaded fonts could not be loaded right now.'
+          t('presenton.theme.notify.loadFonts.title'),
+          error?.message || t('presenton.theme.notify.loadFonts.body')
         )
       }
     }
 
-    const localDefaults = getDefaultThemes()
+    const localDefaults = getDefaultThemes(t)
     setDefaultThemes(localDefaults)
 
     if (localDefaults.length > 0 && shouldHydrateDefaultThemeRef.current) {
@@ -195,7 +232,7 @@ export function useThemePanelController() {
     return () => {
       isCancelled = true
     }
-  }, [applyPreviewTheme])
+  }, [applyPreviewTheme, t])
 
   useEffect(() => {
     if (previousSelectedThemeIdRef.current === selectedTheme.id) return
@@ -282,13 +319,13 @@ export function useThemePanelController() {
     } catch (error: any) {
       console.error('Failed to upload logo', error)
       notify.error(
-        'Could not upload logo',
-        error?.message || 'Something went wrong while uploading your logo. Please try again.'
+        t('presenton.theme.notify.uploadLogo.title'),
+        error?.message || t('presenton.theme.notify.uploadLogo.body')
       )
     } finally {
       setIsLogoUploading(false)
     }
-  }, [pathname, selectedTheme.id])
+  }, [pathname, selectedTheme.id, t])
 
   const generateTheme = useCallback(async ({
     primary,
@@ -312,7 +349,7 @@ export function useThemePanelController() {
     trackEvent(MixpanelEvent.Theme_New_Theme_Clicked, { pathname })
     setIsNewTheme(true)
 
-    const newTheme = createNewCustomThemeDraft()
+    const newTheme = createNewCustomThemeDraft(t)
     const generatedColors = await generateTheme({ source: 'new_theme' })
     const nextTheme = {
       ...newTheme,
@@ -339,7 +376,7 @@ export function useThemePanelController() {
       theme_name: nextTheme.name,
       theme_source: 'new_draft',
     })
-  }, [applyPreviewTheme, generateTheme, pathname])
+  }, [applyPreviewTheme, generateTheme, pathname, t])
 
   const handleRefreshTheme = useCallback(async ({
     primary,
@@ -395,12 +432,15 @@ export function useThemePanelController() {
           has_logo: Boolean(updatedTheme.logo_url),
           font_name: updatedTheme.data?.fonts?.textFont?.name || '',
         })
-        notify.success('Theme updated', 'Your theme changes were saved.')
+        notify.success(
+          t('presenton.theme.notify.updateSuccess.title'),
+          t('presenton.theme.notify.updateSuccess.body')
+        )
       } catch (error: any) {
         console.error('Failed to update theme', error)
         notify.error(
-          'Could not update theme',
-          error?.message || 'Something went wrong while saving your theme changes.'
+          t('presenton.theme.notify.updateFailed.title'),
+          error?.message || t('presenton.theme.notify.updateFailed.body')
         )
       }
 
@@ -431,12 +471,15 @@ export function useThemePanelController() {
         has_logo: Boolean(createdTheme.logo_url),
         font_name: createdTheme.data?.fonts?.textFont?.name || '',
       })
-      notify.success('Theme saved', 'Your new theme was created and is ready to use.')
+      notify.success(
+        t('presenton.theme.notify.saveSuccess.title'),
+        t('presenton.theme.notify.saveSuccess.body')
+      )
     } catch (error: any) {
       console.error('Failed to save theme', error)
       notify.error(
-        'Could not save theme',
-        error?.message || 'Something went wrong while creating your theme.'
+        t('presenton.theme.notify.saveFailed.title'),
+        error?.message || t('presenton.theme.notify.saveFailed.body')
       )
     }
   }, [
@@ -447,6 +490,7 @@ export function useThemePanelController() {
     pathname,
     router,
     selectedTheme,
+    t,
     themeCompanyName,
   ])
 
@@ -462,15 +506,18 @@ export function useThemePanelController() {
         pathname,
         theme_id: themeId,
       })
-      notify.success('Theme deleted', 'The theme was removed from your library.')
+      notify.success(
+        t('presenton.theme.notify.deleteSuccess.title'),
+        t('presenton.theme.notify.deleteSuccess.body')
+      )
     } catch (error: any) {
       console.error('Failed to delete theme', error)
       notify.error(
-        'Could not delete theme',
-        error?.message || 'Something went wrong while deleting the theme.'
+        t('presenton.theme.notify.deleteFailed.title'),
+        error?.message || t('presenton.theme.notify.deleteFailed.body')
       )
     }
-  }, [pathname])
+  }, [pathname, t])
 
   const handleCustomFontChange = useCallback(async (fontFile: File) => {
     try {
@@ -505,19 +552,19 @@ export function useThemePanelController() {
         }
       })
       notify.success(
-        'Font uploaded',
-        `Font "${font_name}" is now available for your themes.`
+        t('presenton.theme.notify.uploadFontSuccess.title'),
+        t('presenton.theme.notify.uploadFontSuccess.body', { name: font_name })
       )
     } catch (error: any) {
       console.error('Failed to upload font', error)
       notify.error(
-        'Could not upload font',
-        error?.message || 'Something went wrong while uploading the font file.'
+        t('presenton.theme.notify.uploadFontFailed.title'),
+        error?.message || t('presenton.theme.notify.uploadFontFailed.body')
       )
     } finally {
       setIsFontUploading(false)
     }
-  }, [pathname, selectedTheme.id])
+  }, [pathname, selectedTheme.id, t])
 
   const handleTabChange = useCallback((nextTab: ThemeTab) => {
     trackEvent(MixpanelEvent.Theme_Tab_Switched, { pathname, tab: nextTab })
@@ -613,7 +660,8 @@ export function useThemePanelController() {
       previewScale,
       previewSlideWidth,
       previewSlideHeight,
-      template,
+      previewLayouts,
+      isPreviewLayoutsLoading,
     },
     actions: {
       handleCloseSheet,

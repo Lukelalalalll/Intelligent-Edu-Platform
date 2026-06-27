@@ -9,7 +9,7 @@ interface SlideThumbnailCardProps extends React.HTMLAttributes<HTMLDivElement> {
   renderMode?: "live" | "shell";
 }
 
-const SCALE = 0.061;
+const SCALE = 0.12;
 
 const SlideThumbnailCardInner = forwardRef<
   HTMLDivElement,
@@ -24,12 +24,12 @@ const SlideThumbnailCardInner = forwardRef<
         borderColor: selected ? "#5141e5" : "var(--stroke, #e5e7eb)",
         ...style,
       }}
-      className={`relative cursor-pointer overflow-hidden rounded-[12px] border p-1.5 transition-colors duration-150 ${
+      className={`relative cursor-pointer overflow-hidden rounded-[18px] border p-2.5 transition-[border-color,box-shadow,transform] duration-150 ${
         selected ? "border-[#BDB4FE]" : "border-[#EDEEEF]"
-      } ${className}`}
+      } ${selected ? "shadow-[0_12px_26px_rgba(81,65,229,0.12)]" : "shadow-[0_8px_18px_rgba(15,23,42,0.05)]"} ${className}`}
       {...props}
     >
-      <p className="pointer-events-none absolute -left-1 top-1/2 z-50 flex h-[18px] min-w-[18px] -translate-y-1/2 items-center justify-center rounded-full border border-[#EDEEEF] bg-white px-1 text-[10px] font-medium text-[#191919] shadow-sm">
+      <p className="pointer-events-none absolute right-2 top-1/2 z-50 flex h-6 min-w-6 -translate-y-1/2 items-center justify-center rounded-full border border-[#E4E7EC] bg-white px-1.5 text-[11px] font-semibold text-[#111827] shadow-[0_6px_14px_rgba(15,23,42,0.12)]">
         {index + 1}
       </p>
 
@@ -39,7 +39,7 @@ const SlideThumbnailCardInner = forwardRef<
       >
         {renderMode === "live" ? (
           <div
-            className="absolute top-0 left-0 rounded-[10px] overflow-hidden pointer-events-none"
+            className="absolute top-0 left-0 overflow-hidden rounded-[12px] pointer-events-none"
             style={{
               width: 1280,
               height: 720,

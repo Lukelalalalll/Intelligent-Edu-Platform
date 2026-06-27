@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { AlertTriangle, Check, Copy, Trash } from 'lucide-react'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import ToolTip from '@/components/ToolTip'
+import { useI18n } from '@/shared/i18n'
 import styles from './ThemeCard.module.css'
 
 interface ThemeCardProps {
@@ -18,6 +19,7 @@ function joinClassNames(parts: Array<string | false | null | undefined>) {
 }
 
 export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete, showDeleteButton = true }) => {
+  const { t } = useI18n()
   if (!theme.data.colors['graph_0']) return null
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -33,7 +35,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
             e.stopPropagation()
             setShowDeleteDialog(true)
           }}
-          aria-label={`Delete ${theme.name}`}
+          aria-label={t('presenton.theme.card.deleteAria', { name: theme.name })}
         >
           <Trash className="h-3.5 w-3.5" />
         </button>
@@ -52,9 +54,9 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
               <div className={styles.dialogIcon}>
                 <AlertTriangle className="h-6 w-6 text-red-500" />
               </div>
-              <h3 className={styles.dialogTitle}>Delete theme?</h3>
+              <h3 className={styles.dialogTitle}>{t('presenton.theme.card.deleteTitle')}</h3>
               <p className={styles.dialogText}>
-                You're about to delete <span className={styles.dialogTextStrong}>"{theme.name}"</span>. This action cannot be undone.
+                {t('presenton.theme.card.deleteBody', { name: theme.name })}
               </p>
             </div>
             <div className={styles.dialogActions}>
@@ -63,7 +65,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
                 onClick={() => setShowDeleteDialog(false)}
                 className={styles.dialogAction}
               >
-                Cancel
+                {t('presenton.theme.card.deleteCancel')}
               </button>
               <button
                 type="button"
@@ -73,7 +75,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
                 }}
                 className={joinClassNames([styles.dialogAction, styles.dialogActionDanger])}
               >
-                Delete
+                {t('presenton.theme.card.deleteConfirm')}
               </button>
             </div>
           </div>
@@ -84,18 +86,18 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
         <img src="/card_bg.svg" alt="" className={styles.previewBackground} />
 
         <div className={styles.metaRow}>
-          <ToolTip content="Font">
+          <ToolTip content={t('presenton.theme.card.tooltip.font')}>
             <span className={styles.metaChip}>{theme.data.fonts.textFont.name}</span>
           </ToolTip>
 
           {theme.company_name ? (
-            <ToolTip content="Company">
+            <ToolTip content={t('presenton.theme.card.tooltip.company')}>
               <span className={styles.metaChip}>{theme.company_name}</span>
             </ToolTip>
           ) : null}
 
           {theme.logo_url ? (
-            <ToolTip content="Logo">
+            <ToolTip content={t('presenton.theme.card.tooltip.logo')}>
               <span className={joinClassNames([styles.metaChip, styles.logoChip])}>
                 <img src={theme.logo_url} alt={theme.name} className={styles.logoImage} />
               </span>
@@ -123,7 +125,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
                   className={styles.previewSubtitle}
                   style={{ color: theme.data.colors['background_text'], fontFamily: `"${theme.data.fonts.textFont.name}", ui-serif, Georgia, serif` }}
                 >
-                  Choose your preferences.
+                  {t('presenton.theme.card.previewSubtitle')}
                 </div>
                 <div
                   className={styles.previewAccent}
@@ -154,8 +156,10 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
             }
           }}
           className={joinClassNames([styles.copyButton, copied && styles.copyButtonActive])}
-          title={copied ? "Copied!" : "Copy ID"}
-          aria-label={copied ? "Theme ID copied" : `Copy ID for ${theme.name}`}
+          title={copied ? t('presenton.theme.card.copyDone') : t('presenton.theme.card.copy')}
+          aria-label={copied
+            ? t('presenton.theme.card.copyDoneAria')
+            : t('presenton.theme.card.copyAria', { name: theme.name })}
         >
           {copied ? <Check className="h-4.5 w-4.5" /> : <Copy className="h-4.5 w-4.5" />}
         </button>

@@ -36,8 +36,9 @@ _SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST = {
     ("services/admin/admin_user_service.py", "auth"),
     ("services/ai/ai_session_service.py", "auth"),
     ("services/ai/ai_session_service.py", "files"),
-    ("services/student/student_assignment_service.py", "auth"),
-    ("services/student/student_assignment_service.py", "files"),
+    ("services/student/student_assignment_service_support/profile_courses.py", "auth"),
+    ("services/student/student_assignment_service_support/submission_flow.py", "auth"),
+    ("services/student/student_assignment_service_support/submission_flow.py", "files"),
 }
 
 _LONG_FILE_ALLOWLIST = {
@@ -56,7 +57,6 @@ _LONG_FILE_ALLOWLIST = {
     "services/slides/html_renderer.py",
     "services/slides/infra/task_tracker.py",
     "services/slides/output/ppt_creator/core.py",
-    "services/student/student_assignment_service.py",
     "services/video_service/render/html_renderer.py",
 }
 
@@ -73,7 +73,6 @@ _ROOT_SERVICE_FILE_ALLOWLIST = {
 _ARCHITECTURE_IMPL_LONG_ALLOWLIST = {
     "application/architecture_facades/course_rag_chunking_impl.py",
     "application/architecture_facades/course_rag_indexing_service_impl.py",
-    "application/architecture_facades/course_rag_retrieval_helpers_impl.py",
     "application/architecture_facades/course_rag_store_manager_impl.py",
 }
 
@@ -85,6 +84,7 @@ _ARCHITECTURE_HELPER_ROOTS = (
     _ARCHITECTURE_FACADES_ROOT / "user_profile",
     _ARCHITECTURE_FACADES_ROOT / "auth_account",
     _ARCHITECTURE_FACADES_ROOT / "course_rag_opensearch_sparse_retriever",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_retrieval_helpers",
 )
 
 _PRESENTON_HELPER_ROOTS = (
@@ -92,7 +92,12 @@ _PRESENTON_HELPER_ROOTS = (
     _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "memory_layer_support",
     _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "service_support",
     _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "tools_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "image_generation_service_support",
     _BACKEND_ROOT / "services" / "presenton" / "presenton_projection",
+)
+
+_PRESENTON_UTILITY_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "utils" / "oauth" / "openai_codex_support",
 )
 
 _PRESENTON_ENDPOINT_HELPER_ROOTS = (
@@ -109,6 +114,7 @@ _PRESENTON_TEMPLATE_HELPER_ROOTS = (
 _SERVICE_HELPER_ROOTS = (
     _BACKEND_ROOT / "services" / "video_service" / "script_support",
     _BACKEND_ROOT / "services" / "slides" / "output" / "business_ppt_creator_support",
+    _BACKEND_ROOT / "services" / "student" / "student_assignment_service_support",
 )
 
 _EXPLICIT_LINE_BOUNDS = {
@@ -129,6 +135,10 @@ _EXPLICIT_LINE_BOUNDS = {
     "application/architecture_facades/auth_account_service_impl.py": 200,
     "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py": 200,
     "presenton_runtime/templates/get_layout_by_name.py": 200,
+    "presenton_runtime/services/image_generation_service.py": 200,
+    "presenton_runtime/utils/oauth/openai_codex.py": 200,
+    "services/student/student_assignment_service.py": 200,
+    "application/architecture_facades/course_rag_retrieval_helpers_impl.py": 200,
 }
 
 
@@ -542,6 +552,16 @@ def test_presenton_endpoint_helper_modules_are_bounded():
 def test_presenton_template_helper_modules_are_bounded():
     offenders: set[str] = set()
     for root in _PRESENTON_TEMPLATE_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_utility_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_UTILITY_HELPER_ROOTS:
         for path in root.rglob("*.py"):
             line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
             if line_count > 350:

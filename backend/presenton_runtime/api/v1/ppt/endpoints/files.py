@@ -7,6 +7,7 @@ from models.decomposed_file_info import DecomposedFileInfo
 from services.temp_file_service import TEMP_FILE_SERVICE
 from services.documents_loader import DocumentsLoader
 import uuid
+from utils.presentation_language import normalize_presentation_language
 from utils.validators import validate_files
 
 FILES_ROUTER = APIRouter(prefix="/files", tags=["Files"])
@@ -52,7 +53,10 @@ async def decompose_files(
         else:
             other_files.append(file_path)
 
-    documents_loader = DocumentsLoader(file_paths=other_files, presentation_language=language)
+    documents_loader = DocumentsLoader(
+        file_paths=other_files,
+        presentation_language=normalize_presentation_language(language),
+    )
     await documents_loader.load_documents(temp_dir)
     parsed_documents = documents_loader.documents
 

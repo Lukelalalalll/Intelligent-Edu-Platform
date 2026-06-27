@@ -1,12 +1,21 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
 import { notify } from "@/components/ui/sonner";
+import { aiConfigApi, type AIConfigResponse } from "@/features/ai-config/api/aiConfigApi";
+import {
+  getConfiguredPresentonProviders,
+  resolvePresentonProviderOverride,
+  writeStoredPresentonProviderOverride,
+  type PresentonSelectableProvider,
+} from "@/presenton/providerOverride";
+import { useI18n } from "@/shared/i18n";
 import { RootState } from "@/store/store";
 import { clearOutlines, setPresentationId } from "@/store/slices/presentationGeneration";
+import { setLLMConfig } from "@/store/slices/userConfig";
 import { setPptGenUploadState } from "@/store/slices/presentationGenUpload";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 
@@ -14,24 +23,66 @@ import { ImagesApi } from "../../services/api/images";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import { LanguageType, type PresentationConfig } from "../type";
 import {
+  getGenerationLanguageForLocale,
+  normalizeGenerationLanguage,
+} from "../../utils/presentonLanguage";
+import {
   buildUploadActionSummary,
   buildUploadSnapshotProps,
   buildUploadStatusCards,
+  getInitialPresentationConfig,
   INITIAL_LOADING_STATE,
-  INITIAL_PRESENTATION_CONFIG,
   type LoadingState,
   STOCK_IMAGE_PROVIDERS,
 } from "./uploadPageHelpers";
 
 export function useUploadPageController() {
+  const { locale, t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useDispatch();
   const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
 
   const [files, setFiles] = useState<File[]>([]);
-  const [config, setConfig] = useState<PresentationConfig>(INITIAL_PRESENTATION_CONFIG);
+  const [config, setConfig] = useState<PresentationConfig>(() => getInitialPresentationConfig(locale));
   const [loadingState, setLoadingState] = useState<LoadingState>(INITIAL_LOADING_STATE);
+  const [aiConfig, setAiConfig] = useState<AIConfigResponse | null>(null);
+  const hasManualLanguageOverrideRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    aiConfigApi
+      .get()
+      .then((response) => {
+        if (!active) {
+          return;
+        }
+        setAiConfig(response);
+      })
+      .catch((error) => {
+        console.error("Failed to load AI config for upload page:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextLanguage = getGenerationLanguageForLocale(locale);
+    setConfig((current) => {
+      const normalizedLanguage = normalizeGenerationLanguage(current.language);
+      if (hasManualLanguageOverrideRef.current && normalizedLanguage) {
+        return current;
+      }
+      if (normalizedLanguage === nextLanguage) {
+        return current;
+      }
+      return {
+        ...current,
+        language: nextLanguage,
+      };
+    });
+  }, [locale]);
 
   const effectiveConfig = useMemo(
     () => ({
@@ -44,6 +95,50 @@ export function useUploadPageController() {
     [config, llmConfig?.WEB_GROUNDING]
   );
 
+  const configuredProviders = useMemo(
+    () => getConfiguredPresentonProviders(aiConfig),
+    [aiConfig]
+  );
+  const selectedProvider = useMemo(
+    () => resolvePresentonProviderOverride(aiConfig),
+    [aiConfig]
+  );
+  useEffect(() => {
+    if (!selectedProvider || llmConfig.LLM === selectedProvider) {
+      return;
+    }
+    dispatch(
+      setLLMConfig({
+        ...llmConfig,
+        LLM: selectedProvider,
+      })
+    );
+  }, [dispatch, llmConfig, selectedProvider]);
+  const providerCards = useMemo(
+    () => [
+      {
+        id: "openai" as const,
+        label: "OpenAI",
+        configured: Boolean(aiConfig?.openai?.api_key_set),
+        model: aiConfig?.openai?.model || llmConfig.OPENAI_MODEL || "gpt-5.5",
+      },
+      {
+        id: "deepseek" as const,
+        label: "DeepSeek",
+        configured: Boolean(aiConfig?.deepseek?.api_key_set),
+        model:
+          aiConfig?.deepseek?.model || llmConfig.DEEPSEEK_MODEL || "deepseek-v4-pro",
+      },
+    ],
+    [aiConfig, llmConfig.DEEPSEEK_MODEL, llmConfig.OPENAI_MODEL]
+  );
+  const generationDisabledReason = useMemo(() => {
+    if (aiConfig && configuredProviders.length === 0) {
+      return t("presenton.upload.currentConfig.noneConfigured");
+    }
+    return null;
+  }, [aiConfig, configuredProviders.length, t]);
+
   const uploadSnapshotProps = useMemo(
     () =>
       buildUploadSnapshotProps({
@@ -55,10 +150,18 @@ export function useUploadPageController() {
     [effectiveConfig, files, llmConfig, pathname]
   );
 
-  const generationPathLabel = files.length > 0 ? "Document-assisted" : "Prompt only";
-  const nextStepLabel = files.length > 0 ? "Documents preview" : "Outline builder";
+  const generationPathLabel =
+    files.length > 0
+      ? t("presenton.upload.path.documents")
+      : t("presenton.upload.path.promptOnly");
+  const nextStepLabel =
+    files.length > 0
+      ? t("presenton.upload.next.documents")
+      : t("presenton.upload.next.outline");
   const primaryActionLabel =
-    files.length > 0 ? "Next: Review documents" : "Next: Generate outline";
+    files.length > 0
+      ? t("presenton.upload.cta.documents")
+      : t("presenton.upload.cta.outline");
 
   const actionSummary = useMemo(
     () =>
@@ -66,8 +169,9 @@ export function useUploadPageController() {
         inputReady: uploadSnapshotProps.has_prompt || files.length > 0,
         filesCount: files.length,
         nextStepLabel,
+        t,
       }),
-    [files.length, nextStepLabel, uploadSnapshotProps.has_prompt]
+    [files.length, nextStepLabel, t, uploadSnapshotProps.has_prompt]
   );
 
   const statusCards = useMemo(
@@ -76,8 +180,9 @@ export function useUploadPageController() {
         generationPathLabel,
         slides: effectiveConfig.slides,
         language: effectiveConfig.language,
+        t,
       }),
-    [effectiveConfig.language, effectiveConfig.slides, generationPathLabel]
+    [effectiveConfig.language, effectiveConfig.slides, generationPathLabel, t]
   );
 
   const trackUploadValidationFailure = useCallback(
@@ -92,6 +197,9 @@ export function useUploadPageController() {
 
   const handleConfigChange = useCallback(
     (key: keyof PresentationConfig, value: unknown) => {
+      if (key === "language") {
+        hasManualLanguageOverrideRef.current = true;
+      }
       setConfig((current) => ({ ...current, [key]: value } as PresentationConfig));
     },
     []
@@ -100,6 +208,22 @@ export function useUploadPageController() {
   const handleFilesChange = useCallback((nextFiles: File[]) => {
     setFiles(nextFiles);
   }, []);
+
+  const handleProviderSelect = useCallback(
+    (provider: PresentonSelectableProvider) => {
+      if (!configuredProviders.includes(provider)) {
+        return;
+      }
+      writeStoredPresentonProviderOverride(provider);
+      dispatch(
+        setLLMConfig({
+          ...llmConfig,
+          LLM: provider,
+        })
+      );
+    },
+    [configuredProviders, dispatch, llmConfig]
+  );
 
   const ensureStockImageProviderReady = useCallback(async (): Promise<boolean> => {
     if (llmConfig?.DISABLE_IMAGE_GENERATION) {
@@ -126,26 +250,40 @@ export function useUploadPageController() {
       return true;
     } catch (error: any) {
       notify.error(
-        "Image provider unavailable",
+        t("presenton.upload.notify.imageUnavailable.title"),
         error?.message ||
-          `Unable to reach ${selectedProvider} right now. Please check your API key/settings and try again.`
+          t("presenton.upload.notify.imageUnavailable.body", {
+            provider: selectedProvider,
+          })
       );
       return false;
     }
-  }, [llmConfig]);
+  }, [llmConfig, t]);
 
   const validateConfiguration = useCallback((): boolean => {
+    if (generationDisabledReason) {
+      trackUploadValidationFailure("provider_not_configured");
+      notify.warning(
+        t("presenton.upload.notify.providerRequired.title"),
+        generationDisabledReason
+      );
+      return false;
+    }
+
     if (!effectiveConfig.language) {
       trackUploadValidationFailure("language_missing");
-      notify.warning("Language required", "Please select a language.");
+      notify.warning(
+        t("presenton.upload.notify.languageRequired.title"),
+        t("presenton.upload.notify.languageRequired.body")
+      );
       return false;
     }
 
     if (files.length > 0 && effectiveConfig.language === LanguageType.Auto) {
       trackUploadValidationFailure("language_auto_with_documents");
       notify.warning(
-        "Language required",
-        "Please choose a language before processing uploaded documents."
+        t("presenton.upload.notify.languageRequired.title"),
+        t("presenton.upload.notify.languageRequired.documents")
       );
       return false;
     }
@@ -153,8 +291,8 @@ export function useUploadPageController() {
     if (!effectiveConfig.prompt.trim() && files.length === 0) {
       trackUploadValidationFailure("prompt_or_document_missing");
       notify.warning(
-        "Input required",
-        "Provide a prompt or upload at least one document."
+        t("presenton.upload.notify.inputRequired.title"),
+        t("presenton.upload.notify.inputRequired.body")
       );
       return false;
     }
@@ -164,7 +302,9 @@ export function useUploadPageController() {
     effectiveConfig.language,
     effectiveConfig.prompt,
     files.length,
+    generationDisabledReason,
     trackUploadValidationFailure,
+    t,
   ]);
 
   const handleGenerationError = useCallback((error: any) => {
@@ -176,19 +316,19 @@ export function useUploadPageController() {
       showProgress: false,
     });
     notify.error(
-      "Generation failed",
-      error.message || "Something went wrong while starting your presentation."
+      t("presenton.upload.notify.generationFailed.title"),
+      error.message || t("presenton.upload.notify.generationFailed.body")
     );
-  }, []);
+  }, [t]);
 
   const handleDocumentProcessing = useCallback(async () => {
     setLoadingState({
       isLoading: true,
-      message: "Processing documents...",
+      message: t("presenton.upload.loading.documents"),
       showProgress: true,
       duration: 90,
       extra_info:
-        files.length > 0 ? "It might take a few minutes for large documents." : "",
+        files.length > 0 ? t("presenton.upload.loading.documentsExtra") : "",
     });
 
     let documents = [];
@@ -228,12 +368,12 @@ export function useUploadPageController() {
     });
 
     router.push("/documents-preview");
-  }, [dispatch, effectiveConfig, files, pathname, router, uploadSnapshotProps]);
+  }, [dispatch, effectiveConfig, files, pathname, router, t, uploadSnapshotProps]);
 
   const handleDirectPresentationGeneration = useCallback(async () => {
     setLoadingState({
       isLoading: true,
-      message: "Generating outlines...",
+      message: t("presenton.upload.loading.outlines"),
       showProgress: true,
       duration: 30,
     });
@@ -266,7 +406,7 @@ export function useUploadPageController() {
     });
 
     router.push("/outline");
-  }, [dispatch, effectiveConfig, pathname, router, uploadSnapshotProps]);
+  }, [dispatch, effectiveConfig, pathname, router, t, uploadSnapshotProps]);
 
   const handleGeneratePresentation = useCallback(async () => {
     if (!validateConfiguration()) {
@@ -305,16 +445,21 @@ export function useUploadPageController() {
   return {
     config: effectiveConfig,
     files,
+    llmConfig,
     loadingState,
     viewState: {
       actionSummary,
+      generationDisabledReason,
+      providerCards,
       primaryActionLabel,
+      selectedProvider,
       statusCards,
     },
     actions: {
       handleConfigChange,
       handleFilesChange,
       handleGeneratePresentation,
+      handleProviderSelect,
     },
   };
 }

@@ -1,16 +1,34 @@
-"""Compatibility facade for the extracted implementation module."""
+"""Compatibility facade for course RAG retrieval helper functions."""
 from __future__ import annotations
 
-from importlib import import_module as _import_module
-
-_impl = _import_module("backend.application.architecture_facades.course_rag_retrieval_helpers_impl")
-
-for _name in dir(_impl):
-    if not (_name.startswith("__") and _name.endswith("__")):
-        globals()[_name] = getattr(_impl, _name)
+from backend.application.architecture_facades.course_rag_retrieval_helpers_impl import (
+    build_evidence_spans,
+    doc_hash,
+    evidence_insufficient_message,
+    expand_chunk_window,
+    fusion_merge,
+    normalize_query_for_retrieval,
+    pack_evidence,
+    postcheck_and_downgrade,
+    reorder_for_llm,
+    rerank_results,
+    should_retry_empty,
+    should_return_insufficient,
+    tokenize_for_rerank,
+)
 
 __all__ = [
-    _name for _name in globals()
-    if not (_name.startswith("__") and _name.endswith("__"))
-    and _name not in {"_import_module", "_impl"}
+    "build_evidence_spans",
+    "doc_hash",
+    "evidence_insufficient_message",
+    "expand_chunk_window",
+    "fusion_merge",
+    "normalize_query_for_retrieval",
+    "pack_evidence",
+    "postcheck_and_downgrade",
+    "reorder_for_llm",
+    "rerank_results",
+    "should_retry_empty",
+    "should_return_insufficient",
+    "tokenize_for_rerank",
 ]

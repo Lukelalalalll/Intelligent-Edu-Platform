@@ -25,6 +25,9 @@ import {
 import { ImagesApi } from "@/app/(presentation-generator)/services/api/images";
 import { getApiUrl } from "@/utils/api";
 import LogoutButton from "@/components/Auth/LogoutButton";
+import { cn } from "@/lib/utils";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
 
 const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
 
@@ -41,6 +44,7 @@ interface ButtonState {
 const SettingsPage = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const isEntranceActive = usePageEntrance();
   const [selectedProvider, setSelectedProvider] = useState<SettingsSection>("text-provider");
   const userConfigState = useSelector((state: RootState) => state.userConfig);
   const [llmConfig, setLlmConfig] = useState<LLMConfig>(
@@ -343,7 +347,13 @@ const SettingsPage = () => {
 
   return (
     <div className="relative flex min-h-[calc(100dvh-var(--nav-height,60px)-8rem)] flex-col font-syne">
-      <main className="mx-auto flex w-full gap-6 overflow-hidden">
+      <main
+        className={cn(
+          "mx-auto flex w-full gap-6 overflow-hidden",
+          entranceStyles.pageEntrance,
+          isEntranceActive && entranceStyles.pageEntranceActive
+        )}
+      >
         <SettingSideBar
           selectedProvider={selectedProvider}
           setSelectedProvider={selectSettingsSection}

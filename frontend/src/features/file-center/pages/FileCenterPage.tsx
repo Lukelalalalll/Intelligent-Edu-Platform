@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import type { ToolSummary, HistoryItem } from '../api/fileCenterHistoryApi';
 import { fileCenterHistoryApi } from '../api/fileCenterHistoryApi';
 import { useAsyncLoader } from '@/shared/hooks/useAsyncLoader';
@@ -10,6 +12,7 @@ import styles from '../styles/fileCenter.module.css';
 import '../../../styles/base.css';
 
 export default function FileCenterPage() {
+    const isEntranceActive = usePageEntrance();
     const [activeTool, setActiveTool] = useState('');
     const [detailItem, setDetailItem] = useState<HistoryItem | null>(null);
     const loadToolSummary = useCallback(() => fileCenterHistoryApi.getSummary(), []);
@@ -27,7 +30,7 @@ export default function FileCenterPage() {
     }, [loadSummary]);
 
     return (
-        <div className={styles.page}>
+        <div className={`${styles.page} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={<><i className="fas fa-folder-open" /> File Center</>}
                 subtitle="Browse and manage your generation history across all tools"

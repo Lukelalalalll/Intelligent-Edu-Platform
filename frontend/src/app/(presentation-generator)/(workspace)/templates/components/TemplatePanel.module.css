@@ -13,32 +13,6 @@
   padding: 0 1rem 1.9rem;
 }
 
-.motionCard {
-  animation: dashboardEntrance 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  transform-origin: center top;
-  will-change: transform, opacity;
-}
-
-.motionPrimary {
-  animation-delay: 40ms;
-}
-
-.motionSecondary {
-  animation-delay: 90ms;
-}
-
-@keyframes dashboardEntrance {
-  0% {
-    opacity: 0;
-    transform: translateY(16px) scale(0.99);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 .banner {
   --banner-padding-block: 2.15rem;
   --banner-intro-padding-block: 3.05rem;
@@ -730,7 +704,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .motionCard,
   .surfaceCard,
   .templateCardSurface,
   .primaryAction,
@@ -738,11 +711,5 @@
   .templateButton {
     animation: none !important;
     transition: none !important;
-  }
-
-  .motionCard {
-    transform: none !important;
-    opacity: 1 !important;
-    will-change: auto;
   }
 }

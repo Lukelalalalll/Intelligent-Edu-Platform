@@ -9,23 +9,12 @@ from utils.llm_config import get_llm_config
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_utils import generate_structured_with_schema_retries
 from utils.llm_provider import get_model
+from utils.presentation_language import resolve_presentation_prompt_language
 from utils.schema_utils import (
     add_field_in_schema,
     ensure_array_schemas_have_items,
     remove_fields_from_schema,
 )
-
-
-def _resolve_prompt_language(language: Optional[str]) -> str:
-    if language is None:
-        return "auto-detect"
-    s = str(language).strip()
-    if not s:
-        return "auto-detect"
-    if s.lower() in {"auto", "auto-detect"}:
-        return "auto-detect"
-    return s
-
 
 def get_system_prompt(
     tone: Optional[str] = None,
@@ -69,7 +58,7 @@ def get_system_prompt(
 
 
 def get_user_prompt(prompt: str, slide_data: dict, language: str):
-    display_language = _resolve_prompt_language(language)
+    display_language = resolve_presentation_prompt_language(language)
     return f"""
         ## Icon Query And Image Prompt Language
         English

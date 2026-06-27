@@ -1,9 +1,12 @@
 "use client";
 
 import { ArrowRight, Paperclip, Sparkles } from "lucide-react";
+import type { LLMConfig } from "@/types/llm_config";
+import type { PresentonSelectableProvider } from "@/presenton/providerOverride";
 
 import Button from "@/shared/components/Button/Button";
 import Card from "@/shared/components/Card/Card";
+import { useI18n } from "@/shared/i18n";
 
 import { type PresentationConfig } from "../type";
 import { ConfigurationSelects } from "./ConfigurationSelects";
@@ -13,7 +16,6 @@ import SupportingDoc from "./SupportingDoc";
 import {
   type UploadActionItem,
   type UploadStatusItem,
-  UPLOAD_FLOW_NOTE,
 } from "./uploadPageHelpers";
 import styles from "./UploadPage.module.css";
 
@@ -27,11 +29,21 @@ type UploadInputSectionProps = {
 type UploadSetupSectionProps = {
   actionSummary: UploadActionItem[];
   config: PresentationConfig;
+  generationDisabledReason: string | null;
   isLoading: boolean;
+  llmConfig: LLMConfig;
+  providerCards: Array<{
+    id: PresentonSelectableProvider;
+    label: string;
+    configured: boolean;
+    model: string;
+  }>;
   primaryActionLabel: string;
+  selectedProvider: PresentonSelectableProvider | null;
   statusCards: UploadStatusItem[];
   onConfigChange: (key: keyof PresentationConfig, value: unknown) => void;
   onGeneratePresentation: () => void;
+  onProviderSelect: (provider: PresentonSelectableProvider) => void;
 };
 
 export function UploadInputSection({
@@ -40,6 +52,8 @@ export function UploadInputSection({
   onFilesChange,
   onPromptChange,
 }: UploadInputSectionProps) {
+  const { t } = useI18n();
+
   return (
     <Card glass className={`${styles.sectionCard} ${styles.promptCard}`}>
       <div className={styles.promptBody}>
@@ -51,7 +65,7 @@ export function UploadInputSection({
               <Paperclip className="h-4 w-4" />
             </div>
             <div>
-              <h3 className={styles.subsectionTitle}>Attach source material</h3>
+              <h3 className={styles.subsectionTitle}>{t("presenton.upload.attach.title")}</h3>
             </div>
           </div>
 
@@ -65,12 +79,19 @@ export function UploadInputSection({
 export function UploadSetupSection({
   actionSummary,
   config,
+  generationDisabledReason,
   isLoading,
+  llmConfig,
+  providerCards,
   primaryActionLabel,
+  selectedProvider,
   statusCards,
   onConfigChange,
   onGeneratePresentation,
+  onProviderSelect,
 }: UploadSetupSectionProps) {
+  const { t } = useI18n();
+
   return (
     <Card glass className={`${styles.sectionCard} ${styles.setupCard}`}>
       <div className={styles.sectionHeader}>
@@ -78,17 +99,22 @@ export function UploadSetupSection({
           <Sparkles />
         </div>
         <div>
-          <p className={styles.sectionEyebrow}>Workspace</p>
-          <h2 className={styles.sectionTitle}>Current AI setup</h2>
+          <p className={styles.sectionEyebrow}>{t("presenton.upload.setup.eyebrow")}</p>
+          <h2 className={styles.sectionTitle}>{t("presenton.upload.setup.title")}</h2>
           <p className={styles.sectionDescription}>
-            This page now uses your saved project providers and model settings
-            directly, so Presenton feels like part of the same workflow.
+            {t("presenton.upload.setup.description")}
           </p>
         </div>
       </div>
 
       <div className={styles.setupBody}>
-        <CurrentConfig webSearchEnabled={config.webSearch} />
+        <CurrentConfig
+          llmConfig={llmConfig}
+          providerCards={providerCards}
+          selectedProvider={selectedProvider}
+          webSearchEnabled={config.webSearch}
+          onProviderSelect={onProviderSelect}
+        />
 
         <div className={styles.promptFooter}>
           <div className={styles.actionSummary}>
@@ -99,15 +125,6 @@ export function UploadSetupSection({
               </div>
             ))}
           </div>
-
-          <Button
-            onClick={onGeneratePresentation}
-            disabled={isLoading}
-            className={styles.primaryAction}
-          >
-            <span>{primaryActionLabel}</span>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
 
         <div className={styles.statusGrid}>
@@ -121,7 +138,21 @@ export function UploadSetupSection({
 
         <div className={styles.controlsBody}>
           <ConfigurationSelects config={config} onConfigChange={onConfigChange} />
-          <p className={styles.controlsNote}>{UPLOAD_FLOW_NOTE}</p>
+          <p className={styles.controlsNote}>{t("presenton.upload.flowNote")}</p>
+        </div>
+
+        <div className={styles.setupActionBar}>
+          <Button
+            onClick={onGeneratePresentation}
+            disabled={isLoading || !!generationDisabledReason}
+            className={styles.primaryAction}
+          >
+            <span>{primaryActionLabel}</span>
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          {generationDisabledReason ? (
+            <p className={styles.controlsNote}>{generationDisabledReason}</p>
+          ) : null}
         </div>
       </div>
     </Card>

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { notify } from "@/components/ui/sonner";
+import { useI18n, type TranslationKey } from "@/shared/i18n";
+import { appendPresentonProviderParam } from "@/presenton/providerOverride";
 import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
@@ -9,12 +11,49 @@ import { ensurePresentonSession } from "../../services/api/presenton-fetch";
 
 const MAX_STREAM_RETRIES = 3;
 const STREAM_RETRY_DELAY_MS = 1_000;
+const DEFAULT_STATUS_MESSAGE = "Preparing your presentation outline";
+const READY_STATUS_MESSAGE = "Outline ready";
+const SEARCHING_STATUS_PATTERN = /^Searching with (.+?): (.+)$/;
 
 type OutlineSlide = { content: string };
 const STREAM_FLUSH_INTERVAL_MS = 140;
 
+type TranslateFn = (
+  key: TranslationKey,
+  vars?: Record<string, string | number>
+) => string;
+
+const localizeOutlineStatus = (status: string, t: TranslateFn) => {
+  const searchingMatch = status.match(SEARCHING_STATUS_PATTERN);
+  if (searchingMatch) {
+    const [, provider, query] = searchingMatch;
+    return t("presenton.outline.stream.status.searchingWebWithProvider", {
+      provider,
+      query,
+    });
+  }
+
+  switch (status) {
+    case DEFAULT_STATUS_MESSAGE:
+      return t("presenton.outline.stream.status.preparing");
+    case READY_STATUS_MESSAGE:
+      return t("presenton.outline.stream.status.ready");
+    case "Analyzing your topic for web research":
+      return t("presenton.outline.stream.status.analyzingWeb");
+    case "Web research complete":
+      return t("presenton.outline.stream.status.webComplete");
+    case "Searching with model-native web search and drafting outlines":
+      return t("presenton.outline.stream.status.nativeSearchDrafting");
+    case "Drafting your presentation outline":
+      return t("presenton.outline.stream.status.drafting");
+    default:
+      return status;
+  }
+};
+
 export const useOutlineStreaming = (presentationId: string | null) => {
   const dispatch = useDispatch();
+  const { t } = useI18n();
   const { outlines } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
@@ -22,8 +61,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
   const [isLoading, setIsLoading] = useState(outlines.length === 0);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number | null>(null);
   const [highestActiveIndex, setHighestActiveIndex] = useState<number>(-1);
-  const [statusMessage, setStatusMessage] = useState(
-    "Preparing your presentation outline"
+  const [rawStatusMessage, setRawStatusMessage] = useState(
+    DEFAULT_STATUS_MESSAGE
   );
   const [streamedOutlines, setStreamedOutlines] = useState<OutlineSlide[]>(outlines);
   const outlinesRef = useRef(outlines);
@@ -32,12 +71,21 @@ export const useOutlineStreaming = (presentationId: string | null) => {
   const highestIndexRef = useRef<number>(-1);
   const pendingSlidesRef = useRef<OutlineSlide[] | null>(null);
   const flushTimerRef = useRef<number | null>(null);
+  const tRef = useRef(t);
 
   const displayOutlines = isStreaming ? streamedOutlines : outlines;
+  const statusMessage = useMemo(
+    () => localizeOutlineStatus(rawStatusMessage, t),
+    [rawStatusMessage, t]
+  );
 
   useEffect(() => {
     outlinesRef.current = outlines;
   }, [outlines]);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     if (!presentationId || outlinesRef.current.length > 0) return;
@@ -93,7 +141,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
       setIsLoading(false);
       setActiveSlideIndex(null);
       setHighestActiveIndex(-1);
-      setStatusMessage("Preparing your presentation outline");
+      setRawStatusMessage(DEFAULT_STATUS_MESSAGE);
       setStreamedOutlines(outlinesRef.current);
       activeIndexRef.current = -1;
       highestIndexRef.current = -1;
@@ -138,13 +186,18 @@ export const useOutlineStreaming = (presentationId: string | null) => {
         console.error("Failed to validate session before outline stream:", error);
         if (!scheduleRetry("session validation failed")) {
           resetStreamingState();
-          notify.error("Connection failed", "Please log in again and retry.");
+          notify.error(
+            tRef.current("presenton.outline.stream.notify.connectionFailed.title"),
+            tRef.current("presenton.outline.stream.notify.sessionFailed.body")
+          );
         }
         return;
       }
 
       eventSource = new EventSource(
-        getApiUrl(`/api/v1/ppt/outlines/stream/${presentationId}`)
+        appendPresentonProviderParam(
+          getApiUrl(`/api/v1/ppt/outlines/stream/${presentationId}`)
+        )
       );
 
       eventSource.addEventListener("response", (event) => {
@@ -155,8 +208,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
           if (!scheduleRetry("invalid SSE payload")) {
             resetStreamingState();
             notify.error(
-              "Stream parse failed",
-              "Failed to parse outline stream response."
+              tRef.current("presenton.outline.stream.notify.parseStream.title"),
+              tRef.current("presenton.outline.stream.notify.parseStream.body")
             );
           }
           return;
@@ -165,7 +218,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
         switch (data.type) {
           case "status":
             if (data.status) {
-              setStatusMessage((current) =>
+              setRawStatusMessage((current) =>
                 current === data.status ? current : data.status
               );
             }
@@ -236,7 +289,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               setIsLoading(false);
               setActiveSlideIndex(null);
               setHighestActiveIndex(-1);
-              setStatusMessage("Outline ready");
+              setRawStatusMessage(READY_STATUS_MESSAGE);
               activeIndexRef.current = -1;
               highestIndexRef.current = -1;
               isClosed = true;
@@ -246,7 +299,10 @@ export const useOutlineStreaming = (presentationId: string | null) => {
             } catch {
               if (!scheduleRetry("failed to parse complete payload")) {
                 resetStreamingState();
-                notify.error("Parse failed", "Failed to parse presentation data.");
+                notify.error(
+                  tRef.current("presenton.outline.stream.notify.parsePresentation.title"),
+                  tRef.current("presenton.outline.stream.notify.parsePresentation.body")
+                );
               }
             }
             accumulatedChunks = "";
@@ -271,9 +327,9 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               resetStreamingState();
               closeEventSource();
               notify.error(
-                "Outline streaming failed",
+                tRef.current("presenton.outline.stream.notify.streamingFailed.title"),
                 data.detail ||
-                  "Failed to connect to the server. Please try again."
+                  tRef.current("presenton.outline.stream.notify.streamingFailed.body")
               );
             }
             break;
@@ -285,8 +341,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
           resetStreamingState();
           closeEventSource();
           notify.error(
-            "Connection failed",
-            "Failed to connect to the server. Please try again."
+            tRef.current("presenton.outline.stream.notify.connectionFailed.title"),
+            tRef.current("presenton.outline.stream.notify.connectionFailed.body")
           );
         }
       };

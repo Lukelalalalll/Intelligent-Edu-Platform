@@ -3,9 +3,12 @@
 import { ArrowRight, Plus, Sparkles } from 'lucide-react'
 import React from 'react'
 import Link from '@/presenton/shims/next-link'
+import { useI18n } from '@/shared/i18n'
 import styles from './CustomTabEmpty.module.css'
 
 const CustomTabEmpty = () => {
+  const { t } = useI18n()
+
   return (
     <Link href="/theme?tab=new-theme" className={styles.card}>
       <div className={styles.previewShell}>
@@ -23,9 +26,9 @@ const CustomTabEmpty = () => {
         </div>
 
         <div className={styles.copy}>
-          <h4 className={styles.title}>Build Theme</h4>
+          <h4 className={styles.title}>{t('presenton.theme.empty.title')}</h4>
           <p className={styles.subtitle}>
-            Start with brand colors, typography, and preview the result live.
+            {t('presenton.theme.empty.body')}
           </p>
         </div>
 

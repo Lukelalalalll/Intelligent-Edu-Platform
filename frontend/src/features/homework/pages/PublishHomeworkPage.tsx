@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import client from '@/shared/api/client';
 import styles from '../styles/publishHomework.module.css';
 
 export default function PublishHomeworkPage() {
+    const isEntranceActive = usePageEntrance();
     const navigate = useNavigate();
     const [courses, setCourses] = useState<any[]>([]);
     const [loadingCourses, setLoadingCourses] = useState(true);
@@ -94,7 +97,7 @@ export default function PublishHomeworkPage() {
     };
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={<><i className="fas fa-bullhorn" aria-hidden="true" style={{color: 'var(--primary-color)'}}></i> Publish Homework</>}
                 subtitle="Create assignments and set submission constraints for your courses."

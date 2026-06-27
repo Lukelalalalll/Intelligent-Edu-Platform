@@ -1,4 +1,5 @@
 import { useAuthStore, type User } from "@/shared/store/useAuthStore";
+import { getPresentonProviderRequestValue } from "@/presenton/providerOverride";
 
 const LOGIN_PATH = "/login";
 const REFRESH_PATH = "/api/refresh";
@@ -67,6 +68,10 @@ const buildHeaders = (
     if (csrfToken && !headers.has(CSRF_HEADER_NAME)) {
       headers.set(CSRF_HEADER_NAME, csrfToken);
     }
+  }
+  const provider = getPresentonProviderRequestValue();
+  if (provider && !headers.has("X-Presenton-LLM-Provider")) {
+    headers.set("X-Presenton-LLM-Provider", provider);
   }
   return headers;
 };

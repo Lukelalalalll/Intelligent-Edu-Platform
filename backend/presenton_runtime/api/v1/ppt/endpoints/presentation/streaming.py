@@ -20,6 +20,10 @@ from services.image_generation_service import ImageGenerationService
 from utils.asset_directory_utils import get_images_directory
 from utils.llm_calls.generate_slide_content import get_slide_content_from_type_and_outline
 from utils.outline_utils import get_images_for_slides_from_outline
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
 from utils.process_slides import process_slide_add_placeholder_assets, process_slide_and_fetch_assets
 
 from .helpers import resolve_presentation_fonts, with_sse_heartbeats
@@ -37,6 +41,8 @@ async def stream_presentation(id: uuid.UUID, sql_session: AsyncSession = Depends
         raise HTTPException(status_code=400, detail="Presentation not prepared for stream")
     if not presentation.outlines:
         raise HTTPException(status_code=400, detail="Outlines can not be empty")
+
+    presentation_language = normalize_presentation_language(presentation.language) or AUTO_PRESENTATION_LANGUAGE
 
     image_generation_service = ImageGenerationService(get_images_directory())
     structure = presentation.get_structure()
@@ -71,7 +77,7 @@ async def stream_presentation(id: uuid.UUID, sql_session: AsyncSession = Depends
                     slide_content = await get_slide_content_from_type_and_outline(
                         slide_layout,
                         outline.slides[i],
-                        presentation.language,
+                        presentation_language,
                         presentation.tone,
                         presentation.verbosity,
                         presentation.instructions,

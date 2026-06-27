@@ -3,6 +3,7 @@
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { Paperclip, Plus, X } from 'lucide-react'
 import { notify } from '@/components/ui/sonner'
+import { useI18n } from '@/shared/i18n'
 import styles from './SupportingDoc.module.css'
 
 interface SupportingDocProps {
@@ -66,6 +67,7 @@ const SupportingDoc = ({
     accept = ACCEPT_DEFAULT,
     multiple = true,
 }: SupportingDocProps) => {
+    const { t } = useI18n()
     const [isDragging, setIsDragging] = useState(false)
     const [previewUrls, setPreviewUrls] = useState<(string | null)[]>([])
 
@@ -89,7 +91,10 @@ const SupportingDoc = ({
     const handleValidate = (filesToReview: File[]) => {
         const disallowed = filesToReview.filter((file) => !isAllowedFile(file))
         if (disallowed.length > 0) {
-            notify.error('Some files are not supported', 'Supported: Word, PowerPoint, spreadsheets, PDF/TXT, and image files.')
+            notify.error(
+                t('presenton.upload.supporting.notify.unsupported.title'),
+                t('presenton.upload.supporting.notify.unsupported.body')
+            )
         }
     }
 
@@ -98,7 +103,10 @@ const SupportingDoc = ({
             return candidateFiles
         }
 
-        notify.warning('Maximum file limit reached', `You can upload up to ${MAX_SUPPORTED_FILES} documents only.`)
+        notify.warning(
+            t('presenton.upload.supporting.notify.limit.title'),
+            t('presenton.upload.supporting.notify.limit.body', { count: MAX_SUPPORTED_FILES })
+        )
 
         return candidateFiles.slice(0, MAX_SUPPORTED_FILES)
     }
@@ -113,7 +121,10 @@ const SupportingDoc = ({
         onFilesChange(allowedFiles)
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
-            notify.success('Files selected', `${allowedFiles.length - files.length} file(s) have been added.`)
+            notify.success(
+                t('presenton.upload.supporting.notify.selected.title'),
+                t('presenton.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
+            )
         }
         e.currentTarget.value = ''
     }
@@ -131,7 +142,10 @@ const SupportingDoc = ({
         onFilesChange(allowedFiles)
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
-            notify.success('Files selected', `${allowedFiles.length - files.length} file(s) have been added.`)
+            notify.success(
+                t('presenton.upload.supporting.notify.selected.title'),
+                t('presenton.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
+            )
         }
     }
 
@@ -161,10 +175,10 @@ const SupportingDoc = ({
                 <div className={styles.metaInfo}>
                     <p className={styles.metaText}>
                         {hasFiles
-                            ? `${filteredFiles.length} attachment${filteredFiles.length > 1 ? 's' : ''} ready`
-                            : 'Optional supporting materials'}
+                            ? t('presenton.upload.supporting.meta.ready', { count: filteredFiles.length })
+                            : t('presenton.upload.supporting.meta.optional')}
                     </p>
-                    <span className={styles.limitChip}>Up to {MAX_SUPPORTED_FILES} files</span>
+                    <span className={styles.limitChip}>{t('presenton.upload.supporting.limit', { count: MAX_SUPPORTED_FILES })}</span>
                 </div>
                 {hasFiles && <button
                     type="button"
@@ -174,7 +188,7 @@ const SupportingDoc = ({
                     data-testid="attachments-clear-button"
                     aria-disabled={!hasFiles}
                 >
-                    Clear all
+                    {t('presenton.upload.supporting.clear')}
                 </button>}
             </div>
 
@@ -199,23 +213,23 @@ const SupportingDoc = ({
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <p className={styles.dropTitle}>Drop files here or click to browse</p>
+                        <p className={styles.dropTitle}>{t('presenton.upload.supporting.dropTitle')}</p>
                         <p className={styles.dropHint}>
-                            Add syllabi, notes, PDFs, spreadsheets, screenshots, or existing decks to ground the presentation before generation.
+                            {t('presenton.upload.supporting.dropHint')}
                         </p>
                     </div>
                     <div className={styles.typeList} aria-hidden="true">
-                        <span className={styles.typeChip}>Docs</span>
-                        <span className={styles.typeChip}>Slides</span>
-                        <span className={styles.typeChip}>Sheets</span>
-                        <span className={styles.typeChip}>Images</span>
+                        <span className={styles.typeChip}>{t('presenton.upload.supporting.docs')}</span>
+                        <span className={styles.typeChip}>{t('presenton.upload.supporting.slides')}</span>
+                        <span className={styles.typeChip}>{t('presenton.upload.supporting.sheets')}</span>
+                        <span className={styles.typeChip}>{t('presenton.upload.supporting.images')}</span>
                     </div>
                 </div>
             </label>
 
             {hasFiles && (
                 <div className="mt-1">
-                    <ul data-testid="file-list" className={styles.fileList} aria-label="Attached files">
+                    <ul data-testid="file-list" className={styles.fileList} aria-label={t('presenton.upload.supporting.attached')}>
                         {filteredFiles.map((file, idx) => (
                             <li
                                 key={`${file.name}-${idx}`}
@@ -223,7 +237,7 @@ const SupportingDoc = ({
                                 data-testid="attached-file-item"
                             >
                                 {previewUrls[idx] ? (
-                                    <img src={previewUrls[idx] as string} alt="Preview" className={styles.previewImage} />
+                                    <img src={previewUrls[idx] as string} alt={t('presenton.upload.supporting.preview')} className={styles.previewImage} />
                                 ) : (
                                     <div className={styles.previewFallback}>
                                         <Paperclip className="h-4 w-4" />
@@ -241,7 +255,7 @@ const SupportingDoc = ({
                                     type="button"
                                     onClick={() => handleRemoveFileAt(idx)}
                                     className={styles.removeButton}
-                                    aria-label={`Remove ${file.name}`}
+                                    aria-label={t('presenton.upload.supporting.remove', { name: file.name })}
                                     data-testid="remove-file-button"
                                 >
                                     <X className="h-4 w-4" />
@@ -251,7 +265,7 @@ const SupportingDoc = ({
                     </ul>
                     {filteredFiles.length !== files.length && (
                         <p className={styles.warning}>
-                            Some files were skipped. Supported: Word, PowerPoint, spreadsheets, PDF/TXT, and image files.
+                            {t('presenton.upload.supporting.unsupported')}
                         </p>
                     )}
                 </div>

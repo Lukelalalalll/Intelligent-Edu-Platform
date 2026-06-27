@@ -10,18 +10,30 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Wrapper from "@/components/Wrapper";
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
 import styles from "./EmptyStateView.module.css";
 
 const EmptyStateView: React.FC = () => {
+  const { t } = useI18n();
   const router = useRouter();
+  const isEntranceActive = usePageEntrance();
 
   return (
     <div className={styles.page}>
-      <Wrapper className={styles.container}>
+      <Wrapper
+        className={cn(
+          styles.container,
+          entranceStyles.pageEntrance,
+          isEntranceActive && entranceStyles.pageEntranceActive
+        )}
+      >
         <WelcomeBanner
-          title="Outline Workspace"
-          subtitle="Start a new Presenton flow to generate an outline, tune the structure, and move into polished slide generation."
+          title={t("presenton.outline.empty.banner.title")}
+          subtitle={t("presenton.outline.empty.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
@@ -32,7 +44,7 @@ const EmptyStateView: React.FC = () => {
               <div className={styles.heroBlock}>
                 <span className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  Presenton flow
+                  {t("presenton.outline.empty.badge")}
                 </span>
 
                 <div className={styles.iconCluster} aria-hidden="true">
@@ -46,13 +58,8 @@ const EmptyStateView: React.FC = () => {
                 </div>
 
                 <div className={styles.copyBlock}>
-                  <h1 className={styles.title}>No presentation loaded yet</h1>
-                  <p className={styles.description}>
-                    This outline workspace is ready, but it does not have a
-                    presentation source attached yet. Create a new presentation
-                    to unlock the streamed outline, smooth card animation, and
-                    template selection flow below.
-                  </p>
+                  <h1 className={styles.title}>{t("presenton.outline.empty.title")}</h1>
+                  <p className={styles.description}>{t("presenton.outline.empty.body")}</p>
                 </div>
               </div>
 
@@ -62,13 +69,12 @@ const EmptyStateView: React.FC = () => {
                   className={styles.primaryAction}
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Create New Presentation</span>
+                  <span>{t("presenton.outline.empty.cta")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
 
                 <p className={styles.helperText}>
-                  Start from a prompt or supporting files, then continue into
-                  the outline builder automatically.
+                  {t("presenton.outline.empty.helper")}
                 </p>
               </div>
             </div>
@@ -78,21 +84,21 @@ const EmptyStateView: React.FC = () => {
             <section className={`${styles.surfaceCard} ${styles.sideCard}`}>
               <span className={styles.mutedBadge}>
                 <Layers3 className="h-3.5 w-3.5" />
-                Workspace status
+                {t("presenton.outline.empty.status.badge")}
               </span>
-              <h2 className={styles.sideTitle}>What this page is waiting for</h2>
+              <h2 className={styles.sideTitle}>{t("presenton.outline.empty.status.title")}</h2>
               <div className={styles.statusList}>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Source</span>
-                  <strong className={styles.statusValue}>Missing</strong>
+                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.source")}</span>
+                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.sourceValue")}</strong>
                 </div>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Outline stream</span>
-                  <strong className={styles.statusValue}>Standby</strong>
+                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.stream")}</span>
+                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.streamValue")}</strong>
                 </div>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Next step</span>
-                  <strong className={styles.statusValue}>Create presentation</strong>
+                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.next")}</span>
+                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.nextValue")}</strong>
                 </div>
               </div>
             </section>
@@ -100,19 +106,13 @@ const EmptyStateView: React.FC = () => {
             <section className={`${styles.surfaceCard} ${styles.sideCard}`}>
               <span className={styles.mutedBadge}>
                 <Compass className="h-3.5 w-3.5" />
-                Next route
+                {t("presenton.outline.empty.route.badge")}
               </span>
-              <h2 className={styles.sideTitle}>How the flow continues</h2>
+              <h2 className={styles.sideTitle}>{t("presenton.outline.empty.route.title")}</h2>
               <ul className={styles.stepList}>
-                <li className={styles.stepItem}>
-                  Enter a prompt or attach source documents.
-                </li>
-                <li className={styles.stepItem}>
-                  Generate the outline and review live slide cards here.
-                </li>
-                <li className={styles.stepItem}>
-                  Choose a Presenton template family before deck generation.
-                </li>
+                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step1")}</li>
+                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step2")}</li>
+                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step3")}</li>
               </ul>
             </section>
           </aside>

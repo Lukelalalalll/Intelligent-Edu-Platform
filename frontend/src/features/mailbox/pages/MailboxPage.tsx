@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import { useAuthStore } from '@/shared/store/useAuthStore';
 import { useMailboxData } from '../hooks/useMailboxData';
 import { useMailboxFilters } from '../hooks/useMailboxFilters';
@@ -12,6 +14,7 @@ import type { MailboxSelections } from '../types';
 import styles from '../styles/mailbox.module.css';
 
 export default function MailboxPage() {
+    const isEntranceActive = usePageEntrance();
     const storeUser = useAuthStore((s) => s.user);
 
     const [currentStep, setCurrentStep] = useState(1);
@@ -37,7 +40,7 @@ export default function MailboxPage() {
     });
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 className={styles.mailboxBanner}
                 title={<><i className="fas fa-inbox"></i> Grading Mailbox</>}

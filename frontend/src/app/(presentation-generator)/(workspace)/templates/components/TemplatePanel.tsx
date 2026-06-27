@@ -2,7 +2,11 @@
 
 import React from "react";
 
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
 
 import {
     TemplatePanelControls,
@@ -13,6 +17,8 @@ import { useTemplatePanelController } from "./useTemplatePanelController";
 import styles from "./TemplatePanel.module.css";
 
 export default function TemplatePanel() {
+    const { t } = useI18n();
+    const isEntranceActive = usePageEntrance();
     const { pathname, libraryState, actions } = useTemplatePanelController();
     const { tab, activeTabDescription, stats, sectionCopy, builtIn, custom } = libraryState;
     const {
@@ -24,10 +30,16 @@ export default function TemplatePanel() {
 
     return (
         <div className={styles.page}>
-            <div className={styles.container}>
+            <div
+                className={cn(
+                    styles.container,
+                    entranceStyles.workspaceEntrance,
+                    isEntranceActive && entranceStyles.workspaceEntranceActive,
+                )}
+            >
                 <WelcomeBanner
-                    title="Templates"
-                    subtitle="Browse built-in families, reopen custom work, and move into preview from a calmer Presenton workspace."
+                    title={t("presenton.templates.banner.title")}
+                    subtitle={t("presenton.templates.banner.subtitle")}
                     variant="workspace"
                     className={styles.banner}
                 />

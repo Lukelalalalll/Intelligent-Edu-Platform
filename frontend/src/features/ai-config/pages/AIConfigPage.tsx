@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import { useAuthStore } from '@/shared/store/useAuthStore';
 import {
     aiConfigApi,
@@ -24,6 +26,7 @@ import {
 import styles from '../styles/aiConfig.module.css';
 
 export default function AIConfigPage() {
+    const isEntranceActive = usePageEntrance();
     const user = useAuthStore((state) => state.user);
     const [activeProvider, setActiveProvider] = useState<ProviderId>('deepseek');
     const [slideDirection, setSlideDirection] = useState<SlideDirection>('right');
@@ -174,7 +177,7 @@ export default function AIConfigPage() {
     }, [openAIForm]);
 
     return (
-        <div className={styles.page}>
+        <div className={`${styles.page} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 className={styles.aiConfigBanner}
                 title={<><i className="fas fa-sliders-h" /> AI Config</>}

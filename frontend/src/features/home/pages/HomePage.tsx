@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import { useI18n } from '@/shared/i18n';
 import ToolCard from '../components/ToolCard';
 import AIChatBox from '../components/AIChatBox';
@@ -21,6 +23,7 @@ const HOME_URLS = {
 };
 
 export default function HomePage() {
+    const isEntranceActive = usePageEntrance();
     const location = useLocation();
     const { t } = useI18n();
     const initialTab = new URLSearchParams(location.search).get('tab');
@@ -54,7 +57,7 @@ export default function HomePage() {
 
 
     return (
-        <div>
+        <div className={`${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner className={layoutStyles['welcome-banner']} variant="hero" />
 
             {/* Tab Switcher: AI Space | Tools | Homework Manage */}

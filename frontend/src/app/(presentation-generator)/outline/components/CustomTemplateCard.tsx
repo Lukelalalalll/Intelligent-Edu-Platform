@@ -3,6 +3,7 @@
 import React, { memo } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import {
   CustomTemplates,
   useCustomTemplatePreview,
@@ -13,6 +14,10 @@ import {
   CustomTemplatePreview,
 } from "../../components/TemplatePreviewComponents";
 
+const outlineBodyFontStyle = {
+  fontFamily: "var(--outline-body-font, var(--body-font-family, inherit))",
+} as const;
+
 export const CustomTemplateCard = memo(function CustomTemplateCard({
   template,
   onSelectTemplate,
@@ -22,6 +27,7 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
   onSelectTemplate: (template: string) => void;
   selectedTemplate: string | null;
 }) {
+  const { t } = useI18n();
   const { previewLayouts, loading } = useCustomTemplatePreview(template.id);
   const isSelected = selectedTemplate === template.id;
 
@@ -44,19 +50,22 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
           isOutline={true}
         />
       </TemplatePreviewStage>
-      <div className="border-t border-[#EDEEEF] bg-white/96 px-6 py-5">
+      <div
+        className="border-t border-[#EDEEEF] bg-white/96 px-6 py-5"
+        style={outlineBodyFontStyle}
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-instrument_sans text-sm font-semibold text-[#101828]">
+            <h3 className="truncate text-sm font-semibold text-[#101828]">
               {template.name}
             </h3>
             <p className="mt-1 text-xs text-[#667085]">
-              Saved custom layout set ready for Presenton generation.
+              {t("presenton.outline.templates.custom.cardDescription")}
             </p>
           </div>
           {isSelected ? (
             <span className="rounded-full border border-[rgba(0,123,85,0.14)] bg-[rgba(0,123,85,0.08)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#0b6b4b]">
-              Selected
+              {t("presenton.outline.templates.selected")}
             </span>
           ) : null}
         </div>

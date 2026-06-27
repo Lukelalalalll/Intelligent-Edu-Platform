@@ -1,19 +1,17 @@
 import React from 'react'
+import { useI18n } from '@/shared/i18n'
+import { THEME_EDITOR_STEPS } from './constants'
 
 interface StepIndicatorProps {
   currentStep: number
 }
 
-const steps = [
-  { step: 1, label: 'Brand' },
-  { step: 2, label: 'Palette' },
-  { step: 3, label: 'Fonts' },
-  { step: 4, label: 'Logo' },
-]
+export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
+  const { t } = useI18n()
 
-export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => (
-  <div className="flex flex-col items-center gap-7 px-4 min-w-[104px] pt-8 border-r border-[#EDEEEF]">
-    {steps.map(({ step, label }) => {
+  return (
+    <div className="flex flex-col items-center gap-7 px-4 min-w-[104px] pt-8 border-r border-[#EDEEEF]">
+      {THEME_EDITOR_STEPS.map(({ step, labelKey }) => {
       const isActive = currentStep === step
       return (
         <div key={step} className="flex flex-col items-center gap-1.5 px-3  ">
@@ -23,11 +21,12 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => 
               : 'bg-white text-[#404348] border border-[#EDEEEF]'
               }`}
           >
-            Step-{step}
+            {t('presenton.theme.editor.steps.stepLabel', { step })}
           </span>
-          <span className="text-[11px] font-normal text-black">{label}</span>
+          <span className="text-[11px] font-normal text-black">{t(labelKey)}</span>
         </div>
       )
-    })}
-  </div>
-)
+      })}
+    </div>
+  )
+}

@@ -12,6 +12,7 @@ from models.presentation_and_path import PresentationPathAndEditPath
 from models.sql.async_presentation_generation_status import AsyncPresentationGenerationTaskModel
 from models.sql.template import TemplateModel
 from services.database import get_async_session
+from utils.presentation_request import infer_requested_slide_count
 
 from .generation_workflow import generate_presentation_handler
 from .helpers import build_export_cookie_header, build_export_web_origin, build_owner_user_id
@@ -30,6 +31,12 @@ async def check_if_api_request_is_valid(
             status_code=400,
             detail="Either content or slides markdown or files is required to generate presentation",
         )
+    if request.n_slides is None:
+        request.n_slides = infer_requested_slide_count(
+            request.content,
+            maximum=MAX_NUMBER_OF_SLIDES,
+        )
+
     if request.n_slides is not None and request.n_slides <= 0:
         raise HTTPException(status_code=400, detail="Number of slides must be greater than 0")
     if request.n_slides is not None and request.n_slides > MAX_NUMBER_OF_SLIDES:

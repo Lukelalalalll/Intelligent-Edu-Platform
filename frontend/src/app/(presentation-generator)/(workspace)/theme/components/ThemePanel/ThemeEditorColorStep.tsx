@@ -3,20 +3,11 @@
 import React from 'react'
 import { Label } from '@/components/ui/label'
 import { RefreshCcw } from 'lucide-react'
+import { useI18n } from '@/shared/i18n'
 import { ColorPickerComponent } from './ColorPickerComponent'
 import { joinClassNames } from './themePanelHelpers'
 import { ThemeColors } from './types'
 import styles from './ThemePanel.module.css'
-
-const BRAND_COLOR_FIELDS: Array<{ key: keyof ThemeColors; label: string }> = [
-  { key: 'primary', label: 'Primary Color' },
-  { key: 'background', label: 'Background Color' },
-]
-
-const TEXT_COLOR_FIELDS: Array<{ key: keyof ThemeColors; label: string }> = [
-  { key: 'background_text', label: 'Background Text' },
-  { key: 'primary_text', label: 'Primary Text' },
-]
 
 const GRAPH_COLOR_KEYS: Array<keyof ThemeColors> = [
   'graph_0',
@@ -67,61 +58,55 @@ export const ThemeEditorColorStep: React.FC<ThemeEditorColorStepProps> = ({
   onColorChange,
   onShowColorPicker,
   onRefreshTheme,
-}) => (
-  <div
-    className={styles.stepScrollable}
-    style={{
-      paddingInline: step === 1 ? '20px' : '10px',
-    }}
-  >
-    <Label className={styles.stepHeading}>
-      {step === 1 ? 'Brand Colors' : 'Palette'}
-      <RefreshCcw
-        onClick={() =>
-          void onRefreshTheme(
-            step === 1
-              ? {}
-              : {
-                  primary: customColors.primary,
-                  background: customColors.background,
-                }
-          )
-        }
-        className={styles.stepRefresh}
-      />
-    </Label>
-    <div className="space-y-4">
-      <div className={joinClassNames([styles.stepCard, step === 2 && styles.stepCardMuted])}>
-        {step === 2 ? <p className={styles.stepSectionCaption}>Brand Colors</p> : null}
-        <div
-          className="space-y-4"
-          style={{
-            padding: step === 2 ? '10px' : '0px',
-            backgroundColor: 'transparent',
-          }}
-        >
-          {renderColorFields(
-            BRAND_COLOR_FIELDS,
-            customColors,
-            showColorPicker,
-            onColorChange,
-            onShowColorPicker
-          )}
-        </div>
-      </div>
+}) => {
+  const { t } = useI18n()
 
-      {step === 2 ? (
-        <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-          <p className={styles.stepSectionCaption}>Text Colors</p>
+  const brandColorFields: Array<{ key: keyof ThemeColors; label: string }> = [
+    { key: 'primary', label: t('presenton.theme.editor.colors.primary') },
+    { key: 'background', label: t('presenton.theme.editor.colors.background') },
+  ]
+
+  const textColorFields: Array<{ key: keyof ThemeColors; label: string }> = [
+    { key: 'background_text', label: t('presenton.theme.editor.colors.backgroundText') },
+    { key: 'primary_text', label: t('presenton.theme.editor.colors.primaryText') },
+  ]
+
+  return (
+    <div
+      className={styles.stepScrollable}
+      style={{
+        paddingInline: step === 1 ? '20px' : '10px',
+      }}
+    >
+      <Label className={styles.stepHeading}>
+        {step === 1 ? t('presenton.theme.editor.colors.brandHeading') : t('presenton.theme.editor.colors.paletteHeading')}
+        <RefreshCcw
+          onClick={() =>
+            void onRefreshTheme(
+              step === 1
+                ? {}
+                : {
+                    primary: customColors.primary,
+                    background: customColors.background,
+                  }
+            )
+          }
+          className={styles.stepRefresh}
+          aria-label={t('presenton.theme.editor.colors.refresh')}
+        />
+      </Label>
+      <div className="space-y-4">
+        <div className={joinClassNames([styles.stepCard, step === 2 && styles.stepCardMuted])}>
+          {step === 2 ? <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.brandSection')}</p> : null}
           <div
             className="space-y-4"
             style={{
-              padding: '10px',
+              padding: step === 2 ? '10px' : '0px',
               backgroundColor: 'transparent',
             }}
           >
             {renderColorFields(
-              TEXT_COLOR_FIELDS,
+              brandColorFields,
               customColors,
               showColorPicker,
               onColorChange,
@@ -129,45 +114,66 @@ export const ThemeEditorColorStep: React.FC<ThemeEditorColorStepProps> = ({
             )}
           </div>
         </div>
-      ) : null}
 
-      {step === 2 ? (
-        <div className={styles.stepCard}>
-          <ColorPickerComponent
-            colorKey="card"
-            label="Card Color"
-            currentColor={customColors.card}
-            onColorChange={onColorChange}
-            showColorPicker={showColorPicker}
-            onShowColorPicker={onShowColorPicker}
-          />
-        </div>
-      ) : null}
-
-      {step === 2 ? (
-        <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-          <p className={styles.stepSectionCaption}>Graph/Chart Colors</p>
-          <div
-            className="space-y-4"
-            style={{
-              padding: '10px',
-              backgroundColor: 'transparent',
-            }}
-          >
-            {GRAPH_COLOR_KEYS.map((colorKey) => (
-              <ColorPickerComponent
-                key={colorKey}
-                colorKey={colorKey}
-                label=""
-                currentColor={customColors[colorKey]}
-                onColorChange={onColorChange}
-                showColorPicker={showColorPicker}
-                onShowColorPicker={onShowColorPicker}
-              />
-            ))}
+        {step === 2 ? (
+          <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
+            <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.textSection')}</p>
+            <div
+              className="space-y-4"
+              style={{
+                padding: '10px',
+                backgroundColor: 'transparent',
+              }}
+            >
+              {renderColorFields(
+                textColorFields,
+                customColors,
+                showColorPicker,
+                onColorChange,
+                onShowColorPicker
+              )}
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+
+        {step === 2 ? (
+          <div className={styles.stepCard}>
+            <ColorPickerComponent
+              colorKey="card"
+              label={t('presenton.theme.editor.colors.card')}
+              currentColor={customColors.card}
+              onColorChange={onColorChange}
+              showColorPicker={showColorPicker}
+              onShowColorPicker={onShowColorPicker}
+            />
+          </div>
+        ) : null}
+
+        {step === 2 ? (
+          <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
+            <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.chartSection')}</p>
+            <div
+              className="space-y-4"
+              style={{
+                padding: '10px',
+                backgroundColor: 'transparent',
+              }}
+            >
+              {GRAPH_COLOR_KEYS.map((colorKey, index) => (
+                <ColorPickerComponent
+                  key={colorKey}
+                  colorKey={colorKey}
+                  label={t('presenton.theme.editor.colors.chartColor', { index: index + 1 })}
+                  currentColor={customColors[colorKey]}
+                  onColorChange={onColorChange}
+                  showColorPicker={showColorPicker}
+                  onShowColorPicker={onShowColorPicker}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
-  </div>
-)
+  )
+}

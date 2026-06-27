@@ -1,8 +1,10 @@
 import React, { lazy } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { PresentonBootstrap } from "@/presenton/bootstrap";
-import DashboardPage from "@/app/(presentation-generator)/(workspace)/dashboard/components/DashboardPage";
+import { useI18n } from "@/shared/i18n";
+import { PresentonScreen } from "@/presenton/PresentonScreen";
+
+export { PresentonScreen } from "@/presenton/PresentonScreen";
 
 const UploadPage = lazy(
   () => import("@/app/(presentation-generator)/upload/components/UploadPage")
@@ -19,12 +21,6 @@ const PresentationPage = lazy(
 const PdfMakerPage = lazy(
   () => import("@/app/(export)/pdf-maker/PdfMakerPage")
 );
-const TemplatePanel = lazy(
-  () => import("@/app/(presentation-generator)/(workspace)/templates/components/TemplatePanel")
-);
-const ThemePanel = lazy(
-  () => import("@/app/(presentation-generator)/(workspace)/theme/components/ThemePanel")
-);
 const SettingsPage = lazy(
   () => import("@/app/(presentation-generator)/(workspace)/settings/SettingPage")
 );
@@ -34,52 +30,6 @@ const TemplatePreviewPage = lazy(
 const CustomTemplatePage = lazy(
   () => import("@/app/(presentation-generator)/custom-template/CustomTemplatePage")
 );
-
-type PresentonScreenProps = React.PropsWithChildren<{
-  tone?: "default" | "wide";
-  bleed?: "default" | "full";
-  contentWidth?: "default" | "wide" | "full";
-  contentInset?: "default" | "none";
-  contentClassName?: string;
-  bootstrapBlocking?: boolean;
-}>;
-
-export function PresentonScreen({
-  children,
-  tone = "default",
-  bleed = "default",
-  contentWidth = "default",
-  contentInset = "default",
-  contentClassName = "",
-  bootstrapBlocking = true,
-}: PresentonScreenProps) {
-  const widthClassName =
-    contentWidth === "full"
-      ? "w-full max-w-none"
-      : contentWidth === "wide" || tone === "wide"
-      ? "w-full max-w-[min(100%,1760px)]"
-      : "w-full max-w-[min(100%,1560px)]";
-  const screenClassName =
-    bleed === "full"
-      ? "w-full min-h-[calc(100dvh-var(--nav-height,60px))] bg-[radial-gradient(circle_at_top_left,rgba(227,246,237,0.98),rgba(237,248,242,0.99)_34%,rgba(244,250,247,1)_100%)]"
-      : contentInset === "none"
-      ? "mx-auto flex w-full flex-col"
-      : "mx-auto flex w-full flex-col px-3 pb-6 pt-4 sm:px-4 lg:px-6";
-
-  return (
-    <PresentonBootstrap blocking={bootstrapBlocking}>
-      <section className={`${screenClassName} ${contentClassName}`.trim()}>
-        <div className={`${widthClassName} mx-auto flex w-full flex-1 flex-col`}>
-          {children}
-        </div>
-      </section>
-    </PresentonBootstrap>
-  );
-}
-
-function PresentonWorkspace({ children }: React.PropsWithChildren) {
-  return <PresentonScreen>{children}</PresentonScreen>;
-}
 
 export function PresentonLegacyRedirectRoute() {
   return <Navigate to="/slides/presenton" replace />;
@@ -110,17 +60,18 @@ export function PresentonOutlineRoute() {
 }
 
 export function PresentonPresentationRoute() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const presentationId = searchParams.get("id");
 
   if (!presentationId) {
     return (
-      <PresentonScreen>
-        <div className="flex min-h-[calc(100dvh-var(--nav-height,60px)-8rem)] flex-col items-center justify-center font-syne">
-          <h1 className="text-2xl font-bold">No presentation id found</h1>
-          <p className="pb-4 text-gray-500">Please try again</p>
+        <PresentonScreen>
+          <div className="flex min-h-[calc(100dvh-var(--nav-height,60px)-8rem)] flex-col items-center justify-center font-syne">
+          <h1 className="text-2xl font-bold">{t("presenton.route.missingId.title")}</h1>
+          <p className="pb-4 text-gray-500">{t("presenton.route.missingId.body")}</p>
           <Button asChild>
-            <a href="/slides/presenton/dashboard">Go to home</a>
+            <a href="/slides/presenton/dashboard">{t("presenton.route.missingId.cta")}</a>
           </Button>
         </div>
       </PresentonScreen>
@@ -135,6 +86,7 @@ export function PresentonPresentationRoute() {
 }
 
 export function PresentonPdfMakerRoute() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const presentationId = searchParams.get("id");
   const exportCookie = searchParams.get("exportCookie") ?? undefined;
@@ -143,10 +95,10 @@ export function PresentonPdfMakerRoute() {
     return (
       <>
         <div className="flex h-screen flex-col items-center justify-center">
-          <h1 className="text-2xl font-bold">No presentation id found</h1>
-          <p className="pb-4 text-gray-500">Please try again</p>
+          <h1 className="text-2xl font-bold">{t("presenton.route.missingId.title")}</h1>
+          <p className="pb-4 text-gray-500">{t("presenton.route.missingId.body")}</p>
           <Button asChild>
-            <a href="/slides/presenton/dashboard">Go to home</a>
+            <a href="/slides/presenton/dashboard">{t("presenton.route.missingId.cta")}</a>
           </Button>
         </div>
       </>
@@ -160,35 +112,11 @@ export function PresentonPdfMakerRoute() {
   );
 }
 
-export function PresentonDashboardRoute() {
-  return (
-    <PresentonScreen bleed="full" bootstrapBlocking={false}>
-      <DashboardPage />
-    </PresentonScreen>
-  );
-}
-
-export function PresentonTemplatesRoute() {
-  return (
-    <PresentonScreen bootstrapBlocking={false}>
-      <TemplatePanel />
-    </PresentonScreen>
-  );
-}
-
-export function PresentonThemeRoute() {
-  return (
-    <PresentonWorkspace>
-      <ThemePanel />
-    </PresentonWorkspace>
-  );
-}
-
 export function PresentonSettingsRoute() {
   return (
-    <PresentonWorkspace>
+    <PresentonScreen>
       <SettingsPage />
-    </PresentonWorkspace>
+    </PresentonScreen>
   );
 }
 

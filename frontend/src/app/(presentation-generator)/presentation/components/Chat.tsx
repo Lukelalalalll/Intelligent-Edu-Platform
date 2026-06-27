@@ -7,6 +7,9 @@ import ChatMessageList from "./chat/components/ChatMessageList";
 import { usePresentationChat } from "./chat/hooks/usePresentationChat";
 import type { ChatProps } from "./chat/Chat.types";
 
+const PROJECT_UI_FONT_STACK =
+  '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif';
+
 const Chat = (props: ChatProps) => {
   const {
     activeAssistantMessageId,
@@ -30,7 +33,10 @@ const Chat = (props: ChatProps) => {
   } = usePresentationChat(props);
 
   return (
-    <div className="flex h-full w-full flex-col bg-white">
+    <div
+      className="flex h-full w-full flex-col bg-white"
+      style={{ fontFamily: PROJECT_UI_FONT_STACK }}
+    >
       <ChatHeader
         isHistoryLoading={isHistoryLoading}
         isSending={isSending}

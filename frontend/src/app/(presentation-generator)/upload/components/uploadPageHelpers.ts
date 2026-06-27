@@ -1,13 +1,18 @@
 "use client";
 
 import { LLMConfig } from "@/types/llm_config";
+import { type Locale } from "@/shared/i18n";
+import { type TranslationKey } from "@/shared/i18n";
 
 import {
-  LanguageType,
   PresentationConfig,
   ToneType,
   VerbosityType,
 } from "../type";
+import {
+  getGenerationLanguageForLocale,
+  getGenerationLanguageLabel,
+} from "../../utils/presentonLanguage";
 
 export const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
 
@@ -77,26 +82,32 @@ export interface UploadSnapshotProps {
 }
 
 export interface UploadActionItem {
+  labelKey: TranslationKey;
   label: string;
   value: string;
 }
 
 export interface UploadStatusItem {
+  labelKey: TranslationKey;
   label: string;
   value: string;
 }
 
-export const INITIAL_PRESENTATION_CONFIG: PresentationConfig = {
-  slides: null,
-  language: LanguageType.Auto,
-  prompt: "",
-  tone: ToneType.Default,
-  verbosity: VerbosityType.Standard,
-  instructions: "",
-  includeTableOfContents: false,
-  includeTitleSlide: false,
-  webSearch: false,
-};
+export function getInitialPresentationConfig(locale: Locale): PresentationConfig {
+  return {
+    slides: null,
+    language: getGenerationLanguageForLocale(locale),
+    prompt: "",
+    tone: ToneType.Default,
+    verbosity: VerbosityType.Standard,
+    instructions: "",
+    includeTableOfContents: false,
+    includeTitleSlide: false,
+    webSearch: false,
+  };
+}
+
+export const INITIAL_PRESENTATION_CONFIG: PresentationConfig = getInitialPresentationConfig("en");
 
 export const INITIAL_LOADING_STATE: LoadingState = {
   isLoading: false,
@@ -105,9 +116,6 @@ export const INITIAL_LOADING_STATE: LoadingState = {
   showProgress: false,
   extra_info: "",
 };
-
-export const UPLOAD_FLOW_NOTE =
-  "Prompt-only runs jump straight into outline generation. Adding source files keeps the flow grounded and sends you through document preview first.";
 
 const getFileExtension = (fileName: string): string => {
   const index = fileName.lastIndexOf(".");
@@ -244,25 +252,32 @@ export function buildUploadActionSummary({
   inputReady,
   filesCount,
   nextStepLabel,
+  t,
 }: {
   inputReady: boolean;
   filesCount: number;
   nextStepLabel: string;
+  t: (key: TranslationKey) => string;
 }): UploadActionItem[] {
   return [
     {
-      label: "Input ready",
-      value: inputReady ? "Ready to generate" : "Add a prompt or file",
+      labelKey: "presenton.upload.summary.inputReady",
+      label: t("presenton.upload.summary.inputReady"),
+      value: inputReady
+        ? t("presenton.upload.summary.inputReady.ready")
+        : t("presenton.upload.summary.inputReady.empty"),
     },
     {
-      label: "Attachments",
+      labelKey: "presenton.upload.summary.attachments",
+      label: t("presenton.upload.summary.attachments"),
       value:
         filesCount > 0
-          ? `${filesCount} file${filesCount > 1 ? "s" : ""} attached`
-          : "Optional",
+          ? t("presenton.upload.summary.attachments.count", { count: filesCount })
+          : t("presenton.upload.summary.attachments.optional"),
     },
     {
-      label: "Next step",
+      labelKey: "presenton.upload.summary.nextStep",
+      label: t("presenton.upload.summary.nextStep"),
       value: nextStepLabel,
     },
   ];
@@ -272,23 +287,30 @@ export function buildUploadStatusCards({
   generationPathLabel,
   slides,
   language,
+  t,
 }: {
   generationPathLabel: string;
   slides: string | null;
   language: string | null;
+  t: (key: TranslationKey) => string;
 }): UploadStatusItem[] {
   return [
     {
-      label: "Generation path",
+      labelKey: "presenton.upload.status.path",
+      label: t("presenton.upload.status.path"),
       value: generationPathLabel,
     },
     {
-      label: "Slide target",
-      value: slides ? `${slides} slides` : "Auto",
+      labelKey: "presenton.upload.status.slides",
+      label: t("presenton.upload.status.slides"),
+      value: slides
+        ? t("presenton.upload.status.slides.count", { count: slides })
+        : t("presenton.upload.status.slides.auto"),
     },
     {
-      label: "Language",
-      value: language || "Auto",
+      labelKey: "presenton.upload.status.language",
+      label: t("presenton.upload.status.language"),
+      value: getGenerationLanguageLabel(language) || t("presenton.upload.status.language.auto"),
     },
   ];
 }

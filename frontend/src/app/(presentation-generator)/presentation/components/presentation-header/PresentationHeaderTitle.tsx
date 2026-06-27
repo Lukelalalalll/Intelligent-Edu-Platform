@@ -23,6 +23,9 @@ type PresentationHeaderTitleProps = {
   presentationId: string;
 };
 
+const PROJECT_UI_FONT_STACK =
+  '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif';
+
 const PresentationHeaderTitle = ({
   presentationId,
 }: PresentationHeaderTitleProps) => {
@@ -134,7 +137,10 @@ const PresentationHeaderTitle = ({
             : "disabled:pointer-events-none disabled:hover:bg-transparent"
         )}
       >
-        <h2 className="w-[450px] min-w-0 flex-1 font-unbounded text-lg leading-snug text-[#101323]">
+        <h2
+          className="w-[450px] min-w-0 flex-1 text-lg leading-snug text-[#101323]"
+          style={{ fontFamily: PROJECT_UI_FONT_STACK }}
+        >
           <MarkdownRenderer
             content={presentationData?.title || "Presentation"}
             className="prose-headings:my-0 prose-p:my-0 mb-0 min-w-0 overflow-hidden text-ellipsis line-clamp-1 text-sm text-[#101323]"
@@ -166,7 +172,8 @@ const PresentationHeaderTitle = ({
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
               placeholder="Presentation title"
-              className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-2 font-unbounded text-base leading-tight text-[#101323] placeholder:text-[#101323]/35 outline-none focus:ring-0"
+              className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-2 text-base leading-tight text-[#101323] placeholder:text-[#101323]/35 outline-none focus:ring-0"
+              style={{ fontFamily: PROJECT_UI_FONT_STACK }}
               aria-label="Presentation title"
             />
             <div className="ml-0.5 flex shrink-0 items-center gap-0.5 border-l border-[#EDECEC] pl-1">

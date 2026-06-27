@@ -44,8 +44,8 @@ const PresentationEditorView = ({
           isPresentationSaving={header.isSaving}
           currentSlide={header.selectedSlide}
         />
-        <div className="flex min-h-0 flex-1 gap-3 overflow-hidden xl:gap-4">
-          <div className="sticky top-0 h-full w-[112px] shrink-0 self-start pt-3">
+        <div className="flex min-h-0 flex-1 gap-4 overflow-hidden xl:gap-5">
+          <div className="sticky top-0 h-full w-[200px] shrink-0 self-start pt-4 xl:w-[224px] 2xl:w-[236px]">
             <SidePanel
               selectedSlide={sidePanel.selectedSlide}
               onSlideClick={sidePanel.onSlideSelect}
@@ -53,7 +53,7 @@ const PresentationEditorView = ({
               loading={sidePanel.loading}
             />
           </div>
-          <div className="relative flex h-full min-w-0 flex-1 gap-3 xl:gap-4">
+          <div className="relative flex h-full min-w-0 flex-1 gap-4 xl:gap-5">
             <PresentationSlidesViewport {...slidesViewport} />
             <div className="sticky top-0 h-full w-full max-w-[370px] shrink-0 self-start">
               <Chat {...chat} />

@@ -10,6 +10,7 @@ import {
 import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { Card as TemplateCard } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 
 import {
     CustomTemplatePreview,
@@ -21,6 +22,7 @@ import {
 import {
     PREVIEW_ROOT_MARGIN,
     PREVIEW_STAGGER_MS,
+    getBuiltInTemplateCopy,
     scheduleAfterPaint,
 } from "./templatePanelHelpers";
 import styles from "./TemplatePanel.module.css";
@@ -146,6 +148,7 @@ export const CustomTemplateCard = React.memo(function CustomTemplateCard({
     previewPriority,
     onOpen,
 }: CustomTemplateCardProps) {
+    const { t } = useI18n();
     const { previewViewportRef, shouldWarmPreview, shouldRenderPreview } = useDeferredCardPreview(previewPriority);
     const { previewLayouts, loading } = useCustomTemplatePreview(`${template.id}`, {
         enabled: shouldWarmPreview,
@@ -156,8 +159,8 @@ export const CustomTemplateCard = React.memo(function CustomTemplateCard({
     return (
         <TemplateWorkspaceCard
             title={template.name}
-            description="Open this custom template in preview and keep refining its reusable layout set."
-            badgeLabel="Custom template"
+            description={t("presenton.templates.cards.customDescription")}
+            badgeLabel={t("presenton.templates.cards.customBadge")}
             onOpen={handleOpen}
             previewOverlay={<LayoutsBadge count={template.layoutCount} />}
             previewReady={shouldRenderPreview}
@@ -186,14 +189,16 @@ export const BuiltInTemplateCard = React.memo(function BuiltInTemplateCard({
     previewPriority,
     onOpen,
 }: BuiltInTemplateCardProps) {
+    const { t } = useI18n();
     const { previewViewportRef, shouldRenderPreview } = useDeferredCardPreview(previewPriority);
     const handleOpen = useCallback(() => onOpen(template.id), [onOpen, template.id]);
+    const localizedTemplate = getBuiltInTemplateCopy(template, t);
 
     return (
         <TemplateWorkspaceCard
-            title={template.name}
-            description={template.description}
-            badgeLabel="Built-in family"
+            title={localizedTemplate.name}
+            description={localizedTemplate.description}
+            badgeLabel={t("presenton.templates.cards.builtInBadge")}
             onOpen={handleOpen}
             previewOverlay={<LayoutsBadge count={template.layouts.length} />}
             previewReady={shouldRenderPreview}
@@ -230,12 +235,14 @@ export function BuiltInTemplatesLoadingGrid() {
 }
 
 export function CustomTemplatesLoadingCard() {
+    const { t } = useI18n();
+
     return (
         <div className={styles.loadingCard}>
             <Loader2 className={cn("animate-spin", styles.loadingIcon)} />
-            <p className={styles.loadingTitle}>Loading custom templates</p>
+            <p className={styles.loadingTitle}>{t("presenton.templates.cards.loading.title")}</p>
             <p className={styles.loadingText}>
-                Pulling your saved template summaries and preview layouts into the workspace.
+                {t("presenton.templates.cards.loading.body")}
             </p>
         </div>
     );

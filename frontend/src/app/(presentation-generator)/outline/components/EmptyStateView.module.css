@@ -1,6 +1,9 @@
 .page {
+  --outline-body-font: var(--body-font-family, inherit);
+  --outline-heading-font: var(--heading-font-family, var(--outline-body-font));
   width: 100%;
   min-height: calc(100dvh - var(--nav-height, 60px));
+  font-family: var(--outline-body-font);
 }
 
 .container {
@@ -108,7 +111,7 @@
   width: fit-content;
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
-  font-family: var(--font-instrument-sans), var(--font-inter), sans-serif;
+  font-family: var(--outline-body-font);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -186,7 +189,7 @@
 .sideTitle {
   margin: 0;
   color: #101828;
-  font-family: var(--heading-font-family, var(--font-unbounded), sans-serif);
+  font-family: var(--outline-heading-font);
   letter-spacing: 0;
 }
 
@@ -208,7 +211,7 @@
 .statusLabel,
 .stepItem {
   margin: 0;
-  font-family: var(--body-font-family, var(--font-instrument-sans), var(--font-inter), sans-serif);
+  font-family: var(--outline-body-font);
   color: #667085;
 }
 
@@ -282,7 +285,7 @@
 
 .statusValue {
   color: #101828;
-  font-family: var(--body-font-family, var(--font-instrument-sans), var(--font-inter), sans-serif);
+  font-family: var(--outline-body-font);
   font-size: 0.95rem;
   line-height: 1.4;
   font-weight: 700;

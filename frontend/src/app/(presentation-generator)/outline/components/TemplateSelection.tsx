@@ -3,6 +3,7 @@
 import React, { memo, useCallback, useMemo } from "react";
 import { Loader2, LayoutTemplate, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n, type TranslationKey } from "@/shared/i18n";
 import { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { templates } from "@/app/presentation-templates";
 import {
@@ -18,12 +19,85 @@ import {
 } from "../../components/TemplatePreviewComponents";
 import styles from "./OutlineWorkspace.module.css";
 
+const outlineBodyFontStyle = {
+  fontFamily: "var(--outline-body-font, var(--body-font-family, inherit))",
+} as const;
+
+const BUILT_IN_TEMPLATE_COPY: Partial<
+  Record<
+    string,
+    {
+      name: TranslationKey;
+      description: TranslationKey;
+    }
+  >
+> = {
+  general: {
+    name: "presenton.templates.family.general.name",
+    description: "presenton.templates.family.general.description",
+  },
+  modern: {
+    name: "presenton.templates.family.modern.name",
+    description: "presenton.templates.family.modern.description",
+  },
+  standard: {
+    name: "presenton.templates.family.standard.name",
+    description: "presenton.templates.family.standard.description",
+  },
+  swift: {
+    name: "presenton.templates.family.swift.name",
+    description: "presenton.templates.family.swift.description",
+  },
+  code: {
+    name: "presenton.templates.family.code.name",
+    description: "presenton.templates.family.code.description",
+  },
+  education: {
+    name: "presenton.templates.family.education.name",
+    description: "presenton.templates.family.education.description",
+  },
+  "product-overview": {
+    name: "presenton.templates.family.productOverview.name",
+    description: "presenton.templates.family.productOverview.description",
+  },
+  report: {
+    name: "presenton.templates.family.report.name",
+    description: "presenton.templates.family.report.description",
+  },
+  "pitch-deck": {
+    name: "presenton.templates.family.pitchDeck.name",
+    description: "presenton.templates.family.pitchDeck.description",
+  },
+  "neo-general": {
+    name: "presenton.templates.family.neoGeneral.name",
+    description: "presenton.templates.family.neoGeneral.description",
+  },
+  "neo-standard": {
+    name: "presenton.templates.family.neoStandard.name",
+    description: "presenton.templates.family.neoStandard.description",
+  },
+  "neo-modern": {
+    name: "presenton.templates.family.neoModern.name",
+    description: "presenton.templates.family.neoModern.description",
+  },
+  "neo-swift": {
+    name: "presenton.templates.family.neoSwift.name",
+    description: "presenton.templates.family.neoSwift.description",
+  },
+};
+
 const BuiltInTemplateCard = memo(function BuiltInTemplateCard({
   template,
+  title,
+  description,
+  selectedLabel,
   isSelected,
   onSelect,
 }: {
   template: TemplateLayoutsWithSettings;
+  title: string;
+  description: string;
+  selectedLabel: string;
   isSelected: boolean;
   onSelect: (template: TemplateLayoutsWithSettings) => void;
 }) {
@@ -48,19 +122,22 @@ const BuiltInTemplateCard = memo(function BuiltInTemplateCard({
           isOutline={true}
         />
       </TemplatePreviewStage>
-      <div className="border-t border-[#EDEEEF] bg-white/96 px-6 py-5">
+      <div
+        className="border-t border-[#EDEEEF] bg-white/96 px-6 py-5"
+        style={outlineBodyFontStyle}
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-instrument_sans text-sm font-semibold capitalize text-[#101828]">
-              {template.name}
+            <h3 className="truncate text-sm font-semibold capitalize text-[#101828]">
+              {title}
             </h3>
             <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#667085]">
-              {template.description}
+              {description}
             </p>
           </div>
           {isSelected ? (
             <span className="rounded-full border border-[rgba(0,123,85,0.14)] bg-[rgba(0,123,85,0.08)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#0b6b4b]">
-              Selected
+              {selectedLabel}
             </span>
           ) : null}
         </div>
@@ -78,6 +155,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
   selectedTemplate,
   onSelectTemplate,
 }) {
+  const { t } = useI18n();
   const { templates: customTemplates, loading: customLoading } =
     useCustomTemplateSummaries();
 
@@ -106,7 +184,9 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
       return (
         <div className={styles.loadingState}>
           <Loader2 className="h-8 w-8 animate-spin text-[#0b6b4b]" />
-          <p className={styles.loadingText}>Loading custom template previews...</p>
+          <p className={styles.loadingText}>
+            {t("presenton.outline.templates.loadingCustom")}
+          </p>
         </div>
       );
     }
@@ -124,7 +204,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
         ))}
       </div>
     );
-  }, [customLoading, customTemplates, handleCustomSelect, selectedCustomId]);
+  }, [customLoading, customTemplates, handleCustomSelect, selectedCustomId, t]);
 
   const builtInTemplateCards = useMemo(
     () =>
@@ -132,11 +212,22 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
         <BuiltInTemplateCard
           key={template.id}
           template={template}
+          title={
+            BUILT_IN_TEMPLATE_COPY[template.id]
+              ? t(BUILT_IN_TEMPLATE_COPY[template.id]!.name)
+              : template.name
+          }
+          description={
+            BUILT_IN_TEMPLATE_COPY[template.id]
+              ? t(BUILT_IN_TEMPLATE_COPY[template.id]!.description)
+              : template.description
+          }
+          selectedLabel={t("presenton.outline.templates.selected")}
           isSelected={selectedBuiltInId === template.id}
           onSelect={handleBuiltInSelect}
         />
       )),
-    [handleBuiltInSelect, selectedBuiltInId]
+    [handleBuiltInSelect, selectedBuiltInId, t]
   );
 
   return (
@@ -146,12 +237,13 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
           <div className={styles.controlCopy}>
             <span className={styles.badge}>
               <Sparkles className="h-3.5 w-3.5" />
-              Custom families
+              {t("presenton.outline.templates.custom.badge")}
             </span>
-            <h3 className={styles.groupTitle}>Custom templates</h3>
+            <h3 className={styles.groupTitle}>
+              {t("presenton.outline.templates.custom.title")}
+            </h3>
             <p className={styles.groupDescription}>
-              Reopen a saved custom layout set or build a new one without leaving the
-              Presenton workspace.
+              {t("presenton.outline.templates.custom.body")}
             </p>
           </div>
         </div>
@@ -163,11 +255,13 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
           <div className={styles.controlCopy}>
             <span className={styles.mutedBadge}>
               <LayoutTemplate className="h-3.5 w-3.5" />
-              Built-in families
+              {t("presenton.outline.templates.builtIn.badge")}
             </span>
-            <h3 className={styles.groupTitle}>Presenton built-ins</h3>
+            <h3 className={styles.groupTitle}>
+              {t("presenton.outline.templates.builtIn.title")}
+            </h3>
             <p className={styles.groupDescription}>
-              Pick the family whose pacing and layout coverage best fits this outline.
+              {t("presenton.outline.templates.builtIn.body")}
             </p>
           </div>
         </div>

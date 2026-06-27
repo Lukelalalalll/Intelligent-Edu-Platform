@@ -1,5 +1,5 @@
 import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
-
+import { type Locale } from "@/shared/i18n";
 export type DeckSortDirection = "desc" | "asc";
 
 export type PresentationHistoryGroup = {
@@ -9,26 +9,54 @@ export type PresentationHistoryGroup = {
   items: PresentationResponse[];
 };
 
+type DashboardTranslator = (
+  key:
+    | "presenton.dashboard.group.all.title"
+    | "presenton.dashboard.group.all.body"
+    | "presenton.dashboard.group.recent.title"
+    | "presenton.dashboard.group.recent.body"
+    | "presenton.dashboard.group.earlier.title"
+    | "presenton.dashboard.group.earlier.body",
+  vars?: Record<string, string | number>
+) => string;
+
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-const shortDateFormatter = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-});
+const DATE_LOCALE_MAP: Record<Locale, string> = {
+  en: "en",
+  "zh-CN": "zh-CN",
+  "zh-HK": "zh-HK",
+};
 
-const longDateFormatter = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
+function getDateFormatter(
+  locale: Locale,
+  variant: "short" | "long" | "dateTime"
+) {
+  const dateLocale = DATE_LOCALE_MAP[locale] ?? locale;
 
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
+  if (variant === "short") {
+    return new Intl.DateTimeFormat(dateLocale, {
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  if (variant === "dateTime") {
+    return new Intl.DateTimeFormat(dateLocale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  return new Intl.DateTimeFormat(dateLocale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export function getPresentationTimestamp(
   presentation: Pick<PresentationResponse, "updated_at" | "created_at">
@@ -92,6 +120,7 @@ export function isPresentationRecentlyUpdated(
 
 export function buildPresentationHistoryGroups(
   presentations: PresentationResponse[],
+  t: DashboardTranslator,
   now = Date.now()
 ): PresentationHistoryGroup[] {
   if (!presentations.length) return [];
@@ -107,8 +136,8 @@ export function buildPresentationHistoryGroups(
     return [
       {
         key: recent.length ? "recent" : "earlier",
-        title: "All decks",
-        description: "Sorted by latest activity across your Presenton workspace.",
+        title: t("presenton.dashboard.group.all.title"),
+        description: t("presenton.dashboard.group.all.body"),
         items: presentations,
       },
     ];
@@ -116,15 +145,15 @@ export function buildPresentationHistoryGroups(
 
   const recentGroup: PresentationHistoryGroup = {
     key: "recent",
-    title: "Recently updated",
-    description: "Decks touched in the last 7 days.",
+    title: t("presenton.dashboard.group.recent.title"),
+    description: t("presenton.dashboard.group.recent.body"),
     items: recent,
   };
 
   const earlierGroup: PresentationHistoryGroup = {
     key: "earlier",
-    title: "Earlier",
-    description: "Older decks that are still available to reopen or clean up.",
+    title: t("presenton.dashboard.group.earlier.title"),
+    description: t("presenton.dashboard.group.earlier.body"),
     items: earlier,
   };
 
@@ -134,17 +163,10 @@ export function buildPresentationHistoryGroups(
 
 export function formatPresentationDate(
   timestamp: number,
-  variant: "short" | "long" | "dateTime" = "long"
+  locale: Locale,
+  variant: "short" | "long" | "dateTime" = "long",
+  fallbackLabel = "Unknown"
 ): string {
-  if (!timestamp) return "Unknown";
-
-  if (variant === "short") {
-    return shortDateFormatter.format(timestamp);
-  }
-
-  if (variant === "dateTime") {
-    return dateTimeFormatter.format(timestamp);
-  }
-
-  return longDateFormatter.format(timestamp);
+  if (!timestamp) return fallbackLabel;
+  return getDateFormatter(locale, variant).format(timestamp);
 }

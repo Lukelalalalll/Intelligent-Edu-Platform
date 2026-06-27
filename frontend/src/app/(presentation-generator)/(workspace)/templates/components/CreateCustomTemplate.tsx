@@ -1,8 +1,11 @@
+"use client";
+
 import React from 'react';
 import { ArrowUpRight, Plus, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/shared/i18n';
 import { trackEvent, MixpanelEvent } from '@/utils/mixpanel';
 
 type CreateCustomTemplateProps = {
@@ -14,6 +17,7 @@ export default function CreateCustomTemplate({
     className,
     variant = 'default',
 }: CreateCustomTemplateProps) {
+    const { t } = useI18n();
     const router = useRouter();
     const isWorkspace = variant === 'workspace';
 
@@ -67,7 +71,7 @@ export default function CreateCustomTemplate({
                     </div>
                     {isWorkspace ? (
                         <span className="absolute left-4 top-3.5 z-40 inline-flex items-center rounded-full bg-[#0f172a] px-3 py-1 text-xs font-semibold text-white">
-                            New custom
+                            {t('presenton.templates.createCustom.badge')}
                         </span>
                     ) : null}
                 </div>
@@ -91,7 +95,7 @@ export default function CreateCustomTemplate({
                         </div>
                         <div className="min-w-0">
                             <h4 className={cn('font-semibold', isWorkspace ? 'text-base text-[#111827]' : 'text-sm text-[#191919]')}>
-                                Build Template
+                                {t('presenton.templates.createCustom.title')}
                             </h4>
                             <p
                                 className={cn(
@@ -100,8 +104,8 @@ export default function CreateCustomTemplate({
                                 )}
                             >
                                 {isWorkspace
-                                    ? 'Start a reusable template and keep it ready for preview, outline, and deck generation.'
-                                    : 'Build Your Own Template'}
+                                    ? t('presenton.templates.createCustom.bodyWorkspace')
+                                    : t('presenton.templates.createCustom.bodyDefault')}
                             </p>
                         </div>
                     </div>

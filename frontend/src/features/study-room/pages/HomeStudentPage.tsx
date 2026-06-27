@@ -6,6 +6,8 @@ import { useAuthStore } from '@/shared/store/useAuthStore';
 import { useI18n } from '@/shared/i18n';
 import styles from '../styles/HomeStudent.module.css';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 
 const StudyRoom = lazy(() => import('../components/StudyRoom'));
 const AIChatBox = lazy(() => import('@/features/home/components/AIChatBox/AIChatBox'));
@@ -16,6 +18,7 @@ function TabFallback({ label }: { label: string }) {
 }
 
 export default function HomeStudentPage() {
+    const isEntranceActive = usePageEntrance();
     const storeUser = useAuthStore((state) => state.user);
     const { t } = useI18n();
     const username = storeUser?.username || t('student.fallbackName');
@@ -147,7 +150,7 @@ export default function HomeStudentPage() {
     }, [handleFileUpload]);
 
     return (
-        <div className={`${styles.pageContainer} ${activeTab === 'study' ? styles.pageContainerFull : ''}`}>
+        <div className={`${styles.pageContainer} ${activeTab === 'study' ? styles.pageContainerFull : ''} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             {bannerState !== 'hidden' && (
                 <div ref={bannerRef} onAnimationEnd={handleBannerAnimationEnd}>
                     <WelcomeBanner

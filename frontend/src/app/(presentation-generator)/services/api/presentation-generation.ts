@@ -3,6 +3,7 @@ import { IconSearch, ImageGenerate, ImageSearch, PreviousGeneratedImagesResponse
 import { ApiResponseHandler } from "./api-error-handler";
 import { presentonFetch } from "./presenton-fetch";
 import { getApiUrl, resolveBackendAssetUrl } from "@/utils/api";
+import { getGenerationLanguageLabel } from "../../utils/presentonLanguage";
 
 export class PresentationGenerationApi {
   static async uploadDoc(documents: File[]) {
@@ -42,7 +43,7 @@ export class PresentationGenerationApi {
           headers: getHeader(),
           body: JSON.stringify({
             file_paths: documentKeys,
-            language: language ?? null,
+            language: getGenerationLanguageLabel(language) || null,
           }),
           cache: "no-cache",
         }
@@ -89,7 +90,7 @@ export class PresentationGenerationApi {
             content,
             n_slides,
             file_paths,
-            language,
+            language: getGenerationLanguageLabel(language) || null,
             tone,
             verbosity,
             instructions,
@@ -133,7 +134,10 @@ export class PresentationGenerationApi {
     }
   }
 
-  static async updatePresentationContent(body: any) {
+  static async updatePresentationContent(
+    body: any,
+    requestInit?: Pick<Parameters<typeof presentonFetch>[1], "signal">
+  ) {
     try {
       const response = await presentonFetch(
         getApiUrl(`/api/v1/ppt/presentation/update`),
@@ -142,6 +146,7 @@ export class PresentationGenerationApi {
           headers: getHeader(),
           body: JSON.stringify(body),
           cache: "no-cache",
+          ...requestInit,
         }
       );
       

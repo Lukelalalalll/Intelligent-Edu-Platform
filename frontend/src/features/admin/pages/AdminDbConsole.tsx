@@ -2,6 +2,8 @@ import React from 'react';
 import styles from '../styles/AdminDbConsole.module.css';
 import relStyles from '../styles/adminRelation.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 
 function RelationGraph({ doc }) {
     if (!doc) {
@@ -148,6 +150,7 @@ export default function AdminDbConsole({
     selectedDoc,
     relationReadOnly,
 }: AdminDbConsoleProps) {
+    const isEntranceActive = usePageEntrance();
     const readOnlyMode = relationReadOnly;
     const isUserCollection = /user/i.test(activeCollection || '');
     const isCourseCollection = /course/i.test(activeCollection || '');
@@ -160,7 +163,7 @@ export default function AdminDbConsole({
     }
 
     return (
-        <div className={styles.pageWrap}>
+        <div className={`${styles.pageWrap} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title="Database Console"
                 subtitle="Visual browser and editor for MongoDB collections"

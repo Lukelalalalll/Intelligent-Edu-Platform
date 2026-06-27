@@ -1,7 +1,7 @@
 import Link from "@/presenton/shims/next-link";
 import { Button } from "@/components/ui/button";
 import WorkspaceCard from "@/shared/components/Card/Card";
-import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import { ArrowLeft, Sparkles, Trash2 } from "lucide-react";
 
 import type { PreviewStat } from "./templatePreviewData";
@@ -28,26 +28,30 @@ export function TemplatePreviewControls({
   summaryTitle,
   onDeleteCustomTemplate,
 }: TemplatePreviewControlsProps) {
+  const { t } = useI18n();
+
   return (
     <WorkspaceCard
       glass
-      className={cn(styles.surfaceCard, styles.motionCard, styles.motionPrimary)}
+      className={styles.surfaceCard}
     >
       <div className={styles.controlSection}>
         <div className={styles.controlTop}>
           <div className={styles.controlCopy}>
             <Link href="/templates" className={styles.secondaryAction}>
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span>Back to Templates</span>
+              <span>{t("presenton.templatePreview.back")}</span>
             </Link>
             <div className={styles.badge}>
               <Sparkles className="h-3.5 w-3.5" />
-              {isCustom ? "Custom template" : "Built-in family"}
+              {isCustom
+                ? t("presenton.templatePreview.badge.custom")
+                : t("presenton.templatePreview.badge.builtIn")}
             </div>
             <div className={styles.controlHeadingRow}>
               <h2 className={styles.controlTitle}>{summaryTitle}</h2>
               {isCustom && !isMissingTemplate ? (
-                <span className={styles.inlinePill}>Custom</span>
+                <span className={styles.inlinePill}>{t("presenton.templatePreview.badge.customInline")}</span>
               ) : null}
             </div>
             <p className={styles.controlDescription}>{summaryDescription}</p>
@@ -62,12 +66,11 @@ export function TemplatePreviewControls({
                 className={styles.dangerAction}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
-                <span>Delete Template</span>
+                <span>{t("presenton.templatePreview.delete")}</span>
               </Button>
             ) : null}
             <p className={styles.controlHelper}>
-              Preview stays read-only here, so you can compare structure, pacing,
-              and deck coverage without switching into editing tools.
+              {t("presenton.templatePreview.helper")}
             </p>
           </div>
         </div>

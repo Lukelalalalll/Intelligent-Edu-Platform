@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
 import { notify } from "@/components/ui/sonner";
 import {
   useRouter,
@@ -28,6 +32,8 @@ import {
 import styles from "./TemplatePreviewClient.module.css";
 
 export default function TemplatePreviewClient() {
+  const { t } = useI18n();
+  const isEntranceActive = usePageEntrance();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { customTemplateId, isCustom, templateSlug } =
@@ -66,6 +72,7 @@ export default function TemplatePreviewClient() {
   const previewModel = useMemo(
     () =>
       buildTemplatePreviewModel({
+        t,
         isCustom,
         customTemplate,
         customLoading,
@@ -82,29 +89,31 @@ export default function TemplatePreviewClient() {
       isCustom,
       staticGroup,
       staticTemplates,
+      t,
     ]
   );
 
   const handleDeleteCustomTemplate = useCallback(async () => {
     if (!customTemplateId) return;
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this template? This action cannot be undone."
-    );
+    const confirmed = window.confirm(t("presenton.templatePreview.deleteConfirm"));
     if (!confirmed) return;
 
     const success = await TemplateService.deleteCustomTemplate(customTemplateId);
     if (success.success) {
-      notify.success("Template deleted", "The template was deleted successfully.");
+      notify.success(
+        t("presenton.templatePreview.notify.deleteSuccess.title"),
+        t("presenton.templatePreview.notify.deleteSuccess.body")
+      );
       router.push("/templates");
       return;
     }
 
     notify.error(
-      "Could not delete template",
-      "Something went wrong while deleting the template."
+      t("presenton.templatePreview.notify.deleteFailed.title"),
+      t("presenton.templatePreview.notify.deleteFailed.body")
     );
-  }, [customTemplateId, router]);
+  }, [customTemplateId, router, t]);
 
   const handleDeleteButtonClick = useCallback(() => {
     trackEvent(MixpanelEvent.TemplatePreview_Delete_Templates_Button_Clicked, {
@@ -116,10 +125,16 @@ export default function TemplatePreviewClient() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div
+        className={cn(
+          styles.container,
+          entranceStyles.pageEntrance,
+          isEntranceActive && entranceStyles.pageEntranceActive
+        )}
+      >
         <WelcomeBanner
-          title="Template Preview"
-          subtitle="Inspect a template family at full slide size before using it in the deck flow."
+          title={t("presenton.templatePreview.banner.title")}
+          subtitle={t("presenton.templatePreview.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />

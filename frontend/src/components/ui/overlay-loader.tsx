@@ -39,33 +39,35 @@ export const OverlayLoader = ({
         zIndex: 1000,
       }}
       className={cn(
-        "fixed inset-0 bg-black/70 z-50 flex items-center justify-center transition-opacity duration-300",
+        "fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.42)] px-4 backdrop-blur-[4px] transition-opacity duration-300",
         isVisible ? "opacity-100" : "opacity-0"
       )}
     >
       <div
         className={cn(
-          "flex flex-col items-center justify-center px-6 pt-6 pb-10 rounded-xl bg-white shadow-2xl relative min-h-[347px]",
-          "min-w-[280px] sm:min-w-[447px] border border-white/10 transition-all duration-400 ease-out",
-          isVisible ? "opacity-100 scale-100" : "opacity-0 scale-90",
+          "relative flex min-h-[347px] min-w-[280px] flex-col items-center justify-center overflow-hidden rounded-[32px] border border-white/70 bg-[rgba(255,255,255,0.92)] px-8 pb-10 pt-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]",
+          "sm:min-w-[447px] transition-all duration-300 ease-out",
+          isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-2",
           className
         )}
       >
-        <div
-          className="overlay-loader-dots shrink-0"
-          role="status"
-          aria-label="Loading"
-        />
+        <div className="flex shrink-0 items-center justify-center" role="status" aria-label="Loading">
+          <span className="overlay-loader-spinner">
+            <span className="overlay-loader-orbit overlay-loader-orbit-primary" />
+            <span className="overlay-loader-orbit overlay-loader-orbit-secondary" />
+            <span className="overlay-loader-core" />
+          </span>
+        </div>
         {showProgress ? (
-          <div className="w-full space-y-6 pt-4">
+          <div className="w-full space-y-6 pt-6">
             <ProgressBar duration={duration} onComplete={onProgressComplete} />
             {text && (
-              <div className="space-y-1">
-                <p className="text-[#191919] text-base text-center font-medium font-inter">
+              <div className="space-y-1.5">
+                <p className="text-center text-[15px] font-semibold text-[#191919]">
                   {text}
                 </p>
                 {extra_info && (
-                  <p className="text-[#191919]/80 text-xs text-center font-medium font-inter">
+                  <p className="text-center text-[13px] leading-6 text-[#4B5563]">
                     {extra_info}
                   </p>
                 )}
@@ -74,11 +76,11 @@ export const OverlayLoader = ({
           </div>
         ) : (
           <>
-            <p className="text-[#191919] text-base text-center font-medium font-inter">
+            <p className="text-center text-[15px] font-semibold text-[#191919]">
               {text}
             </p>
             {extra_info && (
-              <p className="text-[#191919]/80 text-xs text-center font-medium font-inter">
+              <p className="text-center text-[13px] leading-6 text-[#4B5563]">
                 {extra_info}
               </p>
             )}
@@ -121,7 +123,7 @@ export const OverlayLoader = ({
               <feComposite in2="hardAlpha" operator="out" />
               <feColorMatrix
                 type="matrix"
-                values="0 0 0 0 0.85098 0 0 0 0 0.839216 0 0 0 0 0.996078 0 0 0 1 0"
+                values="0 0 0 0 0.784314 0 0 0 0 0.901961 0 0 0 0 0.85098 0 0 0 1 0"
               />
               <feBlend
                 mode="normal"
@@ -143,7 +145,7 @@ export const OverlayLoader = ({
               gradientTransform="matrix(-987.419 -112.408 219.823 -2016.77 351.693 300.327)"
               gradientUnits="userSpaceOnUse"
             >
-              <stop stopColor="#D9D6FE" />
+              <stop stopColor="#C8E6D9" />
               <stop offset="1" stopColor="white" stopOpacity="0" />
             </radialGradient>
           </defs>
@@ -151,18 +153,59 @@ export const OverlayLoader = ({
       </div>
 
       <style>{`
-        .overlay-loader-dots {
-          width: 50px;
-          aspect-ratio: 1;
-          --_c: no-repeat radial-gradient(farthest-side, #7a5af8 92%, #0000);
-          background: var(--_c) top, var(--_c) left, var(--_c) right,
-            var(--_c) bottom;
-          background-size: 12px 12px;
-          animation: overlay-loader-l7 1s infinite;
+        .overlay-loader-spinner {
+          position: relative;
+          width: 72px;
+          height: 72px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
-        @keyframes overlay-loader-l7 {
+
+        .overlay-loader-orbit {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          border: 3px solid transparent;
+          animation: overlay-loader-spin 1.35s linear infinite;
+        }
+
+        .overlay-loader-orbit-primary {
+          border-top-color: #007b55;
+          border-right-color: rgba(0, 123, 85, 0.38);
+        }
+
+        .overlay-loader-orbit-secondary {
+          inset: 10px;
+          border-bottom-color: #35b37e;
+          border-left-color: rgba(11, 107, 75, 0.24);
+          animation-direction: reverse;
+          animation-duration: 1.1s;
+        }
+
+        .overlay-loader-core {
+          width: 14px;
+          height: 14px;
+          border-radius: 9999px;
+          background: linear-gradient(135deg, #007b55 0%, #35b37e 100%);
+          box-shadow: 0 0 0 10px rgba(0, 123, 85, 0.08);
+          animation: overlay-loader-pulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes overlay-loader-spin {
           to {
-            transform: rotate(0.5turn);
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes overlay-loader-pulse {
+          0%, 100% {
+            transform: scale(0.92);
+            box-shadow: 0 0 0 10px rgba(0, 123, 85, 0.08);
+          }
+          50% {
+            transform: scale(1.08);
+            box-shadow: 0 0 0 16px rgba(0, 123, 85, 0.05);
           }
         }
       `}</style>

@@ -24,6 +24,7 @@ from utils.llm_utils import (
     serialize_structured_content,
     stream_generate_events,
 )
+from utils.presentation_language import resolve_presentation_prompt_language
 from utils.schema_utils import prepare_schema_for_validation
 from utils.web_search import (
     build_web_search_query,
@@ -92,7 +93,11 @@ def get_system_prompt(
 
     system = (
         "Generate presentation title and content for slides.\n"
-        "Generate flow based on user **content** and use **context** just for reference.\n"
+        "Generate flow by combining the user request with the provided source material.\n"
+        "Treat the user request as the authority for goals, constraints, scope, and requested slide count.\n"
+        "Treat the source material/context as the factual basis that should be covered and summarized faithfully.\n"
+        "Requested slide count always means the total number of slides in the final deck.\n"
+        "If a title slide or table of contents is enabled, it must fit within that total slide count.\n"
         "Presentation title should be plain text, not markdown. It should be a concise title for the presentation.\n"
         "Each slide content should contain the content for that slide.\n"
         f"{verbosity_instruction}\n"
@@ -128,17 +133,6 @@ def get_system_prompt(
     return system
 
 
-def _resolve_prompt_language(language: Optional[str]) -> str:
-    if language is None:
-        return "auto-detect"
-    s = str(language).strip()
-    if not s:
-        return "auto-detect"
-    if s.lower() in {"auto", "auto-detect"}:
-        return "auto-detect"
-    return s
-
-
 def _resolve_prompt_n_slides(n_slides: Optional[int]) -> str:
     if n_slides is None:
         return "auto-detect"
@@ -155,19 +149,20 @@ def get_user_prompt(
     include_title_slide: bool = True,
     include_table_of_contents: bool = False,
 ):
-    display_language = _resolve_prompt_language(language)
+    display_language = resolve_presentation_prompt_language(language)
     display_slides = _resolve_prompt_n_slides(n_slides)
     toc_text = f"Include Table Of Contents: {str(include_table_of_contents).lower()}\n"
     return (
-        f"Content: {content or ''}\n"
-        f"Number of Slides: {display_slides}\n"
+        f"User Request: {content or ''}\n"
+        f"Requested Total Slide Count: {display_slides}\n"
         f"Language: {display_language}\n"
         f"Tone: {tone or ''}\n"
         f"Today's Date: {datetime.now().strftime('%Y-%m-%d')}\n"
         f"Include Title Slide: {include_title_slide}\n"
         f"{toc_text if include_table_of_contents else ''}"
         f"Instructions: {instructions or ''}\n"
-        f"Context: {additional_context or 'None'}\n"
+        "Count Rule: The final deck must stay within the requested total slide count, including title and table of contents slides when enabled.\n"
+        f"Source Material: {additional_context or 'None'}\n"
     )
 
 

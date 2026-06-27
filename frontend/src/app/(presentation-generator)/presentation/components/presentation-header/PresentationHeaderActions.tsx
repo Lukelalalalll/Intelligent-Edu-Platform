@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Play, Redo2, RotateCcw, Undo2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,6 +22,7 @@ import { presentonFetch } from "../../../services/api/presenton-fetch";
 import ThemeApi from "../../../services/api/theme";
 import { Theme } from "../../../services/api/types";
 import PresentationHeaderExportMenu from "./PresentationHeaderExportMenu";
+import PresentationHeaderExportStatusPopup from "./PresentationHeaderExportStatusPopup";
 import PresentationHeaderRegenerateDialog from "./PresentationHeaderRegenerateDialog";
 import {
   buildSafeExportFileName,
@@ -65,14 +66,48 @@ const EXPORT_MESSAGES: Record<
 const exportTitlePattern = (format: ExportFormat) =>
   new RegExp(`\\.${format}$`, "i");
 
+type ExportPopupPhase = "saving" | "exporting";
+
+type ExportPopupState = {
+  format: ExportFormat;
+  progress: number;
+  phase: ExportPopupPhase;
+};
+
+const EXPORT_POPUP_COPY: Record<
+  ExportPopupPhase,
+  { description: string; label: string; minProgress: number; maxProgress: number }
+> = {
+  saving: {
+    description: "Saving your latest changes before export.",
+    label: "Preparing",
+    minProgress: 12,
+    maxProgress: 38,
+  },
+  exporting: {
+    description: "Your presentation is being exported. This may take a moment.",
+    label: "Generating",
+    minProgress: 48,
+    maxProgress: 92,
+  },
+};
+
+const isAbortError = (error: unknown) =>
+  error instanceof DOMException
+    ? error.name === "AbortError"
+    : error instanceof Error && error.name === "AbortError";
+
 const PresentationHeaderActions = ({
   presentationId,
   isPresentationSaving,
   currentSlide,
 }: PresentationHeaderActionsProps) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [exportPopup, setExportPopup] = useState<ExportPopupState | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
+  const exportAbortControllerRef = useRef<AbortController | null>(null);
+  const exportProgressTimerRef = useRef<number | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -99,6 +134,70 @@ const PresentationHeaderActions = ({
       loadThemes();
     }
   }, [themes.length]);
+
+  const clearExportProgressTimer = useCallback(() => {
+    if (exportProgressTimerRef.current !== null) {
+      window.clearInterval(exportProgressTimerRef.current);
+      exportProgressTimerRef.current = null;
+    }
+  }, []);
+
+  const stopExportPopup = useCallback(() => {
+    clearExportProgressTimer();
+    setExportPopup(null);
+  }, [clearExportProgressTimer]);
+
+  const setExportPopupPhase = useCallback(
+    (format: ExportFormat, phase: ExportPopupPhase) => {
+      const phaseCopy = EXPORT_POPUP_COPY[phase];
+      clearExportProgressTimer();
+      setExportPopup({
+        format,
+        phase,
+        progress: phaseCopy.minProgress,
+      });
+      exportProgressTimerRef.current = window.setInterval(() => {
+        setExportPopup((current) => {
+          if (!current || current.phase !== phase || current.format !== format) {
+            return current;
+          }
+
+          if (current.progress >= phaseCopy.maxProgress) {
+            return current;
+          }
+
+          const remaining = phaseCopy.maxProgress - current.progress;
+          const increment = Math.max(
+            1,
+            Math.ceil(
+              remaining / (phase === "saving" ? 4 : 8)
+            )
+          );
+
+          return {
+            ...current,
+            progress: Math.min(phaseCopy.maxProgress, current.progress + increment),
+          };
+        });
+      }, 320);
+    },
+    [clearExportProgressTimer]
+  );
+
+  const handleCancelExport = useCallback(() => {
+    exportAbortControllerRef.current?.abort();
+    exportAbortControllerRef.current = null;
+    stopExportPopup();
+    setIsExporting(false);
+  }, [stopExportPopup]);
+
+  useEffect(
+    () => () => {
+      exportAbortControllerRef.current?.abort();
+      clearExportProgressTimer();
+    },
+    [clearExportProgressTimer]
+  );
 
   const handleReGenerate = () => {
     setIsRegenerateConfirmOpen(false);
@@ -129,41 +228,51 @@ const PresentationHeaderActions = ({
       return;
     }
 
-    let exportToastId: string | number | undefined;
     const messages = EXPORT_MESSAGES[format];
+    const abortController = new AbortController();
 
     try {
+      exportAbortControllerRef.current = abortController;
       trackEvent(MixpanelEvent.Presentation_Export_Started, {
         pathname,
         presentation_id: presentationId,
         format,
         slide_count: presentationData?.slides?.length || 0,
       });
-      exportToastId = notify.loading(
-        messages.loading,
-        "Your presentation is being exported. This may take a moment."
-      );
       setIsExporting(true);
+      setExportPopupPhase(format, "saving");
 
-      await PresentationGenerationApi.updatePresentationContent(presentationData);
+      await PresentationGenerationApi.updatePresentationContent(presentationData, {
+        signal: abortController.signal,
+      });
+
+      if (abortController.signal.aborted) {
+        throw new DOMException("The export request was canceled.", "AbortError");
+      }
 
       const safeFileName = buildSafeExportFileName(
         presentationData?.title,
         format
       );
       const safeTitle = safeFileName.replace(exportTitlePattern(format), "");
+      setExportPopupPhase(format, "exporting");
       const response = await presentonFetch("/api/v1/app/export", {
         method: "POST",
         headers: {
           ...getHeader(),
           "x-presenton-web-origin": window.location.origin,
         },
+        signal: abortController.signal,
         body: JSON.stringify({
           format,
           id: presentationId,
           title: safeTitle,
         }),
       });
+
+      if (abortController.signal.aborted) {
+        throw new DOMException("The export request was canceled.", "AbortError");
+      }
 
       if (!response.ok) {
         throw new Error(await readExportErrorMessage(response, messages.error));
@@ -175,18 +284,32 @@ const PresentationHeaderActions = ({
         throw new Error("No download URL returned from export");
       }
 
+      clearExportProgressTimer();
+      setExportPopup((current) =>
+        current && current.format === format
+          ? { ...current, progress: 100 }
+          : current
+      );
       downloadBackendAsset(downloadPath, safeFileName);
-      notify.success("Export complete", messages.success, { id: exportToastId });
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      stopExportPopup();
     } catch (error) {
+      if (isAbortError(error)) {
+        return;
+      }
+
       console.error("Export failed:", error);
+      stopExportPopup();
       notify.error(
         "Export failed",
         error instanceof Error
           ? error.message
-          : "We are having trouble exporting your presentation. Please try again.",
-        exportToastId !== undefined ? { id: exportToastId } : undefined
+          : "We are having trouble exporting your presentation. Please try again."
       );
     } finally {
+      exportAbortControllerRef.current = null;
+      clearExportProgressTimer();
+      setExportPopup(null);
       setIsExporting(false);
     }
   };
@@ -284,6 +407,15 @@ const PresentationHeaderActions = ({
         onOpenChange={setIsRegenerateConfirmOpen}
         onConfirm={handleReGenerate}
       />
+      {exportPopup ? (
+        <PresentationHeaderExportStatusPopup
+          format={exportPopup.format}
+          progress={exportPopup.progress}
+          stageLabel={EXPORT_POPUP_COPY[exportPopup.phase].label}
+          description={EXPORT_POPUP_COPY[exportPopup.phase].description}
+          onCancel={handleCancelExport}
+        />
+      ) : null}
     </>
   );
 };

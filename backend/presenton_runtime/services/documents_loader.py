@@ -269,6 +269,52 @@ class DocumentsLoader:
         return document, image_paths
 
     @staticmethod
+    def _extract_pdf_text_with_pdfplumber(file_path: str) -> str:
+        with pdfplumber.open(file_path) as pdf:
+            chunks = [
+                text.strip()
+                for page in pdf.pages
+                if (text := (page.extract_text() or "")).strip()
+            ]
+        return "\n\n".join(chunks).strip()
+
+    @staticmethod
+    def _extract_pdf_text_with_fitz(file_path: str) -> str:
+        import fitz
+
+        doc = fitz.open(file_path)
+        try:
+            chunks = [
+                text.strip()
+                for page in doc
+                if (text := (page.get_text("text") or "")).strip()
+            ]
+        finally:
+            doc.close()
+        return "\n\n".join(chunks).strip()
+
+    def _parse_pdf_with_native_fallback(self, file_path: str) -> str:
+        errors: list[str] = []
+        extractors = [
+            ("pdfplumber", self._extract_pdf_text_with_pdfplumber),
+            ("fitz", self._extract_pdf_text_with_fitz),
+        ]
+        for name, extractor in extractors:
+            try:
+                text = extractor(file_path)
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+                continue
+            if text:
+                return text
+            errors.append(f"{name}: empty text")
+
+        raise LiteParseError(
+            "Native PDF fallback produced no text"
+            + (f" ({'; '.join(errors)})" if errors else "")
+        )
+
+    @staticmethod
     def _is_scanned_pdf(file_path: str, sample_pages: int = 5, threshold: int = 50) -> bool:
         """Check if a PDF is scanned (image-only) by sampling pages for text content."""
         try:
@@ -324,6 +370,18 @@ class DocumentsLoader:
                 file_path,
                 exc,
             )
+            if Path(file_path).suffix.lower() in PDF_EXTENSIONS:
+                try:
+                    LOGGER.info(
+                        "[DocumentsLoader] Trying native PDF fallback file=%s",
+                        file_path,
+                    )
+                    return self._parse_pdf_with_native_fallback(file_path)
+                except Exception:
+                    LOGGER.exception(
+                        "[DocumentsLoader] Native PDF fallback failed file=%s",
+                        file_path,
+                    )
             if self.document_service is not None:
                 try:
                     LOGGER.info("[DocumentsLoader] Trying fallback parser file=%s", file_path)

@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import layoutStyles from './styles/PptTemplateSteps.module.css';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import { slidesEditorApi } from '../../api/slidesApi';
 import { resolveApiRoot } from '@/shared/api/root';
@@ -47,6 +49,7 @@ function escapeSvgText(value: string) {
 }
 
 export default function PptTemplate({ states, handlers }: PptTemplateProps) {
+    const isEntranceActive = usePageEntrance();
     const { themes, selectedTheme, pptSchema, errorMsg, layouts, currentSlideIndex } = states;
     const { selectTheme, setCurrentSlideIndex, selectLayout, applyLayoutToAll } = handlers;
 
@@ -361,7 +364,7 @@ export default function PptTemplate({ states, handlers }: PptTemplateProps) {
     const currentSlide = pptSchema?.slides?.[currentSlideIndex];
 
     return (
-        <div className={`container ${layoutStyles.pageShell}`}>
+        <div className={`container ${layoutStyles.pageShell} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={<><i className="fas fa-palette" /> PowerPoint Template Selection</>}
                 subtitle="Select a theme, let AI design your slides, then preview and add images"

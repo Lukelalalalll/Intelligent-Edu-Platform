@@ -10,6 +10,7 @@ import {
 import Link from "@/presenton/shims/next-link";
 import type { CustomTemplates } from "@/app/hooks/useCustomTemplates";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import WorkspaceCard from "@/shared/components/Card/Card";
 
 import CreateCustomTemplate from "./CreateCustomTemplate";
@@ -19,6 +20,7 @@ import {
     CustomTemplateCard,
     CustomTemplatesLoadingCard,
 } from "./TemplatePanelCards";
+import { getBuiltInGroupCopy } from "./templatePanelHelpers";
 import type {
     BuiltInLibraryState,
     CustomLibraryState,
@@ -91,10 +93,30 @@ type TemplatePanelLibraryProps = {
 };
 
 export function TemplatePanelNavigation({ pathname }: TemplatePanelNavigationProps) {
+    const { t } = useI18n();
+
+    const navItems = [
+        {
+            href: "/dashboard",
+            label: t("presenton.workspace.nav.dashboard"),
+            renderIcon: presentonNavItems[0].renderIcon,
+        },
+        {
+            href: "/templates",
+            label: t("presenton.workspace.nav.templates"),
+            renderIcon: presentonNavItems[1].renderIcon,
+        },
+        {
+            href: "/theme",
+            label: t("presenton.workspace.nav.theme"),
+            renderIcon: presentonNavItems[2].renderIcon,
+        },
+    ] as const;
+
     return (
         <div className={styles.navShell}>
-            <nav className={styles.navList} aria-label="Presenton workspace navigation">
-                {presentonNavItems.map(({ href, label, renderIcon }) => {
+            <nav className={styles.navList} aria-label={t("presenton.workspace.nav.aria")}>
+                {navItems.map(({ href, label, renderIcon }) => {
                     const isActive = pathname === href;
 
                     return (
@@ -121,18 +143,20 @@ export function TemplatePanelControls({
     onCreateTemplateClick,
     onTabChange,
 }: TemplatePanelControlsProps) {
+    const { t } = useI18n();
+
     return (
-        <WorkspaceCard className={cn(styles.surfaceCard, styles.motionCard, styles.motionPrimary)}>
+        <WorkspaceCard className={styles.surfaceCard}>
             <div className={styles.controlSection}>
                 <div className={styles.controlTop}>
                     <div className={styles.controlCopy}>
                         <div className={styles.badge}>
                             <Sparkles className="h-3.5 w-3.5" />
-                            Presenton workspace
+                            {t("presenton.templates.controls.badge")}
                         </div>
-                        <h2 className={styles.controlTitle}>Pick the starting point that fits the deck you want next.</h2>
+                        <h2 className={styles.controlTitle}>{t("presenton.templates.controls.title")}</h2>
                         <p className={styles.controlDescription}>
-                            Built-in families stay grouped by Presenton layout system, while custom templates remain ready to reopen anywhere your deck workflow continues.
+                            {t("presenton.templates.controls.body")}
                         </p>
                     </div>
 
@@ -141,20 +165,20 @@ export function TemplatePanelControls({
                             href="/custom-template"
                             onClick={onCreateTemplateClick}
                             className={styles.primaryAction}
-                            aria-label="Create new template"
+                            aria-label={t("presenton.templates.controls.createAria")}
                         >
-                            <span>New Template</span>
+                            <span>{t("presenton.templates.controls.create")}</span>
                             <ChevronRight className="h-4 w-4" />
                         </Link>
                         <p className={styles.controlHelper}>
-                            The template browser stays focused on choosing, previewing, and reopening layouts without changing any backend behavior or preview routes.
+                            {t("presenton.templates.controls.helper")}
                         </p>
                     </div>
                 </div>
 
                 <div className={styles.controlBottom}>
                     <div className={styles.tabBlock}>
-                        <div className={styles.tabRail} role="tablist" aria-label="Template library views">
+                        <div className={styles.tabRail} role="tablist" aria-label={t("presenton.templates.tabs.aria")}>
                             <button
                                 type="button"
                                 role="tab"
@@ -162,7 +186,7 @@ export function TemplatePanelControls({
                                 className={cn(styles.tabButton, tab === "default" && styles.tabButtonActive)}
                                 onClick={() => onTabChange("default")}
                             >
-                                Built-in
+                                {t("presenton.templates.tabs.builtIn")}
                             </button>
                             <button
                                 type="button"
@@ -171,7 +195,7 @@ export function TemplatePanelControls({
                                 className={cn(styles.tabButton, tab === "custom" && styles.tabButtonActive)}
                                 onClick={() => onTabChange("custom")}
                             >
-                                Custom
+                                {t("presenton.templates.tabs.custom")}
                             </button>
                         </div>
                         <p className={styles.activeTabNote}>{activeTabDescription}</p>
@@ -201,7 +225,7 @@ export function TemplatePanelLibrary({
     onOpenCustomTemplate,
 }: TemplatePanelLibraryProps) {
     return (
-        <WorkspaceCard className={cn(styles.surfaceCard, styles.motionCard, styles.motionSecondary)}>
+        <WorkspaceCard className={styles.surfaceCard}>
             <div className={styles.contentSection}>
                 <div className={styles.sectionIntro}>
                     <div className={styles.sectionTitleWrap}>
@@ -237,32 +261,44 @@ function BuiltInTemplateLibrary({
     builtIn: BuiltInLibraryState;
     onOpenBuiltInPreview: (id: string) => void;
 }) {
+    const { t } = useI18n();
+
     return (
         <div className={styles.groupStack}>
             {builtIn.isLoading && !builtIn.hasCatalog ? (
                 <section className={styles.templateGroup}>
                     <div className={styles.groupHeader}>
                         <div className={styles.groupTitleWrap}>
-                            <h3 className={styles.groupTitle}>Built-in templates</h3>
+                            <h3 className={styles.groupTitle}>{t("presenton.templates.builtIn.loading.title")}</h3>
                             <p className={styles.groupDescription}>
-                                Preparing the shared Presenton template library for preview.
+                                {t("presenton.templates.builtIn.loading.body")}
                             </p>
                         </div>
-                        <span className={styles.groupCount}>Loading</span>
+                        <span className={styles.groupCount}>{t("presenton.templates.builtIn.loading.count")}</span>
                     </div>
                     <BuiltInTemplatesLoadingGrid />
                 </section>
             ) : null}
 
-            {builtIn.groups.map((group) => (
-                <section key={group.key} className={styles.templateGroup}>
+            {builtIn.groups.map((group) => {
+                const localizedGroup = getBuiltInGroupCopy(
+                    group.key,
+                    group.title,
+                    group.description,
+                    t,
+                );
+
+                return (
+                    <section key={group.key} className={styles.templateGroup}>
                     <div className={styles.groupHeader}>
                         <div className={styles.groupTitleWrap}>
-                            <h3 className={styles.groupTitle}>{group.title}</h3>
-                            <p className={styles.groupDescription}>{group.description}</p>
+                            <h3 className={styles.groupTitle}>{localizedGroup.title}</h3>
+                            <p className={styles.groupDescription}>{localizedGroup.description}</p>
                         </div>
                         <span className={styles.groupCount}>
-                            {group.templates.length} {group.templates.length === 1 ? "family" : "families"}
+                            {group.templates.length === 1
+                                ? t("presenton.templates.builtIn.count.one", { count: group.templates.length })
+                                : t("presenton.templates.builtIn.count.other", { count: group.templates.length })}
                         </span>
                     </div>
 
@@ -277,7 +313,8 @@ function BuiltInTemplateLibrary({
                         ))}
                     </div>
                 </section>
-            ))}
+                );
+            })}
         </div>
     );
 }
@@ -289,17 +326,21 @@ function CustomTemplateLibrary({
     custom: CustomLibraryState;
     onOpenCustomTemplate: (template: CustomTemplates) => void;
 }) {
+    const { t } = useI18n();
+
     return (
         <section className={styles.templateGroup}>
             <div className={styles.groupHeader}>
                 <div className={styles.groupTitleWrap}>
-                    <h3 className={styles.groupTitle}>Custom templates</h3>
+                    <h3 className={styles.groupTitle}>{t("presenton.templates.custom.title")}</h3>
                     <p className={styles.groupDescription}>
-                        Start a reusable template from scratch or reopen one of your saved custom layout systems.
+                        {t("presenton.templates.custom.body")}
                     </p>
                 </div>
                 <span className={styles.groupCount}>
-                    {custom.isLoading ? "Loading" : `${custom.count} saved`}
+                    {custom.isLoading
+                        ? t("presenton.templates.custom.count.loading")
+                        : t("presenton.templates.custom.count.saved", { count: custom.count })}
                 </span>
             </div>
 

@@ -32,6 +32,10 @@ from utils.llm_calls.generate_presentation_outlines import (
     generate_ppt_outline,
     get_messages as get_outline_messages,
 )
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
 from utils.web_search import get_selected_web_search_provider, get_web_search_route
 
 OUTLINES_ROUTER = APIRouter(prefix="/outlines", tags=["Outlines"])
@@ -46,6 +50,8 @@ async def stream_outlines(
 
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
+
+    presentation_language = normalize_presentation_language(presentation.language) or AUTO_PRESENTATION_LANGUAGE
 
     search_route, actual_search_provider = get_web_search_route()
     LOGGER.info(
@@ -73,7 +79,7 @@ async def stream_outlines(
         if presentation.file_paths:
             documents_loader = DocumentsLoader(
                 file_paths=presentation.file_paths,
-                presentation_language=presentation.language,
+                presentation_language=presentation_language,
             )
             await documents_loader.load_documents(temp_dir)
             documents = documents_loader.documents
@@ -94,7 +100,7 @@ async def stream_outlines(
         outline_messages = get_outline_messages(
             presentation.content,
             n_slides_to_generate,
-            presentation.language,
+            presentation_language,
             additional_context,
             presentation.tone,
             presentation.verbosity,
@@ -122,7 +128,7 @@ async def stream_outlines(
         async for chunk in generate_ppt_outline(
             presentation.content,
             n_slides_to_generate,
-            presentation.language,
+            presentation_language,
             additional_context,
             presentation.tone,
             presentation.verbosity,

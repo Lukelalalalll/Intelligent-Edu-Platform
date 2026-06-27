@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useEffect, useMemo, useRef } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import usePrefersReducedMotion from "@/shared/hooks/usePrefersReducedMotion";
 import { FileText, Loader2, Plus, Sparkles } from "lucide-react";
 import { OutlineItem } from "./OutlineItem";
@@ -143,11 +144,18 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
   onUpdateSlide,
   onDeleteSlide,
 }) => {
+  const { t } = useI18n();
   const prefersReducedMotion = usePrefersReducedMotion();
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollToBottomRef = useRef(false);
   const visibleSlides = outlines?.length ?? 0;
   const activeContent =
     activeSlideIndex !== null ? outlines?.[activeSlideIndex]?.content ?? "" : "";
+
+  const handleAddSlideClick = useCallback(() => {
+    shouldScrollToBottomRef.current = true;
+    onAddSlide();
+  }, [onAddSlide]);
 
   useEffect(() => {
     if (!isStreaming || activeSlideIndex === null) return undefined;
@@ -193,30 +201,51 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
     };
   }, [activeContent, activeSlideIndex, isStreaming, prefersReducedMotion, visibleSlides]);
 
+  useEffect(() => {
+    if (!shouldScrollToBottomRef.current || visibleSlides === 0) return undefined;
+
+    const rafId = window.requestAnimationFrame(() => {
+      const viewport = viewportRef.current;
+      shouldScrollToBottomRef.current = false;
+
+      if (!viewport) return;
+
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [prefersReducedMotion, visibleSlides]);
+
   return (
     <section className={cn(styles.surfaceCard, styles.contentCard)}>
       <div className={styles.contentHeader}>
         <div className={styles.controlCopy}>
           <span className={styles.badge}>
             <Sparkles className="h-3.5 w-3.5" />
-            Presenton outline workspace
+            {t("presenton.outline.workspace.badge")}
           </span>
           <h2 className={styles.sectionTitle}>
-            Tighten the outline before Presenton turns it into slides.
+            {t("presenton.outline.workspace.title")}
           </h2>
           <p className={styles.sectionDescription}>
-            Streaming stays inside this panel, so the page frame remains calm while each
-            slide settles into its final outline.
+            {t("presenton.outline.workspace.body")}
           </p>
         </div>
 
         <div className={styles.itemPillRow}>
           <span className={styles.mutedBadge}>
             <FileText className="h-3.5 w-3.5" />
-            {visibleSlides} {visibleSlides === 1 ? "slide" : "slides"}
+            {t("presenton.outline.workspace.slidesCount", { count: visibleSlides })}
           </span>
           <span className={styles.mutedBadge}>
-            {isStreaming ? "Live generation" : "Manual cleanup"}
+            {isStreaming
+              ? t("presenton.outline.workspace.mode.live")
+              : t("presenton.outline.workspace.mode.manual")}
           </span>
         </div>
       </div>
@@ -231,14 +260,14 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
           ) : (
             <>
               <span className={styles.statusDot} aria-hidden="true" />
-              <span>Outline ready for final cleanup</span>
+              <span>{t("presenton.outline.workspace.status.ready")}</span>
             </>
           )}
         </div>
         <p className={styles.statusHint}>
           {isStreaming
-            ? "When new content pushes past this viewport, the panel glides just enough to keep pace."
-            : "Tap any slide to edit markdown directly, then drag cards to reorder once the outline feels right."}
+            ? t("presenton.outline.workspace.hint.live")
+            : t("presenton.outline.workspace.hint.manual")}
         </p>
       </div>
 
@@ -264,18 +293,17 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
 
           <div className={styles.listFooter}>
             <p className={styles.helperText}>
-              New slides stay pinned inside this panel. If the stack still fits, it will not
-              auto-scroll at all.
+              {t("presenton.outline.workspace.footer")}
             </p>
             <Button
               type="button"
               variant="outline"
-              onClick={onAddSlide}
+              onClick={handleAddSlideClick}
               disabled={isLoading || isStreaming}
               className={styles.secondaryButton}
             >
               <Plus className="h-4 w-4" />
-              Add slide
+              {t("presenton.outline.workspace.add")}
             </Button>
           </div>
         </>
@@ -286,19 +314,18 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
           <div className={styles.emptyIcon}>
             <FileText className="h-6 w-6" />
           </div>
-          <h3 className={styles.groupTitle}>No outline slides yet</h3>
+          <h3 className={styles.groupTitle}>{t("presenton.outline.workspace.empty.title")}</h3>
           <p className={styles.groupDescription}>
-            Add the first slide manually, or head back and regenerate the outline from the
-            source document.
+            {t("presenton.outline.workspace.empty.body")}
           </p>
           <Button
             type="button"
             variant="outline"
-            onClick={onAddSlide}
+            onClick={handleAddSlideClick}
             className={styles.secondaryButton}
           >
             <Plus className="h-4 w-4" />
-            Add first slide
+            {t("presenton.outline.workspace.addFirst")}
           </Button>
         </div>
       ) : null}

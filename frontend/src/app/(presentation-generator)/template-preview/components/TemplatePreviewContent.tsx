@@ -1,9 +1,10 @@
 import Link from "@/presenton/shims/next-link";
 import WorkspaceCard from "@/shared/components/Card/Card";
-import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import { ArrowLeft, PanelTop } from "lucide-react";
 
 import type { CustomTemplateLayout } from "@/app/hooks/useCustomTemplates";
+import { cn } from "@/lib/utils";
 
 import type { BuiltInPreviewLayout } from "./templatePreviewData";
 import { TemplatePreviewStack } from "./TemplatePreviewStack";
@@ -35,10 +36,12 @@ export function TemplatePreviewContent({
   staticTemplates,
   templateSlug,
 }: TemplatePreviewContentProps) {
+  const { t } = useI18n();
+
   return (
     <WorkspaceCard
       glass
-      className={cn(styles.surfaceCard, styles.motionCard, styles.motionSecondary)}
+      className={styles.surfaceCard}
     >
       <div className={styles.contentSection}>
         <div className={styles.sectionIntro}>
@@ -46,12 +49,12 @@ export function TemplatePreviewContent({
             {isCompactBuiltIn ? (
               <Link href="/templates" className={styles.inlineBackAction}>
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                <span>Back to Templates</span>
+                <span>{t("presenton.templatePreview.backInline")}</span>
               </Link>
             ) : null}
             <div className={cn(styles.badge, styles.mutedBadge)}>
               <PanelTop className="h-3.5 w-3.5" />
-              Preview stack
+              {t("presenton.templatePreview.stackBadge")}
             </div>
             <h2 className={styles.sectionTitle}>{mainSectionTitle}</h2>
             <p className={styles.sectionDescription}>{mainSectionDescription}</p>

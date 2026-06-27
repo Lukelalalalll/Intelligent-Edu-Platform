@@ -3,6 +3,7 @@ export interface UploadedFile {
   file: File;
   size: string;
 }
+
 export enum ThemeType {
   Light = "light",
   Dark = "dark",
@@ -26,6 +27,7 @@ export enum LanguageType {
   Russian = "Russian (Русский)",
   ChineseSimplified = "Chinese (Simplified - 中文, 汉语)",
   ChineseTraditional = "Chinese (Traditional - 中文, 漢語)",
+  CantoneseTraditional = "Cantonese (Traditional - 粵語繁體)",
   Japanese = "Japanese (日本語)",
   Korean = "Korean (한국어)",
   Arabic = "Arabic (العربية)",
@@ -89,7 +91,7 @@ export enum LanguageType {
   Vietnamese = "Vietnamese (Tiếng Việt)",
   Lao = "Lao (ລາວ)",
   Khmer = "Khmer (ភាសាខ្មែរ)",
-  Burmese = "Burmese (မြန်မာစာ)",
+  Burmese = "Burmese (မြန်မာ)",
   Tagalog = "Tagalog/Filipino (Tagalog/Filipino)",
   Javanese = "Javanese (Basa Jawa)",
   Sundanese = "Sundanese (Basa Sunda)",
@@ -145,4 +147,3 @@ export enum VerbosityType {
   Standard = "standard",
   Text_Heavy = "text-heavy",
 }
-

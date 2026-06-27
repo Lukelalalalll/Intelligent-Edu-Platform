@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 
 import styles from './PptGeneratorShell.module.css';
 
@@ -40,7 +42,6 @@ export interface PptGeneratorShellProps {
     bannerClassName?: string;
     bannerStyle?: React.CSSProperties;
     bannerVariant?: 'workspace' | 'hero';
-    bannerCollapseOnScroll?: boolean;
     compactStepper?: boolean;
 }
 
@@ -76,9 +77,9 @@ export default function PptGeneratorShell({
     bannerClassName,
     bannerStyle,
     bannerVariant = 'workspace',
-    bannerCollapseOnScroll,
     compactStepper = false,
 }: PptGeneratorShellProps) {
+    const isEntranceActive = usePageEntrance();
     const railSpring = { type: 'spring', stiffness: 260, damping: 30, mass: 0.92 } as const;
     const railTiming = { duration: 0.8, ease: [0.22, 1, 0.36, 1] as const } as const;
     const railInset = showStepper ? 24 : 10;
@@ -174,7 +175,15 @@ export default function PptGeneratorShell({
     );
 
     return (
-        <div className={joinClassNames([styles.shell, dense && styles.shellDense, className])}>
+        <div
+            className={joinClassNames([
+                styles.shell,
+                dense && styles.shellDense,
+                entranceStyles.pageEntrance,
+                isEntranceActive && entranceStyles.pageEntranceActive,
+                className,
+            ])}
+        >
             <WelcomeBanner
                 title={bannerTitle ?? <><i className="fas fa-file-powerpoint" aria-hidden="true"></i> PPT Generator</>}
                 subtitle={bannerSubtitle ?? PPT_GENERATOR_SUBTITLE}
@@ -182,7 +191,6 @@ export default function PptGeneratorShell({
                 style={bannerStyle}
                 as="header"
                 variant={bannerVariant}
-                collapseOnScroll={bannerCollapseOnScroll ?? dense}
             />
 
             <div

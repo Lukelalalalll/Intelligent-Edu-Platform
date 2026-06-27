@@ -11,6 +11,7 @@ from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_config import get_llm_config
 from utils.llm_provider import get_model
 from utils.llm_utils import generate_structured_with_schema_retries
+from utils.presentation_language import resolve_presentation_prompt_language
 from utils.schema_utils import (
     add_field_in_schema,
     ensure_array_schemas_have_items,
@@ -66,17 +67,6 @@ English
 """
 
 
-def _resolve_prompt_language(language: Optional[str]) -> str:
-    if language is None:
-        return "auto-detect"
-    s = str(language).strip()
-    if not s:
-        return "auto-detect"
-    if s.lower() in {"auto", "auto-detect"}:
-        return "auto-detect"
-    return s
-
-
 def _get_schema_markdown(response_schema: Optional[dict]) -> str:
     if not response_schema:
         return "- Follow the provided response schema strictly."
@@ -129,7 +119,7 @@ def get_system_prompt(
 def get_user_prompt(outline: str, language: Optional[str]):
     return SLIDE_CONTENT_USER_PROMPT.format(
         current_date_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        language=_resolve_prompt_language(language),
+        language=resolve_presentation_prompt_language(language),
         content=outline,
     )
 

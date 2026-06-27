@@ -1,35 +1,41 @@
-/**
- * DocumentPreviewPage Component
- *
- * A component that displays and manages document previews for presentation generation.
- * Features:
- * - Document content preview with markdown support
- * - Sidebar navigation for documents
- * - Document content editing and saving
- * - Presentation generation workflow
- *
- * @component
- */
-
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { OverlayLoader } from "@/components/ui/overlay-loader";
-import { PresentationGenerationApi } from "../../services/api/presentation-generation";
-import { getHeader } from "../../services/api/header";
-import { setPresentationId } from "@/store/slices/presentationGeneration";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter, usePathname } from "next/navigation";
-import { RootState } from "@/store/store";
-import { Button } from "@/components/ui/button";
-import { notify } from "@/components/ui/sonner";
-import { getIconFromFile } from "../../utils/others";
-import { ChevronRight, PanelRightOpen, X } from "lucide-react";
-import ToolTip from "@/components/ToolTip";
-import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
+import {
+  AlertCircle,
+  ChevronRight,
+  FileText,
+  FolderOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 
-// Types
+import Wrapper from "@/components/Wrapper";
+import { Button } from "@/components/ui/button";
+import { OverlayLoader } from "@/components/ui/overlay-loader";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
+import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
+import { RootState } from "@/store/store";
+import { setPresentationId } from "@/store/slices/presentationGeneration";
+import { notify } from "@/components/ui/sonner";
+import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
+import { getApiUrl } from "@/utils/api";
+
+import { PresentationGenerationApi } from "../../services/api/presentation-generation";
+import { presentonFetch } from "../../services/api/presenton-fetch";
+import { getHeader } from "../../services/api/header";
+import { getIconFromFile } from "../../utils/others";
+import MarkdownRenderer from "./MarkdownRenderer";
+import styles from "./DocumentPreviewPage.module.css";
+
 interface LoadingState {
   message: string;
   show: boolean;
@@ -37,34 +43,92 @@ interface LoadingState {
   progress: boolean;
 }
 
-interface TextContents {
-  [key: string]: string;
-}
-
 interface FileItem {
   name: string;
   file_path: string;
 }
 
+interface DocumentStatus {
+  status: "idle" | "loading" | "ready" | "error";
+  error?: string;
+}
+
+type TextContents = Record<string, string>;
+type DocumentStatusMap = Record<string, DocumentStatus>;
+
+function collectFileItems(input: unknown, bucket: FileItem[] = []): FileItem[] {
+  if (Array.isArray(input)) {
+    input.forEach((entry) => collectFileItems(entry, bucket));
+    return bucket;
+  }
+
+  if (
+    input &&
+    typeof input === "object" &&
+    "name" in input &&
+    "file_path" in input
+  ) {
+    const candidate = input as Partial<FileItem>;
+    if (
+      typeof candidate.name === "string" &&
+      candidate.name &&
+      typeof candidate.file_path === "string" &&
+      candidate.file_path
+    ) {
+      bucket.push({
+        name: candidate.name,
+        file_path: candidate.file_path,
+      });
+    }
+  }
+
+  return bucket;
+}
+
+function getDisplayName(name: string): string {
+  return name.split(/[\\/]/).pop() || name;
+}
+
+function normalizePreviewContent(content: string): string {
+  return content
+    .replace(/\uFEFF/g, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+}
+
+function getDocumentStateLabel(
+  t: ReturnType<typeof useI18n>["t"],
+  status: DocumentStatus["status"],
+  hasContent: boolean
+): string {
+  if (status === "error") {
+    return t("presenton.documents.state.error");
+  }
+
+  if (status === "ready") {
+    return hasContent
+      ? t("presenton.documents.state.ready")
+      : t("presenton.documents.state.empty");
+  }
+
+  return t("presenton.documents.state.loading");
+}
+
 const DocumentsPreviewPage: React.FC = () => {
-  // Hooks
+  const { t } = useI18n();
+  const isEntranceActive = usePageEntrance();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Redux state
   const { config, files } = useSelector(
     (state: RootState) => state.pptGenUpload
   );
 
-  // Local state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedDocumentPath, setSelectedDocumentPath] = useState<string | null>(null);
   const [textContents, setTextContents] = useState<TextContents>({});
-  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [downloadingDocuments, setDownloadingDocuments] = useState<string[]>(
-    []
-  );
-  const [isOpen, setIsOpen] = useState(true);
+  const [documentStatuses, setDocumentStatuses] = useState<DocumentStatusMap>({});
   const [showLoading, setShowLoading] = useState<LoadingState>({
     message: "",
     show: false,
@@ -72,104 +136,138 @@ const DocumentsPreviewPage: React.FC = () => {
     progress: false,
   });
 
-  // Memoized computed values
-  const fileItems: FileItem[] = useMemo(() => {
-    if (!files || !Array.isArray(files) || files.length === 0) return [];
-    return files
-      .flat()
-      .filter((item: any) => item && item.name && item.file_path);
-  }, [files]);
+  const fileItems = useMemo(() => collectFileItems(files), [files]);
 
-  const documentKeys = useMemo(() => {
-    return fileItems.map((file) => file.name);
-  }, [fileItems]);
+  const selectedFile = useMemo(
+    () =>
+      fileItems.find((file) => file.file_path === selectedDocumentPath) ??
+      fileItems[0] ??
+      null,
+    [fileItems, selectedDocumentPath]
+  );
 
-  const updateSelectedDocument = (value: string) => {
-    setSelectedDocument(value);
-    if (textareaRef.current) {
-      textareaRef.current.value = textContents[value] || "";
-    }
-  };
+  const selectedContent = selectedFile
+    ? textContents[selectedFile.file_path] ?? ""
+    : "";
+  const selectedStatus = selectedFile
+    ? documentStatuses[selectedFile.file_path]?.status ?? "idle"
+    : "idle";
+  const selectedError = selectedFile
+    ? documentStatuses[selectedFile.file_path]?.error
+    : undefined;
 
-  const readFile = async (filePath: string) => {
-    const res = await fetch(`/api/v1/app/read-file`, {
-      method: "POST",
-      headers: getHeader(),
-      body: JSON.stringify({ filePath }),
-    });
-    return res.json();
-  };
+  const selectedCharacterCount = selectedContent.length.toLocaleString();
 
-  const maintainDocumentTexts = async () => {
-    const newDocuments: string[] = [];
-    const promises: Promise<{ content: string }>[] = [];
+  const readFile = useCallback(
+    async (filePath: string): Promise<string> => {
+      const response = await presentonFetch(getApiUrl("/api/v1/app/read-file"), {
+        method: "POST",
+        headers: getHeader(),
+        body: JSON.stringify({ filePath }),
+        cache: "no-cache",
+      });
 
-    // Process documents
-    documentKeys.forEach((key: string) => {
-      if (!(key in textContents)) {
-        newDocuments.push(key);
-        const fileItem = fileItems.find((item) => item.name === key);
-        if (fileItem) {
-          promises.push(readFile(fileItem.file_path));
+      if (!response.ok) {
+        let errorMessage = t("presenton.documents.notify.readFailed.body");
+        try {
+          const payload = await response.clone().json();
+          if (typeof payload?.detail === "string" && payload.detail.trim()) {
+            errorMessage = payload.detail;
+          }
+        } catch {
+          // Fall through to the generic message below.
         }
+        throw new Error(errorMessage);
       }
-    });
 
-    if (promises.length > 0) {
-      setDownloadingDocuments(newDocuments);
-      try {
-        const results = await Promise.all(promises);
-        setTextContents((prev) => {
-          const newContents = { ...prev };
-          newDocuments.forEach((key, index) => {
-            newContents[key] = results[index].content || "";
-          });
-          return newContents;
-        });
-      } catch (error) {
-        console.error("Error reading files:", error);
-        notify.error("Could not read document", "Failed to read document content.");
+      const payload = await response.json();
+      return typeof payload?.content === "string" ? payload.content : "";
+    },
+    [t]
+  );
+
+  const loadDocument = useCallback(
+    async (file: FileItem, force = false) => {
+      const existingStatus = documentStatuses[file.file_path]?.status;
+      if (
+        !force &&
+        (existingStatus === "loading" ||
+          existingStatus === "ready" ||
+          existingStatus === "error")
+      ) {
+        return;
       }
-      setDownloadingDocuments([]);
-    }
-  };
+
+      setDocumentStatuses((prev) => ({
+        ...prev,
+        [file.file_path]: { status: "loading" },
+      }));
+
+      try {
+        const content = await readFile(file.file_path);
+        setTextContents((prev) => ({
+          ...prev,
+          [file.file_path]: normalizePreviewContent(content),
+        }));
+        setDocumentStatuses((prev) => ({
+          ...prev,
+          [file.file_path]: { status: "ready" },
+        }));
+      } catch (error: any) {
+        const message =
+          error?.message || t("presenton.documents.notify.readFailed.body");
+
+        setTextContents((prev) => ({
+          ...prev,
+          [file.file_path]: "",
+        }));
+        setDocumentStatuses((prev) => ({
+          ...prev,
+          [file.file_path]: {
+            status: "error",
+            error: message,
+          },
+        }));
+        notify.error(t("presenton.documents.notify.readFailed.title"), message);
+      }
+    },
+    [documentStatuses, readFile, t]
+  );
 
   const handleCreatePresentation = async () => {
     try {
       setShowLoading({
-        message: "Generating presentation outline...",
+        message: t("presenton.documents.loading"),
         show: true,
         duration: 40,
         progress: true,
       });
 
-      const documentPaths = fileItems.map(
-        (fileItem: FileItem) => fileItem.file_path
-      );
+      const documentPaths = fileItems.map((file) => file.file_path);
       trackEvent(MixpanelEvent.DocumentsPreview_Create_Presentation_API_Call);
-      const createResponse = await PresentationGenerationApi.createPresentation(
-        {
-          content: config?.prompt ?? "",
-          n_slides: config?.slides ? parseInt(config.slides) : null,
-          file_paths: documentPaths,
-          language: config?.language ?? "",
-          tone: config?.tone,
-          verbosity: config?.verbosity,
-          instructions: config?.instructions || null,
-          include_table_of_contents: !!config?.includeTableOfContents,
-          include_title_slide: !!config?.includeTitleSlide,
-          web_search: !!config?.webSearch,
-        }
-      );
+      const createResponse = await PresentationGenerationApi.createPresentation({
+        content: config?.prompt ?? "",
+        n_slides: config?.slides ? parseInt(config.slides, 10) : null,
+        file_paths: documentPaths,
+        language: config?.language ?? "",
+        tone: config?.tone,
+        verbosity: config?.verbosity,
+        instructions: config?.instructions || null,
+        include_table_of_contents: !!config?.includeTableOfContents,
+        include_title_slide: !!config?.includeTitleSlide,
+        web_search: !!config?.webSearch,
+      });
 
       dispatch(setPresentationId(createResponse.id));
       trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/outline" });
       router.replace("/outline");
     } catch (error: any) {
-      console.error("Error in radar presentation creation:", error);
-      notify.error("Creation failed", error.message || "Something went wrong while creating the presentation.");
+      notify.error(
+        t("presenton.documents.notify.createFailed.title"),
+        error?.message || t("presenton.documents.notify.createFailed.body")
+      );
       setShowLoading({
-        message: "Error in radar presentation creation.",
+        message: t("presenton.documents.error.create"),
         show: true,
         duration: 10,
         progress: false,
@@ -184,118 +282,334 @@ const DocumentsPreviewPage: React.FC = () => {
     }
   };
 
-  // Effects
   useEffect(() => {
-    if (documentKeys.length > 0) {
-      setSelectedDocument(documentKeys[0]);
-      maintainDocumentTexts();
+    if (fileItems.length === 0) {
+      setSelectedDocumentPath(null);
+      return;
     }
-  }, [documentKeys]);
 
-  // Render helpers
-  const renderDocumentContent = () => {
-    if (!selectedDocument) return null;
+    setSelectedDocumentPath((current) => {
+      if (current && fileItems.some((file) => file.file_path === current)) {
+        return current;
+      }
+      return fileItems[0].file_path;
+    });
+  }, [fileItems]);
 
-    const isDocument = documentKeys.includes(selectedDocument);
+  useEffect(() => {
+    if (!selectedFile) {
+      return;
+    }
+    void loadDocument(selectedFile);
+  }, [loadDocument, selectedFile]);
 
-    if (!isDocument) return null;
+  const stateLabel = useMemo(() => {
+    if (!selectedFile) {
+      return t("presenton.documents.state.missing");
+    }
+    if (selectedStatus === "loading" || selectedStatus === "idle") {
+      return t("presenton.documents.state.loading");
+    }
+    if (selectedStatus === "error") {
+      return t("presenton.documents.state.error");
+    }
+    if (!selectedContent) {
+      return t("presenton.documents.state.empty");
+    }
+    return t("presenton.documents.state.ready");
+  }, [selectedContent, selectedFile, selectedStatus, t]);
 
-    return (
-      <div className="h-full mr-4">
-        <div className="overflow-y-auto custom_scrollbar h-full">
-          <div className="h-full w-full max-w-full flex flex-col mb-5">
-            <h1 className="text-2xl font-medium mb-5">Content:</h1>
-            {downloadingDocuments.includes(selectedDocument) ? (
-              <Skeleton className="w-full h-full" />
-            ) : (
-              <div className="whitespace-pre-wrap break-words text-sm leading-7 text-[#2E2E2E]">
-                {textContents[selectedDocument] || ""}
-              </div>
-            )}
+  const renderViewerBody = () => {
+    if (!selectedFile) {
+      return (
+        <div className={styles.stateCard}>
+          <div className={styles.stateInner}>
+            <div className={styles.stateIcon}>
+              <FolderOpen className="h-6 w-6" />
+            </div>
+            <h3 className={styles.stateTitle}>
+              {t("presenton.documents.missing.title")}
+            </h3>
+            <p className={styles.stateText}>
+              {t("presenton.documents.missing.body")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className={styles.secondaryButton}
+              onClick={() => router.push("/upload")}
+            >
+              {t("presenton.documents.missing.cta")}
+            </Button>
           </div>
         </div>
-      </div>
-    );
-  };
+      );
+    }
 
-  const renderSidebar = () => {
-    if (!isOpen) return null;
+    if (selectedStatus === "loading" || selectedStatus === "idle") {
+      return (
+        <div className={styles.loadingStack}>
+          <Skeleton className="h-6 w-44 rounded-full" />
+          <Skeleton className="h-5 w-full rounded-full" />
+          <Skeleton className="h-5 w-[92%] rounded-full" />
+          <Skeleton className="h-5 w-[88%] rounded-full" />
+          <Skeleton className="h-5 w-[95%] rounded-full" />
+          <Skeleton className="h-40 w-full rounded-[20px]" />
+        </div>
+      );
+    }
+
+    if (selectedStatus === "error") {
+      return (
+        <div className={styles.stateCard}>
+          <div className={styles.stateInner}>
+            <div className={cn(styles.stateIcon, styles.stateIconWarning)}>
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <h3 className={styles.stateTitle}>
+              {t("presenton.documents.error.title")}
+            </h3>
+            <p className={styles.stateText}>
+              {selectedError || t("presenton.documents.error.body")}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className={styles.secondaryButton}
+              onClick={() => selectedFile && void loadDocument(selectedFile, true)}
+            >
+              <RefreshCw className="h-4 w-4" />
+              {t("presenton.documents.retry")}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!selectedContent) {
+      return (
+        <div className={styles.stateCard}>
+          <div className={styles.stateInner}>
+            <div className={styles.stateIcon}>
+              <FileText className="h-6 w-6" />
+            </div>
+            <h3 className={styles.stateTitle}>
+              {t("presenton.documents.empty.title")}
+            </h3>
+            <p className={styles.stateText}>
+              {t("presenton.documents.empty.body")}
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div className={`border-r border-gray-200 fixed xl:relative w-full z-50 xl:z-auto
-        transition-all duration-300 bg-white ease-in-out max-w-[200px] md:max-w-[300px] xl:h-[calc(100dvh-var(--nav-height,60px)-13rem)] rounded-md p-5`}>
-        <X
-          onClick={() => setIsOpen(false)}
-          className="text-black mb-4 ml-auto mr-0 cursor-pointer hover:text-gray-600"
-          size={20}
-        />
-
-        {documentKeys.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs mt-2 text-[#2E2E2E] opacity-70">DOCUMENTS</p>
-            <div className="flex flex-col gap-2 mt-6">
-              {documentKeys.map((key: string) => (
-                <div
-                  key={key}
-                  onClick={() => updateSelectedDocument(key)}
-                  className={`${selectedDocument === key ? "border border-blue-500" : ""
-                    } flex p-2 rounded-sm gap-2 items-center cursor-pointer`}
-                >
-                  <img
-                    className="h-6 w-6 border border-gray-200"
-                    src={getIconFromFile(key)}
-                    alt="Document icon"
-                  />
-                  <span className="text-sm h-6 text-[#2E2E2E] overflow-hidden">
-                    {key.split("/").pop() ?? "file.txt"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className={styles.contentText}>
+        <MarkdownRenderer content={selectedContent} />
       </div>
     );
   };
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-var(--nav-height,60px)-8rem)] w-full flex-col bg-white/90">
+    <div className={styles.page}>
       <OverlayLoader
         show={showLoading.show}
         text={showLoading.message}
         showProgress={showLoading.progress}
         duration={showLoading.duration}
       />
-      <div className="relative flex flex-1 gap-4 font-instrument_sans pt-2">
-        {!isOpen && (
-          <div className="fixed left-[calc(var(--sidebar-width,280px)+1.25rem)] top-1/2 z-40 -translate-y-1/2 xl:absolute xl:left-2 xl:top-1/2">
-            <ToolTip content="Open Panel">
-              <Button
-                onClick={() => setIsOpen(true)}
-                className="bg-[#5146E5] text-white p-3 shadow-lg"
-              >
-                <PanelRightOpen className="text-white" size={20} />
-              </Button>
-            </ToolTip>
-          </div>
+
+      <Wrapper
+        className={cn(
+          styles.shell,
+          entranceStyles.pageEntrance,
+          isEntranceActive && entranceStyles.pageEntranceActive
         )}
+      >
+        <WelcomeBanner
+          title={t("presenton.documents.banner.title")}
+          subtitle={t("presenton.documents.banner.subtitle")}
+          variant="workspace"
+          className={styles.banner}
+        />
 
-        {renderSidebar()}
+        {!isSidebarOpen && fileItems.length > 0 ? (
+          <div className={styles.revealBar}>
+            <Button
+              type="button"
+              variant="outline"
+              className={styles.secondaryButton}
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+              {t("presenton.documents.openPanel")}
+            </Button>
+          </div>
+        ) : null}
 
-        <div className="bg-white w-full min-h-0 xl:h-[calc(100dvh-var(--nav-height,60px)-13rem)] custom_scrollbar rounded-md overflow-y-auto px-4 py-6 sm:px-6">
-          {renderDocumentContent()}
+        <div className={styles.workspaceGrid}>
+          {isSidebarOpen ? (
+            <aside className={cn(styles.surfaceCard, styles.sidebarCard)}>
+              <div className={styles.sidebarHeader}>
+                <div className={styles.sidebarCopy}>
+                  <span className={styles.badge}>
+                    <FileText className="h-3.5 w-3.5" />
+                    {t("presenton.documents.section.documents")}
+                  </span>
+                  <h2 className={styles.sideTitle}>
+                    {t("presenton.documents.library.title")}
+                  </h2>
+                  <p className={styles.sideDescription}>
+                    {t("presenton.documents.library.body")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={() => setIsSidebarOpen(false)}
+                  aria-label={t("presenton.documents.closePanel")}
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className={styles.docList}>
+                {fileItems.map((file) => {
+                  const isActive = selectedFile?.file_path === file.file_path;
+
+                  return (
+                    <button
+                      key={file.file_path}
+                      type="button"
+                      onClick={() => setSelectedDocumentPath(file.file_path)}
+                      className={cn(
+                        styles.docButton,
+                        isActive && styles.docButtonActive
+                      )}
+                    >
+                      <span className={styles.iconFrame}>
+                        <img
+                          className="h-5 w-5"
+                          src={getIconFromFile(file.name)}
+                          alt=""
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className={styles.docBody}>
+                        <span className={styles.docName}>
+                          {getDisplayName(file.name)}
+                        </span>
+                        <span className={styles.docMeta}>
+                          {getDocumentStateLabel(
+                            t,
+                            documentStatuses[file.file_path]?.status ?? "idle",
+                            !!textContents[file.file_path]
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
+          ) : null}
+
+          <section className={cn(styles.surfaceCard, styles.viewerCard)}>
+            <div className={styles.viewerHeader}>
+              <div className={styles.viewerTitleWrap}>
+                <span className={styles.mutedBadge}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {t("presenton.documents.content")}
+                </span>
+                <h2 className={styles.sectionTitle}>
+                  {selectedFile
+                    ? getDisplayName(selectedFile.name)
+                    : t("presenton.documents.missing.title")}
+                </h2>
+                <p className={styles.sectionDescription}>
+                  {t("presenton.documents.viewer.subtitle")}
+                </p>
+              </div>
+
+              <div className={styles.viewerTools}>
+                <span className={styles.statePill}>{stateLabel}</span>
+                {selectedFile ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={styles.secondaryButton}
+                    onClick={() => void loadDocument(selectedFile, true)}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {t("presenton.documents.retry")}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className={styles.contentViewport}>{renderViewerBody()}</div>
+          </section>
+
+          <aside className={cn(styles.surfaceCard, styles.summaryCard)}>
+            <span className={styles.badge}>
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("presenton.documents.summary.badge")}
+            </span>
+            <h3 className={styles.sideTitle}>
+              {t("presenton.documents.summary.title")}
+            </h3>
+            <p className={styles.sideDescription}>
+              {t("presenton.documents.summary.body")}
+            </p>
+
+            <div className={styles.summaryList}>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryLabel}>
+                  {t("presenton.documents.summary.documents")}
+                </span>
+                <span className={styles.summaryValue}>
+                  {fileItems.length.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryLabel}>
+                  {t("presenton.documents.summary.selected")}
+                </span>
+                <span className={styles.summaryValue}>
+                  {selectedFile ? getDisplayName(selectedFile.name) : "-"}
+                </span>
+              </div>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryLabel}>
+                  {t("presenton.documents.summary.characters")}
+                </span>
+                <span className={styles.summaryValue}>
+                  {selectedContent ? selectedCharacterCount : "-"}
+                </span>
+              </div>
+              <div className={styles.summaryRow}>
+                <span className={styles.summaryLabel}>
+                  {t("presenton.documents.summary.state")}
+                </span>
+                <span className={styles.summaryValue}>{stateLabel}</span>
+              </div>
+            </div>
+
+            <div className={styles.actionBlock}>
+              <Button
+                type="button"
+                onClick={handleCreatePresentation}
+                className={styles.nextButton}
+                disabled={fileItems.length === 0}
+              >
+                <span>{t("presenton.documents.next")}</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </aside>
         </div>
-
-        <div className="fixed bottom-24 right-6 z-40 xl:absolute xl:bottom-4 xl:right-0">
-          <Button
-            onClick={handleCreatePresentation}
-            className="flex items-center gap-2 px-8 py-6 rounded-sm text-md bg-[#5146E5] hover:bg-[#5146E5]/90"
-          >
-            <span className="text-white font-semibold">Next</span>
-            <ChevronRight />
-          </Button>
-        </div>
-      </div>
+      </Wrapper>
     </div>
   );
 };

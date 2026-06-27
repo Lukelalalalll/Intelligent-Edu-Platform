@@ -4,11 +4,13 @@ import React, { useMemo, useRef } from 'react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ChevronRight, SquarePen } from 'lucide-react'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
+import { useI18n } from '@/shared/i18n'
 import { StepIndicator } from './StepIndicator'
 import { ThemeEditorBrandStep } from './ThemeEditorBrandStep'
 import { ThemeEditorColorStep } from './ThemeEditorColorStep'
 import { ThemeEditorFontStep } from './ThemeEditorFontStep'
 import { ThemePreviewPane } from './ThemePreviewPane'
+import type { ThemePreviewLayout } from './themePreviewLoader'
 import { ThemeColors, ThemeFonts, ThemeStepMeta, UserFontLibrary } from './types'
 import styles from './ThemePanel.module.css'
 
@@ -32,7 +34,8 @@ interface ThemeEditorSheetProps {
   previewScale: number
   previewSlideWidth: number
   previewSlideHeight: number
-  template: any
+  previewLayouts: ThemePreviewLayout[]
+  isPreviewLayoutsLoading: boolean
   onClickOutside: () => void
   onShowColorPicker: (colorKey: string | null) => void
   onColorChange: (colorKey: keyof ThemeColors, value: string) => void
@@ -47,11 +50,14 @@ interface ThemeEditorSheetProps {
   onPrimaryAction: () => void
 }
 
-function getPrimaryActionLabel(currentStep: number) {
-  if (currentStep === 1) return 'Generate theme palette'
-  if (currentStep === 2) return 'Continue to Fonts'
-  if (currentStep === 3) return 'Continue to Design'
-  return 'Save as Custom Theme'
+function getPrimaryActionLabel(
+  currentStep: number,
+  t: ReturnType<typeof useI18n>['t']
+) {
+  if (currentStep === 1) return t('presenton.theme.editor.primary.generate')
+  if (currentStep === 2) return t('presenton.theme.editor.primary.fonts')
+  if (currentStep === 3) return t('presenton.theme.editor.primary.design')
+  return t('presenton.theme.editor.primary.save')
 }
 
 export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
@@ -74,7 +80,8 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
   previewScale,
   previewSlideWidth,
   previewSlideHeight,
-  template,
+  previewLayouts,
+  isPreviewLayoutsLoading,
   onClickOutside,
   onShowColorPicker,
   onColorChange,
@@ -88,11 +95,14 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
   onPreviousStep,
   onPrimaryAction,
 }) => {
+  const { t } = useI18n()
   const themeNameInputRef = useRef<HTMLInputElement>(null)
   const editorEyebrow = useMemo(() => {
-    if (isNewTheme) return 'New custom theme'
-    return selectedTheme.user === 'system' ? 'Customize theme' : 'Edit custom theme'
-  }, [isNewTheme, selectedTheme.user])
+    if (isNewTheme) return t('presenton.theme.editor.eyebrow.new')
+    return selectedTheme.user === 'system'
+      ? t('presenton.theme.editor.eyebrow.customize')
+      : t('presenton.theme.editor.eyebrow.edit')
+  }, [isNewTheme, selectedTheme.user, t])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -117,7 +127,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                     type="button"
                     className={styles.editorIconButton}
                     onClick={() => themeNameInputRef.current?.focus()}
-                    aria-label="Edit theme name"
+                    aria-label={t('presenton.theme.editor.editThemeName')}
                   >
                     <SquarePen className="h-4 w-4" />
                   </button>
@@ -128,8 +138,8 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
               <StepIndicator currentStep={currentStep} />
               <div className={styles.stepStage}>
                 <div className={styles.stepIntro}>
-                  <h3 className={styles.stepIntroTitle}>{currentStepMeta.title}</h3>
-                  <p className={styles.stepIntroText}>{currentStepMeta.description}</p>
+                  <h3 className={styles.stepIntroTitle}>{t(currentStepMeta.titleKey)}</h3>
+                  <p className={styles.stepIntroText}>{t(currentStepMeta.descriptionKey)}</p>
                 </div>
 
                 <div className={styles.stepContent}>
@@ -181,7 +191,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                       className={styles.footerSecondaryAction}
                       onClick={onPreviousStep}
                     >
-                      Back
+                      {t('presenton.theme.editor.back')}
                     </button>
                   ) : null}
 
@@ -190,7 +200,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                     className={styles.footerPrimaryAction}
                     onClick={onPrimaryAction}
                   >
-                    {getPrimaryActionLabel(currentStep)}
+                    {getPrimaryActionLabel(currentStep, t)}
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -204,7 +214,8 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
             previewSlideWidth={previewSlideWidth}
             previewSlideHeight={previewSlideHeight}
             totalThemeCount={totalThemeCount}
-            template={template}
+            previewLayouts={previewLayouts}
+            isLoading={isPreviewLayoutsLoading}
           />
         </div>
       </SheetContent>

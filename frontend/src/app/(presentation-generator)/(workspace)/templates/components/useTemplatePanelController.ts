@@ -6,58 +6,35 @@ import {
     type CustomTemplates,
     useCustomTemplateSummaries,
 } from "@/app/hooks/useCustomTemplates";
-import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { usePathname, useRouter } from "@/presenton/shims/next-navigation";
+import { useI18n } from "@/shared/i18n";
+import { PAGE_ENTRANCE_SETTLE_MS } from "@/shared/page-entrance/usePageEntrance";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 
 import {
+    BUILT_IN_PREVIEW_BATCH_STEP,
+    BUILT_IN_PREVIEW_CADENCE_MS,
+    CUSTOM_PREVIEW_BATCH_STEP,
+    CUSTOM_PREVIEW_CADENCE_MS,
+    INITIAL_BUILT_IN_PREVIEW_BATCH,
+    INITIAL_CUSTOM_PREVIEW_BATCH,
     buildBuiltInGroupItems,
-    buildBuiltInTemplateGroups,
     buildPreviewItems,
     getActiveTabDescription,
     getCustomTemplatePreviewSlug,
     getTemplatePanelStats,
     getTemplateSectionCopy,
-    INITIAL_BUILT_IN_PREVIEW_BATCH,
-    INITIAL_CUSTOM_PREVIEW_BATCH,
-    PREVIEW_BATCH_STEP,
     scheduleAfterPaint,
 } from "./templatePanelHelpers";
+import {
+    getCachedBuiltInTemplateCatalog,
+    loadBuiltInTemplateCatalog,
+} from "./templateCatalogLoader";
 import type { BuiltInTemplateCatalog, TemplateTab } from "./templatePanelTypes";
 
-let builtInTemplateCatalogCache: BuiltInTemplateCatalog | null = null;
-let builtInTemplateCatalogRequest: Promise<BuiltInTemplateCatalog> | null = null;
-
-async function loadBuiltInTemplateCatalog(): Promise<BuiltInTemplateCatalog> {
-    if (builtInTemplateCatalogCache) {
-        return builtInTemplateCatalogCache;
-    }
-
-    if (!builtInTemplateCatalogRequest) {
-        builtInTemplateCatalogRequest = import("@/app/presentation-templates")
-            .then((module) => {
-                const catalogTemplates = module.templates as TemplateLayoutsWithSettings[];
-                const groups = buildBuiltInTemplateGroups(catalogTemplates);
-                const catalog = {
-                    templates: catalogTemplates,
-                    groups,
-                    count: catalogTemplates.length,
-                };
-
-                builtInTemplateCatalogCache = catalog;
-                return catalog;
-            })
-            .finally(() => {
-                builtInTemplateCatalogRequest = null;
-            });
-    }
-
-    return builtInTemplateCatalogRequest;
-}
-
 function useBuiltInTemplateCatalog(enabled: boolean) {
-    const [catalog, setCatalog] = useState<BuiltInTemplateCatalog | null>(() => builtInTemplateCatalogCache);
-    const [loading, setLoading] = useState<boolean>(() => enabled && !builtInTemplateCatalogCache);
+    const [catalog, setCatalog] = useState<BuiltInTemplateCatalog | null>(() => getCachedBuiltInTemplateCatalog());
+    const [loading, setLoading] = useState<boolean>(() => enabled && !getCachedBuiltInTemplateCatalog());
 
     useEffect(() => {
         if (!enabled) {
@@ -65,8 +42,9 @@ function useBuiltInTemplateCatalog(enabled: boolean) {
             return;
         }
 
-        if (builtInTemplateCatalogCache) {
-            setCatalog(builtInTemplateCatalogCache);
+        const cachedCatalog = getCachedBuiltInTemplateCatalog();
+        if (cachedCatalog) {
+            setCatalog(cachedCatalog);
             setLoading(false);
             return;
         }
@@ -104,6 +82,7 @@ function useProgressivePreviewBudget(
     enabled: boolean,
     initialCount: number,
     step: number,
+    cadenceMs: number,
 ) {
     const [budget, setBudget] = useState(0);
 
@@ -130,7 +109,7 @@ function useProgressivePreviewBudget(
             setBudget(current);
 
             if (current < totalCount) {
-                cleanup = scheduleAfterPaint(advance, 72);
+                cleanup = scheduleAfterPaint(advance, cadenceMs);
             }
         };
 
@@ -143,21 +122,33 @@ function useProgressivePreviewBudget(
             cancelled = true;
             cleanup();
         };
-    }, [enabled, initialCount, step, totalCount]);
+    }, [cadenceMs, enabled, initialCount, step, totalCount]);
 
     return budget;
 }
 
 export function useTemplatePanelController() {
+    const { t } = useI18n();
     const [tab, setTab] = useState<TemplateTab>("default");
+    const [shouldLoadBuiltInCatalog, setShouldLoadBuiltInCatalog] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const { templates: customTemplates, loading: customLoading } = useCustomTemplateSummaries();
-    const { catalog: builtInCatalog, loading: builtInLoading } = useBuiltInTemplateCatalog(true);
+    const { catalog: builtInCatalog, loading: builtInLoading } = useBuiltInTemplateCatalog(shouldLoadBuiltInCatalog);
 
     useEffect(() => {
         trackEvent(MixpanelEvent.Templates_Page_Viewed);
     }, []);
+
+    useEffect(() => {
+        if (shouldLoadBuiltInCatalog || tab !== "default" || builtInCatalog !== null) {
+            return;
+        }
+
+        return scheduleAfterPaint(() => {
+            setShouldLoadBuiltInCatalog(true);
+        }, PAGE_ENTRANCE_SETTLE_MS);
+    }, [builtInCatalog, shouldLoadBuiltInCatalog, tab]);
 
     const handleOpenBuiltInPreview = useCallback((id: string) => {
         trackEvent(MixpanelEvent.Templates_Inbuilt_Opened, { template_id: id });
@@ -189,20 +180,24 @@ export function useTemplatePanelController() {
 
     const builtInPreviewBudget = useProgressivePreviewBudget(
         builtInCatalog?.count ?? 0,
-        tab === "default" && !builtInLoading,
+        tab === "default" && builtInCatalog !== null && !builtInLoading,
         INITIAL_BUILT_IN_PREVIEW_BATCH,
-        PREVIEW_BATCH_STEP,
+        BUILT_IN_PREVIEW_BATCH_STEP,
+        BUILT_IN_PREVIEW_CADENCE_MS,
     );
 
     const customPreviewBudget = useProgressivePreviewBudget(
         customTemplates.length,
         tab === "custom" && !customLoading,
         INITIAL_CUSTOM_PREVIEW_BATCH,
-        2,
+        CUSTOM_PREVIEW_BATCH_STEP,
+        CUSTOM_PREVIEW_CADENCE_MS,
     );
 
     const builtInCount = builtInCatalog?.count ?? 0;
     const customCount = customTemplates.length;
+    const hasBuiltInCatalog = builtInCatalog !== null;
+    const isBuiltInCatalogLoading = builtInLoading || !hasBuiltInCatalog;
 
     const builtInGroups = useMemo(
         () => buildBuiltInGroupItems(builtInCatalog, builtInPreviewBudget),
@@ -214,18 +209,18 @@ export function useTemplatePanelController() {
         [customPreviewBudget, customTemplates],
     );
 
-    const activeTabDescription = useMemo(() => getActiveTabDescription(tab), [tab]);
+    const activeTabDescription = useMemo(() => getActiveTabDescription(tab, t), [tab, t]);
     const stats = useMemo(
         () => getTemplatePanelStats({
             builtInCount,
-            builtInLoading,
+            builtInLoading: isBuiltInCatalogLoading,
             customCount,
             customLoading,
             tab,
-        }),
-        [builtInCount, builtInLoading, customCount, customLoading, tab],
+        }, t),
+        [builtInCount, customCount, customLoading, isBuiltInCatalogLoading, t, tab],
     );
-    const sectionCopy = useMemo(() => getTemplateSectionCopy(tab), [tab]);
+    const sectionCopy = useMemo(() => getTemplateSectionCopy(tab, t), [tab, t]);
 
     return {
         pathname,
@@ -237,8 +232,8 @@ export function useTemplatePanelController() {
             builtIn: {
                 count: builtInCount,
                 groups: builtInGroups,
-                isLoading: builtInLoading,
-                hasCatalog: builtInCatalog !== null,
+                isLoading: isBuiltInCatalogLoading,
+                hasCatalog: hasBuiltInCatalog,
             },
             custom: {
                 count: customCount,

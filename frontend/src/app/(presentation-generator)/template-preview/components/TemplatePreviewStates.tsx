@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Eye, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 
 import styles from "./TemplatePreviewClient.module.css";
 
@@ -18,6 +19,7 @@ export function TemplatePreviewStateBranch({
   customLoading,
   isMissingTemplate,
 }: TemplatePreviewStateBranchProps) {
+  const { t } = useI18n();
   const hasBlockingState = customLoading || Boolean(customError) || isMissingTemplate;
 
   return (
@@ -25,10 +27,9 @@ export function TemplatePreviewStateBranch({
       {customLoading ? (
         <div className={styles.statusPanel} role="status">
           <Loader2 className={cn("animate-spin", styles.statusIcon)} />
-          <h3 className={styles.statusTitle}>Compiling custom template preview</h3>
+          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.loading.title")}</h3>
           <p className={styles.statusText}>
-            Pulling saved layouts into the Presenton workspace and preparing
-            the full-size slide stack.
+            {t("presenton.templatePreview.state.loading.body")}
           </p>
         </div>
       ) : null}
@@ -36,7 +37,7 @@ export function TemplatePreviewStateBranch({
       {customError ? (
         <div className={styles.statusPanel}>
           <Eye className={styles.statusIcon} />
-          <h3 className={styles.statusTitle}>Could not load this template</h3>
+          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.error.title")}</h3>
           <p className={styles.statusText}>{customError}</p>
         </div>
       ) : null}
@@ -44,10 +45,9 @@ export function TemplatePreviewStateBranch({
       {isMissingTemplate ? (
         <div className={styles.statusPanel}>
           <Eye className={styles.statusIcon} />
-          <h3 className={styles.statusTitle}>Template preview unavailable</h3>
+          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.missing.title")}</h3>
           <p className={styles.statusText}>
-            The selected slug did not resolve to a built-in or custom
-            Presenton template with previewable layouts.
+            {t("presenton.templatePreview.state.missing.body")}
           </p>
         </div>
       ) : null}

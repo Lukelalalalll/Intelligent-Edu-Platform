@@ -11,6 +11,8 @@ import { transferApi } from '../../chat/api/transferApi';
 import * as historyApi from '../api/historyApi';
 import { resolveApiRoot } from '@/shared/api/root';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import s from '../../../styles/history.module.css';
 import styles from '../styles/diagram.module.css';
 
@@ -24,6 +26,7 @@ const toSrc = (v: unknown): string => {
 };
 
 export default function DiagramPage() {
+    const isEntranceActive = usePageEntrance();
     const { extractState, extractHandlers, searchState, searchHandlers, editorState, editorHandlers } = useDiagramExtractSearch();
     const { genState, genHandlers } = useDiagramGenerate();
     const { imageState, imageHandlers } = useDiagramImageExtract();
@@ -156,7 +159,7 @@ export default function DiagramPage() {
     };
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title="Visual Tool"
                 subtitle="Extract diagrams & images, search SVGs, and generate with AI"

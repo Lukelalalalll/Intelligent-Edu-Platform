@@ -3,7 +3,11 @@
 import React from "react";
 
 import { OverlayLoader } from "@/components/ui/overlay-loader";
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import { usePageEntrance } from "@/shared/page-entrance/usePageEntrance";
 
 import {
   UploadInputSection,
@@ -13,7 +17,9 @@ import { useUploadPageController } from "./useUploadPageController";
 import styles from "./UploadPage.module.css";
 
 const UploadPage = () => {
-  const { config, files, loadingState, viewState, actions } =
+  const isEntranceActive = usePageEntrance();
+  const { t } = useI18n();
+  const { config, files, llmConfig, loadingState, viewState, actions } =
     useUploadPageController();
 
   return (
@@ -25,11 +31,17 @@ const UploadPage = () => {
         duration={loadingState.duration}
         extra_info={loadingState.extra_info}
       />
-      <div className={styles.container}>
+      <div
+        className={cn(
+          styles.container,
+          entranceStyles.pageEntrance,
+          isEntranceActive && entranceStyles.pageEntranceActive
+        )}
+      >
         <WelcomeBanner
           className={styles.banner}
-          title="Generate a Presentation"
-          subtitle="Start with a concise brief or a few supporting files, then refine the outline before the full deck is generated."
+          title={t("presenton.upload.banner.title")}
+          subtitle={t("presenton.upload.banner.subtitle")}
           variant="workspace"
         />
 
@@ -43,11 +55,16 @@ const UploadPage = () => {
           <UploadSetupSection
             actionSummary={viewState.actionSummary}
             config={config}
+            generationDisabledReason={viewState.generationDisabledReason}
             isLoading={loadingState.isLoading}
+            llmConfig={llmConfig}
+            providerCards={viewState.providerCards}
             primaryActionLabel={viewState.primaryActionLabel}
+            selectedProvider={viewState.selectedProvider}
             statusCards={viewState.statusCards}
             onConfigChange={actions.handleConfigChange}
             onGeneratePresentation={actions.handleGeneratePresentation}
+            onProviderSelect={actions.handleProviderSelect}
           />
         </div>
       </div>

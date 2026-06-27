@@ -1,3 +1,4 @@
+import type { TranslationKey } from '@/shared/i18n'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import { ThemeFontOption, ThemeStepMeta } from './types'
 
@@ -243,22 +244,29 @@ export const FALLBACK_THEME: Theme = {
 
 export const THEME_EDITOR_STEP_META: Record<number, ThemeStepMeta> = {
   1: {
-    title: 'Anchor the brand colors',
-    description: 'Pick the primary and background pair that drives the palette direction.',
+    titleKey: 'presenton.theme.editor.stepMeta.colors.title',
+    descriptionKey: 'presenton.theme.editor.stepMeta.colors.body',
   },
   2: {
-    title: 'Tune the full palette',
-    description: 'Refine text, card, and chart colors while the preview updates live.',
+    titleKey: 'presenton.theme.editor.stepMeta.palette.title',
+    descriptionKey: 'presenton.theme.editor.stepMeta.palette.body',
   },
   3: {
-    title: 'Choose the type system',
-    description: 'Upload a brand font or select one of the shared presets for the deck voice.',
+    titleKey: 'presenton.theme.editor.stepMeta.fonts.title',
+    descriptionKey: 'presenton.theme.editor.stepMeta.fonts.body',
   },
   4: {
-    title: 'Add brand identity',
-    description: 'Set the company name and logo that should travel with this custom theme.',
+    titleKey: 'presenton.theme.editor.stepMeta.brand.title',
+    descriptionKey: 'presenton.theme.editor.stepMeta.brand.body',
   },
 }
+
+export const THEME_EDITOR_STEPS: Array<{ step: number; labelKey: TranslationKey }> = [
+  { step: 1, labelKey: 'presenton.theme.editor.steps.brand' },
+  { step: 2, labelKey: 'presenton.theme.editor.steps.palette' },
+  { step: 3, labelKey: 'presenton.theme.editor.steps.fonts' },
+  { step: 4, labelKey: 'presenton.theme.editor.steps.logo' },
+]
 
 export const PREVIEW_BASE_WIDTH = 1280
 export const PREVIEW_BASE_HEIGHT = 720

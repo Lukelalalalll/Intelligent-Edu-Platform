@@ -28,6 +28,10 @@ from utils.llm_calls.generate_presentation_outlines import (
 )
 from utils.llm_utils import message_content_to_text
 from utils.outline_utils import get_no_of_outlines_to_generate_for_n_slides
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
 
 from .helpers import build_edit_path
 from .slide_builder import build_presentation_assets
@@ -46,7 +50,7 @@ async def generate_presentation_handler(
 ):
     assert sql_session is not None
     try:
-        language_to_use = (request.language or "").strip() or None
+        language_to_use = normalize_presentation_language(request.language) or AUTO_PRESENTATION_LANGUAGE
         presentation_outlines, total_outlines, using_slides_markdown = await _load_or_generate_outlines(
             request=request,
             presentation_id=presentation_id,
@@ -175,7 +179,7 @@ async def _load_or_generate_outlines(
     await _set_async_status(sql_session, async_status, message="Generating presentation outlines")
     additional_context = ""
     if request.files:
-        documents_loader = DocumentsLoader(file_paths=request.files, presentation_language=request.language)
+        documents_loader = DocumentsLoader(file_paths=request.files, presentation_language=language_to_use)
         await documents_loader.load_documents()
         if documents_loader.documents:
             additional_context = "\n\n".join(documents_loader.documents)

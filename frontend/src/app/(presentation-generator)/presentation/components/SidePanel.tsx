@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import React, { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
@@ -37,7 +38,10 @@ interface SidePanelProps {
   loading: boolean;
 }
 
-const THUMBNAIL_ESTIMATE_PX = 86;
+const PROJECT_UI_FONT_STACK =
+  '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif';
+
+const THUMBNAIL_ESTIMATE_PX = 122;
 const THUMBNAIL_OVERSCAN = 6;
 const THUMBNAIL_VIRTUALIZE_THRESHOLD = 14;
 
@@ -72,6 +76,10 @@ const SidePanelComponent = ({
   const handleAddSlideClick = () => {
     if (!slides.length || isStreaming) return;
     setShowNewSlideSelection(true);
+  };
+
+  const closeNewSlideSelection = () => {
+    setShowNewSlideSelection(false);
   };
 
   const sensors = useSensors(
@@ -162,37 +170,54 @@ const SidePanelComponent = ({
     return null;
   }
 
-  const shouldShowNewSlideModal =
-    showNewSlideSelection &&
-    lastSlideTemplateId &&
-    typeof document !== "undefined";
+  const canRenderNewSlideModal =
+    Boolean(lastSlideTemplateId) && typeof document !== "undefined";
 
-  const newSlideModal = shouldShowNewSlideModal
+  const newSlideModal = canRenderNewSlideModal
     ? createPortal(
-        <div
-          className="fixed inset-0 z-[1000] overflow-y-auto bg-black/50 px-4 py-16"
-          onClick={() => setShowNewSlideSelection(false)}
-        >
-          <div className="relative z-[1001] flex min-h-full items-start justify-center pt-10">
-            <div
-              className="w-full max-w-[675px]"
-              onClick={(event) => event.stopPropagation()}
+        <AnimatePresence>
+          {showNewSlideSelection ? (
+            <motion.div
+              key="new-slide-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-0 z-[1000] overflow-y-auto bg-[rgba(15,23,42,0.22)] px-4 py-16 backdrop-blur-sm"
+              onClick={closeNewSlideSelection}
             >
-              <NewSlide
-                index={lastSlideIndex}
-                templateID={lastSlideTemplateId}
-                setShowNewSlideSelection={setShowNewSlideSelection}
-                presentationId={presentationId}
-              />
-            </div>
-          </div>
-        </div>,
+              <div className="relative z-[1001] flex min-h-full items-start justify-center pt-10">
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.965 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 14, scale: 0.982 }}
+                  transition={{
+                    duration: 0.24,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="w-full max-w-[675px] will-change-transform"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <NewSlide
+                    index={lastSlideIndex}
+                    templateID={lastSlideTemplateId}
+                    setShowNewSlideSelection={setShowNewSlideSelection}
+                    presentationId={presentationId}
+                  />
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>,
         document.body
       )
     : null;
 
   return (
-    <div className="h-full w-full px-2">
+    <div
+      className="h-full w-full px-3"
+      style={{ fontFamily: PROJECT_UI_FONT_STACK }}
+    >
       <div className="relative z-50 h-full xl:z-auto">
         <div className="slide-theme flex h-full w-full flex-col overflow-hidden hide-scrollbar">
           <DndContext
@@ -231,7 +256,7 @@ const SidePanelComponent = ({
                             top: virtualItem.start,
                             left: 0,
                             width: "100%",
-                            paddingBottom: "14px",
+                            paddingBottom: "18px",
                           }}
                         >
                           <SlideThumbnailCard
@@ -245,7 +270,7 @@ const SidePanelComponent = ({
                     })}
                   </div>
                 ) : (
-                  <div className="space-y-3.5">
+                  <div className="space-y-[18px] pb-1">
                     {slides.map((slide: any, index: number) => (
                       <SlideThumbnailCard
                         key={`${slide.id}-${index}`}
@@ -286,7 +311,7 @@ const SidePanelComponent = ({
                               top: virtualItem.start,
                               left: 0,
                               width: "100%",
-                              paddingBottom: "14px",
+                              paddingBottom: "18px",
                             }}
                           >
                             <SortableSlide
@@ -300,7 +325,7 @@ const SidePanelComponent = ({
                       })}
                     </div>
                   ) : (
-                    <div className="space-y-3.5">
+                    <div className="space-y-[18px] pb-1">
                       {slides.map((slide: any, index: number) => (
                         <SortableSlide
                           key={`${slide.id}-${index}`}
@@ -321,10 +346,10 @@ const SidePanelComponent = ({
           <button
             type="button"
             onClick={handleAddSlideClick}
-            className="mx-auto flex flex-col items-center justify-center gap-2 py-4"
+            className="mx-1 my-3 flex min-h-[88px] w-auto flex-col items-center justify-center gap-2 rounded-[22px] border border-[#EDEEEF] bg-white/90 px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition-colors hover:bg-white"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-normal text-[#000000]">
+            <Plus className="h-4 w-4 text-[#111827]" />
+            <span className="text-[13px] font-medium text-[#111827]">
               Add Slide
             </span>
           </button>

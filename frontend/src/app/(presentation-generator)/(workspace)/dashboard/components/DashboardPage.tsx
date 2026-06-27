@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "@/presenton/shims/next-link";
 import {
   ArrowRight,
@@ -12,8 +12,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
+import { useI18n } from "@/shared/i18n";
 import { DashboardApi, PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
-import { PresentationGrid } from "@/app/(presentation-generator)/(workspace)/dashboard/components/PresentationGrid";
 import {
   buildPresentationHistoryGroups,
   DeckSortDirection,
@@ -25,8 +25,19 @@ import {
 } from "@/app/(presentation-generator)/(workspace)/dashboard/components/dashboardUtils";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { usePathname } from "@/presenton/shims/next-navigation";
+import { cn } from "@/lib/utils";
+import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
+import {
+  PAGE_ENTRANCE_SETTLE_MS,
+  usePageEntrance,
+} from "@/shared/page-entrance/usePageEntrance";
 import Card from "@/shared/components/Card/Card";
 import styles from "./DashboardPage.module.css";
+
+const PresentationGrid = lazy(() =>
+  import("@/app/(presentation-generator)/(workspace)/dashboard/components/PresentationGrid")
+    .then((module) => ({ default: module.PresentationGrid })),
+);
 
 const TemplateNavIcon = ({ active }: { active: boolean }) => (
   <svg
@@ -47,38 +58,41 @@ const TemplateNavIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
-const presentonNavItems = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    renderIcon: (active: boolean) => (
-      <LayoutDashboard
-        className={styles.navIcon}
-        color={active ? "#007b55" : "#667085"}
-      />
-    ),
-  },
-  {
-    href: "/templates",
-    label: "Templates",
-    renderIcon: (active: boolean) => <TemplateNavIcon active={active} />,
-  },
-  {
-    href: "/theme",
-    label: "Themes",
-    renderIcon: (active: boolean) => (
-      <Palette className={styles.navIcon} color={active ? "#007b55" : "#667085"} />
-    ),
-  },
-];
-
-const sortOptions: Array<{ value: DeckSortDirection; label: string; description: string }> = [
-  { value: "desc", label: "Latest first", description: "Most recently updated decks first" },
-  { value: "asc", label: "Oldest first", description: "Earliest updated decks first" },
-];
+function DashboardHistorySkeleton() {
+  return (
+    <div className={styles.historySkeleton} aria-hidden="true">
+      {Array.from({ length: 2 }).map((_, groupIndex) => (
+        <section key={`history-skeleton-${groupIndex}`} className={styles.historySkeletonSection}>
+          <div className={styles.historySkeletonHeader}>
+            <div className={styles.historySkeletonTitle} />
+            <div className={styles.historySkeletonDescription} />
+          </div>
+          <div className={styles.historySkeletonGrid}>
+            {Array.from({ length: 4 }).map((__, cardIndex) => (
+              <div key={`history-skeleton-card-${groupIndex}-${cardIndex}`} className={styles.historySkeletonCard}>
+                <div className={styles.historySkeletonPreview} />
+                <div className={styles.historySkeletonBody}>
+                  <div className={styles.historySkeletonLineShort} />
+                  <div className={styles.historySkeletonLineLong} />
+                  <div className={styles.historySkeletonPills}>
+                    <div className={styles.historySkeletonPill} />
+                    <div className={styles.historySkeletonPill} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
 
 const DashboardPage: React.FC = () => {
+  const { locale, t } = useI18n();
   const pathname = usePathname();
+  const isEntranceActive = usePageEntrance();
+  const [showHistoryGrid, setShowHistoryGrid] = useState(false);
   const [presentations, setPresentations] = useState<PresentationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +114,7 @@ const DashboardPage: React.FC = () => {
       setError(
         err instanceof Error && err.message.trim()
           ? err.message
-          : "We couldn't load your deck history right now."
+          : t("presenton.dashboard.loadError.fallback")
       );
       setPresentations([]);
     } finally {
@@ -111,11 +125,30 @@ const DashboardPage: React.FC = () => {
       });
       setIsLoading(false);
     }
-  }, [pathname]);
+  }, [pathname, t]);
 
   useEffect(() => {
     void fetchPresentations();
   }, [fetchPresentations]);
+
+  useEffect(() => {
+    if (showHistoryGrid) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      setShowHistoryGrid(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowHistoryGrid(true);
+    }, PAGE_ENTRANCE_SETTLE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [showHistoryGrid]);
 
   const sortedPresentations = useMemo(
     () => sortPresentations(presentations, deckSortDirection),
@@ -123,8 +156,8 @@ const DashboardPage: React.FC = () => {
   );
 
   const historyGroups = useMemo(
-    () => buildPresentationHistoryGroups(sortedPresentations),
-    [sortedPresentations]
+    () => buildPresentationHistoryGroups(sortedPresentations, t),
+    [sortedPresentations, t]
   );
 
   const latestPresentation = useMemo(
@@ -141,8 +174,13 @@ const DashboardPage: React.FC = () => {
   );
 
   const latestUpdatedLabel = latestPresentation
-    ? formatPresentationDate(getPresentationTimestamp(latestPresentation), "dateTime")
-    : "No deck history yet";
+    ? formatPresentationDate(
+        getPresentationTimestamp(latestPresentation),
+        locale,
+        "dateTime",
+        t("presenton.dashboard.card.unknownDate")
+      )
+    : t("presenton.dashboard.summary.activity.none");
 
   const removePresentation = (presentationId: string) => {
     setPresentations((prev) => prev.filter((presentation) => presentation.id !== presentationId));
@@ -161,18 +199,68 @@ const DashboardPage: React.FC = () => {
     setDeckSortDirection(value);
   };
 
+  const presentonNavItems = useMemo(
+    () => [
+      {
+        href: "/dashboard",
+        label: t("presenton.workspace.nav.dashboard"),
+        renderIcon: (active: boolean) => (
+          <LayoutDashboard
+            className={styles.navIcon}
+            color={active ? "#007b55" : "#667085"}
+          />
+        ),
+      },
+      {
+        href: "/templates",
+        label: t("presenton.workspace.nav.templates"),
+        renderIcon: (active: boolean) => <TemplateNavIcon active={active} />,
+      },
+      {
+        href: "/theme",
+        label: t("presenton.workspace.nav.theme"),
+        renderIcon: (active: boolean) => (
+          <Palette className={styles.navIcon} color={active ? "#007b55" : "#667085"} />
+        ),
+      },
+    ],
+    [t]
+  );
+
+  const sortOptions: Array<{ value: DeckSortDirection; label: string; description: string }> = useMemo(
+    () => [
+      {
+        value: "desc",
+        label: t("presenton.dashboard.history.sort.latest.label"),
+        description: t("presenton.dashboard.history.sort.latest.description"),
+      },
+      {
+        value: "asc",
+        label: t("presenton.dashboard.history.sort.oldest.label"),
+        description: t("presenton.dashboard.history.sort.oldest.description"),
+      },
+    ],
+    [t]
+  );
+
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div
+        className={cn(
+          styles.container,
+          entranceStyles.workspaceEntrance,
+          isEntranceActive && entranceStyles.workspaceEntranceActive,
+        )}
+      >
         <WelcomeBanner
-          title="Slide Presentation"
-          subtitle="Create new decks, reopen recent work, and keep your Presenton workspace moving without leaving the flow."
+          title={t("presenton.dashboard.banner.title")}
+          subtitle={t("presenton.dashboard.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
 
         <div className={styles.navShell}>
-          <nav className={styles.navList} aria-label="Presenton workspace navigation">
+          <nav className={styles.navList} aria-label={t("presenton.workspace.nav.aria")}>
             {presentonNavItems.map(({ href, label, renderIcon }) => {
               const isActive = pathname === href;
               return (
@@ -196,14 +284,13 @@ const DashboardPage: React.FC = () => {
               <div className={styles.heroHeader}>
                 <div className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  Presenton workspace
+                  {t("presenton.dashboard.hero.badge")}
                 </div>
                 <h2 className={styles.heroTitle}>
-                  Build the next deck in a workspace that feels calm again.
+                  {t("presenton.dashboard.hero.title")}
                 </h2>
                 <p className={styles.heroDescription}>
-                  Start a presentation, keep your latest decks within reach, and move through
-                  Presenton without fighting a crowded first screen.
+                  {t("presenton.dashboard.hero.body")}
                 </p>
               </div>
 
@@ -213,46 +300,53 @@ const DashboardPage: React.FC = () => {
                   onClick={() => handleCreatePresentationClick("dashboard_primary_cta")}
                   className={styles.primaryAction}
                 >
-                  <span>Create Presentation</span>
+                  <span>{t("presenton.dashboard.hero.cta")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <p className={styles.helperText}>
-                  New decks continue with your saved providers, model choices, and theme workflow,
-                  so the workspace keeps its momentum.
+                  {t("presenton.dashboard.hero.helper")}
                 </p>
               </div>
 
               <div className={styles.summaryGrid}>
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>Deck history</span>
+                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.history.label")}</span>
                     <LayoutDashboard className={styles.summaryIcon} />
                   </div>
                   <div className={styles.summaryValue}>{presentations.length}</div>
                   <div className={styles.summaryMeta}>
-                    {presentations.length === 1 ? "Saved deck" : "Saved decks"} ready to reopen
+                    {presentations.length === 1
+                      ? t("presenton.dashboard.summary.history.single")
+                      : t("presenton.dashboard.summary.history.other")}
                   </div>
                 </div>
 
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>Recent activity</span>
+                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.activity.label")}</span>
                     <Clock3 className={styles.summaryIcon} />
                   </div>
                   <div className={styles.summaryValue}>
-                    {latestPresentation ? formatPresentationDate(getPresentationTimestamp(latestPresentation), "short") : "None yet"}
+                      {latestPresentation
+                      ? formatPresentationDate(getPresentationTimestamp(latestPresentation), locale, "short")
+                      : t("presenton.dashboard.summary.activity.empty")}
                   </div>
                   <div className={styles.summaryMeta}>{latestUpdatedLabel}</div>
                 </div>
 
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>Workspace scope</span>
+                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.scope.label")}</span>
                     <History className={styles.summaryIcon} />
                   </div>
-                  <div className={styles.summaryValue}>{totalSlides > 0 ? totalSlides : "Ready"}</div>
+                  <div className={styles.summaryValue}>
+                    {totalSlides > 0 ? totalSlides : t("presenton.dashboard.summary.scope.ready")}
+                  </div>
                   <div className={styles.summaryMeta}>
-                    {totalSlides > 0 ? "Slides currently tracked across decks" : "Waiting for the first deck"}
+                    {totalSlides > 0
+                      ? t("presenton.dashboard.summary.scope.metaTracked")
+                      : t("presenton.dashboard.summary.scope.metaWaiting")}
                   </div>
                 </div>
               </div>
@@ -264,7 +358,7 @@ const DashboardPage: React.FC = () => {
               <div className={styles.previewStage}>
                 <div className={styles.previewPill}>
                   <PanelTop className="h-3.5 w-3.5" />
-                  Deck workspace
+                  {t("presenton.dashboard.preview.badge")}
                 </div>
                 <div className={styles.previewDecks} aria-hidden="true">
                   <div
@@ -291,32 +385,31 @@ const DashboardPage: React.FC = () => {
               <div className={styles.historyIntro}>
                 <div className={styles.mutedBadge}>
                   <History className="h-3.5 w-3.5" />
-                  Deck history
+                  {t("presenton.dashboard.history.badge")}
                 </div>
-                <h2 className={styles.historyTitle}>Your deck history</h2>
+                <h2 className={styles.historyTitle}>{t("presenton.dashboard.history.title")}</h2>
                 <p className={styles.historyDescription}>
-                  Browse every presentation generated in Presenton, reopen the latest work, and keep
-                  older decks tidy without leaving the dashboard.
+                  {t("presenton.dashboard.history.body")}
                 </p>
               </div>
 
               <div className={styles.historyControls}>
                 <div className={styles.miniStats}>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatLabel}>Total decks</span>
+                    <span className={styles.miniStatLabel}>{t("presenton.dashboard.history.stats.total")}</span>
                     <div className={styles.miniStatValue}>{presentations.length}</div>
                   </div>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatLabel}>Recent update</span>
+                    <span className={styles.miniStatLabel}>{t("presenton.dashboard.history.stats.recentUpdate")}</span>
                     <div className={styles.miniStatValue}>
                       {latestPresentation
-                        ? formatPresentationDate(getPresentationTimestamp(latestPresentation), "short")
-                        : "No activity"}
+                        ? formatPresentationDate(getPresentationTimestamp(latestPresentation), locale, "short")
+                        : t("presenton.dashboard.history.stats.none")}
                     </div>
                   </div>
                 </div>
 
-                <div className={styles.sortTabs} role="tablist" aria-label="Deck history sort order">
+                <div className={styles.sortTabs} role="tablist" aria-label={t("presenton.dashboard.history.sort.aria")}>
                   {sortOptions.map((option) => {
                     const isActive = option.value === deckSortDirection;
                     return (
@@ -338,14 +431,20 @@ const DashboardPage: React.FC = () => {
             </div>
 
             <div className={styles.historyContent}>
-              <PresentationGrid
-                groups={historyGroups}
-                isLoading={isLoading}
-                error={error}
-                onRetry={fetchPresentations}
-                onCreatePresentationClick={() => handleCreatePresentationClick("dashboard_history_empty")}
-                onPresentationDeleted={removePresentation}
-              />
+              {showHistoryGrid ? (
+                <Suspense fallback={<DashboardHistorySkeleton />}>
+                  <PresentationGrid
+                    groups={historyGroups}
+                    isLoading={isLoading}
+                    error={error}
+                    onRetry={fetchPresentations}
+                    onCreatePresentationClick={() => handleCreatePresentationClick("dashboard_history_empty")}
+                    onPresentationDeleted={removePresentation}
+                  />
+                </Suspense>
+              ) : (
+                <DashboardHistorySkeleton />
+              )}
             </div>
           </div>
         </Card>

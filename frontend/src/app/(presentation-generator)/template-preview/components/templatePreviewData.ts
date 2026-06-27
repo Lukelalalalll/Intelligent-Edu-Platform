@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import type { CustomTemplateDetail } from "@/app/hooks/useCustomTemplates";
+import type { TranslationKey } from "@/shared/i18n";
 
 export const CUSTOM_PREFIX = "custom-";
 
@@ -46,6 +47,7 @@ export type TemplatePreviewModel = {
 };
 
 type BuildTemplatePreviewModelInput = {
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string;
   isCustom: boolean;
   customTemplate: CustomTemplateDetail | null;
   customLoading: boolean;
@@ -69,44 +71,50 @@ export function getTemplatePreviewParams(
 }
 
 function buildPreviewStats({
+  t,
   customFontCount,
   isCustom,
   layoutCount,
 }: {
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string;
   customFontCount: number;
   isCustom: boolean;
   layoutCount: number;
 }): PreviewStat[] {
   const sourceMeta = isCustom
     ? {
-        label: customFontCount > 0 ? "Fonts" : "Source",
-        value: customFontCount > 0 ? `${customFontCount}` : "Custom",
+        label: customFontCount > 0 ? t("presenton.templatePreview.stat.source.fonts") : t("presenton.templatePreview.stat.source"),
+        value: customFontCount > 0
+          ? `${customFontCount}`
+          : t("presenton.templatePreview.stat.source.custom"),
         meta:
           customFontCount > 0
-            ? "Uploaded families detected in this reusable template."
-            : "Saved reusable layouts from your workspace.",
+            ? t("presenton.templatePreview.stat.source.fontsMeta")
+            : t("presenton.templatePreview.stat.source.customMeta"),
       }
     : {
-        label: "Source",
-        value: "Built-in",
-        meta: "Shared Presenton family from the workspace library.",
+        label: t("presenton.templatePreview.stat.source"),
+        value: t("presenton.templatePreview.stat.source.builtIn"),
+        meta: t("presenton.templatePreview.stat.source.builtInMeta"),
       };
 
   return [
     {
-      label: "Template type",
-      value: isCustom ? "Custom" : "Built-in",
+      label: t("presenton.templatePreview.stat.templateType"),
+      value: isCustom
+        ? t("presenton.templatePreview.stat.templateType.custom")
+        : t("presenton.templatePreview.stat.templateType.builtIn"),
       meta: isCustom
-        ? "Preview-only review for a saved custom layout system."
-        : "Preview-only review for a shared Presenton family.",
+        ? t("presenton.templatePreview.stat.templateType.customMeta")
+        : t("presenton.templatePreview.stat.templateType.builtInMeta"),
     },
     {
-      label: "Layouts",
+      label: t("presenton.templatePreview.stat.layouts"),
       value: `${layoutCount}`,
       meta:
         layoutCount === 1
-          ? "One layout ready to inspect at full slide size."
-          : "Full-size slide stages stay scrollable without shrinking the deck.",
+          ? t("presenton.templatePreview.stat.layouts.single")
+          : t("presenton.templatePreview.stat.layouts.multi"),
     },
     {
       label: sourceMeta.label,
@@ -117,6 +125,7 @@ function buildPreviewStats({
 }
 
 export function buildTemplatePreviewModel({
+  t,
   isCustom,
   customTemplate,
   customLoading,
@@ -132,21 +141,22 @@ export function buildTemplatePreviewModel({
   const templateName = isCustom
     ? customTemplate?.template?.name ||
       customTemplate?.name ||
-      "Custom Template"
-    : staticGroup?.name || "Template Preview";
+      t("presenton.templatePreview.badge.custom")
+    : staticGroup?.name || t("presenton.templatePreview.banner.title");
 
   const templateDescription = isCustom
     ? customTemplate?.template?.description ||
       customTemplate?.description ||
-      "Review the full slide stack for this saved custom template."
+      t("presenton.templatePreview.main.customBody")
     : staticGroup?.description ||
-      "Inspect how this built-in Presenton family is paced before generation starts.";
+      t("presenton.templatePreview.main.builtInBody");
 
   const isMissingTemplate =
     (!isCustom && (!staticGroup || staticTemplates.length === 0)) ||
     (isCustom && !customLoading && !customError && !customTemplate);
 
   const previewStats = buildPreviewStats({
+    t,
     customFontCount,
     isCustom,
     layoutCount,
@@ -164,23 +174,23 @@ export function buildTemplatePreviewModel({
     isMissingTemplate,
     previewStats,
     summaryTitle: isMissingTemplate
-      ? "Template preview unavailable"
+      ? t("presenton.templatePreview.summary.missingTitle")
       : customLoading
-        ? "Preparing this custom template for full-size review."
+        ? t("presenton.templatePreview.summary.loadingTitle")
         : templateName,
     summaryDescription: isMissingTemplate
-      ? "We could not find a matching Presenton template family for this slug. Head back to the library and open a different preview."
+      ? t("presenton.templatePreview.summary.missingBody")
       : customError
         ? customError
         : customLoading
-          ? "Loading saved layouts and compiling the full preview stack inside the Presenton workspace."
+          ? t("presenton.templatePreview.summary.loadingBody")
           : templateDescription,
     mainSectionTitle: isCustom
-      ? "Review every saved layout at full slide size."
-      : "Inspect the built-in family layout sequence.",
+      ? t("presenton.templatePreview.main.customTitle")
+      : t("presenton.templatePreview.main.builtInTitle"),
     mainSectionDescription: isCustom
-      ? "Keep this page focused on inspection only: open the stack, compare pacing, and confirm the reusable structure before using the template elsewhere."
-      : "Browse the shared family one layout at a time and see how the deck moves before it becomes part of a generation flow.",
+      ? t("presenton.templatePreview.main.customBody")
+      : t("presenton.templatePreview.main.builtInBody"),
     shouldShowDeleteAction,
     isCompactBuiltIn,
     showSummaryCard: !isCompactBuiltIn,

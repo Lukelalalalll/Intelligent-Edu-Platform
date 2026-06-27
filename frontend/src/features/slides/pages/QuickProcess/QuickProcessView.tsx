@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styles from './styles/quickProcess.module.css';
 import stepStyles from '../../../../shared/styles/stepper.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import SlidesLoadingState from '../../components/SlidesLoadingState';
 
 export default function QuickProcess({
@@ -13,6 +15,7 @@ export default function QuickProcess({
     handleSubmit, handleProceed, handleDownloadScript,
     bannerTitle, bannerSubtitle, submitLabel, resultTitle, proceedLabel,
 }) {
+    const isEntranceActive = usePageEntrance();
     const [currentStep, setCurrentStep] = useState(1);
 
     const stepItems = [
@@ -33,7 +36,7 @@ export default function QuickProcess({
     };
 
     return (
-        <div className={styles.container}>
+        <div className={`${styles.container} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={bannerTitle || <><i className="fas fa-magic"></i> Quick Content Processor</>}
                 subtitle={bannerSubtitle || "Auto-generate structured PPT content and scripts from all chapters"}

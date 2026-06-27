@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "@/presenton/shims/next-link";
 import { AlertCircle, ArrowRight, RefreshCcw } from "lucide-react";
+import { useI18n } from "@/shared/i18n";
 import { PresentationCard } from "./PresentationCard";
 import { EmptyState } from "./EmptyState";
 import { PresentationHistoryGroup } from "./dashboardUtils";
@@ -39,31 +40,35 @@ const DeckShimmerCard = () => (
   </div>
 );
 
-const ErrorState = ({ error, onRetry }: { error: string; onRetry?: () => void }) => (
-  <div className="rounded-[26px] border border-[#F1D0D0] bg-[linear-gradient(180deg,rgba(255,249,248,0.98)_0%,rgba(255,255,255,0.98)_100%)] p-6 shadow-[0_18px_36px_-20px_rgba(127,29,29,0.12)] sm:p-7">
-    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FEE4E2] text-[#B42318]">
-          <AlertCircle className="h-5 w-5" />
+const ErrorState = ({ error, onRetry }: { error: string; onRetry?: () => void }) => {
+  const { t } = useI18n();
+
+  return (
+    <div className="rounded-[26px] border border-[#F1D0D0] bg-[linear-gradient(180deg,rgba(255,249,248,0.98)_0%,rgba(255,255,255,0.98)_100%)] p-6 shadow-[0_18px_36px_-20px_rgba(127,29,29,0.12)] sm:p-7">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FEE4E2] text-[#B42318]">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-[#101828]">{t("presenton.dashboard.loadError.title")}</h3>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">{error}</p>
+          </div>
         </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-[#101828]">Unable to load deck history</h3>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">{error}</p>
-        </div>
+        {onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-5 text-sm font-semibold text-[#101828] transition hover:-translate-y-0.5 hover:border-[rgba(0,123,85,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.28)]"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            {t("presenton.dashboard.loadError.retry")}
+          </button>
+        ) : null}
       </div>
-      {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-5 text-sm font-semibold text-[#101828] transition hover:-translate-y-0.5 hover:border-[rgba(0,123,85,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.28)]"
-        >
-          <RefreshCcw className="h-4 w-4" />
-          Try again
-        </button>
-      ) : null}
     </div>
-  </div>
-);
+  );
+};
 
 export const PresentationGrid = ({
   groups,
@@ -73,6 +78,8 @@ export const PresentationGrid = ({
   onCreatePresentationClick,
   onPresentationDeleted,
 }: PresentationGridProps) => {
+  const { t } = useI18n();
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -111,8 +118,11 @@ export const PresentationGrid = ({
               <p className="text-sm leading-6 text-slate-600">{group.description}</p>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-              <span>{group.items.length}</span>
-              <span>deck{group.items.length === 1 ? "" : "s"}</span>
+              <span>
+                {group.items.length === 1
+                  ? t("presenton.dashboard.grid.count.single", { count: group.items.length })
+                  : t("presenton.dashboard.grid.count.other", { count: group.items.length })}
+              </span>
             </div>
           </div>
 
@@ -129,14 +139,14 @@ export const PresentationGrid = ({
       ))}
 
       <div className="flex flex-col gap-3 rounded-[24px] border border-dashed border-[rgba(15,23,42,0.12)] bg-[rgba(247,251,249,0.86)] px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>Need a fresh starting point for the next story?</span>
+        <span>{t("presenton.dashboard.grid.prompt")}</span>
         {onCreatePresentationClick ? (
           <Link
             href="/upload"
             onClick={onCreatePresentationClick}
             className="inline-flex items-center gap-2 font-semibold text-[#007b55] transition hover:text-[#0b6b4b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.24)]"
           >
-            <span>Create another presentation</span>
+            <span>{t("presenton.dashboard.grid.cta")}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}

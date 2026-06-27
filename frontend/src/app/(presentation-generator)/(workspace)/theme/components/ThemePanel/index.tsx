@@ -13,6 +13,9 @@ import Link from '@/presenton/shims/next-link'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
 import WorkspaceCard from '@/shared/components/Card/Card'
 import WelcomeBanner from '@/shared/components/WelcomeBanner'
+import { useI18n } from '@/shared/i18n'
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css'
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance'
 import CustomTabEmpty from './CustomTabEmpty'
 import { ThemeCard } from './ThemeCard'
 import { ThemeEditorSheet } from './ThemeEditorSheet'
@@ -62,6 +65,8 @@ const presentonNavItems = [
 ] as const
 
 const ThemePanel: React.FC = () => {
+  const { t } = useI18n()
+  const isEntranceActive = usePageEntrance()
   const { pathname, libraryState, editorState, previewState, actions } = useThemePanelController()
   const { tab, activeTabDescription, activeThemeCount, totalThemeCount, defaultThemes, customThemes, isCustomThemesLoading } = libraryState
   const {
@@ -84,7 +89,8 @@ const ThemePanel: React.FC = () => {
     previewScale,
     previewSlideWidth,
     previewSlideHeight,
-    template,
+    previewLayouts,
+    isPreviewLayoutsLoading,
   } = previewState
   const {
     handleCloseSheet,
@@ -106,25 +112,49 @@ const ThemePanel: React.FC = () => {
   } = actions
 
   const sectionTitle = tab === 'default'
-    ? 'Open a foundation theme and shape it into something brand-ready.'
-    : 'Keep saved theme directions close to the next deck you build.'
+    ? t('presenton.theme.section.builtIn.title')
+    : t('presenton.theme.section.custom.title')
   const sectionDescription = tab === 'default'
-    ? 'Built-in themes stay grouped in one workspace so you can inspect the palette direction before opening the editor and saving a custom version.'
-    : 'Custom themes keep your saved colors, fonts, and branding within easy reach whenever a new deck needs a familiar visual system.'
+    ? t('presenton.theme.section.builtIn.body')
+    : t('presenton.theme.section.custom.body')
+
+  const navItems = [
+    {
+      href: '/dashboard',
+      label: t('presenton.workspace.nav.dashboard'),
+      renderIcon: presentonNavItems[0].renderIcon,
+    },
+    {
+      href: '/templates',
+      label: t('presenton.workspace.nav.templates'),
+      renderIcon: presentonNavItems[1].renderIcon,
+    },
+    {
+      href: '/theme',
+      label: t('presenton.workspace.nav.theme'),
+      renderIcon: presentonNavItems[2].renderIcon,
+    },
+  ] as const
 
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <div
+        className={joinClassNames([
+          styles.container,
+          entranceStyles.workspaceEntrance,
+          isEntranceActive && entranceStyles.workspaceEntranceActive,
+        ])}
+      >
         <WelcomeBanner
-          title="Themes"
-          subtitle="Shape built-in palettes into brand-ready slide themes, reopen saved directions, and keep the Presenton workspace visually consistent."
+          title={t('presenton.theme.banner.title')}
+          subtitle={t('presenton.theme.banner.subtitle')}
           variant="workspace"
           className={styles.banner}
         />
 
         <div className={styles.navShell}>
-          <nav className={styles.navList} aria-label="Presenton workspace navigation">
-            {presentonNavItems.map(({ href, label, renderIcon }) => {
+          <nav className={styles.navList} aria-label={t('presenton.workspace.nav.aria')}>
+            {navItems.map(({ href, label, renderIcon }) => {
               const isActive = pathname === href
               return (
                 <Link
@@ -147,11 +177,11 @@ const ThemePanel: React.FC = () => {
               <div className={styles.controlCopy}>
                 <div className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  Presenton workspace
+                  {t('presenton.theme.controls.badge')}
                 </div>
-                <h2 className={styles.controlTitle}>Keep every deck theme in a calmer, card-based workspace.</h2>
+                <h2 className={styles.controlTitle}>{t('presenton.theme.controls.title')}</h2>
                 <p className={styles.controlDescription}>
-                  Browse the shared library, tune colors and typography, and save reusable theme directions without leaving the Presenton flow.
+                  {t('presenton.theme.controls.body')}
                 </p>
               </div>
 
@@ -163,20 +193,20 @@ const ThemePanel: React.FC = () => {
                     source: 'theme_workspace_primary_cta',
                   })}
                   className={styles.primaryAction}
-                  aria-label="Create new theme"
+                  aria-label={t('presenton.theme.controls.createAria')}
                 >
-                  <span>New Theme</span>
+                  <span>{t('presenton.theme.controls.create')}</span>
                   <ChevronRight className="h-4 w-4" />
                 </Link>
                 <p className={styles.controlHelper}>
-                  Theme editing stays front-end only here: the redesign changes layout and hierarchy, not the API flow or saved theme data model.
+                  {t('presenton.theme.controls.helper')}
                 </p>
               </div>
             </div>
 
             <div className={styles.controlBottom}>
               <div className={styles.tabBlock}>
-                <div className={styles.tabRail} role="tablist" aria-label="Theme library views">
+                <div className={styles.tabRail} role="tablist" aria-label={t('presenton.theme.tabs.aria')}>
                   <button
                     type="button"
                     role="tab"
@@ -184,7 +214,7 @@ const ThemePanel: React.FC = () => {
                     className={joinClassNames([styles.tabButton, tab === 'default' && styles.tabButtonActive])}
                     onClick={() => handleTabChange('default')}
                   >
-                    Built-in
+                    {t('presenton.theme.tabs.builtIn')}
                   </button>
                   <button
                     type="button"
@@ -193,7 +223,7 @@ const ThemePanel: React.FC = () => {
                     className={joinClassNames([styles.tabButton, tab === 'custom' && styles.tabButtonActive])}
                     onClick={() => handleTabChange('custom')}
                   >
-                    Custom
+                    {t('presenton.theme.tabs.custom')}
                   </button>
                 </div>
                 <p className={styles.activeTabNote}>{activeTabDescription}</p>
@@ -201,26 +231,28 @@ const ThemePanel: React.FC = () => {
 
               <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Built-in themes</span>
+                  <span className={styles.statLabel}>{t('presenton.theme.stats.builtIn.label')}</span>
                   <div className={styles.statValue}>{defaultThemes.length}</div>
-                  <p className={styles.statMeta}>Shared Presenton foundations ready to personalize.</p>
+                  <p className={styles.statMeta}>{t('presenton.theme.stats.builtIn.meta')}</p>
                 </div>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Custom themes</span>
+                  <span className={styles.statLabel}>{t('presenton.theme.stats.custom.label')}</span>
                   <div className={styles.statValue}>{isCustomThemesLoading ? '...' : customThemes.length}</div>
                   <p className={styles.statMeta}>
                     {isCustomThemesLoading
-                      ? 'Loading your saved theme library.'
+                      ? t('presenton.theme.stats.custom.metaLoading')
                       : customThemes.length === 1
-                        ? 'Saved custom theme ready to reopen.'
-                        : 'Saved custom themes ready to reopen.'}
+                        ? t('presenton.theme.stats.custom.metaOne')
+                        : t('presenton.theme.stats.custom.metaOther')}
                   </p>
                 </div>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>Active view</span>
-                  <div className={styles.statValue}>{tab === 'default' ? 'Built-in' : 'Custom'}</div>
+                  <span className={styles.statLabel}>{t('presenton.theme.stats.active.label')}</span>
+                  <div className={styles.statValue}>{tab === 'default' ? t('presenton.theme.tabs.builtIn') : t('presenton.theme.tabs.custom')}</div>
                   <p className={styles.statMeta}>
-                    {activeThemeCount} {activeThemeCount === 1 ? 'theme' : 'themes'} visible in this section.
+                    {activeThemeCount === 1
+                      ? t('presenton.theme.stats.active.countOne', { count: activeThemeCount })
+                      : t('presenton.theme.stats.active.countOther', { count: activeThemeCount })}
                   </p>
                 </div>
               </div>
@@ -234,7 +266,7 @@ const ThemePanel: React.FC = () => {
               <div className={styles.sectionTitleWrap}>
                 <div className={styles.mutedBadge}>
                   <PanelTop className="h-3.5 w-3.5" />
-                  {tab === 'default' ? 'Built-in library' : 'Custom library'}
+                  {tab === 'default' ? t('presenton.theme.section.builtIn.badge') : t('presenton.theme.section.custom.badge')}
                 </div>
                 <h2 className={styles.sectionTitle}>{sectionTitle}</h2>
                 <p className={styles.sectionDescription}>{sectionDescription}</p>
@@ -242,8 +274,10 @@ const ThemePanel: React.FC = () => {
 
               <div className={styles.groupCount}>
                 {tab === 'custom' && isCustomThemesLoading
-                  ? 'Loading'
-                  : `${activeThemeCount} ${activeThemeCount === 1 ? 'theme' : 'themes'}`}
+                  ? t('presenton.theme.section.loading')
+                  : activeThemeCount === 1
+                    ? t('presenton.theme.section.countOne', { count: activeThemeCount })
+                    : t('presenton.theme.section.countOther', { count: activeThemeCount })}
               </div>
             </div>
 
@@ -262,9 +296,9 @@ const ThemePanel: React.FC = () => {
             ) : isCustomThemesLoading ? (
               <div className={styles.loadingCard}>
                 <Loader2 className={joinClassNames(['animate-spin', styles.loadingIcon])} />
-                <p className={styles.loadingTitle}>Loading custom themes</p>
+                <p className={styles.loadingTitle}>{t('presenton.theme.loading.title')}</p>
                 <p className={styles.loadingText}>
-                  Pulling your saved theme directions into the Presenton workspace.
+                  {t('presenton.theme.loading.body')}
                 </p>
               </div>
             ) : customThemes.length > 0 ? (
@@ -306,7 +340,8 @@ const ThemePanel: React.FC = () => {
           previewScale={previewScale}
           previewSlideWidth={previewSlideWidth}
           previewSlideHeight={previewSlideHeight}
-          template={template}
+          previewLayouts={previewLayouts}
+          isPreviewLayoutsLoading={isPreviewLayoutsLoading}
           onClickOutside={handleClickOutside}
           onShowColorPicker={handleShowColorPicker}
           onColorChange={handleColorChange}

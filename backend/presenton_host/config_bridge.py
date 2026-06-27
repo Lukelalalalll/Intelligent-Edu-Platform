@@ -12,6 +12,27 @@ from backend.services.auth.user_profile_service import (
 from .auth_bridge import resolve_request_public_origin
 from .paths import CONFIGURED_SENTINEL
 
+ALLOWED_PRESENTON_OVERRIDE_PROVIDERS = {"openai", "deepseek"}
+
+
+def _resolve_presenton_provider_override(
+    request: Request,
+    *,
+    has_openai: bool,
+    has_deepseek: bool,
+) -> str:
+    override = (
+        str(request.headers.get("X-Presenton-LLM-Provider") or "").strip().lower()
+        or str(request.query_params.get("presenton_provider") or "").strip().lower()
+    )
+    if override not in ALLOWED_PRESENTON_OVERRIDE_PROVIDERS:
+        return ""
+    if override == "openai" and not has_openai:
+        return ""
+    if override == "deepseek" and not has_deepseek:
+        return ""
+    return override
+
 
 def build_presenton_user_config_summary(
     *,
@@ -54,7 +75,15 @@ async def load_presenton_host_config(
     preferred_provider = str(getattr(Config, "AI_DEFAULT_PROVIDER", "") or "").strip().lower()
     if preferred_provider not in {"openai", "deepseek"}:
         preferred_provider = ""
+    override_provider = _resolve_presenton_provider_override(
+        request,
+        has_openai=has_openai,
+        has_deepseek=has_deepseek,
+    )
     requested_provider = (
+        override_provider
+        if override_provider
+        else
         preferred_provider
         if preferred_provider in supported_providers
         else supported_providers[0] if supported_providers

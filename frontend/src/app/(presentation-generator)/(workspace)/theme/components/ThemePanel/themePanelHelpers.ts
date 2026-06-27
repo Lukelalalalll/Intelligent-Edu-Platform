@@ -1,4 +1,5 @@
 import { Theme, ThemeParams } from '@/app/(presentation-generator)/services/api/types'
+import type { TranslationKey } from '@/shared/i18n'
 import {
   FALLBACK_THEME,
   PREVIEW_BASE_WIDTH,
@@ -10,6 +11,11 @@ import {
   PREVIEW_VIEWPORT_GUTTER,
 } from './constants'
 import { ThemeColors, ThemeEditorValues, ThemeFonts } from './types'
+
+type ThemeTranslator = (
+  key: TranslationKey,
+  vars?: Record<string, string | number>
+) => string
 
 type ThemeCustomizationOptions = {
   colors: ThemeColors
@@ -38,8 +44,27 @@ export function normalizeTheme(theme: Theme): Theme {
   }
 }
 
-export function getDefaultThemes(): Theme[] {
-  return DEFAULT_THEMES.map((theme) => normalizeTheme(theme))
+function getBuiltInThemeTranslationKey(
+  themeId: string,
+  field: 'name' | 'description'
+): TranslationKey {
+  return `presenton.theme.builtIn.${themeId}.${field}` as TranslationKey
+}
+
+function localizeBuiltInTheme(theme: Theme, t: ThemeTranslator): Theme {
+  if (theme.user !== 'system') {
+    return theme
+  }
+
+  return {
+    ...theme,
+    name: t(getBuiltInThemeTranslationKey(theme.id, 'name')),
+    description: t(getBuiltInThemeTranslationKey(theme.id, 'description')),
+  }
+}
+
+export function getDefaultThemes(t: ThemeTranslator): Theme[] {
+  return DEFAULT_THEMES.map((theme) => localizeBuiltInTheme(normalizeTheme(theme), t))
 }
 
 export function extractThemeEditorValues(theme: Theme): ThemeEditorValues {
@@ -117,11 +142,11 @@ export function mapGeneratedThemeColors(generatedTheme: Record<string, string>):
   }
 }
 
-export function createNewCustomThemeDraft(): Theme {
+export function createNewCustomThemeDraft(t: ThemeTranslator): Theme {
   return {
     id: `custom-${Date.now()}`,
-    name: 'New Custom Theme',
-    description: 'Start with a blank canvas',
+    name: t('presenton.theme.defaults.newThemeName'),
+    description: t('presenton.theme.defaults.newThemeDescription'),
     user: 'local',
     logo: '',
     logo_url: '',

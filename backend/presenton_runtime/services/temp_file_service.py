@@ -1,3 +1,4 @@
+import locale
 import os
 from typing import Optional, Union
 
@@ -107,10 +108,41 @@ class TempFileService:
     ) -> str:
         file_path = self.create_temp_file_path(file_path, dir_path)
         mode = "wb" if isinstance(content, bytes) else "w"
-        with open(file_path, mode) as f:
-            f.write(content)
+        if isinstance(content, bytes):
+            with open(file_path, mode) as f:
+                f.write(content)
+        else:
+            with open(file_path, mode, encoding="utf-8", errors="replace") as f:
+                f.write(content)
 
         return file_path
+
+    def _read_text_file(self, file_path: str) -> str:
+        encodings_to_try = [
+            "utf-8-sig",
+            "utf-8",
+            "gb18030",
+        ]
+
+        preferred_encoding = locale.getpreferredencoding(False)
+        if preferred_encoding and preferred_encoding not in encodings_to_try:
+            encodings_to_try.append(preferred_encoding)
+
+        for encoding in encodings_to_try:
+            try:
+                with open(file_path, "r", encoding=encoding) as f:
+                    return f.read()
+            except UnicodeDecodeError:
+                continue
+
+        fallback_encoding = preferred_encoding or "utf-8"
+        with open(
+            file_path,
+            "r",
+            encoding=fallback_encoding,
+            errors="replace",
+        ) as f:
+            return f.read()
 
     def read_temp_file(self, file_path: str, binary: bool = True) -> Union[bytes, str]:
         file_path = self.resolve_temp_path(file_path, must_exist=True)
@@ -120,9 +152,10 @@ class TempFileService:
                 status_code=400,
                 detail="File path must stay within the temp directory",
             )
-        mode = "rb" if binary else "r"
-        with open(file_path, mode) as f:
-            return f.read()
+        if binary:
+            with open(file_path, "rb") as f:
+                return f.read()
+        return self._read_text_file(file_path)
 
     async def update_temp_file_from_upload(self, file_path: str, upload_file) -> None:
         if not isinstance(file_path, str) or not file_path.strip():

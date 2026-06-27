@@ -1,3 +1,5 @@
+import type { TranslationKey } from '@/shared/i18n'
+
 export interface ThemeColors {
   primary: string
   background: string
@@ -37,8 +39,8 @@ export interface UserFontLibrary {
 }
 
 export interface ThemeStepMeta {
-  title: string
-  description: string
+  titleKey: TranslationKey
+  descriptionKey: TranslationKey
 }
 
 export interface ThemeEditorValues {

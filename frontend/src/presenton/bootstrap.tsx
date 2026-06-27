@@ -1,21 +1,34 @@
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useDispatch } from "react-redux";
-import { aiConfigApi } from "@/features/ai-config/api/aiConfigApi";
+import {
+  aiConfigApi,
+  type AIConfigResponse,
+} from "@/features/ai-config/api/aiConfigApi";
+import { useI18n } from "@/shared/i18n";
 import { setCanChangeKeys, setLLMConfig } from "@/store/slices/userConfig";
 import { LLMConfig } from "@/types/llm_config";
+import {
+  applyPresentonProviderOverride,
+  resolvePresentonProviderOverride,
+} from "@/presenton/providerOverride";
 
 const CONFIGURED_SENTINEL = "__configured__";
 
-let cachedConfig: LLMConfig | null = null;
-let cachedLoad: Promise<LLMConfig> | null = null;
+type PresentonHostConfig = {
+  aiConfig: AIConfigResponse;
+  llmConfig: LLMConfig;
+};
 
-const mapHostAiConfigToPresenton = async (): Promise<LLMConfig> => {
+let cachedConfig: PresentonHostConfig | null = null;
+let cachedLoad: Promise<PresentonHostConfig> | null = null;
+
+const mapHostAiConfigToPresenton = async (): Promise<PresentonHostConfig> => {
   const hostConfig = await aiConfigApi.get();
   const hasOpenAi = !!hostConfig.openai.api_key_set;
   const hasDeepSeek = !!hostConfig.deepseek.api_key_set;
 
-  const llm: LLMConfig = {
+  const llmConfig: LLMConfig = {
     LLM: hasOpenAi ? "openai" : hasDeepSeek ? "deepseek" : "openai",
     OPENAI_MODEL: hostConfig.openai.model || "gpt-5.5",
     OPENAI_API_KEY: hasOpenAi ? CONFIGURED_SENTINEL : "",
@@ -28,7 +41,10 @@ const mapHostAiConfigToPresenton = async (): Promise<LLMConfig> => {
     WEB_SEARCH_PROVIDER: "auto",
   };
 
-  return llm;
+  return {
+    aiConfig: hostConfig,
+    llmConfig,
+  };
 };
 
 const loadPresentonConfig = async () => {
@@ -52,6 +68,7 @@ export function PresentonBootstrap({
   children,
   blocking = true,
 }: PresentonBootstrapProps) {
+  const { t } = useI18n();
   const dispatch = useDispatch();
   const [ready, setReady] = useState<boolean>(!blocking || !!cachedConfig);
 
@@ -60,10 +77,17 @@ export function PresentonBootstrap({
 
     const bootstrap = async () => {
       try {
-        const llmConfig = await loadPresentonConfig();
+        const hostConfig = await loadPresentonConfig();
         if (!active) {
           return;
         }
+        const providerOverride = resolvePresentonProviderOverride(
+          hostConfig.aiConfig
+        );
+        const llmConfig = applyPresentonProviderOverride(
+          hostConfig.llmConfig,
+          providerOverride
+        );
         dispatch(setLLMConfig(llmConfig));
         dispatch(setCanChangeKeys(false));
       } catch (error) {
@@ -102,13 +126,13 @@ export function PresentonBootstrap({
           <div className="flex min-h-[420px] items-center justify-center rounded-[24px] border border-white/80 bg-white/82 shadow-[0_20px_40px_-24px_rgba(15,23,42,0.22)] backdrop-blur-xl">
             <div className="flex items-center gap-3 text-[#0b6b4b]">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm font-semibold">Loading Presenton...</span>
+              <span className="text-sm font-semibold">{t("presenton.loading")}</span>
             </div>
           </div>
         </div>
       </div>
     ),
-    []
+    [t]
   );
 
   if (blocking && !ready) {

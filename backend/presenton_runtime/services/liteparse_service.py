@@ -121,10 +121,13 @@ class LiteParseService:
 
     def _resolve_npm_project_root(self) -> str:
         """Directory whose node_modules contains @llamaindex/liteparse."""
+        service_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(service_dir, "..", "..", ".."))
         candidates = [
             self.runner_dir,
             os.path.abspath(os.path.join(self.runner_dir, "..")),
             os.path.abspath(os.path.join(self.runner_dir, "..", "..")),
+            os.path.abspath(os.path.join(repo_root, "presenton-main")),
             os.path.abspath(os.path.join(os.getcwd(), "..", "..", "document-extraction-liteparse")),
             os.path.abspath(os.path.join(os.getcwd(), "..", "..")),
             "/app/document-extraction-liteparse",
@@ -132,19 +135,23 @@ class LiteParseService:
         ]
 
         fallback = candidates[0]
+        package_fallback = ""
         for candidate in candidates:
-            if os.path.isdir(candidate):
-                fallback = candidate
+            if not os.path.isdir(candidate):
+                continue
             local_nm = os.path.join(candidate, "node_modules", "@llamaindex", "liteparse")
             if os.path.isdir(local_nm):
                 return candidate
+            if not package_fallback and os.path.isfile(os.path.join(candidate, "package.json")):
+                package_fallback = candidate
 
-        return fallback
+        return package_fallback or fallback
 
     @staticmethod
     def _resolve_runner_path() -> str:
         cwd = os.path.abspath(".")
         service_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(service_dir, "..", "..", ".."))
         candidates = [
             # Dedicated Docker runtime path
             "/app/document-extraction-liteparse/liteparse_runner.mjs",
@@ -160,6 +167,15 @@ class LiteParseService:
                 )
             ),
             # services/liteparse_service.py → resources/...
+            os.path.abspath(
+                os.path.join(
+                    repo_root,
+                    "presenton-main",
+                    "resources",
+                    "document-extraction",
+                    "liteparse_runner.mjs",
+                )
+            ),
             os.path.abspath(
                 os.path.join(
                     service_dir,

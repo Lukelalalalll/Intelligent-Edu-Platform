@@ -26,7 +26,7 @@ export const useOutlineManagement = (outlines: { content: string }[] | null) => 
   const handleAddSlide = useCallback(() => {
     if (!outlines) return;
 
-    const updatedOutlines = [...outlines, { content: "Outline title" }];
+    const updatedOutlines = [...outlines, { content: "" }];
     dispatch(setOutlines(updatedOutlines));
   }, [outlines, dispatch]);
 

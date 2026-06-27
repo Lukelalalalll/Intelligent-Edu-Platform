@@ -20,6 +20,10 @@ from utils.outline_utils import (
     get_presentation_outline_model_with_toc,
     get_presentation_title_from_presentation_outline,
 )
+from utils.presentation_language import (
+    AUTO_PRESENTATION_LANGUAGE,
+    normalize_presentation_language,
+)
 from utils.ppt_utils import select_toc_or_list_slide_layout_index
 from utils.process_slides import process_slide_and_fetch_assets
 
@@ -37,6 +41,7 @@ async def build_presentation_assets(
     using_slides_markdown: bool,
     language_to_use: str | None,
 ):
+    normalized_language = normalize_presentation_language(language_to_use) or AUTO_PRESENTATION_LANGUAGE
     logger.info("[presentation.generate] loading layout template=%r presentation_id=%s", request.template, presentation_id)
     layout_model = await get_layout_by_name(request.template)
     logger.info(
@@ -57,7 +62,7 @@ async def build_presentation_assets(
         id=presentation_id,
         content=request.content,
         n_slides=request.n_slides if request.n_slides is not None else len(presentation_outlines.slides),
-        language=language_to_use or "",
+        language=normalized_language,
         title=get_presentation_title_from_presentation_outline(presentation_outlines),
         outlines=presentation_outlines.model_dump(),
         layout=layout_model.model_dump(),
@@ -71,7 +76,7 @@ async def build_presentation_assets(
         presentation_outlines=presentation_outlines,
         presentation_structure=presentation_structure,
         layout_model=layout_model,
-        language_to_use=language_to_use,
+        language_to_use=normalized_language,
         request=request,
         using_slides_markdown=using_slides_markdown,
     )

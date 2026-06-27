@@ -48,11 +48,11 @@ export const ProgressBar = ({ duration, onComplete }: ProgressBarProps) => {
         <div className="w-full space-y-2">
             <div className="flex justify-end items-center  text-sm">
                 {/* <span>Processing...</span> */}
-                <span className='font-inter text-[#191919]/80 text-end font-medium text-xs'>{Math.round(progress)}%</span>
+                <span className='text-end text-xs font-medium text-[#0B6B4B]/80'>{Math.round(progress)}%</span>
             </div>
-            <div className="w-full bg-white/40 rounded-full h-2 overflow-hidden">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[rgba(0,123,85,0.10)]">
                 <div
-                    className="h-full bg-gradient-to-r from-[#9034EA] via-[#5146E5] to-[#9034EA] rounded-full animate-gradient transition-all duration-300 ease-out"
+                    className="h-full rounded-full bg-gradient-to-r from-[#007B55] via-[#0B6B4B] to-[#35B37E] animate-gradient transition-all duration-300 ease-out"
                     style={{
                         width: `${progress}%`,
                         backgroundSize: '200% 100%',

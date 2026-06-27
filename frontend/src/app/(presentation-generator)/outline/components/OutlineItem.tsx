@@ -16,6 +16,7 @@ import { marked } from "marked";
 import ToolTip from "@/components/ToolTip";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/shared/i18n";
 import styles from "./OutlineWorkspace.module.css";
 
 interface OutlineItemProps {
@@ -59,6 +60,7 @@ function OutlineItemCard({
   onChange,
   onDelete,
 }: OutlineItemCardProps) {
+  const { t } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const content = slideOutline.content || "";
@@ -146,28 +148,32 @@ function OutlineItemCard({
                 ? styles.itemHandleSortable
                 : styles.itemHandleStatic
             )}
-            aria-label={enableSorting && !isStreaming ? `Drag slide ${index}` : undefined}
-          >
+              aria-label={enableSorting && !isStreaming ? t("presenton.outline.item.drag", { count: index }) : undefined}
+            >
             <GripVertical className="h-4 w-4" aria-hidden="true" />
           </div>
 
           <div className={styles.itemMeta}>
             <div className={styles.itemPillRow}>
-              <span className={styles.itemPill}>Slide {index}</span>
+              <span className={styles.itemPill}>{t("presenton.outline.item.slideLabel", { count: index })}</span>
               <span
                 className={cn(
                   styles.itemStatus,
                   !showStreamingText && styles.itemStatusReady
                 )}
               >
-                {showStreamingText ? "Generating" : isEditing ? "Editing" : "Ready"}
+                {showStreamingText
+                  ? t("presenton.outline.item.status.generating")
+                  : isEditing
+                    ? t("presenton.outline.item.status.editing")
+                    : t("presenton.outline.item.status.ready")}
               </span>
             </div>
           </div>
         </div>
 
         {!isStreaming ? (
-          <ToolTip content="Delete Slide">
+          <ToolTip content={t("presenton.outline.item.delete")}>
             <button
               type="button"
               onClick={handleSlideDelete}
@@ -186,7 +192,7 @@ function OutlineItemCard({
               {content}
               <span className={styles.streamCaret} aria-hidden="true" />
             </div>
-            <div className={styles.streamNote}>Generating this slide</div>
+            <div className={styles.streamNote}>{t("presenton.outline.item.streamNote")}</div>
           </>
         ) : isEditing ? (
           <Textarea
@@ -194,14 +200,14 @@ function OutlineItemCard({
             value={content}
             onChange={handleTextareaChange}
             onBlur={() => setIsEditing(false)}
-            placeholder="Enter markdown content here..."
+            placeholder={t("presenton.outline.item.placeholder")}
             className={styles.itemTextarea}
           />
         ) : (
           <div
             role="button"
             tabIndex={0}
-            aria-label={`Edit slide ${index} markdown`}
+            aria-label={t("presenton.outline.item.ariaEdit", { count: index })}
             onClick={() => setIsEditing(true)}
             onFocus={() => setIsEditing(true)}
             onKeyDown={handleKeyDown}
@@ -215,7 +221,7 @@ function OutlineItemCard({
             ) : content.trim() ? (
               <div className={styles.itemStreamingBody}>{content}</div>
             ) : (
-              <p className={styles.emptyText}>Empty outline</p>
+              <p className={styles.emptyText}>{t("presenton.outline.item.empty")}</p>
             )}
           </div>
         )}
