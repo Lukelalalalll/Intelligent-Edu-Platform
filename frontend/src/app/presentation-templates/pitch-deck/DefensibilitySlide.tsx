@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const AdvantageSchema = z.object({
   title: z.string().min(4).max(26).meta({
@@ -125,3 +125,5 @@ const DefensibilitySlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default DefensibilitySlide;
+
+

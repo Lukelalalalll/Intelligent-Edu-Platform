@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 
 async def persist_success_history(
     *,
     user: dict | None,
     task_id: str,
-    presenton_task_service,
+    ppt_generator_task_service,
     persist_generate_v2_history_fn,
     req,
     runtime,
@@ -20,7 +20,7 @@ async def persist_success_history(
     if not user or not user.get("id"):
         return
     try:
-        task = await presenton_task_service.get_task(task_id)
+        task = await ppt_generator_task_service.get_task(task_id)
         await persist_generate_v2_history_fn(
             user_id=user.get("id", ""),
             task=task,
@@ -34,14 +34,14 @@ async def persist_success_history(
             script_payload=script_payload,
         )
     except Exception:
-        logger.warning("history_insert_failed tool=presenton_generate_v2", exc_info=True)
+        logger.warning("history_insert_failed tool=ppt_generator_generate_v2", exc_info=True)
 
 
 async def persist_failure_history(
     *,
     user: dict | None,
     task_id: str,
-    presenton_task_service,
+    ppt_generator_task_service,
     persist_generate_v2_history_fn,
     req,
     runtime,
@@ -56,7 +56,7 @@ async def persist_failure_history(
     if not user or not user.get("id"):
         return
     try:
-        task = await presenton_task_service.get_task(task_id)
+        task = await ppt_generator_task_service.get_task(task_id)
         await persist_generate_v2_history_fn(
             user_id=user.get("id", ""),
             task=task,
@@ -70,4 +70,5 @@ async def persist_failure_history(
             script_payload=script_payload,
         )
     except Exception:
-        logger.warning("history_insert_failed tool=presenton_generate_v2", exc_info=True)
+        logger.warning("history_insert_failed tool=ppt_generator_generate_v2", exc_info=True)
+

@@ -1,6 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
 
-type RouteSkeletonTone = 'default' | 'presenton';
+type RouteSkeletonTone = 'default' | 'pptGenerator';
 
 const shellStyle: React.CSSProperties = {
     minHeight: 'calc(100vh - var(--nav-height, 72px))',
@@ -28,7 +28,7 @@ function shimmer(width: string, height: string): React.CSSProperties {
     };
 }
 
-const presentonShellStyle: React.CSSProperties = {
+const pptGeneratorShellStyle: React.CSSProperties = {
     minHeight: 'calc(100vh - var(--nav-height, 72px))',
     width: '100%',
     padding: '16px 0 32px',
@@ -36,7 +36,7 @@ const presentonShellStyle: React.CSSProperties = {
         'radial-gradient(circle at top left, rgba(224, 245, 235, 0.98), rgba(239, 248, 243, 0.99) 34%, rgba(246, 251, 248, 1) 100%)',
 };
 
-const presentonInnerStyle: React.CSSProperties = {
+const pptGeneratorInnerStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: '1520px',
     margin: '0 auto',
@@ -46,7 +46,7 @@ const presentonInnerStyle: React.CSSProperties = {
     alignContent: 'start',
 };
 
-const presentonBannerStyle: React.CSSProperties = {
+const pptGeneratorBannerStyle: React.CSSProperties = {
     borderRadius: '28px',
     padding: '32px 28px',
     background:
@@ -54,7 +54,7 @@ const presentonBannerStyle: React.CSSProperties = {
     boxShadow: '0 24px 48px -18px rgba(0, 123, 85, 0.28)',
 };
 
-const presentonNavStyle: React.CSSProperties = {
+const pptGeneratorNavStyle: React.CSSProperties = {
     width: 'fit-content',
     maxWidth: '100%',
     margin: '0 auto',
@@ -67,7 +67,7 @@ const presentonNavStyle: React.CSSProperties = {
     boxShadow: '0 18px 36px -24px rgba(15, 23, 42, 0.18)',
 };
 
-const presentonNavPillStyle: React.CSSProperties = {
+const pptGeneratorNavPillStyle: React.CSSProperties = {
     width: '116px',
     height: '42px',
     borderRadius: '999px',
@@ -77,19 +77,19 @@ const presentonNavPillStyle: React.CSSProperties = {
     animation: 'globalGradientFlow 1.6s ease-in-out infinite',
 };
 
-function PresentonRouteSkeleton() {
+function PptGeneratorRouteSkeleton() {
     return (
-        <div style={presentonShellStyle} aria-hidden="true">
-            <div style={presentonInnerStyle}>
-                <div style={presentonBannerStyle}>
+        <div style={pptGeneratorShellStyle} aria-hidden="true">
+            <div style={pptGeneratorInnerStyle}>
+                <div style={pptGeneratorBannerStyle}>
                     <div style={shimmer('240px', '22px')} />
                     <div style={{ height: '14px' }} />
                     <div style={shimmer('520px', '14px')} />
                 </div>
-                <div style={presentonNavStyle}>
-                    <div style={presentonNavPillStyle} />
-                    <div style={presentonNavPillStyle} />
-                    <div style={presentonNavPillStyle} />
+                <div style={pptGeneratorNavStyle}>
+                    <div style={pptGeneratorNavPillStyle} />
+                    <div style={pptGeneratorNavPillStyle} />
+                    <div style={pptGeneratorNavPillStyle} />
                 </div>
                 <div style={{ ...cardStyle, borderRadius: '24px', minHeight: '420px', padding: '24px' }}>
                     <div style={shimmer('180px', '18px')} />
@@ -128,8 +128,8 @@ function PresentonRouteSkeleton() {
 }
 
 export default function RouteSkeleton({ tone = 'default' }: { tone?: RouteSkeletonTone }) {
-    if (tone === 'presenton') {
-        return <PresentonRouteSkeleton />;
+    if (tone === 'pptGenerator') {
+        return <PptGeneratorRouteSkeleton />;
     }
 
     return (
@@ -149,3 +149,4 @@ export default function RouteSkeleton({ tone = 'default' }: { tone?: RouteSkelet
         </div>
     );
 }
+

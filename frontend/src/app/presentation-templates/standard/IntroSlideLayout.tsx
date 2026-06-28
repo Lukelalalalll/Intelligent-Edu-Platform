@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 
 const ImageSchema = z.object({
@@ -161,3 +161,4 @@ const dynamicSlideLayout: React.FC<LayoutProps> = ({ data: slideData }) => {
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default dynamicSlideLayout
+

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 
 
@@ -82,7 +82,7 @@ const Schema = z.object({
   }),
 
   rightContent: z.object({
-    title: z.string().min(18).max(40).default("Let’s Get in\nTouch with Us").meta({
+    title: z.string().min(18).max(40).default("Let鈥檚 Get in\nTouch with Us").meta({
       description: "Main heading. Max 6 words",
     }),
     sections: z.array(z.object({
@@ -115,7 +115,7 @@ const Schema = z.object({
       description: "List of content sections",
     }),
   }).default({
-    title: "Let’s Get in\nTouch with Us",
+    title: "Let鈥檚 Get in\nTouch with Us",
     sections: [
       {
         label: "Address",
@@ -177,7 +177,7 @@ const dynamicSlideLayout: React.FC<SlideLayoutProps> = ({ data: slideData }) => 
 
             <div className="h-full flex flex-col">
               <h1 className=" text-[64px] leading-[1.12] font-semibold mb-8 whitespace-pre-line" style={{ color: 'var(--background-text, #111827)' }}>
-                {slideData?.rightContent?.title || "Let’s Get in\nTouch with Us"}
+                {slideData?.rightContent?.title || "Let鈥檚 Get in\nTouch with Us"}
               </h1>
 
               <div className="mb-6">
@@ -207,3 +207,4 @@ const dynamicSlideLayout: React.FC<SlideLayoutProps> = ({ data: slideData }) => 
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default dynamicSlideLayout
+

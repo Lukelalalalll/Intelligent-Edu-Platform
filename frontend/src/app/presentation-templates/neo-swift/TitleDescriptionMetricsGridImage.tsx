@@ -1,4 +1,4 @@
-import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
+﻿import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
 import * as z from 'zod';
 
 export const Schema = z.object({
@@ -42,7 +42,7 @@ export const Schema = z.object({
         __image_url__: z.string(),
         __image_prompt__: z.string().max(100),
     }).describe('The primary visual image on the right').default({
-        __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+        __image_url__: '/placeholder.jpg',
         __image_prompt__: 'Hands of business people stacked together in unity'
     }),
 });
@@ -174,5 +174,7 @@ const dynamicSlideLayout = ({ data }: { data: Partial<z.infer<typeof Schema>> })
     );
 };
 export default dynamicSlideLayout;
+
+
 
 

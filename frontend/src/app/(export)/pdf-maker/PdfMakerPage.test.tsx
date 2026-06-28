@@ -54,7 +54,7 @@ vi.mock("react-redux", () => ({
     }),
 }));
 
-vi.mock("@/presenton/shims/next-navigation", () => ({
+vi.mock("@/ppt_generator/shims/next-navigation", () => ({
   usePathname: () => "/export/pdf-maker",
 }));
 

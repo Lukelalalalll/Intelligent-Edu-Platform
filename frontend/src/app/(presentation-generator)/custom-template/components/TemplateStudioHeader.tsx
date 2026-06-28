@@ -1,4 +1,4 @@
-
+﻿
 
 import React from "react";
 
@@ -14,4 +14,5 @@ export const TemplateStudioHeader: React.FC = () => {
         </div>
     );
 };
+
 

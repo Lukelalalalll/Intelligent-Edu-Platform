@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { useSchemaHighlight, getAllValuesAtPath } from './SchemaHighlightContext'
@@ -304,4 +304,5 @@ const SchemaElementHighlighter: React.FC<SchemaElementHighlighterProps> = ({
 }
 
 export default SchemaElementHighlighter
+
 

@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { notify } from "@/components/ui/sonner";
 import { useI18n, type TranslationKey } from "@/shared/i18n";
-import { appendPresentonProviderParam } from "@/presenton/providerOverride";
+import { appendPptGeneratorProviderParam } from "@/ppt_generator/providerOverride";
 import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
 import { getApiUrl } from "@/utils/api";
-import { ensurePresentonSession } from "../../services/api/presenton-fetch";
+import { ensurePptGeneratorSession } from "../../services/api/ppt_generator-fetch";
 
 const MAX_STREAM_RETRIES = 3;
 const STREAM_RETRY_DELAY_MS = 1_000;
@@ -27,7 +27,7 @@ const localizeOutlineStatus = (status: string, t: TranslateFn) => {
   const searchingMatch = status.match(SEARCHING_STATUS_PATTERN);
   if (searchingMatch) {
     const [, provider, query] = searchingMatch;
-    return t("presenton.outline.stream.status.searchingWebWithProvider", {
+    return t("ppt_generator.outline.stream.status.searchingWebWithProvider", {
       provider,
       query,
     });
@@ -35,17 +35,17 @@ const localizeOutlineStatus = (status: string, t: TranslateFn) => {
 
   switch (status) {
     case DEFAULT_STATUS_MESSAGE:
-      return t("presenton.outline.stream.status.preparing");
+      return t("ppt_generator.outline.stream.status.preparing");
     case READY_STATUS_MESSAGE:
-      return t("presenton.outline.stream.status.ready");
+      return t("ppt_generator.outline.stream.status.ready");
     case "Analyzing your topic for web research":
-      return t("presenton.outline.stream.status.analyzingWeb");
+      return t("ppt_generator.outline.stream.status.analyzingWeb");
     case "Web research complete":
-      return t("presenton.outline.stream.status.webComplete");
+      return t("ppt_generator.outline.stream.status.webComplete");
     case "Searching with model-native web search and drafting outlines":
-      return t("presenton.outline.stream.status.nativeSearchDrafting");
+      return t("ppt_generator.outline.stream.status.nativeSearchDrafting");
     case "Drafting your presentation outline":
-      return t("presenton.outline.stream.status.drafting");
+      return t("ppt_generator.outline.stream.status.drafting");
     default:
       return status;
   }
@@ -181,21 +181,21 @@ export const useOutlineStreaming = (presentationId: string | null) => {
     const openStream = async () => {
       closeEventSource();
       try {
-        await ensurePresentonSession();
+        await ensurePptGeneratorSession();
       } catch (error) {
         console.error("Failed to validate session before outline stream:", error);
         if (!scheduleRetry("session validation failed")) {
           resetStreamingState();
           notify.error(
-            tRef.current("presenton.outline.stream.notify.connectionFailed.title"),
-            tRef.current("presenton.outline.stream.notify.sessionFailed.body")
+            tRef.current("ppt_generator.outline.stream.notify.connectionFailed.title"),
+            tRef.current("ppt_generator.outline.stream.notify.sessionFailed.body")
           );
         }
         return;
       }
 
       eventSource = new EventSource(
-        appendPresentonProviderParam(
+        appendPptGeneratorProviderParam(
           getApiUrl(`/api/v1/ppt/outlines/stream/${presentationId}`)
         )
       );
@@ -208,8 +208,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
           if (!scheduleRetry("invalid SSE payload")) {
             resetStreamingState();
             notify.error(
-              tRef.current("presenton.outline.stream.notify.parseStream.title"),
-              tRef.current("presenton.outline.stream.notify.parseStream.body")
+              tRef.current("ppt_generator.outline.stream.notify.parseStream.title"),
+              tRef.current("ppt_generator.outline.stream.notify.parseStream.body")
             );
           }
           return;
@@ -300,8 +300,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               if (!scheduleRetry("failed to parse complete payload")) {
                 resetStreamingState();
                 notify.error(
-                  tRef.current("presenton.outline.stream.notify.parsePresentation.title"),
-                  tRef.current("presenton.outline.stream.notify.parsePresentation.body")
+                  tRef.current("ppt_generator.outline.stream.notify.parsePresentation.title"),
+                  tRef.current("ppt_generator.outline.stream.notify.parsePresentation.body")
                 );
               }
             }
@@ -327,9 +327,9 @@ export const useOutlineStreaming = (presentationId: string | null) => {
               resetStreamingState();
               closeEventSource();
               notify.error(
-                tRef.current("presenton.outline.stream.notify.streamingFailed.title"),
+                tRef.current("ppt_generator.outline.stream.notify.streamingFailed.title"),
                 data.detail ||
-                  tRef.current("presenton.outline.stream.notify.streamingFailed.body")
+                  tRef.current("ppt_generator.outline.stream.notify.streamingFailed.body")
               );
             }
             break;
@@ -341,8 +341,8 @@ export const useOutlineStreaming = (presentationId: string | null) => {
           resetStreamingState();
           closeEventSource();
           notify.error(
-            tRef.current("presenton.outline.stream.notify.connectionFailed.title"),
-            tRef.current("presenton.outline.stream.notify.connectionFailed.body")
+            tRef.current("ppt_generator.outline.stream.notify.connectionFailed.title"),
+            tRef.current("ppt_generator.outline.stream.notify.connectionFailed.body")
           );
         }
       };
@@ -370,3 +370,4 @@ export const useOutlineStreaming = (presentationId: string | null) => {
     statusMessage,
   };
 };
+

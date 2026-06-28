@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import RouteSkeleton from './RouteSkeleton';
 import { useAuthStore } from './store/useAuthStore';
 
-function isPresentonRoute(pathname: string) {
+function isPptGeneratorRoute(pathname: string) {
   return (
-    pathname.startsWith('/slides/presenton') ||
+    pathname.startsWith('/slides/ppt_generator') ||
     [
       '/upload',
       '/documents-preview',
@@ -29,7 +29,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
 
   if (status === 'unknown' || (isSessionLoading && !user)) {
-    return <RouteSkeleton tone={isPresentonRoute(location.pathname) ? 'presenton' : 'default'} />;
+    return <RouteSkeleton tone={isPptGeneratorRoute(location.pathname) ? 'pptGenerator' : 'default'} />;
   }
 
   if (!user || status === 'anonymous') {
@@ -41,3 +41,4 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 };
 
 export default ProtectedRoute;
+

@@ -1,4 +1,4 @@
-function Shimmer({ className }: { className?: string }) {
+﻿function Shimmer({ className }: { className?: string }) {
     return (
         <div
             className={`bg-[#E1E1E5] animate-pulse rounded-md ${className ?? ""}`}
@@ -44,7 +44,7 @@ export default function LoadingSettings() {
                     </div>
                 </div>
 
-                {/* Main column — matches SettingPage + TextProvider default */}
+                {/* Main column 鈥?matches SettingPage + TextProvider default */}
                 <div className="w-full min-w-0 flex flex-col">
                     <div className="sticky top-0 right-0 z-50 py-[28px] backdrop-blur mb-4">
                         <div className="flex gap-3 items-center flex-wrap">
@@ -80,7 +80,7 @@ export default function LoadingSettings() {
                             </div>
                         </div>
 
-                        {/* TextProvider “Advanced” card */}
+                        {/* TextProvider 鈥淎dvanced鈥?card */}
                         <div className="bg-white flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-6 sm:p-10 rounded-[12px]">
                             <div className="max-w-[290px] shrink-0">
                                 <Shimmer className="h-6 w-28 mb-2" />
@@ -95,10 +95,11 @@ export default function LoadingSettings() {
                 </div>
             </main>
 
-            {/* Fixed save button — matches SettingPage placement */}
+            {/* Fixed save button 鈥?matches SettingPage placement */}
             <div className="mx-auto fixed bottom-20 right-5 z-40">
                 <Shimmer className="h-12 w-[200px] sm:w-[240px] rounded-[58px]" />
             </div>
         </div>
     );
 }
+

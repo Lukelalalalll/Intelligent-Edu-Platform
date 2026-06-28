@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import {
   useFontLoader,
   type FontLoadResult,
@@ -61,3 +61,4 @@ describe("useFontLoader", () => {
     ]);
   });
 });
+

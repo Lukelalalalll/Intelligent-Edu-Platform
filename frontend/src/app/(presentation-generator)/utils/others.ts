@@ -1,4 +1,4 @@
-export const getIconFromFile = (file: string): string => {
+﻿export const getIconFromFile = (file: string): string => {
   const file_ext = file.split(".").pop()?.toLowerCase() ?? "";
   if (file_ext == "pdf") {
     return "/pdf.svg";
@@ -113,3 +113,4 @@ export function getStaticFileUrl(filepath: string): string {
   const relevantPath = pathParts.slice(2).join('/');
   return `/static/${relevantPath}`;
 }
+

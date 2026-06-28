@@ -1,4 +1,4 @@
-export interface ChartAssignmentResponse {
+﻿export interface ChartAssignmentResponse {
     title_with_charts: {
         title: string;
         graph_id: string | null;

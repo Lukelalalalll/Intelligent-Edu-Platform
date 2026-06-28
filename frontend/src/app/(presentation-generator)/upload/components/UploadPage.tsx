@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import { cn } from "@/lib/utils";
+import PptGeneratorWorkflowStepper from "@/ppt_generator/components/PptGeneratorWorkflowStepper";
 import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
 import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
@@ -40,10 +41,12 @@ const UploadPage = () => {
       >
         <WelcomeBanner
           className={styles.banner}
-          title={t("presenton.upload.banner.title")}
-          subtitle={t("presenton.upload.banner.subtitle")}
+          title={t("ppt_generator.upload.banner.title")}
+          subtitle={t("ppt_generator.upload.banner.subtitle")}
           variant="workspace"
         />
+
+        <PptGeneratorWorkflowStepper activeStep="prepare" />
 
         <div className={styles.workspaceGrid}>
           <UploadInputSection
@@ -73,3 +76,4 @@ const UploadPage = () => {
 };
 
 export default UploadPage;
+

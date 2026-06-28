@@ -1,4 +1,4 @@
-import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
+﻿import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
 import * as z from 'zod'
 
 export const Schema = z.object({
@@ -131,5 +131,7 @@ const dynamicSlideLayout = ({ data }: { data: Partial<z.infer<typeof Schema>> })
     );
 };
 export default dynamicSlideLayout;
+
+
 
 

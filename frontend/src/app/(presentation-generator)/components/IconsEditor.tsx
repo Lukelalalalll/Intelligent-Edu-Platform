@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, {
   useCallback,
@@ -477,3 +477,4 @@ const IconsEditor = ({
 };
 
 export default IconsEditor;
+

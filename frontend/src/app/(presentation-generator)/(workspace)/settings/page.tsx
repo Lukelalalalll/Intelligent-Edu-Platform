@@ -1,8 +1,8 @@
-import React from 'react'
+﻿import React from 'react'
 import SettingPage from './SettingPage'
 
 export const metadata = {
-  title: 'Settings | Presenton',
+  title: 'Settings | PPT Generator',
   description: 'Settings page',
 }
 const page = () => {
@@ -13,3 +13,4 @@ const page = () => {
 }
 
 export default page
+

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   CheckCircle2,
   FileCog,
@@ -39,7 +39,7 @@ type ToolbarConfigArgs = {
   previewCount: number;
   totalSlides: number;
   completedSlides: number;
-  allFontsReady: boolean;
+  allFontsResolved: boolean;
   hasProcessedSlides: boolean;
   isSavingLayout: boolean;
   isProcessingSlides: boolean;
@@ -89,7 +89,7 @@ export function buildCustomTemplateToolbarConfig({
   previewCount,
   totalSlides,
   completedSlides,
-  allFontsReady,
+  allFontsResolved,
   hasProcessedSlides,
   isSavingLayout,
   isProcessingSlides,
@@ -104,7 +104,7 @@ export function buildCustomTemplateToolbarConfig({
       eyebrow: "Template Studio",
       title: "Upload a PPTX to build a reusable template family",
       description:
-        "Start from an existing slide deck, check font coverage, preview extracted slides, and convert the deck into editable Presenton template layouts.",
+        "Start from an existing slide deck, check font coverage, preview extracted slides, and convert the deck into editable PPT Generator template layouts.",
       actionLabel: hasFile ? "Check Fonts" : "Select a PPTX file",
       actionIcon: icon(FileCog),
       actionDisabled: !hasFile,
@@ -120,10 +120,12 @@ export function buildCustomTemplateToolbarConfig({
       eyebrow: "Font Validation",
       title: "Verify typefaces before generating slide previews",
       description:
-        "Presenton compares the uploaded deck against available fonts so your reconstructed slides stay faithful to the original typography.",
-      actionLabel: allFontsReady ? "Continue to Preview" : "Continue",
+        "PPT Generator compares the uploaded deck against matched fonts so your reconstructed slides stay faithful to the original typography. Resolve every missing entry with either a matched font selection or an uploaded font file before continuing.",
+      actionLabel: allFontsResolved
+        ? "Continue to Preview"
+        : "Resolve All Missing Fonts First",
       actionIcon: icon(Type),
-      actionDisabled: false,
+      actionDisabled: !allFontsResolved,
       actionLoading: step === "font-upload",
       onAction: () => {
         void onContinueFonts();
@@ -168,7 +170,7 @@ export function buildCustomTemplateToolbarConfig({
     eyebrow: "Save Template",
     title: "Template reconstruction complete",
     description:
-      "Review the finished layouts, make any last schema adjustments, and save the result as a reusable custom Presenton template.",
+      "Review the finished layouts, make any last schema adjustments, and save the result as a reusable custom PPT Generator template.",
     actionLabel: "Save Template",
     actionIcon: icon(Save),
     actionDisabled: !hasProcessedSlides || isProcessingSlides,
@@ -180,3 +182,4 @@ export function buildCustomTemplateToolbarConfig({
         : "Layouts ready",
   };
 }
+

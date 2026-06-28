@@ -1,4 +1,4 @@
-import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
+﻿import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
 import { type Locale } from "@/shared/i18n";
 export type DeckSortDirection = "desc" | "asc";
 
@@ -11,12 +11,12 @@ export type PresentationHistoryGroup = {
 
 type DashboardTranslator = (
   key:
-    | "presenton.dashboard.group.all.title"
-    | "presenton.dashboard.group.all.body"
-    | "presenton.dashboard.group.recent.title"
-    | "presenton.dashboard.group.recent.body"
-    | "presenton.dashboard.group.earlier.title"
-    | "presenton.dashboard.group.earlier.body",
+    | "ppt_generator.dashboard.group.all.title"
+    | "ppt_generator.dashboard.group.all.body"
+    | "ppt_generator.dashboard.group.recent.title"
+    | "ppt_generator.dashboard.group.recent.body"
+    | "ppt_generator.dashboard.group.earlier.title"
+    | "ppt_generator.dashboard.group.earlier.body",
   vars?: Record<string, string | number>
 ) => string;
 
@@ -136,8 +136,8 @@ export function buildPresentationHistoryGroups(
     return [
       {
         key: recent.length ? "recent" : "earlier",
-        title: t("presenton.dashboard.group.all.title"),
-        description: t("presenton.dashboard.group.all.body"),
+        title: t("ppt_generator.dashboard.group.all.title"),
+        description: t("ppt_generator.dashboard.group.all.body"),
         items: presentations,
       },
     ];
@@ -145,15 +145,15 @@ export function buildPresentationHistoryGroups(
 
   const recentGroup: PresentationHistoryGroup = {
     key: "recent",
-    title: t("presenton.dashboard.group.recent.title"),
-    description: t("presenton.dashboard.group.recent.body"),
+    title: t("ppt_generator.dashboard.group.recent.title"),
+    description: t("ppt_generator.dashboard.group.recent.body"),
     items: recent,
   };
 
   const earlierGroup: PresentationHistoryGroup = {
     key: "earlier",
-    title: t("presenton.dashboard.group.earlier.title"),
-    description: t("presenton.dashboard.group.earlier.body"),
+    title: t("ppt_generator.dashboard.group.earlier.title"),
+    description: t("ppt_generator.dashboard.group.earlier.body"),
     items: earlier,
   };
 
@@ -170,3 +170,4 @@ export function formatPresentationDate(
   if (!timestamp) return fallbackLabel;
   return getDateFormatter(locale, variant).format(timestamp);
 }
+

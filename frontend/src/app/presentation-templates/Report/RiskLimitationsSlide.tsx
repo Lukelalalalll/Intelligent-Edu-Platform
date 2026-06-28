@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const RiskItemSchema = z.object({
   label: z.string().min(3).max(28).meta({
@@ -166,3 +166,5 @@ const RiskLimitationsSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default RiskLimitationsSlide;
+
+

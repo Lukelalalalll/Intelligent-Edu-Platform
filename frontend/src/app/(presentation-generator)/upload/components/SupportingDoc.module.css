@@ -1,4 +1,4 @@
-.root {
+﻿.root {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
@@ -228,3 +228,4 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+

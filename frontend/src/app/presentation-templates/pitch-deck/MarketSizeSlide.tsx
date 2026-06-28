@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const MarketLayerSchema = z.object({
   label: z.string().min(2).max(12).meta({
@@ -88,3 +88,5 @@ const MarketSizeSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default MarketSizeSlide;
+
+

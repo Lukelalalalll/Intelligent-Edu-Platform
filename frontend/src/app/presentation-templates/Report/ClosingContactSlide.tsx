@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const ContactSchema = z.object({
   name: z.string().min(3).max(42).meta({
@@ -134,3 +134,5 @@ const ClosingContactSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default ClosingContactSlide;
+
+

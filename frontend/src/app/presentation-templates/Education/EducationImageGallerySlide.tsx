@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 
 export const slideLayoutId = "image-gallery-slide";
@@ -87,3 +87,5 @@ const EducationImageGallerySlide = ({ data }: { data: Partial<SchemaType> }) => 
 };
 
 export default EducationImageGallerySlide;
+
+

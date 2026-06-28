@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import ChatComposer from "./chat/components/ChatComposer";
@@ -70,3 +70,4 @@ const Chat = (props: ChatProps) => {
 };
 
 export default React.memo(Chat);
+

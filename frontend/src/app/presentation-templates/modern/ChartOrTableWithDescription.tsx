@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import * as z from "zod";
@@ -43,7 +43,7 @@ const businessModelSchema = z
       .min(1)
       .max(30)
       .default([
-        { cells: ["Row A", "✓", "-"] },
+        { cells: ["Row A", "鉁?, "-"] },
         { cells: ["Row B", "Text", "123"] },
         { cells: ["Row C", "More text", "456"] },
       ]),
@@ -85,7 +85,7 @@ const businessModelSchema = z
     mode: "table",
     columns: ["Column 1", "Column 2", "Column 3"],
     rows: [
-      { cells: ["Row A", "✓", "-"] },
+      { cells: ["Row A", "鉁?, "-"] },
       { cells: ["Row B", "Text", "123"] },
       { cells: ["Row C", "More text", "456"] },
     ],
@@ -210,3 +210,5 @@ const BusinessModelSlide: React.FC<Props> = ({ data }) => {
 };
 
 export default BusinessModelSlide;
+
+

@@ -1,4 +1,4 @@
-import Link from "@/presenton/shims/next-link";
+﻿import Link from "@/ppt_generator/shims/next-link";
 import WorkspaceCard from "@/shared/components/Card/Card";
 import { useI18n } from "@/shared/i18n";
 import { ArrowLeft, PanelTop } from "lucide-react";
@@ -49,12 +49,12 @@ export function TemplatePreviewContent({
             {isCompactBuiltIn ? (
               <Link href="/templates" className={styles.inlineBackAction}>
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                <span>{t("presenton.templatePreview.backInline")}</span>
+                <span>{t("ppt_generator.templatePreview.backInline")}</span>
               </Link>
             ) : null}
             <div className={cn(styles.badge, styles.mutedBadge)}>
               <PanelTop className="h-3.5 w-3.5" />
-              {t("presenton.templatePreview.stackBadge")}
+              {t("ppt_generator.templatePreview.stackBadge")}
             </div>
             <h2 className={styles.sectionTitle}>{mainSectionTitle}</h2>
             <p className={styles.sectionDescription}>{mainSectionDescription}</p>
@@ -77,3 +77,4 @@ export function TemplatePreviewContent({
     </WorkspaceCard>
   );
 }
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React from "react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
         <div className={styles.cardHeader}>
           <h2>Slide Preview</h2>
           <p>
-            Review the extracted slide imagery before Presenton converts each one into
+            Review the extracted slide imagery before PPT Generator converts each one into
             a reusable React template layout.
           </p>
         </div>
@@ -134,3 +134,4 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
     </div>
   );
 };
+

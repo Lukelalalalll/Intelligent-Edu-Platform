@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,21 +9,21 @@ vi.mock("@/shared/i18n", () => ({
   useI18n: () => ({
     t: (key: string) =>
       ({
-        "presenton.upload.advanced.tooltip": "Advanced settings",
-        "presenton.upload.advanced.dialog": "Advanced settings",
-        "presenton.upload.advanced.close": "Close advanced settings",
-        "presenton.upload.advanced.title": "Advanced Settings",
-        "presenton.upload.advanced.subtitle": "Adjust presentation behavior",
-        "presenton.upload.advanced.save": "Save",
-        "presenton.upload.advanced.instructions.label": "Write instructions",
-        "presenton.upload.advanced.instructions.placeholder":
+        "ppt_generator.upload.advanced.tooltip": "Advanced settings",
+        "ppt_generator.upload.advanced.dialog": "Advanced settings",
+        "ppt_generator.upload.advanced.close": "Close advanced settings",
+        "ppt_generator.upload.advanced.title": "Advanced Settings",
+        "ppt_generator.upload.advanced.subtitle": "Adjust presentation behavior",
+        "ppt_generator.upload.advanced.save": "Save",
+        "ppt_generator.upload.advanced.instructions.label": "Write instructions",
+        "ppt_generator.upload.advanced.instructions.placeholder":
           "Guide the AI: define audience, tone, key points, or constraints.",
-        "presenton.upload.advanced.tone": "Tone",
-        "presenton.upload.advanced.tone.placeholder": "Select tone",
-        "presenton.upload.advanced.verbosity": "Verbosity",
-        "presenton.upload.advanced.verbosity.placeholder": "Select verbosity",
-        "presenton.upload.advanced.includeToc": "Include table of contents",
-        "presenton.upload.advanced.includeTitle": "Title slide",
+        "ppt_generator.upload.advanced.tone": "Tone",
+        "ppt_generator.upload.advanced.tone.placeholder": "Select tone",
+        "ppt_generator.upload.advanced.verbosity": "Verbosity",
+        "ppt_generator.upload.advanced.verbosity.placeholder": "Select verbosity",
+        "ppt_generator.upload.advanced.includeToc": "Include table of contents",
+        "ppt_generator.upload.advanced.includeTitle": "Title slide",
       }[key] ?? key),
   }),
 }));
@@ -155,3 +155,4 @@ describe("AdvanceSettings", () => {
     });
   });
 });
+

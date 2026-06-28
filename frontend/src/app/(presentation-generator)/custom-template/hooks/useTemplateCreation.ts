@@ -1,15 +1,23 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { notify } from "@/components/ui/sonner";
 import { getHeader, getHeaderForFormData } from "@/app/(presentation-generator)/services/api/header";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
 import {
+    FontItem,
+    FontResolution,
+    FontResolutionMap,
     TemplateCreationStep,
     TemplateCreationState,
     FontData,
     FontUploadPreviewResponse,
     SlideLayoutResponse,
+    SelectedFontReplacement,
     UploadedFont,
     ProcessedSlide,
+    fontFamilyName,
+    fontOriginalName,
+    fontResolutionKey,
+    fontVariantName,
 } from "../types";
 import { getApiUrl } from "@/utils/api";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
@@ -17,6 +25,16 @@ import { compileCustomLayout } from "@/app/hooks/compileLayout";
 
 /** Must match `VISION_LAYOUT_ERROR_MARKER` in FastAPI `utils/template_vision_errors.py`. */
 const TEMPLATE_VISION_MODEL_MARKER = "TEMPLATE_VISION_MODEL_REQUIRED";
+
+function summarizeMissingFonts(fontNames: string[]): string {
+    if (fontNames.length === 0) {
+        return "";
+    }
+    const previewNames = fontNames.slice(0, 3).join(", ");
+    return fontNames.length > 3
+        ? `${previewNames}, +${fontNames.length - 3} more`
+        : previewNames;
+}
 
 const initialState: TemplateCreationState = {
     step: 'file-upload',
@@ -34,6 +52,7 @@ const initialState: TemplateCreationState = {
 export const useTemplateCreation = () => {
     const [state, setState] = useState<TemplateCreationState>(initialState);
     const [uploadedFonts, setUploadedFonts] = useState<UploadedFont[]>([]);
+    const [fontResolutionsByKey, setFontResolutionsByKey] = useState<FontResolutionMap>({});
     const [slides, setSlides] = useState<ProcessedSlide[]>([]);
 
     // Helper to update state partially
@@ -45,6 +64,7 @@ export const useTemplateCreation = () => {
     const reset = useCallback(() => {
         setState(initialState);
         setUploadedFonts([]);
+        setFontResolutionsByKey({});
         setSlides([]);
     }, []);
 
@@ -77,9 +97,15 @@ export const useTemplateCreation = () => {
 
             updateState({
                 fontsData: data,
+                previewData: null,
+                templateId: null,
+                totalSlides: 0,
                 step: 'font-check',
                 isLoading: false
             });
+            setUploadedFonts([]);
+            setFontResolutionsByKey({});
+            setSlides([]);
 
             return data;
         } catch (error) {
@@ -91,14 +117,7 @@ export const useTemplateCreation = () => {
     }, [updateState]);
 
 
-    const uploadFont = useCallback((fontName: string, file: File): string | null => {
-        // Check if font is already added
-        const existingFont = uploadedFonts.find((f) => f.fontName === fontName);
-        if (existingFont) {
-            notify.warning("Font already added", `Font "${fontName}" is already in your upload list.`);
-            return fontName;
-        }
-
+    const uploadFont = useCallback((font: FontItem, file: File): string | null => {
         // Validate file type
         const validExtensions = [".ttf", ".otf", ".woff", ".woff2", ".eot"];
         const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
@@ -115,54 +134,105 @@ export const useTemplateCreation = () => {
             return null;
         }
 
-        // Store font locally
-        const newFont: UploadedFont = {
-            fontName: fontName,
-            fontUrl: '', // Will be set after upload
+        const resolutionKey = fontResolutionKey(font);
+        const originalName = fontOriginalName(font);
+        const nextFont: UploadedFont = {
+            fontName: originalName,
+            fontUrl: '',
             fontPath: '',
-            file: file,
+            resolutionKey,
+            sourceFontName: font.name,
+            file,
         };
 
-        setUploadedFonts(prev => [...prev, newFont]);
-        notify.success("Font added", `Font "${fontName}" was added successfully.`);
-        return fontName;
-    }, [uploadedFonts]);
+        // Store font locally
+        setUploadedFonts(prev => [
+            ...prev.filter(existing => existing.resolutionKey !== resolutionKey),
+            nextFont,
+        ]);
+        setFontResolutionsByKey(prev => ({
+            ...prev,
+            [resolutionKey]: {
+                type: "upload",
+                uploadedFontName: originalName,
+            },
+        }));
+        notify.success("Font added", `Font "${font.name}" was added successfully.`);
+        return resolutionKey;
+    }, []);
 
     // Remove a font
-    const removeFont = useCallback((fontName: string) => {
-        setUploadedFonts(prev => prev.filter(font => font.fontName !== fontName));
+    const removeFont = useCallback((resolutionKey: string) => {
+        setUploadedFonts(prev => prev.filter(font => font.resolutionKey !== resolutionKey));
+        setFontResolutionsByKey(prev => {
+            const nextState = { ...prev };
+            if (nextState[resolutionKey]?.type === "upload") {
+                delete nextState[resolutionKey];
+            }
+            return nextState;
+        });
         notify.info("Font removed", "The font was removed from your upload list.");
     }, []);
 
-    // Get all unsupported fonts that need upload
-    const getUnsupportedFonts = useCallback((): string[] => {
+    const setFontReplacement = useCallback((font: FontItem, replacement: FontItem | null) => {
+        const resolutionKey = fontResolutionKey(font);
+
+        setUploadedFonts(prev => prev.filter(uploadedFont => uploadedFont.resolutionKey !== resolutionKey));
+        setFontResolutionsByKey(prev => {
+            const nextState = { ...prev };
+            if (!replacement) {
+                delete nextState[resolutionKey];
+                return nextState;
+            }
+
+            const selection: SelectedFontReplacement = {
+                original_name: fontOriginalName(font),
+                original_variant: fontVariantName(font),
+                replacement_family_name: fontFamilyName(replacement),
+                replacement_variant: fontVariantName(replacement),
+                replacement_label: replacement.name,
+            };
+            nextState[resolutionKey] = {
+                type: "replacement",
+                selection,
+            };
+            return nextState;
+        });
+    }, []);
+
+    // Get all unresolved fonts
+    const getUnresolvedFonts = useCallback((): FontItem[] => {
         if (!state.fontsData?.unavailable_fonts) {
             return [];
         }
-        return state.fontsData.unavailable_fonts
-            .map((font) => font.name)
-            .filter(
-                (fontName) =>
-                    !uploadedFonts.some(
-                        (uploaded) =>
-                            uploaded.fontName === fontName ||
-                            uploaded.fontName ===
-                                state.fontsData?.unavailable_fonts.find(
-                                    (f) => f.name === fontName
-                                )?.original_name
-                    )
-            );
-    }, [state.fontsData, uploadedFonts]);
+        return state.fontsData.unavailable_fonts.filter(
+            (font) => !fontResolutionsByKey[fontResolutionKey(font)]
+        );
+    }, [fontResolutionsByKey, state.fontsData]);
 
-    // Check if all required fonts are uploaded
-    const allFontsUploaded = useCallback((): boolean => {
-        return getUnsupportedFonts().length === 0;
-    }, [getUnsupportedFonts]);
+    const buildSelectedReplacementPayload = useCallback((): SelectedFontReplacement[] => {
+        return Object.values(fontResolutionsByKey)
+            .filter((resolution): resolution is Extract<FontResolution, { type: "replacement" }> => resolution?.type === "replacement")
+            .map((resolution) => resolution.selection);
+    }, [fontResolutionsByKey]);
+
+    // Check if all required fonts are resolved
+    const allFontsResolved = useCallback((): boolean => {
+        return getUnresolvedFonts().length === 0;
+    }, [getUnresolvedFonts]);
 
     // Step 2: Upload fonts and get slide preview
     const fontUploadAndPreview = useCallback(async (
         pptxFile: File
     ): Promise<FontUploadPreviewResponse | null> => {
+        const unresolvedFonts = getUnresolvedFonts();
+        if (unresolvedFonts.length > 0) {
+            const errorMessage = `Resolve all missing fonts before previewing: ${summarizeMissingFonts(unresolvedFonts.map((font) => font.name))}.`;
+            updateState({ error: errorMessage, isLoading: false });
+            notify.error("Missing font resolutions", errorMessage);
+            return null;
+        }
+
         updateState({ isLoading: true, error: null, step: 'font-upload' });
 
         try {
@@ -174,6 +244,7 @@ export const useTemplateCreation = () => {
                 formData.append("font_files", font.file);
                 formData.append("original_font_names", font.fontName);
             });
+            formData.append("font_replacements", JSON.stringify(buildSelectedReplacementPayload()));
 
             const response = await fetch(
                 getApiUrl(`/api/v1/ppt/template/fonts-upload-and-slides-preview`),
@@ -203,7 +274,7 @@ export const useTemplateCreation = () => {
             notify.error("Preview failed", errorMessage);
             return null;
         }
-    }, [uploadedFonts, updateState]);
+    }, [buildSelectedReplacementPayload, getUnresolvedFonts, uploadedFonts, updateState]);
 
     // Step 3: Initialize template creation
     const initTemplateCreation = useCallback(async (): Promise<string | null> => {
@@ -250,7 +321,7 @@ export const useTemplateCreation = () => {
                 source: "template_init",
                 template_id: typeof data === "string" ? data : data.id,
                 total_slides: state.previewData.slide_image_urls.length,
-                uploaded_font_count: state.previewData.fonts?.length || 0,
+                uploaded_font_count: Object.keys(state.previewData.fonts ?? {}).length,
             });
 
             notify.success("Template initialized", "Template creation was initialized successfully.");
@@ -278,7 +349,6 @@ export const useTemplateCreation = () => {
         templateId: string,
         slideIndex: number,
         autoAdvance: boolean = true,
-        retry: boolean = false,
         _isAutoRetry: boolean = false
     ): Promise<SlideLayoutResponse | null> => {
         // Mark slide as processing
@@ -389,7 +459,7 @@ export const useTemplateCreation = () => {
                             if (failedCount > 0) {
                                 notify.warning(
                                     "Some slides could not be processed",
-                                    `${processedCount} of ${newSlides.length} slides were reconstructed. ${failedCount} slide(s) failed — review them and try again.`
+                                    `${processedCount} of ${newSlides.length} slides were reconstructed. ${failedCount} slide(s) failed 鈥?review them and try again.`
                                 );
                             } else {
                                 notify.success(
@@ -416,7 +486,7 @@ export const useTemplateCreation = () => {
             // Auto-retry once on transient failures; vision/model capability errors won't recover.
             if (!_isAutoRetry && !isVisionModelError) {
                 console.log(`Auto-retrying slide ${slideIndex + 1} after API failure...`);
-                return createSlideLayout(templateId, slideIndex, autoAdvance, true, true);
+                return createSlideLayout(templateId, slideIndex, autoAdvance, true);
             }
 
             // Mark slide with error
@@ -484,6 +554,7 @@ export const useTemplateCreation = () => {
         // State
         state,
         uploadedFonts,
+        fontResolutionsByKey,
         slides,
         setSlides,
 
@@ -495,8 +566,9 @@ export const useTemplateCreation = () => {
         checkFonts,
         uploadFont,
         removeFont,
-        getUnsupportedFonts,
-        allFontsUploaded,
+        setFontReplacement,
+        getUnresolvedFonts,
+        allFontsResolved,
 
         // Template creation operations
         fontUploadAndPreview,
@@ -510,3 +582,4 @@ export const useTemplateCreation = () => {
         updateState,
     };
 };
+

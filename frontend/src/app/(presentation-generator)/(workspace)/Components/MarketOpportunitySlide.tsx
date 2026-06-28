@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "product-overview-market-opportunity-slide";
 export const slideLayoutName = "Product Overview Market Opportunity Slide";
@@ -131,3 +131,4 @@ const MarketOpportunitySlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default MarketOpportunitySlide;
+

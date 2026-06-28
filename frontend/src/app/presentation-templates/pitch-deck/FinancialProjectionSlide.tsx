@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const ProjectionRowSchema = z.object({
   label: z.string().min(3).max(24).meta({
@@ -137,3 +137,5 @@ const FinancialProjectionSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default FinancialProjectionSlide;
+
+

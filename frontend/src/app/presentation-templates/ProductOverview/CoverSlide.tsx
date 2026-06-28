@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 
 
@@ -90,3 +90,5 @@ const CoverSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default CoverSlide;
+
+

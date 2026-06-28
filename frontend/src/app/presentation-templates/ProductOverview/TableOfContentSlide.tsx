@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const PRODUCT_BG = "var(--background-color,#d7dddd)";
 const PRODUCT_DARK = "var(--primary-color,#05463d)";
@@ -114,3 +114,5 @@ const TableOfContentSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default TableOfContentSlide;
+
+

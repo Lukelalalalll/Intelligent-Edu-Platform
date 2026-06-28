@@ -1,7 +1,7 @@
-import { getApiUrl } from "@/utils/api";
+﻿import { getApiUrl } from "@/utils/api";
 import { ApiResponseHandler } from "./api-error-handler";
 import { getHeader } from "./header";
-import { presentonFetch } from "./presenton-fetch";
+import { pptGeneratorFetch } from "./ppt_generator-fetch";
 
 export interface CloneTemplatePayload {
     id: string;
@@ -19,7 +19,7 @@ class TemplateService {
 
     static async getCustomTemplateSummaries() {
         try {
-            const response = await presentonFetch(getApiUrl(`/api/v1/ppt/template/all`),);
+            const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/template/all`),);
             return await ApiResponseHandler.handleResponse(response, "Failed to get custom template summaries");
         } catch (error) {
             console.error("Failed to get custom template summaries", error);
@@ -29,7 +29,7 @@ class TemplateService {
 
     static async getCustomTemplateDetails(templateId: string) {
         try {
-            const response = await presentonFetch(getApiUrl(`/api/v1/ppt/template/${templateId}/layouts`),);
+            const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/template/${templateId}/layouts`),);
             return await ApiResponseHandler.handleResponse(response, "Failed to get custom template details");
         } catch (error) {
             console.error("Failed to get custom template details", error);
@@ -39,7 +39,7 @@ class TemplateService {
 
     static async deleteCustomTemplate(presentationId: string) {
         try {
-            const response = await presentonFetch(getApiUrl(`/api/v1/ppt/template-management/delete-templates/${presentationId}`), { method: "DELETE", headers: getHeader() });
+            const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/template-management/delete-templates/${presentationId}`), { method: "DELETE", headers: getHeader() });
             return await ApiResponseHandler.handleResponseWithResult(response, "Failed to delete custom template");
         } catch (error) {
             console.error("Failed to delete custom template", error);
@@ -49,7 +49,7 @@ class TemplateService {
 
     static async cloneCustomTemplate(payload: CloneTemplatePayload) {
         try {
-            const response = await presentonFetch(getApiUrl(`/api/v1/ppt/template/clone`), {
+            const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/template/clone`), {
                 method: "POST",
                 headers: getHeader(),
                 body: JSON.stringify(payload),
@@ -63,7 +63,7 @@ class TemplateService {
 
     static async cloneTemplateLayout(payload: CloneLayoutPayload) {
         try {
-            const response = await presentonFetch(getApiUrl(`/api/v1/ppt/template/slide-layout/clone`), {
+            const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/template/slide-layout/clone`), {
                 method: "POST",
                 headers: getHeader(),
                 body: JSON.stringify(payload),
@@ -77,3 +77,4 @@ class TemplateService {
 }
 
 export default TemplateService;
+

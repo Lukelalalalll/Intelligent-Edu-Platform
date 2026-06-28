@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import PptGeneratorWorkflowStepper from "@/ppt_generator/components/PptGeneratorWorkflowStepper";
 import { useI18n } from "@/shared/i18n";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
 import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
@@ -30,7 +31,7 @@ import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { getApiUrl } from "@/utils/api";
 
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
-import { presentonFetch } from "../../services/api/presenton-fetch";
+import { pptGeneratorFetch } from "../../services/api/ppt_generator-fetch";
 import { getHeader } from "../../services/api/header";
 import { getIconFromFile } from "../../utils/others";
 import MarkdownRenderer from "./MarkdownRenderer";
@@ -102,16 +103,16 @@ function getDocumentStateLabel(
   hasContent: boolean
 ): string {
   if (status === "error") {
-    return t("presenton.documents.state.error");
+    return t("ppt_generator.documents.state.error");
   }
 
   if (status === "ready") {
     return hasContent
-      ? t("presenton.documents.state.ready")
-      : t("presenton.documents.state.empty");
+      ? t("ppt_generator.documents.state.ready")
+      : t("ppt_generator.documents.state.empty");
   }
 
-  return t("presenton.documents.state.loading");
+  return t("ppt_generator.documents.state.loading");
 }
 
 const DocumentsPreviewPage: React.FC = () => {
@@ -160,7 +161,7 @@ const DocumentsPreviewPage: React.FC = () => {
 
   const readFile = useCallback(
     async (filePath: string): Promise<string> => {
-      const response = await presentonFetch(getApiUrl("/api/v1/app/read-file"), {
+      const response = await pptGeneratorFetch(getApiUrl("/api/v1/app/read-file"), {
         method: "POST",
         headers: getHeader(),
         body: JSON.stringify({ filePath }),
@@ -168,7 +169,7 @@ const DocumentsPreviewPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        let errorMessage = t("presenton.documents.notify.readFailed.body");
+        let errorMessage = t("ppt_generator.documents.notify.readFailed.body");
         try {
           const payload = await response.clone().json();
           if (typeof payload?.detail === "string" && payload.detail.trim()) {
@@ -215,7 +216,7 @@ const DocumentsPreviewPage: React.FC = () => {
         }));
       } catch (error: any) {
         const message =
-          error?.message || t("presenton.documents.notify.readFailed.body");
+          error?.message || t("ppt_generator.documents.notify.readFailed.body");
 
         setTextContents((prev) => ({
           ...prev,
@@ -228,7 +229,7 @@ const DocumentsPreviewPage: React.FC = () => {
             error: message,
           },
         }));
-        notify.error(t("presenton.documents.notify.readFailed.title"), message);
+        notify.error(t("ppt_generator.documents.notify.readFailed.title"), message);
       }
     },
     [documentStatuses, readFile, t]
@@ -237,7 +238,7 @@ const DocumentsPreviewPage: React.FC = () => {
   const handleCreatePresentation = async () => {
     try {
       setShowLoading({
-        message: t("presenton.documents.loading"),
+        message: t("ppt_generator.documents.loading"),
         show: true,
         duration: 40,
         progress: true,
@@ -263,11 +264,11 @@ const DocumentsPreviewPage: React.FC = () => {
       router.replace("/outline");
     } catch (error: any) {
       notify.error(
-        t("presenton.documents.notify.createFailed.title"),
-        error?.message || t("presenton.documents.notify.createFailed.body")
+        t("ppt_generator.documents.notify.createFailed.title"),
+        error?.message || t("ppt_generator.documents.notify.createFailed.body")
       );
       setShowLoading({
-        message: t("presenton.documents.error.create"),
+        message: t("ppt_generator.documents.error.create"),
         show: true,
         duration: 10,
         progress: false,
@@ -305,18 +306,18 @@ const DocumentsPreviewPage: React.FC = () => {
 
   const stateLabel = useMemo(() => {
     if (!selectedFile) {
-      return t("presenton.documents.state.missing");
+      return t("ppt_generator.documents.state.missing");
     }
     if (selectedStatus === "loading" || selectedStatus === "idle") {
-      return t("presenton.documents.state.loading");
+      return t("ppt_generator.documents.state.loading");
     }
     if (selectedStatus === "error") {
-      return t("presenton.documents.state.error");
+      return t("ppt_generator.documents.state.error");
     }
     if (!selectedContent) {
-      return t("presenton.documents.state.empty");
+      return t("ppt_generator.documents.state.empty");
     }
-    return t("presenton.documents.state.ready");
+    return t("ppt_generator.documents.state.ready");
   }, [selectedContent, selectedFile, selectedStatus, t]);
 
   const renderViewerBody = () => {
@@ -328,10 +329,10 @@ const DocumentsPreviewPage: React.FC = () => {
               <FolderOpen className="h-6 w-6" />
             </div>
             <h3 className={styles.stateTitle}>
-              {t("presenton.documents.missing.title")}
+              {t("ppt_generator.documents.missing.title")}
             </h3>
             <p className={styles.stateText}>
-              {t("presenton.documents.missing.body")}
+              {t("ppt_generator.documents.missing.body")}
             </p>
             <Button
               type="button"
@@ -339,7 +340,7 @@ const DocumentsPreviewPage: React.FC = () => {
               className={styles.secondaryButton}
               onClick={() => router.push("/upload")}
             >
-              {t("presenton.documents.missing.cta")}
+              {t("ppt_generator.documents.missing.cta")}
             </Button>
           </div>
         </div>
@@ -367,10 +368,10 @@ const DocumentsPreviewPage: React.FC = () => {
               <AlertCircle className="h-6 w-6" />
             </div>
             <h3 className={styles.stateTitle}>
-              {t("presenton.documents.error.title")}
+              {t("ppt_generator.documents.error.title")}
             </h3>
             <p className={styles.stateText}>
-              {selectedError || t("presenton.documents.error.body")}
+              {selectedError || t("ppt_generator.documents.error.body")}
             </p>
             <Button
               type="button"
@@ -379,7 +380,7 @@ const DocumentsPreviewPage: React.FC = () => {
               onClick={() => selectedFile && void loadDocument(selectedFile, true)}
             >
               <RefreshCw className="h-4 w-4" />
-              {t("presenton.documents.retry")}
+              {t("ppt_generator.documents.retry")}
             </Button>
           </div>
         </div>
@@ -394,10 +395,10 @@ const DocumentsPreviewPage: React.FC = () => {
               <FileText className="h-6 w-6" />
             </div>
             <h3 className={styles.stateTitle}>
-              {t("presenton.documents.empty.title")}
+              {t("ppt_generator.documents.empty.title")}
             </h3>
             <p className={styles.stateText}>
-              {t("presenton.documents.empty.body")}
+              {t("ppt_generator.documents.empty.body")}
             </p>
           </div>
         </div>
@@ -428,11 +429,13 @@ const DocumentsPreviewPage: React.FC = () => {
         )}
       >
         <WelcomeBanner
-          title={t("presenton.documents.banner.title")}
-          subtitle={t("presenton.documents.banner.subtitle")}
+          title={t("ppt_generator.documents.banner.title")}
+          subtitle={t("ppt_generator.documents.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
+
+        <PptGeneratorWorkflowStepper activeStep="prepare" />
 
         {!isSidebarOpen && fileItems.length > 0 ? (
           <div className={styles.revealBar}>
@@ -443,7 +446,7 @@ const DocumentsPreviewPage: React.FC = () => {
               onClick={() => setIsSidebarOpen(true)}
             >
               <PanelLeftOpen className="h-4 w-4" />
-              {t("presenton.documents.openPanel")}
+              {t("ppt_generator.documents.openPanel")}
             </Button>
           </div>
         ) : null}
@@ -455,20 +458,20 @@ const DocumentsPreviewPage: React.FC = () => {
                 <div className={styles.sidebarCopy}>
                   <span className={styles.badge}>
                     <FileText className="h-3.5 w-3.5" />
-                    {t("presenton.documents.section.documents")}
+                    {t("ppt_generator.documents.section.documents")}
                   </span>
                   <h2 className={styles.sideTitle}>
-                    {t("presenton.documents.library.title")}
+                    {t("ppt_generator.documents.library.title")}
                   </h2>
                   <p className={styles.sideDescription}>
-                    {t("presenton.documents.library.body")}
+                    {t("ppt_generator.documents.library.body")}
                   </p>
                 </div>
                 <button
                   type="button"
                   className={styles.iconButton}
                   onClick={() => setIsSidebarOpen(false)}
-                  aria-label={t("presenton.documents.closePanel")}
+                  aria-label={t("ppt_generator.documents.closePanel")}
                 >
                   <PanelLeftClose className="h-4 w-4" />
                 </button>
@@ -520,15 +523,15 @@ const DocumentsPreviewPage: React.FC = () => {
               <div className={styles.viewerTitleWrap}>
                 <span className={styles.mutedBadge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t("presenton.documents.content")}
+                  {t("ppt_generator.documents.content")}
                 </span>
                 <h2 className={styles.sectionTitle}>
                   {selectedFile
                     ? getDisplayName(selectedFile.name)
-                    : t("presenton.documents.missing.title")}
+                    : t("ppt_generator.documents.missing.title")}
                 </h2>
                 <p className={styles.sectionDescription}>
-                  {t("presenton.documents.viewer.subtitle")}
+                  {t("ppt_generator.documents.viewer.subtitle")}
                 </p>
               </div>
 
@@ -542,7 +545,7 @@ const DocumentsPreviewPage: React.FC = () => {
                     onClick={() => void loadDocument(selectedFile, true)}
                   >
                     <RefreshCw className="h-4 w-4" />
-                    {t("presenton.documents.retry")}
+                    {t("ppt_generator.documents.retry")}
                   </Button>
                 ) : null}
               </div>
@@ -554,19 +557,19 @@ const DocumentsPreviewPage: React.FC = () => {
           <aside className={cn(styles.surfaceCard, styles.summaryCard)}>
             <span className={styles.badge}>
               <Sparkles className="h-3.5 w-3.5" />
-              {t("presenton.documents.summary.badge")}
+              {t("ppt_generator.documents.summary.badge")}
             </span>
             <h3 className={styles.sideTitle}>
-              {t("presenton.documents.summary.title")}
+              {t("ppt_generator.documents.summary.title")}
             </h3>
             <p className={styles.sideDescription}>
-              {t("presenton.documents.summary.body")}
+              {t("ppt_generator.documents.summary.body")}
             </p>
 
             <div className={styles.summaryList}>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryLabel}>
-                  {t("presenton.documents.summary.documents")}
+                  {t("ppt_generator.documents.summary.documents")}
                 </span>
                 <span className={styles.summaryValue}>
                   {fileItems.length.toLocaleString()}
@@ -574,7 +577,7 @@ const DocumentsPreviewPage: React.FC = () => {
               </div>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryLabel}>
-                  {t("presenton.documents.summary.selected")}
+                  {t("ppt_generator.documents.summary.selected")}
                 </span>
                 <span className={styles.summaryValue}>
                   {selectedFile ? getDisplayName(selectedFile.name) : "-"}
@@ -582,7 +585,7 @@ const DocumentsPreviewPage: React.FC = () => {
               </div>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryLabel}>
-                  {t("presenton.documents.summary.characters")}
+                  {t("ppt_generator.documents.summary.characters")}
                 </span>
                 <span className={styles.summaryValue}>
                   {selectedContent ? selectedCharacterCount : "-"}
@@ -590,7 +593,7 @@ const DocumentsPreviewPage: React.FC = () => {
               </div>
               <div className={styles.summaryRow}>
                 <span className={styles.summaryLabel}>
-                  {t("presenton.documents.summary.state")}
+                  {t("ppt_generator.documents.summary.state")}
                 </span>
                 <span className={styles.summaryValue}>{stateLabel}</span>
               </div>
@@ -603,7 +606,7 @@ const DocumentsPreviewPage: React.FC = () => {
                 className={styles.nextButton}
                 disabled={fileItems.length === 0}
               >
-                <span>{t("presenton.documents.next")}</span>
+                <span>{t("ppt_generator.documents.next")}</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -615,3 +618,4 @@ const DocumentsPreviewPage: React.FC = () => {
 };
 
 export default DocumentsPreviewPage;
+

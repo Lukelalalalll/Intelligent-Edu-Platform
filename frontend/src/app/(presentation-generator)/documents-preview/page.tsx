@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import DocumentPreviewPage from './components/DocumentPreviewPage'
 
 const page = () => {
@@ -10,3 +10,4 @@ const page = () => {
 }
 
 export default page
+

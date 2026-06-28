@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
     ChevronRight,
     LayoutDashboard,
@@ -7,7 +7,7 @@ import {
     Sparkles,
 } from "lucide-react";
 
-import Link from "@/presenton/shims/next-link";
+import Link from "@/ppt_generator/shims/next-link";
 import type { CustomTemplates } from "@/app/hooks/useCustomTemplates";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/shared/i18n";
@@ -49,7 +49,7 @@ const TemplateNavIcon = ({ active }: { active: boolean }) => (
     </svg>
 );
 
-const presentonNavItems = [
+const pptGeneratorNavItems = [
     {
         href: "/dashboard",
         label: "Dashboard",
@@ -98,24 +98,24 @@ export function TemplatePanelNavigation({ pathname }: TemplatePanelNavigationPro
     const navItems = [
         {
             href: "/dashboard",
-            label: t("presenton.workspace.nav.dashboard"),
-            renderIcon: presentonNavItems[0].renderIcon,
+            label: t("ppt_generator.workspace.nav.dashboard"),
+            renderIcon: pptGeneratorNavItems[0].renderIcon,
         },
         {
             href: "/templates",
-            label: t("presenton.workspace.nav.templates"),
-            renderIcon: presentonNavItems[1].renderIcon,
+            label: t("ppt_generator.workspace.nav.templates"),
+            renderIcon: pptGeneratorNavItems[1].renderIcon,
         },
         {
             href: "/theme",
-            label: t("presenton.workspace.nav.theme"),
-            renderIcon: presentonNavItems[2].renderIcon,
+            label: t("ppt_generator.workspace.nav.theme"),
+            renderIcon: pptGeneratorNavItems[2].renderIcon,
         },
     ] as const;
 
     return (
         <div className={styles.navShell}>
-            <nav className={styles.navList} aria-label={t("presenton.workspace.nav.aria")}>
+            <nav className={styles.navList} aria-label={t("ppt_generator.workspace.nav.aria")}>
                 {navItems.map(({ href, label, renderIcon }) => {
                     const isActive = pathname === href;
 
@@ -146,17 +146,17 @@ export function TemplatePanelControls({
     const { t } = useI18n();
 
     return (
-        <WorkspaceCard className={styles.surfaceCard}>
+        <WorkspaceCard className={cn(styles.surfaceCard, styles.controlCard)}>
             <div className={styles.controlSection}>
                 <div className={styles.controlTop}>
                     <div className={styles.controlCopy}>
                         <div className={styles.badge}>
                             <Sparkles className="h-3.5 w-3.5" />
-                            {t("presenton.templates.controls.badge")}
+                            {t("ppt_generator.templates.controls.badge")}
                         </div>
-                        <h2 className={styles.controlTitle}>{t("presenton.templates.controls.title")}</h2>
+                        <h2 className={styles.controlTitle}>{t("ppt_generator.templates.controls.title")}</h2>
                         <p className={styles.controlDescription}>
-                            {t("presenton.templates.controls.body")}
+                            {t("ppt_generator.templates.controls.body")}
                         </p>
                     </div>
 
@@ -165,20 +165,20 @@ export function TemplatePanelControls({
                             href="/custom-template"
                             onClick={onCreateTemplateClick}
                             className={styles.primaryAction}
-                            aria-label={t("presenton.templates.controls.createAria")}
+                            aria-label={t("ppt_generator.templates.controls.createAria")}
                         >
-                            <span>{t("presenton.templates.controls.create")}</span>
+                            <span>{t("ppt_generator.templates.controls.create")}</span>
                             <ChevronRight className="h-4 w-4" />
                         </Link>
                         <p className={styles.controlHelper}>
-                            {t("presenton.templates.controls.helper")}
+                            {t("ppt_generator.templates.controls.helper")}
                         </p>
                     </div>
                 </div>
 
                 <div className={styles.controlBottom}>
                     <div className={styles.tabBlock}>
-                        <div className={styles.tabRail} role="tablist" aria-label={t("presenton.templates.tabs.aria")}>
+                        <div className={styles.tabRail} role="tablist" aria-label={t("ppt_generator.templates.tabs.aria")}>
                             <button
                                 type="button"
                                 role="tab"
@@ -186,7 +186,7 @@ export function TemplatePanelControls({
                                 className={cn(styles.tabButton, tab === "default" && styles.tabButtonActive)}
                                 onClick={() => onTabChange("default")}
                             >
-                                {t("presenton.templates.tabs.builtIn")}
+                                {t("ppt_generator.templates.tabs.builtIn")}
                             </button>
                             <button
                                 type="button"
@@ -195,7 +195,7 @@ export function TemplatePanelControls({
                                 className={cn(styles.tabButton, tab === "custom" && styles.tabButtonActive)}
                                 onClick={() => onTabChange("custom")}
                             >
-                                {t("presenton.templates.tabs.custom")}
+                                {t("ppt_generator.templates.tabs.custom")}
                             </button>
                         </div>
                         <p className={styles.activeTabNote}>{activeTabDescription}</p>
@@ -225,7 +225,7 @@ export function TemplatePanelLibrary({
     onOpenCustomTemplate,
 }: TemplatePanelLibraryProps) {
     return (
-        <WorkspaceCard className={styles.surfaceCard}>
+        <WorkspaceCard className={cn(styles.surfaceCard, styles.libraryCard)}>
             <div className={styles.contentSection}>
                 <div className={styles.sectionIntro}>
                     <div className={styles.sectionTitleWrap}>
@@ -269,12 +269,12 @@ function BuiltInTemplateLibrary({
                 <section className={styles.templateGroup}>
                     <div className={styles.groupHeader}>
                         <div className={styles.groupTitleWrap}>
-                            <h3 className={styles.groupTitle}>{t("presenton.templates.builtIn.loading.title")}</h3>
+                            <h3 className={styles.groupTitle}>{t("ppt_generator.templates.builtIn.loading.title")}</h3>
                             <p className={styles.groupDescription}>
-                                {t("presenton.templates.builtIn.loading.body")}
+                                {t("ppt_generator.templates.builtIn.loading.body")}
                             </p>
                         </div>
-                        <span className={styles.groupCount}>{t("presenton.templates.builtIn.loading.count")}</span>
+                        <span className={styles.groupCount}>{t("ppt_generator.templates.builtIn.loading.count")}</span>
                     </div>
                     <BuiltInTemplatesLoadingGrid />
                 </section>
@@ -297,8 +297,8 @@ function BuiltInTemplateLibrary({
                         </div>
                         <span className={styles.groupCount}>
                             {group.templates.length === 1
-                                ? t("presenton.templates.builtIn.count.one", { count: group.templates.length })
-                                : t("presenton.templates.builtIn.count.other", { count: group.templates.length })}
+                                ? t("ppt_generator.templates.builtIn.count.one", { count: group.templates.length })
+                                : t("ppt_generator.templates.builtIn.count.other", { count: group.templates.length })}
                         </span>
                     </div>
 
@@ -332,15 +332,15 @@ function CustomTemplateLibrary({
         <section className={styles.templateGroup}>
             <div className={styles.groupHeader}>
                 <div className={styles.groupTitleWrap}>
-                    <h3 className={styles.groupTitle}>{t("presenton.templates.custom.title")}</h3>
+                    <h3 className={styles.groupTitle}>{t("ppt_generator.templates.custom.title")}</h3>
                     <p className={styles.groupDescription}>
-                        {t("presenton.templates.custom.body")}
+                        {t("ppt_generator.templates.custom.body")}
                     </p>
                 </div>
                 <span className={styles.groupCount}>
                     {custom.isLoading
-                        ? t("presenton.templates.custom.count.loading")
-                        : t("presenton.templates.custom.count.saved", { count: custom.count })}
+                        ? t("ppt_generator.templates.custom.count.loading")
+                        : t("ppt_generator.templates.custom.count.saved", { count: custom.count })}
                 </span>
             </div>
 
@@ -362,3 +362,4 @@ function CustomTemplateLibrary({
         </section>
     );
 }
+

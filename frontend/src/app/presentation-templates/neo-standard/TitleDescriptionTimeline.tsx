@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zod Schema for the slide content elements.
  */
 import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
@@ -138,5 +138,7 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+
 
 

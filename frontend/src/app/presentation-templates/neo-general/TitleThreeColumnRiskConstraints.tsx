@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 /**
  * Zod Schema for the slide content.
  */
@@ -122,3 +122,4 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 import { useI18n } from "@/shared/i18n";
 import {
@@ -6,11 +6,11 @@ import {
   LLM_PROVIDERS,
   WEB_SEARCH_PROVIDERS,
 } from "@/utils/providerConstants";
-import type { PresentonSelectableProvider } from "@/presenton/providerOverride";
+import type { PptGeneratorSelectableProvider } from "@/ppt_generator/providerOverride";
 import type { LLMConfig } from "@/types/llm_config";
 
 type ProviderCard = {
-  id: PresentonSelectableProvider;
+  id: PptGeneratorSelectableProvider;
   label: string;
   configured: boolean;
   model: string;
@@ -19,9 +19,9 @@ type ProviderCard = {
 type CurrentConfigProps = {
   llmConfig: LLMConfig;
   providerCards: ProviderCard[];
-  selectedProvider: PresentonSelectableProvider | null;
+  selectedProvider: PptGeneratorSelectableProvider | null;
   webSearchEnabled: boolean;
-  onProviderSelect: (provider: PresentonSelectableProvider) => void;
+  onProviderSelect: (provider: PptGeneratorSelectableProvider) => void;
 };
 
 function getSelectedTextModel(
@@ -82,19 +82,19 @@ const CurrentConfig = ({
     : textProviderLabel;
 
   const imageSummary = llmConfig.DISABLE_IMAGE_GENERATION
-    ? t("presenton.upload.currentConfig.imagesDisabled")
+    ? t("ppt_generator.upload.currentConfig.imagesDisabled")
     : llmConfig.IMAGE_PROVIDER
       ? IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER]?.label || llmConfig.IMAGE_PROVIDER
-      : t("presenton.upload.currentConfig.noImageProvider");
+      : t("ppt_generator.upload.currentConfig.noImageProvider");
   const webSearchProviderKey = (llmConfig.WEB_SEARCH_PROVIDER || "auto").toLowerCase();
   const webSearchProvider =
     WEB_SEARCH_PROVIDERS[webSearchProviderKey]?.label || webSearchProviderKey;
-  const webSearchSummary = `${webSearchProvider} (${webSearchEnabled ? t("presenton.upload.currentConfig.webState.on") : t("presenton.upload.currentConfig.webState.off")})`;
+  const webSearchSummary = `${webSearchProvider} (${webSearchEnabled ? t("ppt_generator.upload.currentConfig.webState.on") : t("ppt_generator.upload.currentConfig.webState.off")})`;
 
   const items = [
-    { label: t("presenton.upload.currentConfig.text"), value: textSummary },
-    { label: t("presenton.upload.currentConfig.images"), value: imageSummary },
-    { label: t("presenton.upload.currentConfig.web"), value: webSearchSummary },
+    { label: t("ppt_generator.upload.currentConfig.text"), value: textSummary },
+    { label: t("ppt_generator.upload.currentConfig.images"), value: imageSummary },
+    { label: t("ppt_generator.upload.currentConfig.web"), value: webSearchSummary },
   ];
 
   return (
@@ -128,20 +128,20 @@ const CurrentConfig = ({
                     {provider.label}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-[#475569]">
-                    {provider.model || t("presenton.upload.currentConfig.defaultModel")}
+                    {provider.model || t("ppt_generator.upload.currentConfig.defaultModel")}
                   </p>
                 </div>
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass}`}
                 >
                   {configured
-                    ? t("presenton.upload.currentConfig.configured")
-                    : t("presenton.upload.currentConfig.unconfigured")}
+                    ? t("ppt_generator.upload.currentConfig.configured")
+                    : t("ppt_generator.upload.currentConfig.unconfigured")}
                 </span>
               </div>
               {isSelected ? (
                 <span className="mt-3 text-xs font-semibold text-[#0b6b4b]">
-                  {t("presenton.upload.currentConfig.selected")}
+                  {t("ppt_generator.upload.currentConfig.selected")}
                 </span>
               ) : null}
             </button>
@@ -169,3 +169,4 @@ const CurrentConfig = ({
 };
 
 export default CurrentConfig;
+

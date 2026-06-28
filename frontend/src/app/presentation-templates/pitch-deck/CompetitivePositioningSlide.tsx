@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const CompetitorSchema = z.object({
   name: z.string().min(3).max(24).meta({
@@ -132,3 +132,5 @@ const CompetitivePositioningSlide = ({ data }: { data: Partial<SchemaType> }) =>
 };
 
 export default CompetitivePositioningSlide;
+
+

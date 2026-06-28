@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+﻿import { cn } from "@/lib/utils";
 import React, { useState } from "react";
 import TextProviderFields from "./text-provider/TextProviderFields";
 import TextProviderModelSelect from "./text-provider/TextProviderModelSelect";
@@ -142,3 +142,4 @@ const TextProvider = ({ onInputChange, llmConfig }: TextProviderProps) => {
 };
 
 export default TextProvider;
+

@@ -1,5 +1,5 @@
-import React from "react";
-import Link from "@/presenton/shims/next-link";
+﻿import React from "react";
+import Link from "@/ppt_generator/shims/next-link";
 import { AlertCircle, ArrowRight, RefreshCcw } from "lucide-react";
 import { useI18n } from "@/shared/i18n";
 import { PresentationCard } from "./PresentationCard";
@@ -51,7 +51,7 @@ const ErrorState = ({ error, onRetry }: { error: string; onRetry?: () => void })
             <AlertCircle className="h-5 w-5" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-[#101828]">{t("presenton.dashboard.loadError.title")}</h3>
+            <h3 className="text-lg font-semibold text-[#101828]">{t("ppt_generator.dashboard.loadError.title")}</h3>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">{error}</p>
           </div>
         </div>
@@ -62,7 +62,7 @@ const ErrorState = ({ error, onRetry }: { error: string; onRetry?: () => void })
             className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-5 text-sm font-semibold text-[#101828] transition hover:-translate-y-0.5 hover:border-[rgba(0,123,85,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.28)]"
           >
             <RefreshCcw className="h-4 w-4" />
-            {t("presenton.dashboard.loadError.retry")}
+            {t("ppt_generator.dashboard.loadError.retry")}
           </button>
         ) : null}
       </div>
@@ -120,8 +120,8 @@ export const PresentationGrid = ({
             <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
               <span>
                 {group.items.length === 1
-                  ? t("presenton.dashboard.grid.count.single", { count: group.items.length })
-                  : t("presenton.dashboard.grid.count.other", { count: group.items.length })}
+                  ? t("ppt_generator.dashboard.grid.count.single", { count: group.items.length })
+                  : t("ppt_generator.dashboard.grid.count.other", { count: group.items.length })}
               </span>
             </div>
           </div>
@@ -139,14 +139,14 @@ export const PresentationGrid = ({
       ))}
 
       <div className="flex flex-col gap-3 rounded-[24px] border border-dashed border-[rgba(15,23,42,0.12)] bg-[rgba(247,251,249,0.86)] px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>{t("presenton.dashboard.grid.prompt")}</span>
+        <span>{t("ppt_generator.dashboard.grid.prompt")}</span>
         {onCreatePresentationClick ? (
           <Link
             href="/upload"
             onClick={onCreatePresentationClick}
             className="inline-flex items-center gap-2 font-semibold text-[#007b55] transition hover:text-[#0b6b4b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.24)]"
           >
-            <span>{t("presenton.dashboard.grid.cta")}</span>
+            <span>{t("ppt_generator.dashboard.grid.cta")}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}
@@ -154,3 +154,4 @@ export const PresentationGrid = ({
     </div>
   );
 };
+

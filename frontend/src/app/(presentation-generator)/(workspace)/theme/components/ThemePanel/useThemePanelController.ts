@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notify } from '@/components/ui/sonner'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import { ImagesApi } from '@/app/(presentation-generator)/services/api/images'
 import ThemeApi from '@/app/(presentation-generator)/services/api/theme'
-import { usePathname, useRouter, useSearchParams } from '@/presenton/shims/next-navigation'
+import { usePathname, useRouter, useSearchParams } from '@/ppt_generator/shims/next-navigation'
 import { useFontLoader as loadFontAssets } from '@/app/(presentation-generator)/hooks/useFontLoad'
 import { useI18n } from '@/shared/i18n'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
@@ -13,7 +13,8 @@ import {
   FALLBACK_THEME,
   PREVIEW_BASE_HEIGHT,
   PREVIEW_BASE_WIDTH,
-  THEME_EDITOR_STEP_META,
+  THEME_EDITOR_STEP_IDS,
+  THEME_EDITOR_STEPS,
 } from './constants'
 import {
   applyThemeToElement,
@@ -32,8 +33,10 @@ import { loadThemePreviewLayouts } from './themePreviewLoader'
 import type { ThemePreviewLayout } from './themePreviewLoader'
 import {
   ThemeColors,
+  ThemeEditorStepId,
   ThemeFonts,
   ThemePaletteGenerationSource,
+  ThemePaletteSeedSnapshot,
   ThemeTab,
   UserFontLibrary,
 } from './types'
@@ -63,27 +66,39 @@ export function useThemePanelController() {
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isFontUploading, setIsFontUploading] = useState(false)
   const [customThemes, setCustomThemes] = useState<Theme[]>([])
-  const [defaultThemes, setDefaultThemes] = useState<Theme[]>([])
   const [isCustomThemesLoading, setIsCustomThemesLoading] = useState(true)
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState<ThemeEditorStepId>('colors')
   const [themeCompanyName, setThemeCompanyName] = useState('')
   const [isNewTheme, setIsNewTheme] = useState(false)
   const [userFonts, setUserFonts] = useState<UserFontLibrary>({ fonts: [] })
   const [slideContainerWidth, setSlideContainerWidth] = useState(0)
   const [previewLayouts, setPreviewLayouts] = useState<ThemePreviewLayout[]>([])
   const [isPreviewLayoutsLoading, setIsPreviewLayoutsLoading] = useState(false)
+  const [isPaletteGenerating, setIsPaletteGenerating] = useState(false)
+  const [lastGeneratedPaletteSeeds, setLastGeneratedPaletteSeeds] =
+    useState<ThemePaletteSeedSnapshot | null>(null)
 
   const slideContainerRef = useRef<HTMLDivElement>(null)
   const previousSelectedThemeIdRef = useRef(selectedTheme.id)
 
-  const currentStepMeta = THEME_EDITOR_STEP_META[currentStep]
+  const defaultThemes = useMemo(() => getDefaultThemes(t), [t])
+  const currentStepIndex = Math.max(THEME_EDITOR_STEP_IDS.indexOf(currentStep), 0)
+  const currentStepMeta = THEME_EDITOR_STEPS[currentStepIndex]
+  const totalSteps = THEME_EDITOR_STEPS.length
   const activeTabDescription = tab === 'default'
-    ? t('presenton.theme.activeTab.builtIn')
-    : t('presenton.theme.activeTab.custom')
+    ? t('ppt_generator.theme.activeTab.builtIn')
+    : t('ppt_generator.theme.activeTab.custom')
   const totalThemeCount = defaultThemes.length + customThemes.length
   const activeThemeCount = tab === 'default' ? defaultThemes.length : customThemes.length
+  const paletteDirty = useMemo(() => {
+    if (!lastGeneratedPaletteSeeds) return false
+    return (
+      customColors.primary !== lastGeneratedPaletteSeeds.primary ||
+      customColors.background !== lastGeneratedPaletteSeeds.background
+    )
+  }, [customColors.background, customColors.primary, lastGeneratedPaletteSeeds])
   const previewScale = useMemo(
     () => calculatePreviewScale(slideContainerWidth),
     [slideContainerWidth]
@@ -110,15 +125,20 @@ export function useThemePanelController() {
     })
   }, [])
 
+  const buildPaletteSeedSnapshot = useCallback(
+    (colors: ThemeColors): ThemePaletteSeedSnapshot => ({
+      primary: colors.primary,
+      background: colors.background,
+    }),
+    []
+  )
+
   useEffect(() => {
     trackEvent(MixpanelEvent.Theme_Page_Viewed, { pathname })
   }, [pathname])
 
   useEffect(() => {
-    if (!isSheetOpen) {
-      setSlideContainerWidth(0)
-      return
-    }
+    if (!isSheetOpen) return
 
     const element = slideContainerRef.current
     if (!element) return
@@ -128,7 +148,6 @@ export function useThemePanelController() {
     })
 
     resizeObserver.observe(element)
-    setSlideContainerWidth(element.clientWidth)
 
     return () => resizeObserver.disconnect()
   }, [isSheetOpen])
@@ -165,7 +184,6 @@ export function useThemePanelController() {
     if (!isSheetOpen) return
 
     applyPreviewTheme(previewTheme)
-    setSlideContainerWidth(slideContainerRef.current?.clientWidth || 0)
   }, [applyPreviewTheme, isSheetOpen, previewTheme])
 
   useEffect(() => {
@@ -185,8 +203,8 @@ export function useThemePanelController() {
       } catch (error: any) {
         console.error('Failed to load custom themes', error)
         notify.error(
-          t('presenton.theme.notify.loadThemes.title'),
-          error?.message || t('presenton.theme.notify.loadThemes.body')
+          t('ppt_generator.theme.notify.loadThemes.title'),
+          error?.message || t('ppt_generator.theme.notify.loadThemes.body')
         )
       } finally {
         if (!isCancelled) {
@@ -204,17 +222,14 @@ export function useThemePanelController() {
       } catch (error: any) {
         console.error('Failed to load user fonts', error)
         notify.error(
-          t('presenton.theme.notify.loadFonts.title'),
-          error?.message || t('presenton.theme.notify.loadFonts.body')
+          t('ppt_generator.theme.notify.loadFonts.title'),
+          error?.message || t('ppt_generator.theme.notify.loadFonts.body')
         )
       }
     }
 
-    const localDefaults = getDefaultThemes(t)
-    setDefaultThemes(localDefaults)
-
-    if (localDefaults.length > 0 && shouldHydrateDefaultThemeRef.current) {
-      const firstTheme = localDefaults[0]
+    if (defaultThemes.length > 0 && shouldHydrateDefaultThemeRef.current) {
+      const firstTheme = defaultThemes[0]
       const editorValues = extractThemeEditorValues(firstTheme)
 
       shouldHydrateDefaultThemeRef.current = false
@@ -223,6 +238,8 @@ export function useThemePanelController() {
       setCustomFonts(editorValues.fonts)
       setCustomBrandLogo(editorValues.brandLogo)
       setCustomBrandLogoId(editorValues.brandLogoId)
+      setThemeCompanyName(editorValues.companyName)
+      setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
       applyPreviewTheme(firstTheme)
     }
 
@@ -232,7 +249,7 @@ export function useThemePanelController() {
     return () => {
       isCancelled = true
     }
-  }, [applyPreviewTheme, t])
+  }, [applyPreviewTheme, buildPaletteSeedSnapshot, defaultThemes, t])
 
   useEffect(() => {
     if (previousSelectedThemeIdRef.current === selectedTheme.id) return
@@ -243,11 +260,14 @@ export function useThemePanelController() {
     setCustomFonts(editorValues.fonts)
     setCustomBrandLogo(editorValues.brandLogo)
     setCustomBrandLogoId(editorValues.brandLogoId)
-  }, [selectedTheme])
+    setThemeCompanyName(editorValues.companyName)
+    setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
+  }, [buildPaletteSeedSnapshot, selectedTheme])
 
   const handleCloseSheet = useCallback((open: boolean) => {
     setIsSheetOpen(open)
     if (!open) {
+      setSlideContainerWidth(0)
       router.replace('/theme')
     }
   }, [router])
@@ -263,7 +283,8 @@ export function useThemePanelController() {
     setCustomBrandLogoId(editorValues.brandLogoId)
     setThemeCompanyName(editorValues.companyName)
     setIsSheetOpen(true)
-    setCurrentStep(1)
+    setCurrentStep('colors')
+    setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
     applyPreviewTheme(theme)
 
     const themeSource = getThemeSource(theme)
@@ -280,7 +301,7 @@ export function useThemePanelController() {
       theme_name: theme.name,
       theme_source: themeSource,
     })
-  }, [applyPreviewTheme, pathname])
+  }, [applyPreviewTheme, buildPaletteSeedSnapshot, pathname])
 
   const handleColorChange = useCallback((colorKey: keyof ThemeColors, value: string) => {
     const validValue = value && !value.startsWith('#') ? `#${value}` : value
@@ -319,8 +340,8 @@ export function useThemePanelController() {
     } catch (error: any) {
       console.error('Failed to upload logo', error)
       notify.error(
-        t('presenton.theme.notify.uploadLogo.title'),
-        error?.message || t('presenton.theme.notify.uploadLogo.body')
+        t('ppt_generator.theme.notify.uploadLogo.title'),
+        error?.message || t('ppt_generator.theme.notify.uploadLogo.body')
       )
     } finally {
       setIsLogoUploading(false)
@@ -348,9 +369,21 @@ export function useThemePanelController() {
   const createNewCustomTheme = useCallback(async () => {
     trackEvent(MixpanelEvent.Theme_New_Theme_Clicked, { pathname })
     setIsNewTheme(true)
+    setIsPaletteGenerating(true)
 
     const newTheme = createNewCustomThemeDraft(t)
-    const generatedColors = await generateTheme({ source: 'new_theme' })
+    let generatedColors = newTheme.data.colors
+    try {
+      generatedColors = await generateTheme({ source: 'new_theme' })
+    } catch (error: any) {
+      console.error('Failed to generate initial theme palette', error)
+      notify.error(
+        t('ppt_generator.theme.notify.generateFailed.title'),
+        error?.message || t('ppt_generator.theme.notify.generateFailed.body')
+      )
+    } finally {
+      setIsPaletteGenerating(false)
+    }
     const nextTheme = {
       ...newTheme,
       data: {
@@ -366,8 +399,9 @@ export function useThemePanelController() {
     setCustomBrandLogo(editorValues.brandLogo)
     setCustomBrandLogoId(editorValues.brandLogoId)
     setIsSheetOpen(true)
-    setCurrentStep(1)
+    setCurrentStep('colors')
     setThemeCompanyName('')
+    setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
     applyPreviewTheme(nextTheme)
 
     trackEvent(MixpanelEvent.Theme_Editor_Opened, {
@@ -376,22 +410,28 @@ export function useThemePanelController() {
       theme_name: nextTheme.name,
       theme_source: 'new_draft',
     })
-  }, [applyPreviewTheme, generateTheme, pathname, t])
+  }, [applyPreviewTheme, buildPaletteSeedSnapshot, generateTheme, pathname, t])
 
-  const handleRefreshTheme = useCallback(async ({
-    primary,
-    background,
-  }: {
-    primary?: string
-    background?: string
-  }) => {
-    const generatedTheme = await generateTheme({
-      primary,
-      background,
-      source: 'refresh',
-    })
-    setCustomColors(generatedTheme)
-  }, [generateTheme])
+  const handleGeneratePalette = useCallback(async () => {
+    try {
+      setIsPaletteGenerating(true)
+      const generatedTheme = await generateTheme({
+        primary: customColors.primary,
+        background: customColors.background,
+        source: 'refresh',
+      })
+      setCustomColors(generatedTheme)
+      setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(generatedTheme))
+    } catch (error: any) {
+      console.error('Failed to generate theme palette', error)
+      notify.error(
+        t('ppt_generator.theme.notify.generateFailed.title'),
+        error?.message || t('ppt_generator.theme.notify.generateFailed.body')
+      )
+    } finally {
+      setIsPaletteGenerating(false)
+    }
+  }, [buildPaletteSeedSnapshot, customColors.background, customColors.primary, generateTheme, t])
 
   const saveTheme = useCallback(async () => {
     const saveBase = {
@@ -424,6 +464,7 @@ export function useThemePanelController() {
         )
         setSelectedTheme(updatedTheme)
         setIsSheetOpen(false)
+        setSlideContainerWidth(0)
         trackEvent(MixpanelEvent.Theme_Saved, {
           pathname,
           mode: 'update',
@@ -433,14 +474,14 @@ export function useThemePanelController() {
           font_name: updatedTheme.data?.fonts?.textFont?.name || '',
         })
         notify.success(
-          t('presenton.theme.notify.updateSuccess.title'),
-          t('presenton.theme.notify.updateSuccess.body')
+          t('ppt_generator.theme.notify.updateSuccess.title'),
+          t('ppt_generator.theme.notify.updateSuccess.body')
         )
       } catch (error: any) {
         console.error('Failed to update theme', error)
         notify.error(
-          t('presenton.theme.notify.updateFailed.title'),
-          error?.message || t('presenton.theme.notify.updateFailed.body')
+          t('ppt_generator.theme.notify.updateFailed.title'),
+          error?.message || t('ppt_generator.theme.notify.updateFailed.body')
         )
       }
 
@@ -462,6 +503,7 @@ export function useThemePanelController() {
       setCustomThemes((themes) => [...themes, createdTheme])
       setSelectedTheme(createdTheme)
       setIsSheetOpen(false)
+      setSlideContainerWidth(0)
       router.replace('/theme')
       trackEvent(MixpanelEvent.Theme_Saved, {
         pathname,
@@ -472,14 +514,14 @@ export function useThemePanelController() {
         font_name: createdTheme.data?.fonts?.textFont?.name || '',
       })
       notify.success(
-        t('presenton.theme.notify.saveSuccess.title'),
-        t('presenton.theme.notify.saveSuccess.body')
+        t('ppt_generator.theme.notify.saveSuccess.title'),
+        t('ppt_generator.theme.notify.saveSuccess.body')
       )
     } catch (error: any) {
       console.error('Failed to save theme', error)
       notify.error(
-        t('presenton.theme.notify.saveFailed.title'),
-        error?.message || t('presenton.theme.notify.saveFailed.body')
+        t('ppt_generator.theme.notify.saveFailed.title'),
+        error?.message || t('ppt_generator.theme.notify.saveFailed.body')
       )
     }
   }, [
@@ -507,14 +549,14 @@ export function useThemePanelController() {
         theme_id: themeId,
       })
       notify.success(
-        t('presenton.theme.notify.deleteSuccess.title'),
-        t('presenton.theme.notify.deleteSuccess.body')
+        t('ppt_generator.theme.notify.deleteSuccess.title'),
+        t('ppt_generator.theme.notify.deleteSuccess.body')
       )
     } catch (error: any) {
       console.error('Failed to delete theme', error)
       notify.error(
-        t('presenton.theme.notify.deleteFailed.title'),
-        error?.message || t('presenton.theme.notify.deleteFailed.body')
+        t('ppt_generator.theme.notify.deleteFailed.title'),
+        error?.message || t('ppt_generator.theme.notify.deleteFailed.body')
       )
     }
   }, [pathname, t])
@@ -552,14 +594,14 @@ export function useThemePanelController() {
         }
       })
       notify.success(
-        t('presenton.theme.notify.uploadFontSuccess.title'),
-        t('presenton.theme.notify.uploadFontSuccess.body', { name: font_name })
+        t('ppt_generator.theme.notify.uploadFontSuccess.title'),
+        t('ppt_generator.theme.notify.uploadFontSuccess.body', { name: font_name })
       )
     } catch (error: any) {
       console.error('Failed to upload font', error)
       notify.error(
-        t('presenton.theme.notify.uploadFontFailed.title'),
-        error?.message || t('presenton.theme.notify.uploadFontFailed.body')
+        t('ppt_generator.theme.notify.uploadFontFailed.title'),
+        error?.message || t('ppt_generator.theme.notify.uploadFontFailed.body')
       )
     } finally {
       setIsFontUploading(false)
@@ -592,28 +634,23 @@ export function useThemePanelController() {
   }, [])
 
   const handlePreviousStep = useCallback(() => {
-    setCurrentStep((step) => Math.max(1, step - 1))
+    setCurrentStep((step) => {
+      const stepIndex = THEME_EDITOR_STEP_IDS.indexOf(step)
+      return THEME_EDITOR_STEP_IDS[Math.max(0, stepIndex - 1)]
+    })
   }, [])
 
   const handlePrimaryStepAction = useCallback(() => {
-    if (currentStep === 4) {
+    if (currentStep === 'brand') {
       void saveTheme()
       return
     }
 
-    if (currentStep === 1) {
-      setCurrentStep((step) => Math.min(4, step + 1))
-      if (isNewTheme) {
-        void handleRefreshTheme({
-          primary: customColors.primary,
-          background: customColors.background,
-        })
-      }
-      return
-    }
-
-    setCurrentStep((step) => Math.min(4, step + 1))
-  }, [currentStep, customColors.background, customColors.primary, handleRefreshTheme, isNewTheme, saveTheme])
+    setCurrentStep((step) => {
+      const stepIndex = THEME_EDITOR_STEP_IDS.indexOf(step)
+      return THEME_EDITOR_STEP_IDS[Math.min(THEME_EDITOR_STEP_IDS.length - 1, stepIndex + 1)]
+    })
+  }, [currentStep, saveTheme])
 
   useEffect(() => {
     if (newThemeTab !== 'new-theme') {
@@ -644,6 +681,8 @@ export function useThemePanelController() {
       selectedTheme,
       isSheetOpen,
       currentStep,
+      currentStepIndex,
+      totalSteps,
       currentStepMeta,
       isNewTheme,
       customColors,
@@ -651,6 +690,9 @@ export function useThemePanelController() {
       customBrandLogo,
       isLogoUploading,
       isFontUploading,
+      isPaletteGenerating,
+      paletteDirty,
+      hasGeneratedPalette: Boolean(lastGeneratedPaletteSeeds),
       showColorPicker,
       themeCompanyName,
       userFonts,
@@ -670,7 +712,7 @@ export function useThemePanelController() {
       handleClickOutside,
       handleColorChange,
       handleShowColorPicker,
-      handleRefreshTheme,
+      handleGeneratePalette,
       handleFontSelect,
       handleBrandLogoUpload,
       handleCustomFontChange,
@@ -683,3 +725,4 @@ export function useThemePanelController() {
     },
   }
 }
+

@@ -1,4 +1,4 @@
-import React from "react"
+﻿import React from "react"
 import * as z from "zod"
 
 const layoutId = "SwiftTableOfContents"
@@ -144,5 +144,7 @@ const TableOfContents: React.FC<SlideLayoutProps> = ({ data: slideData }) => {
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default TableOfContents
+
+
 
 

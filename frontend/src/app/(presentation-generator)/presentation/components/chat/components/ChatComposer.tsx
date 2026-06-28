@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   FormEventHandler,
   KeyboardEventHandler,
   RefObject,
@@ -186,3 +186,4 @@ const ChatComposer = ({
 );
 
 export default ChatComposer;
+

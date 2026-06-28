@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { AlertTriangle } from "lucide-react";
 
@@ -62,3 +62,4 @@ const PresentationHeaderRegenerateDialog = ({
 };
 
 export default PresentationHeaderRegenerateDialog;
+

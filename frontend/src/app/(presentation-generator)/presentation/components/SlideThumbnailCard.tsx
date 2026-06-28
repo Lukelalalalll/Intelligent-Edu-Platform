@@ -1,4 +1,4 @@
-import React, { forwardRef, memo } from "react";
+﻿import React, { forwardRef, memo } from "react";
 import type { Slide } from "../../types/slide";
 import { V1ContentRender } from "../../components/V1ContentRender";
 
@@ -74,3 +74,4 @@ const SlideThumbnailCardInner = forwardRef<
 SlideThumbnailCardInner.displayName = "SlideThumbnailCard";
 
 export const SlideThumbnailCard = memo(SlideThumbnailCardInner);
+

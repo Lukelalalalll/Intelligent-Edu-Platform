@@ -1,4 +1,4 @@
-import type { ChatStreamTrace } from "../../../services/api/chat";
+﻿import type { ChatStreamTrace } from "../../../services/api/chat";
 import {
   MUTATING_TOOLS,
   TOOL_LABELS,
@@ -14,7 +14,7 @@ export const createMessageId = () => {
 };
 
 export const conversationStorageKey = (presentationId: string) =>
-  `presenton:chat:conversationId:${presentationId}`;
+  `ppt_generator:chat:conversationId:${presentationId}`;
 
 export const getToolLabel = (tool?: string) => {
   if (!tool) {
@@ -231,3 +231,5 @@ export const buildBackendMessage = (
 
 export const hasPresentationMutationToolCall = (toolCalls: string[]) =>
   toolCalls.some((tool) => MUTATING_TOOLS.has(tool));
+
+

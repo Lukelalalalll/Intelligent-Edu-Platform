@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 import { requireAppSession } from "@/utils/serverAuth";
 import { ConfigurationInitializer } from "../ConfigurationInitializer";
@@ -11,3 +11,4 @@ export default async function Layout({ children }: { children: React.ReactNode }
     </div>
   );
 }
+

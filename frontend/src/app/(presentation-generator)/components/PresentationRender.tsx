@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { V1ContentRender } from "../../(presentation-generator)/components/V1ContentRender";
 
@@ -118,3 +118,4 @@ const SlideScale = ({
 };
 
 export default SlideScale;
+

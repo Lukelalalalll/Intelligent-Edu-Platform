@@ -2,7 +2,7 @@
 import React, { useCallback } from "react";
 
 import "@/app/(presentation-generator)/utils/prism-languages";
-import { usePathname } from "@/presenton/shims/next-navigation";
+import { usePathname } from "@/ppt_generator/shims/next-navigation";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 
 import {

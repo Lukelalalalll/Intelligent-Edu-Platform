@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Chart with Bullets Slide Layout - Enhanced with multiple chart variations
  */
 
@@ -580,4 +580,6 @@ const ChartWithBulletsSlideLayout: React.FC<ChartWithBulletsSlideLayoutProps> = 
 }
 
 export default ChartWithBulletsSlideLayout
+
+
 

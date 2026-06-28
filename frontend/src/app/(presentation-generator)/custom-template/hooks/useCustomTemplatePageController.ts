@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-import { mapPresentonHrefToAppRoute } from "@/presenton/routing";
+import { mapPptGeneratorHrefToAppRoute } from "@/ppt_generator/routing";
 
 import { useFontLoader as loadFonts } from "../../hooks/useFontLoad";
 import {
@@ -15,19 +15,6 @@ import { useFileUpload } from "./useFileUpload";
 import { useLayoutSaving } from "./useLayoutSaving";
 import { useTemplateCreation } from "./useTemplateCreation";
 
-function getMissingFonts(
-  unavailableFonts: Array<{ name: string; original_name?: string | null }> = [],
-  uploadedFonts: Array<{ fontName: string }>
-) {
-  return unavailableFonts.filter((font) => {
-    return !uploadedFonts.some(
-      (uploaded) =>
-        uploaded.fontName === font.name ||
-        (font.original_name && uploaded.fontName === font.original_name)
-    );
-  });
-}
-
 export function useCustomTemplatePageController() {
   const router = useRouter();
   const fileUpload = useFileUpload();
@@ -35,16 +22,19 @@ export function useCustomTemplatePageController() {
   const {
     state,
     uploadedFonts,
+    fontResolutionsByKey,
     slides,
     setSlides,
     completedSlides,
     checkFonts,
     uploadFont,
     removeFont,
+    setFontReplacement,
     fontUploadAndPreview,
     initTemplateCreation,
     retrySlide,
-    allFontsUploaded,
+    getUnresolvedFonts,
+    allFontsResolved,
   } = templateCreation;
   const {
     isSavingLayout,
@@ -54,10 +44,7 @@ export function useCustomTemplatePageController() {
     saveLayout,
   } = useLayoutSaving(slides);
 
-  const missingFonts = useMemo(
-    () => getMissingFonts(state.fontsData?.unavailable_fonts ?? [], uploadedFonts),
-    [state.fontsData?.unavailable_fonts, uploadedFonts]
-  );
+  const unresolvedFonts = useMemo(() => getUnresolvedFonts(), [getUnresolvedFonts]);
 
   const isProcessingSlides = useMemo(
     () => slides.some((slide) => slide.processing),
@@ -101,7 +88,7 @@ export function useCustomTemplatePageController() {
   );
 
   const handleBackToTemplates = useCallback(() => {
-    router.push(mapPresentonHrefToAppRoute("/templates"));
+    router.push(mapPptGeneratorHrefToAppRoute("/templates"));
   }, [router]);
 
   const toolbar = useMemo(
@@ -110,11 +97,11 @@ export function useCustomTemplatePageController() {
         step: state.step,
         hasFile: Boolean(fileUpload.selectedFile),
         fontCount: Object.keys(state.previewData?.fonts ?? {}).length,
-        missingFontCount: missingFonts.length,
+        missingFontCount: unresolvedFonts.length,
         previewCount: state.previewData?.slide_image_urls?.length ?? 0,
         totalSlides: state.totalSlides,
         completedSlides,
-        allFontsReady: allFontsUploaded(),
+        allFontsResolved: allFontsResolved(),
         hasProcessedSlides,
         isSavingLayout,
         isProcessingSlides,
@@ -127,7 +114,7 @@ export function useCustomTemplatePageController() {
         fileName: fileUpload.selectedFile?.name,
       }),
     [
-      allFontsUploaded,
+      allFontsResolved,
       completedSlides,
       fileUpload.selectedFile,
       handleCheckFonts,
@@ -136,7 +123,7 @@ export function useCustomTemplatePageController() {
       initTemplateCreation,
       isProcessingSlides,
       isSavingLayout,
-      missingFonts.length,
+      unresolvedFonts.length,
       openSaveModal,
       state.previewData,
       state.step,
@@ -178,9 +165,12 @@ export function useCustomTemplatePageController() {
     },
     fontManagementStepProps: {
       fontsData: state.fontsData,
+      fontResolutionsByKey,
       uploadedFonts,
       uploadFont,
       removeFont,
+      setFontReplacement,
+      allFontsResolved: allFontsResolved(),
       onContinue: handleFontUploadAndPreview,
       isUploading: state.isLoading,
     },
@@ -209,3 +199,4 @@ export function useCustomTemplatePageController() {
     },
   };
 }
+

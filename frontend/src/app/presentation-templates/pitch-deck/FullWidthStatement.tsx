@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "full-width-statement";
 export const slideLayoutName = "Full-Width Statement";
@@ -54,8 +54,7 @@ const FullWidthStatement = ({ data }: { data: Partial<SchemaType> }) => {
               color: "var(--background-text,#dddac7)",
             }}
           >
-            {slideData.statement}”
-          </p>
+            {slideData.statement}鈥?          </p>
         </div>
       </div>
     </>
@@ -63,3 +62,5 @@ const FullWidthStatement = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default FullWidthStatement;
+
+

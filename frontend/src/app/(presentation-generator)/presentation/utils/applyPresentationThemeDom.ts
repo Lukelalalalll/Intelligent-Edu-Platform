@@ -1,4 +1,4 @@
-import { useFontLoader, type FontLoadResult } from "../../hooks/useFontLoad";
+﻿import { useFontLoader, type FontLoadResult } from "../../hooks/useFontLoad";
 import type { Theme } from "../../services/api/types";
 
 const THEME_CSS_KEYS = [
@@ -80,3 +80,4 @@ export function applyPresentationThemeToElement(
 
   return fontLoadResult;
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
@@ -313,3 +313,5 @@ export const GeneralChart: React.FC<{
 
     return <canvas ref={canvasRef} className="h-full w-full" />;
 };
+
+

@@ -1,5 +1,5 @@
-"""
-Schemas package — re-exports all schemas for backward compatibility.
+﻿"""
+Schemas package 鈥?re-exports all schemas for backward compatibility.
 Import from backend.schemas.<module> for explicit imports, or from
 backend.schemas directly for convenience.
 """
@@ -67,8 +67,8 @@ from backend.schemas.slides import (  # noqa: F401
     SummarizeChaptersSchema,
     PptProcessSchema,
     SlidesGenerateV2Schema,
-    PresentonOutlineRequestSchema,
-    PresentonAssistantMessageSchema,
+    PptGeneratorOutlineRequestSchema,
+    PptGeneratorAssistantMessageSchema,
     SlidesTaskResponseSchema,
     SlidesTaskStatusSchema,
     GenerateRenderRequest,
@@ -117,3 +117,4 @@ from backend.schemas.chat import (  # noqa: F401
     ChatAiAssistantSchema,
     ChatTransferStartSchema,
 )
+

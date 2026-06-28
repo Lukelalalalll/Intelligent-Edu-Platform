@@ -1,4 +1,4 @@
-
+﻿
 export const useFontLoader = ( fonts:string[]) => {
     const injectFonts = (fontUrls: string[]) => {
         fontUrls.forEach((fontUrl) => {
@@ -14,3 +14,4 @@ export const useFontLoader = ( fonts:string[]) => {
       };
       injectFonts(fonts);
 };
+

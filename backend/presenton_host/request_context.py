@@ -10,7 +10,7 @@ from backend.presenton_runtime_context import (
 
 from .auth_bridge import get_presenton_current_user
 from .bootstrap import ensure_presenton_ready, load_presenton_runtime
-from .config_bridge import load_presenton_host_config
+from .config_bridge import load_ppt_generator_host_config
 
 
 async def presenton_request_context(
@@ -18,7 +18,7 @@ async def presenton_request_context(
     current_user: dict = Depends(get_presenton_current_user),
 ):
     await ensure_presenton_ready()
-    _, overrides = await load_presenton_host_config(request, current_user)
+    _, overrides = await load_ppt_generator_host_config(request, current_user)
     owner_user_id = resolve_presenton_owner_user_id(current_user)
     request.state.presenton_owner_user_id = owner_user_id
     request.state.auth_username = str(

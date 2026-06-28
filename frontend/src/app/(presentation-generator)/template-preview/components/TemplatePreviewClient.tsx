@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo } from "react";
 
@@ -11,7 +11,7 @@ import { notify } from "@/components/ui/sonner";
 import {
   useRouter,
   useSearchParams,
-} from "@/presenton/shims/next-navigation";
+} from "@/ppt_generator/shims/next-navigation";
 import { useCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import {
   templates as templateGroups,
@@ -96,22 +96,22 @@ export default function TemplatePreviewClient() {
   const handleDeleteCustomTemplate = useCallback(async () => {
     if (!customTemplateId) return;
 
-    const confirmed = window.confirm(t("presenton.templatePreview.deleteConfirm"));
+    const confirmed = window.confirm(t("ppt_generator.templatePreview.deleteConfirm"));
     if (!confirmed) return;
 
     const success = await TemplateService.deleteCustomTemplate(customTemplateId);
     if (success.success) {
       notify.success(
-        t("presenton.templatePreview.notify.deleteSuccess.title"),
-        t("presenton.templatePreview.notify.deleteSuccess.body")
+        t("ppt_generator.templatePreview.notify.deleteSuccess.title"),
+        t("ppt_generator.templatePreview.notify.deleteSuccess.body")
       );
       router.push("/templates");
       return;
     }
 
     notify.error(
-      t("presenton.templatePreview.notify.deleteFailed.title"),
-      t("presenton.templatePreview.notify.deleteFailed.body")
+      t("ppt_generator.templatePreview.notify.deleteFailed.title"),
+      t("ppt_generator.templatePreview.notify.deleteFailed.body")
     );
   }, [customTemplateId, router, t]);
 
@@ -133,8 +133,8 @@ export default function TemplatePreviewClient() {
         )}
       >
         <WelcomeBanner
-          title={t("presenton.templatePreview.banner.title")}
-          subtitle={t("presenton.templatePreview.banner.subtitle")}
+          title={t("ppt_generator.templatePreview.banner.title")}
+          subtitle={t("ppt_generator.templatePreview.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
@@ -168,3 +168,4 @@ export default function TemplatePreviewClient() {
     </div>
   );
 }
+

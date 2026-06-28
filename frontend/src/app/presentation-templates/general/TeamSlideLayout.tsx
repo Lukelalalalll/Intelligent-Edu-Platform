@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 import { ImageSchema } from '../defaultSchemes';
 
@@ -180,3 +180,4 @@ const TeamSlideLayout: React.FC<TeamSlideLayoutProps> = ({ data: slideData }) =>
 }
 
 export default TeamSlideLayout 
+

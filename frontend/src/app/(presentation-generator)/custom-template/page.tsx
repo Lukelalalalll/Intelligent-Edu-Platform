@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import CustomTemplatePage from './CustomTemplatePage'
 
 
@@ -14,3 +14,4 @@ const page = () => {
 }
 
 export default page
+

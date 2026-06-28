@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Constants for Custom Template Creation Flow
  */
 
@@ -15,8 +15,8 @@ export const TEMPLATE_STEPS: Record<TemplateCreationStep, { title: string; descr
         description: 'Checking fonts in your presentation',
     },
     'font-upload': {
-        title: 'Upload Fonts',
-        description: 'Upload missing fonts for accurate rendering',
+        title: 'Resolve Fonts',
+        description: 'Resolve each missing font with an upload or matched font selection',
     },
     'slides-preview': {
         title: 'Preview Slides',
@@ -92,3 +92,4 @@ export const FAQS = [
         answer: "You can delete a custom template by uploading a PPTX file and then editing the template to your liking.",
     },
 ]
+

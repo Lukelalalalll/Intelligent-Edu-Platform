@@ -1,5 +1,5 @@
-import React from "react";
-import Link from "@/presenton/shims/next-link";
+﻿import React from "react";
+import Link from "@/ppt_generator/shims/next-link";
 import { ArrowRight, LayoutTemplate, Sparkles } from "lucide-react";
 
 export const EmptyState = ({
@@ -20,7 +20,7 @@ export const EmptyState = ({
               You don&apos;t have any presentations yet.
             </h3>
             <p className="text-[15px] leading-7 text-slate-600">
-              Start a new Presenton workflow from a prompt or source file, then every finished
+              Start a new PPT Generator workflow from a prompt or source file, then every finished
               deck will show up here as part of your reusable history.
             </p>
           </div>
@@ -48,3 +48,4 @@ export const EmptyState = ({
     </div>
   );
 };
+

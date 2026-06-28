@@ -1,3 +1,3 @@
 export function isEdgeToEdgeRoute(pathname: string) {
-  return pathname === '/slides/presenton/presentation' || pathname === '/presentation';
+  return pathname === '/slides/ppt_generator/presentation' || pathname === '/presentation';
 }

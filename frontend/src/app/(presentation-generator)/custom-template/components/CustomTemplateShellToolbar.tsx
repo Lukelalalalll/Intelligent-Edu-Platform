@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 import type { CustomTemplateToolbarConfig } from "../customTemplatePageConfig";
 import styles from "../customTemplateWorkbench.module.css";
@@ -34,3 +34,4 @@ export function CustomTemplateShellToolbar({
     </div>
   );
 }
+

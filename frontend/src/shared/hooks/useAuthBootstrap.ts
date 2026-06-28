@@ -6,7 +6,7 @@ import { SESSION_CHECK_INTERVAL, useAuthStore, type User } from '../store/useAut
 let sessionCheckPromise: Promise<void> | null = null;
 const AUTH_BOOTSTRAP_BYPASS_PATHS = new Set([
   '/pdf-maker',
-  '/slides/presenton/pdf-maker',
+  '/slides/ppt_generator/pdf-maker',
 ]);
 
 function shouldRefreshSession() {

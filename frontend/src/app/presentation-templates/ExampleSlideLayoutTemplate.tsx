@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 // Note:
 // If you want to use images and icons, you must use ImageSchema and IconSchema
 // Images and icons are the only media types supported for PDF and PPTX exports
@@ -30,3 +30,4 @@ const SlideComponent = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default SlideComponent;
+

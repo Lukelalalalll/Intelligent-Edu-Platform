@@ -1,4 +1,4 @@
-import ToolTip from '@/components/ToolTip';
+﻿import ToolTip from '@/components/ToolTip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -113,16 +113,16 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                 <div className="mb-[25px] flex items-center justify-between gap-4">
                                     <div className="min-w-0">
                                         <h3 id="advanced-settings-title" className="text-[1.4rem] font-bold text-[#333]">
-                                            {t("presenton.upload.advanced.title")}
+                                            {t("ppt_generator.upload.advanced.title")}
                                         </h3>
                                         <p id="advanced-settings-subtitle" className="mt-1 text-sm leading-6 text-[#888]">
-                                            {t("presenton.upload.advanced.subtitle")}
+                                            {t("ppt_generator.upload.advanced.subtitle")}
                                         </p>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={handleCloseAdvanced}
-                                        aria-label={t("presenton.upload.advanced.close")}
+                                        aria-label={t("ppt_generator.upload.advanced.close")}
                                         className="border-none bg-transparent p-0 text-[1.5rem] text-[#ccc] transition-colors duration-200 hover:text-[#333]"
                                     >
                                         <X className="h-5 w-5" />
@@ -135,7 +135,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                             htmlFor="advanced-instructions"
                                             className="mb-2 block text-left text-[0.85rem] font-semibold text-[#555]"
                                         >
-                                            {t("presenton.upload.advanced.instructions.label")}
+                                            {t("ppt_generator.upload.advanced.instructions.label")}
                                         </label>
                                         <Textarea
                                             id="advanced-instructions"
@@ -145,14 +145,14 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                             onChange={(event) =>
                                                 setAdvancedDraft((prev) => ({ ...prev, instructions: event.target.value }))
                                             }
-                                            placeholder={t("presenton.upload.advanced.instructions.placeholder")}
+                                            placeholder={t("ppt_generator.upload.advanced.instructions.placeholder")}
                                             className="min-h-[112px] w-full resize-none rounded-[var(--radius-md)] border-2 border-[#f0f0f0] bg-[#f9f9f9] px-4 py-3 text-[0.95rem] text-[#333] shadow-none outline-none transition-all duration-200 placeholder:text-[#999] focus-visible:border-[var(--primary-color)] focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(0,123,85,0.1)] focus-visible:ring-offset-0"
                                         />
                                     </div>
 
                                     <div className="mb-5">
                                         <label className="mb-2 block text-left text-[0.85rem] font-semibold text-[#555]">
-                                            {t("presenton.upload.advanced.tone")}
+                                            {t("ppt_generator.upload.advanced.tone")}
                                         </label>
                                         <Select
                                             value={advancedDraft.tone}
@@ -161,7 +161,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                             }
                                         >
                                             <SelectTrigger className="h-auto w-full rounded-[var(--radius-md)] border-2 border-[#f0f0f0] bg-[#f9f9f9] px-4 py-3 text-[0.95rem] font-normal capitalize text-[#333] shadow-none outline-none transition-all duration-200 focus:ring-0 focus-visible:border-[var(--primary-color)] focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(0,123,85,0.1)] focus-visible:ring-offset-0">
-                                                <SelectValue placeholder={t("presenton.upload.advanced.tone.placeholder")} />
+                                                <SelectValue placeholder={t("ppt_generator.upload.advanced.tone.placeholder")} />
                                             </SelectTrigger>
                                             <SelectContent className="z-[120]">
                                                 {Object.values(ToneType).map((tone) => (
@@ -175,7 +175,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
 
                                     <div className="mb-5">
                                         <label className="mb-2 block text-left text-[0.85rem] font-semibold text-[#555]">
-                                            {t("presenton.upload.advanced.verbosity")}
+                                            {t("ppt_generator.upload.advanced.verbosity")}
                                         </label>
                                         <Select
                                             value={advancedDraft.verbosity}
@@ -184,7 +184,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                             }
                                         >
                                             <SelectTrigger className="h-auto w-full rounded-[var(--radius-md)] border-2 border-[#f0f0f0] bg-[#f9f9f9] px-4 py-3 text-[0.95rem] font-normal capitalize text-[#333] shadow-none outline-none transition-all duration-200 focus:ring-0 focus-visible:border-[var(--primary-color)] focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[rgba(0,123,85,0.1)] focus-visible:ring-offset-0">
-                                                <SelectValue placeholder={t("presenton.upload.advanced.verbosity.placeholder")} />
+                                                <SelectValue placeholder={t("ppt_generator.upload.advanced.verbosity.placeholder")} />
                                             </SelectTrigger>
                                             <SelectContent className="z-[120]">
                                                 {Object.values(VerbosityType).map((verbosity) => (
@@ -198,7 +198,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
 
                                     <div className="mb-5 flex items-center justify-between gap-4 rounded-[var(--radius-md)] border-2 border-[#f0f0f0] bg-[#f9f9f9] px-4 py-3">
                                         <label className="text-left text-[0.85rem] font-semibold text-[#555]">
-                                            {t("presenton.upload.advanced.includeToc")}
+                                            {t("ppt_generator.upload.advanced.includeToc")}
                                         </label>
                                         <Switch
                                             checked={advancedDraft.includeTableOfContents}
@@ -211,7 +211,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
 
                                     <div className="mb-0 flex items-center justify-between gap-4 rounded-[var(--radius-md)] border-2 border-[#f0f0f0] bg-[#f9f9f9] px-4 py-3">
                                         <label className="text-left text-[0.85rem] font-semibold text-[#555]">
-                                            {t("presenton.upload.advanced.includeTitle")}
+                                            {t("ppt_generator.upload.advanced.includeTitle")}
                                         </label>
                                         <Switch
                                             checked={advancedDraft.includeTitleSlide}
@@ -235,7 +235,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                                             className="cursor-pointer rounded-[10px] border-none bg-[var(--primary-color)] px-6 py-2.5 font-semibold text-white shadow-[0_4px_12px_rgba(0,123,85,0.2)] transition-all duration-200 hover:bg-[#006644] hover:-translate-y-px"
                                             onClick={handleSaveAdvanced}
                                         >
-                                            {t("presenton.upload.advanced.save")}
+                                            {t("ppt_generator.upload.advanced.save")}
                                         </button>
                                     </div>
                                 </div>
@@ -250,10 +250,10 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
     return (
         <>
             <div className="ml-auto">
-                <ToolTip content={t("presenton.upload.advanced.tooltip")}>
+                <ToolTip content={t("ppt_generator.upload.advanced.tooltip")}>
                     <button
-                        aria-label={t("presenton.upload.advanced.tooltip")}
-                        title={t("presenton.upload.advanced.tooltip")}
+                        aria-label={t("ppt_generator.upload.advanced.tooltip")}
+                        title={t("ppt_generator.upload.advanced.tooltip")}
                         type="button"
                         onClick={handleOpenAdvanced}
                         className="inline-flex h-10 items-center gap-2 rounded-full border border-[rgba(0,123,85,0.16)] bg-white/92 px-4 text-[#1C1C27] shadow-sm transition hover:bg-[#F7F7FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.18)]"
@@ -261,7 +261,7 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
                     >
                         <SlidersHorizontal className="h-3.5 w-3.5 text-[#007B55]" aria-hidden="true" />
                         <span className="text-sm font-semibold leading-none">
-                            {t("presenton.upload.advanced.title")}
+                            {t("ppt_generator.upload.advanced.title")}
                         </span>
                     </button>
                 </ToolTip>
@@ -272,3 +272,4 @@ const AdvanceSettings = ({ config, onConfigChange }: ConfigurationSelectsProps) 
 };
 
 export default AdvanceSettings;
+

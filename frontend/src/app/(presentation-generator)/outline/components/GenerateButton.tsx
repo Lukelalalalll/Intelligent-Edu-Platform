@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/shared/i18n";
 import { LoadingState } from "../types/index";
@@ -27,9 +27,9 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
 
   const getButtonText = () => {
     if (loadingState.isLoading) return loadingState.message;
-    if (streamState.isLoading || streamState.isStreaming) return t("presenton.outline.generate.loading");
-    if (!selectedTemplate) return t("presenton.outline.generate.select");
-    return t("presenton.outline.generate.start");
+    if (streamState.isLoading || streamState.isStreaming) return t("ppt_generator.outline.generate.loading");
+    if (!selectedTemplate) return t("ppt_generator.outline.generate.select");
+    return t("ppt_generator.outline.generate.start");
   };
 
   return (
@@ -49,3 +49,4 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
 };
 
 export default GenerateButton;
+

@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "centered-cover-with-footer-meta";
 export const slideLayoutName = "Centered Cover with Footer Metadata";
@@ -94,3 +94,5 @@ const CenteredCoverWithFooterMeta = ({
 };
 
 export default CenteredCoverWithFooterMeta;
+
+

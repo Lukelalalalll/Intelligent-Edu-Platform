@@ -1,4 +1,4 @@
-import re
+﻿import re
 from typing import Literal, List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -93,7 +93,7 @@ class SlidesGenerateV2Schema(BaseModel):
     combined_markdown_filename: str = ""
 
 
-class PresentonOutlineRequestSchema(BaseModel):
+class PptGeneratorOutlineRequestSchema(BaseModel):
     model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
 
     provider: Optional[AIProvider] = "auto"
@@ -107,7 +107,7 @@ class PresentonOutlineRequestSchema(BaseModel):
     combined_markdown_filename: str = ""
 
 
-class PresentonAssistantMessageSchema(BaseModel):
+class PptGeneratorAssistantMessageSchema(BaseModel):
     model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
 
     provider: Optional[AIProvider] = "auto"
@@ -178,3 +178,4 @@ class RenderDraftPreviewRequest(BaseModel):
 
 class ThemeListResponse(BaseModel):
     themes: list[dict]
+

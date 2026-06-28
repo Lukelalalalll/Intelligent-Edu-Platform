@@ -1,4 +1,4 @@
-import { RemoteSvgIcon } from "@/app/hooks/useRemoteSvgIcon";
+﻿import { RemoteSvgIcon } from "@/app/hooks/useRemoteSvgIcon";
 import * as z from "zod";
 
 
@@ -123,4 +123,6 @@ const DataAnalysisListSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default DataAnalysisListSlide;
+
+
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 
@@ -61,3 +61,4 @@ export class SlideErrorBoundary extends React.Component<
 }
 
 export default SlideErrorBoundary;
+

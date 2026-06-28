@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from "react";
+﻿import { useEffect, useLayoutEffect } from "react";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import type { Theme } from "../../../services/api/types";
 import { applyPresentationThemeToElement } from "../../utils/applyPresentationThemeDom";
@@ -41,3 +41,4 @@ export const usePresentationThemeSync = ({
     applyPresentationThemeToElement(el, presentationTheme);
   }, [isPresentMode, presentationTheme]);
 };
+

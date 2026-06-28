@@ -1,7 +1,7 @@
-import { buildAbsoluteApiRequestUrl, getApiUrl } from "@/utils/api";
+﻿import { buildAbsoluteApiRequestUrl, getApiUrl } from "@/utils/api";
 import { ApiResponseHandler } from "./api-error-handler";
 import { getHeader } from "./header";
-import { presentonFetch } from "./presenton-fetch";
+import { pptGeneratorFetch } from "./ppt_generator-fetch";
 
 export interface ChatMessageRequest {
   presentation_id: string;
@@ -94,7 +94,7 @@ export class PresentationChatApi {
       buildAbsoluteApiRequestUrl("/api/v1/ppt/chat/conversations")
     );
     u.searchParams.set("presentation_id", presentationId);
-    const response = await presentonFetch(u.toString(), {
+    const response = await pptGeneratorFetch(u.toString(), {
       headers: getHeader(),
       cache: "no-cache",
     });
@@ -111,7 +111,7 @@ export class PresentationChatApi {
     const u = new URL(buildAbsoluteApiRequestUrl("/api/v1/ppt/chat/history"));
     u.searchParams.set("presentation_id", presentationId);
     u.searchParams.set("conversation_id", conversationId);
-    const response = await presentonFetch(u.toString(), {
+    const response = await pptGeneratorFetch(u.toString(), {
       headers: getHeader(),
       cache: "no-cache",
     });
@@ -124,7 +124,7 @@ export class PresentationChatApi {
   static async sendMessage(
     payload: ChatMessageRequest
   ): Promise<ChatMessageResponse> {
-    const response = await presentonFetch(getApiUrl("/api/v1/ppt/chat/message"), {
+    const response = await pptGeneratorFetch(getApiUrl("/api/v1/ppt/chat/message"), {
       method: "POST",
       headers: getHeader(),
       body: JSON.stringify(payload),
@@ -142,7 +142,7 @@ export class PresentationChatApi {
     handlers: ChatStreamHandlers = {},
     options?: { signal?: AbortSignal }
   ): Promise<ChatMessageResponse> {
-    const response = await presentonFetch(getApiUrl("/api/v1/ppt/chat/message/stream"), {
+    const response = await pptGeneratorFetch(getApiUrl("/api/v1/ppt/chat/message/stream"), {
       method: "POST",
       headers: getHeader(),
       body: JSON.stringify(payload),
@@ -333,3 +333,4 @@ export class PresentationChatApi {
     throw new Error("Chat stream ended before completion");
   }
 }
+

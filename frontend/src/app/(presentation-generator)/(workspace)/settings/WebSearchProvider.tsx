@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useState } from "react";
 import { Check, ChevronUp, Eye, EyeOff, Search } from "lucide-react";
@@ -239,3 +239,4 @@ const WebSearchProvider = ({
 };
 
 export default WebSearchProvider;
+

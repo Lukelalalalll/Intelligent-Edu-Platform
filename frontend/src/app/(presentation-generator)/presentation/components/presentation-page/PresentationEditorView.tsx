@@ -1,4 +1,4 @@
-import Chat from "../Chat";
+﻿import Chat from "../Chat";
 import PresentationHeader from "../PresentationHeader";
 import SidePanel from "../SidePanel";
 import type { ChatProps } from "../chat/Chat.types";
@@ -70,3 +70,4 @@ const PresentationEditorView = ({
 };
 
 export default PresentationEditorView;
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Step 3: Slide Preview
  * Displays preview of slides with uploaded fonts
  */
@@ -28,4 +28,5 @@ export const Step3SlidePreview: React.FC<Step3SlidePreviewProps> = ({
         />
     );
 };
+
 

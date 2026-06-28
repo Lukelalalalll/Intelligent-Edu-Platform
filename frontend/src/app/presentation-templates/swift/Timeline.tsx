@@ -1,4 +1,4 @@
-import React from "react"
+﻿import React from "react"
 import * as z from "zod"
 import { resolveBackendAssetUrl } from "@/utils/api"
 
@@ -173,6 +173,8 @@ const Timeline: React.FC<SlideLayoutProps> = ({ data: slideData }) => {
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default Timeline
+
+
 
 
 

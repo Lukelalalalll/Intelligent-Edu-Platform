@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +33,7 @@ const builtInTemplateCatalog = vi.hoisted(() => {
     group: {
       id: "general",
       name: "General Template",
-      description: "Balanced built-in layouts for broad Presenton decks.",
+      description: "Balanced built-in layouts for broad PPT Generator decks.",
       layouts: [agendaLayout, dataLayout],
     },
   };
@@ -124,7 +124,7 @@ describe("TemplatePreviewClient", () => {
   });
 
   it("renders the compact built-in header and preview stack", () => {
-    renderPreview("/slides/presenton/template-preview?slug=general");
+    renderPreview("/slides/ppt_generator/template-preview?slug=general");
 
     expect(
       screen.getByRole("heading", { name: "Template Preview" })
@@ -166,7 +166,7 @@ describe("TemplatePreviewClient", () => {
     };
     mockTemplatePreviewState.customFonts = ["Inter", "IBM Plex Sans"];
 
-    renderPreview("/slides/presenton/template-preview?slug=custom-42");
+    renderPreview("/slides/ppt_generator/template-preview?slug=custom-42");
 
     expect(screen.getByText("Custom template")).toBeInTheDocument();
     expect(screen.getByText("Custom Strategy")).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe("TemplatePreviewClient", () => {
   });
 
   it("renders the workspace empty state with back navigation for invalid slugs", () => {
-    renderPreview("/slides/presenton/template-preview?slug=missing");
+    renderPreview("/slides/ppt_generator/template-preview?slug=missing");
 
     expect(
       screen.getByRole("heading", { name: "Template Preview" })
@@ -187,3 +187,4 @@ describe("TemplatePreviewClient", () => {
     ).toBeInTheDocument();
   });
 });
+

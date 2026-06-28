@@ -1,4 +1,4 @@
-import * as z from 'zod';
+﻿import * as z from 'zod';
 
 /**
  * Lightweight radial progress component using SVG
@@ -160,4 +160,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+
 

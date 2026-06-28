@@ -12,20 +12,20 @@ from backend.services.auth.user_profile_service import (
 from .auth_bridge import resolve_request_public_origin
 from .paths import CONFIGURED_SENTINEL
 
-ALLOWED_PRESENTON_OVERRIDE_PROVIDERS = {"openai", "deepseek"}
+ALLOWED_PPT_GENERATOR_OVERRIDE_PROVIDERS = {"openai", "deepseek"}
 
 
-def _resolve_presenton_provider_override(
+def _resolve_ppt_generator_provider_override(
     request: Request,
     *,
     has_openai: bool,
     has_deepseek: bool,
 ) -> str:
     override = (
-        str(request.headers.get("X-Presenton-LLM-Provider") or "").strip().lower()
-        or str(request.query_params.get("presenton_provider") or "").strip().lower()
+        str(request.headers.get("X-Ppt-Generator-LLM-Provider") or "").strip().lower()
+        or str(request.query_params.get("ppt_generator_provider") or "").strip().lower()
     )
-    if override not in ALLOWED_PRESENTON_OVERRIDE_PROVIDERS:
+    if override not in ALLOWED_PPT_GENERATOR_OVERRIDE_PROVIDERS:
         return ""
     if override == "openai" and not has_openai:
         return ""
@@ -34,7 +34,7 @@ def _resolve_presenton_provider_override(
     return override
 
 
-def build_presenton_user_config_summary(
+def build_ppt_generator_user_config_summary(
     *,
     selected_llm: str,
     openai_runtime: dict,
@@ -56,7 +56,7 @@ def build_presenton_user_config_summary(
     }
 
 
-async def load_presenton_host_config(
+async def load_ppt_generator_host_config(
     request: Request,
     current_user: dict,
 ) -> tuple[dict, dict]:
@@ -75,7 +75,7 @@ async def load_presenton_host_config(
     preferred_provider = str(getattr(Config, "AI_DEFAULT_PROVIDER", "") or "").strip().lower()
     if preferred_provider not in {"openai", "deepseek"}:
         preferred_provider = ""
-    override_provider = _resolve_presenton_provider_override(
+    override_provider = _resolve_ppt_generator_provider_override(
         request,
         has_openai=has_openai,
         has_deepseek=has_deepseek,
@@ -92,7 +92,7 @@ async def load_presenton_host_config(
     resolved_runtime = (
         await resolve_provider_runtime(
             requested_provider,
-            feature="presenton.runtime",
+            feature="ppt_generator.runtime",
             user=current_user,
             require_healthy=False,
         )
@@ -101,7 +101,7 @@ async def load_presenton_host_config(
     )
     chosen_llm = resolved_runtime.provider_id if resolved_runtime else requested_provider
 
-    summary = build_presenton_user_config_summary(
+    summary = build_ppt_generator_user_config_summary(
         selected_llm=chosen_llm,
         openai_runtime=openai_runtime,
         deepseek_runtime=deepseek_runtime,

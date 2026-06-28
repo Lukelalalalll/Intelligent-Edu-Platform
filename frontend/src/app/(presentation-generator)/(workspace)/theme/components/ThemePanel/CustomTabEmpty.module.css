@@ -1,4 +1,4 @@
-.card {
+﻿.card {
   width: 100%;
   min-height: 340px;
   display: flex;
@@ -125,3 +125,4 @@
   border: 1px solid rgba(15, 23, 42, 0.08);
   color: #0b6b4b;
 }
+

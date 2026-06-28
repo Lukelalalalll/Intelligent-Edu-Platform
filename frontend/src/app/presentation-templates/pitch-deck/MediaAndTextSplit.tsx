@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "media-and-text-split";
 export const slideLayoutName = "Media and Text Split";
@@ -145,3 +145,5 @@ const MediaAndTextSplit = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default MediaAndTextSplit;
+
+

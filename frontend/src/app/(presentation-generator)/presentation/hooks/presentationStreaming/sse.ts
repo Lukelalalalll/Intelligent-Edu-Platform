@@ -1,4 +1,4 @@
-export type ParsedSseEventBlock = {
+﻿export type ParsedSseEventBlock = {
   event: string;
   data: string;
 };
@@ -54,3 +54,4 @@ export function drainSseEventBlocks(buffer: string): {
     remainingBuffer: workingBuffer,
   };
 }
+

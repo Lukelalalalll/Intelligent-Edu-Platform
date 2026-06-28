@@ -1,4 +1,4 @@
-import { LLMConfig } from "@/types/llm_config";
+﻿import { LLMConfig } from "@/types/llm_config";
 
 export interface TextProviderProps {
   onInputChange: (value: string | boolean, field: string) => void;
@@ -14,3 +14,4 @@ export interface TextProviderModelOption {
 
 export type TextProviderField = keyof LLMConfig & string;
 export type TextProviderInputChange = TextProviderProps["onInputChange"];
+

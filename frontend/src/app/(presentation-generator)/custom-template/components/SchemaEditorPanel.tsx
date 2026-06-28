@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Schema Editor Panel Component
  * Wraps the SchemaEditor with compiled layout functionality
  */
@@ -36,4 +36,5 @@ export const SchemaEditorPanel: React.FC<SchemaEditorPanelProps> = ({
         />
     );
 };
+
 

@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import { notify } from "@/components/ui/sonner";
 import { useI18n } from "@/shared/i18n";
 import { clearPresentationData } from "@/store/slices/presentationGeneration";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
-import { LoadingState, TABS } from "../types/index";
+import { LoadingState } from "../types/index";
 import { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { getCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
@@ -21,7 +21,7 @@ export const usePresentationGeneration = (
   presentationId: string | null,
   outlines: { content: string }[] | null,
   selectedTemplate: TemplateLayoutsWithSettings | string | null,
-  setActiveTab: (tab: string) => void
+  onTemplateRequired?: () => void
 ) => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -34,16 +34,16 @@ export const usePresentationGeneration = (
   const validateInputs = useCallback(() => {
     if (!outlines || outlines.length === 0) {
       notify.warning(
-        t("presenton.outline.generate.notify.outlinesNotReady.title"),
-        t("presenton.outline.generate.notify.outlinesNotReady.body")
+        t("ppt_generator.outline.generate.notify.outlinesNotReady.title"),
+        t("ppt_generator.outline.generate.notify.outlinesNotReady.body")
       );
       return false;
     }
 
     if (!selectedTemplate) {
       notify.warning(
-        t("presenton.outline.generate.notify.layoutNotSelected.title"),
-        t("presenton.outline.generate.notify.layoutNotSelected.body")
+        t("ppt_generator.outline.generate.notify.layoutNotSelected.title"),
+        t("ppt_generator.outline.generate.notify.layoutNotSelected.body")
       );
       return false;
     }
@@ -74,8 +74,7 @@ export const usePresentationGeneration = (
 
   const handleSubmit = useCallback(async () => {
     if (!selectedTemplate) {
-      setActiveTab(TABS.LAYOUTS);
-      return;
+      onTemplateRequired?.();
     }
     if (!validateInputs()) return;
 
@@ -105,7 +104,7 @@ export const usePresentationGeneration = (
     });
 
     setLoadingState({
-      message: t("presenton.outline.generate.loading.presentation"),
+      message: t("ppt_generator.outline.generate.loading.presentation"),
       isLoading: true,
       showProgress: true,
       duration: 30,
@@ -117,7 +116,7 @@ export const usePresentationGeneration = (
       // Check if it's a custom template (string = presentationId)
       if (typeof selectedTemplate === "string") {
         setLoadingState({
-          message: t("presenton.outline.generate.loading.customTemplate"),
+          message: t("ppt_generator.outline.generate.loading.customTemplate"),
           isLoading: true,
           showProgress: true,
           duration: 30,
@@ -133,14 +132,14 @@ export const usePresentationGeneration = (
           customTemplateDetail.layouts.length === 0
         ) {
           notify.error(
-            t("presenton.outline.generate.notify.templateError.title"),
-            t("presenton.outline.generate.notify.templateError.body")
+            t("ppt_generator.outline.generate.notify.templateError.title"),
+            t("ppt_generator.outline.generate.notify.templateError.body")
           );
           return;
         }
 
         setLoadingState({
-          message: t("presenton.outline.generate.loading.presentation"),
+          message: t("ppt_generator.outline.generate.loading.presentation"),
           isLoading: true,
           showProgress: true,
           duration: 30,
@@ -194,8 +193,8 @@ export const usePresentationGeneration = (
     } catch (error: any) {
       console.error("Error In Presentation Generation(prepare).", error);
       notify.error(
-        t("presenton.outline.generate.notify.generationError.title"),
-        error.message || t("presenton.outline.generate.notify.generationError.body")
+        t("ppt_generator.outline.generate.notify.generationError.title"),
+        error.message || t("ppt_generator.outline.generate.notify.generationError.body")
       );
     } finally {
       setLoadingState(DEFAULT_LOADING_STATE);
@@ -208,9 +207,10 @@ export const usePresentationGeneration = (
     router,
     selectedTemplate,
     pathname,
-    setActiveTab,
+    onTemplateRequired,
     t,
   ]);
 
   return { loadingState, handleSubmit };
 };
+

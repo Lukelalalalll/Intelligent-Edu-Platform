@@ -26,6 +26,14 @@ class FontsUploadAndSlidesPreviewResponse(BaseModel):
     fonts: dict
 
 
+class FontReplacementSelection(BaseModel):
+    original_name: str
+    original_variant: str
+    replacement_family_name: str
+    replacement_variant: str
+    replacement_label: str
+
+
 class _PreviewLogger:
     def info(self, message: str):
         print(f"[fonts-preview] {message}")

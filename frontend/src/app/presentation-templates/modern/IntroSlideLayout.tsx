@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import * as z from "zod";
 import { ImageSchema } from "../defaultSchemes";
 
@@ -139,3 +139,5 @@ const IntroPitchDeckSlide: React.FC<IntroSlideLayoutProps> = ({
 };
 
 export default IntroPitchDeckSlide;
+
+

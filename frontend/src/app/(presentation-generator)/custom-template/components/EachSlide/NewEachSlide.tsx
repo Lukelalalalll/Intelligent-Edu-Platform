@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useRef, useState, useMemo, useEffect } from "react";
 import { useCompiledLayout } from "../../hooks/useCompiledLayout";
@@ -480,3 +480,4 @@ const EachSlide: React.FC<EachSlideProps> = ({
 };
 
 export default EachSlide;
+

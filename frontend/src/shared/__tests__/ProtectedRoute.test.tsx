@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+﻿import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ProtectedRoute from '../ProtectedRoute';
@@ -102,8 +102,8 @@ describe('ProtectedRoute', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('uses the Presenton-toned skeleton on Presenton routes while auth state is pending', () => {
-    mockLocation.pathname = '/slides/presenton/dashboard';
+  it('uses the PPT Generator-toned skeleton on PPT Generator routes while auth state is pending', () => {
+    mockLocation.pathname = '/slides/ppt_generator/dashboard';
 
     const { container } = render(
       <ProtectedRoute>
@@ -132,3 +132,5 @@ describe('ProtectedRoute', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
+
+

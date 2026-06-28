@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+﻿import type { ComponentType } from "react";
 
 import type { CustomTemplateDetail } from "@/app/hooks/useCustomTemplates";
 import type { TranslationKey } from "@/shared/i18n";
@@ -83,38 +83,38 @@ function buildPreviewStats({
 }): PreviewStat[] {
   const sourceMeta = isCustom
     ? {
-        label: customFontCount > 0 ? t("presenton.templatePreview.stat.source.fonts") : t("presenton.templatePreview.stat.source"),
+        label: customFontCount > 0 ? t("ppt_generator.templatePreview.stat.source.fonts") : t("ppt_generator.templatePreview.stat.source"),
         value: customFontCount > 0
           ? `${customFontCount}`
-          : t("presenton.templatePreview.stat.source.custom"),
+          : t("ppt_generator.templatePreview.stat.source.custom"),
         meta:
           customFontCount > 0
-            ? t("presenton.templatePreview.stat.source.fontsMeta")
-            : t("presenton.templatePreview.stat.source.customMeta"),
+            ? t("ppt_generator.templatePreview.stat.source.fontsMeta")
+            : t("ppt_generator.templatePreview.stat.source.customMeta"),
       }
     : {
-        label: t("presenton.templatePreview.stat.source"),
-        value: t("presenton.templatePreview.stat.source.builtIn"),
-        meta: t("presenton.templatePreview.stat.source.builtInMeta"),
+        label: t("ppt_generator.templatePreview.stat.source"),
+        value: t("ppt_generator.templatePreview.stat.source.builtIn"),
+        meta: t("ppt_generator.templatePreview.stat.source.builtInMeta"),
       };
 
   return [
     {
-      label: t("presenton.templatePreview.stat.templateType"),
+      label: t("ppt_generator.templatePreview.stat.templateType"),
       value: isCustom
-        ? t("presenton.templatePreview.stat.templateType.custom")
-        : t("presenton.templatePreview.stat.templateType.builtIn"),
+        ? t("ppt_generator.templatePreview.stat.templateType.custom")
+        : t("ppt_generator.templatePreview.stat.templateType.builtIn"),
       meta: isCustom
-        ? t("presenton.templatePreview.stat.templateType.customMeta")
-        : t("presenton.templatePreview.stat.templateType.builtInMeta"),
+        ? t("ppt_generator.templatePreview.stat.templateType.customMeta")
+        : t("ppt_generator.templatePreview.stat.templateType.builtInMeta"),
     },
     {
-      label: t("presenton.templatePreview.stat.layouts"),
+      label: t("ppt_generator.templatePreview.stat.layouts"),
       value: `${layoutCount}`,
       meta:
         layoutCount === 1
-          ? t("presenton.templatePreview.stat.layouts.single")
-          : t("presenton.templatePreview.stat.layouts.multi"),
+          ? t("ppt_generator.templatePreview.stat.layouts.single")
+          : t("ppt_generator.templatePreview.stat.layouts.multi"),
     },
     {
       label: sourceMeta.label,
@@ -141,15 +141,15 @@ export function buildTemplatePreviewModel({
   const templateName = isCustom
     ? customTemplate?.template?.name ||
       customTemplate?.name ||
-      t("presenton.templatePreview.badge.custom")
-    : staticGroup?.name || t("presenton.templatePreview.banner.title");
+      t("ppt_generator.templatePreview.badge.custom")
+    : staticGroup?.name || t("ppt_generator.templatePreview.banner.title");
 
   const templateDescription = isCustom
     ? customTemplate?.template?.description ||
       customTemplate?.description ||
-      t("presenton.templatePreview.main.customBody")
+      t("ppt_generator.templatePreview.main.customBody")
     : staticGroup?.description ||
-      t("presenton.templatePreview.main.builtInBody");
+      t("ppt_generator.templatePreview.main.builtInBody");
 
   const isMissingTemplate =
     (!isCustom && (!staticGroup || staticTemplates.length === 0)) ||
@@ -174,25 +174,26 @@ export function buildTemplatePreviewModel({
     isMissingTemplate,
     previewStats,
     summaryTitle: isMissingTemplate
-      ? t("presenton.templatePreview.summary.missingTitle")
+      ? t("ppt_generator.templatePreview.summary.missingTitle")
       : customLoading
-        ? t("presenton.templatePreview.summary.loadingTitle")
+        ? t("ppt_generator.templatePreview.summary.loadingTitle")
         : templateName,
     summaryDescription: isMissingTemplate
-      ? t("presenton.templatePreview.summary.missingBody")
+      ? t("ppt_generator.templatePreview.summary.missingBody")
       : customError
         ? customError
         : customLoading
-          ? t("presenton.templatePreview.summary.loadingBody")
+          ? t("ppt_generator.templatePreview.summary.loadingBody")
           : templateDescription,
     mainSectionTitle: isCustom
-      ? t("presenton.templatePreview.main.customTitle")
-      : t("presenton.templatePreview.main.builtInTitle"),
+      ? t("ppt_generator.templatePreview.main.customTitle")
+      : t("ppt_generator.templatePreview.main.builtInTitle"),
     mainSectionDescription: isCustom
-      ? t("presenton.templatePreview.main.customBody")
-      : t("presenton.templatePreview.main.builtInBody"),
+      ? t("ppt_generator.templatePreview.main.customBody")
+      : t("ppt_generator.templatePreview.main.builtInBody"),
     shouldShowDeleteAction,
     isCompactBuiltIn,
     showSummaryCard: !isCompactBuiltIn,
   };
 }
+

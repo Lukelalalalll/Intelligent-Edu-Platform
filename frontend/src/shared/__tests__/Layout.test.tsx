@@ -58,18 +58,18 @@ describe('Layout edge-to-edge routing', () => {
   });
 
   it('marks the presentation editor route as edge-to-edge', () => {
-    expect(isEdgeToEdgeRoute('/slides/presenton/presentation')).toBe(true);
+    expect(isEdgeToEdgeRoute('/slides/ppt_generator/presentation')).toBe(true);
     expect(isEdgeToEdgeRoute('/presentation')).toBe(true);
-    expect(isEdgeToEdgeRoute('/slides/presenton/dashboard')).toBe(false);
+    expect(isEdgeToEdgeRoute('/slides/ppt_generator/dashboard')).toBe(false);
   });
 
   it('removes shared main padding and width constraints on the presentation editor route', () => {
     const { container } = render(
-      <MemoryRouter initialEntries={['/slides/presenton/presentation?id=test-presentation']}>
+      <MemoryRouter initialEntries={['/slides/ppt_generator/presentation?id=test-presentation']}>
         <Routes>
           <Route element={<Layout />}>
             <Route
-              path="/slides/presenton/presentation"
+              path="/slides/ppt_generator/presentation"
               element={<div data-testid="presentation-page">Presentation</div>}
             />
           </Route>

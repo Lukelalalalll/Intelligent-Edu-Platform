@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from 'react'
 import { Check } from 'lucide-react'
 
@@ -42,3 +42,4 @@ export const FontCard: React.FC<FontCardProps> = ({ font, isSelected, onSelect }
     </div>
   </div>
 )
+

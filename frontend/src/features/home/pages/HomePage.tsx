@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
 import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
@@ -10,7 +10,7 @@ import layoutStyles from '../styles/HomeLayout.module.css';
 
 const HOME_URLS = {
     sub1: '/slides/ai-theme-config',
-    presenton: '/slides/presenton/dashboard',
+    pptGenerator: '/slides/ppt_generator/dashboard',
     sub2: '/questions',
     sub4: '/diagram',
     sub5: '/study-notes',
@@ -36,7 +36,7 @@ export default function HomePage() {
         { title: t('home.tool.questions.title'), desc: t('home.tool.questions.desc'), icon: "fa-question-circle", url: HOME_URLS.sub2 },
         { title: t('home.tool.visual.title'), desc: t('home.tool.visual.desc'), icon: "fa-images", url: HOME_URLS.sub4 },
         { title: t('home.tool.studyNotes.title'), desc: t('home.tool.studyNotes.desc'), icon: "fa-book-reader", url: HOME_URLS.sub5 },
-        { title: t('home.tool.presenton.title'), desc: t('home.tool.presenton.desc'), icon: "fa-file-powerpoint", url: HOME_URLS.presenton },
+        { title: t('home.tool.ppt_generator.title'), desc: t('home.tool.ppt_generator.desc'), icon: "fa-file-powerpoint", url: HOME_URLS.pptGenerator },
         { title: t('home.tool.video.title'), desc: t('home.tool.video.desc'), icon: "fa-film", url: HOME_URLS.videoGen },
     ], [t]);
 
@@ -108,3 +108,5 @@ export default function HomePage() {
         </div>
     );
 }
+
+

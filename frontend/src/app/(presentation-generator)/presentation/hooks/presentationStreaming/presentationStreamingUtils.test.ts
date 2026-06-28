@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { mergeStreamedPresentationData } from "./mergePresentationData";
 import { drainSseEventBlocks, parseSseEventBlock } from "./sse";
 import { formatStreamStatus } from "./shared";
@@ -94,3 +94,4 @@ describe("presentation streaming helpers", () => {
     });
   });
 });
+

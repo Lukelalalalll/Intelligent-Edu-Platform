@@ -1,6 +1,5 @@
-import type { TranslationKey } from '@/shared/i18n'
-import { Theme } from '@/app/(presentation-generator)/services/api/types'
-import { ThemeFontOption, ThemeStepMeta } from './types'
+﻿import { Theme } from '@/app/(presentation-generator)/services/api/types'
+import { ThemeEditorStepId, ThemeFontOption, ThemeStepMeta } from './types'
 
 export const FONT_OPTIONS: ThemeFontOption[] = [
   { name: 'Inter', displayName: 'Inter', cssUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap' },
@@ -242,31 +241,30 @@ export const FALLBACK_THEME: Theme = {
   },
 }
 
-export const THEME_EDITOR_STEP_META: Record<number, ThemeStepMeta> = {
-  1: {
-    titleKey: 'presenton.theme.editor.stepMeta.colors.title',
-    descriptionKey: 'presenton.theme.editor.stepMeta.colors.body',
+export const THEME_EDITOR_STEPS: ThemeStepMeta[] = [
+  {
+    id: 'colors',
+    labelKey: 'ppt_generator.theme.editor.steps.colors',
+    titleKey: 'ppt_generator.theme.editor.stepMeta.colors.title',
+    descriptionKey: 'ppt_generator.theme.editor.stepMeta.colors.body',
   },
-  2: {
-    titleKey: 'presenton.theme.editor.stepMeta.palette.title',
-    descriptionKey: 'presenton.theme.editor.stepMeta.palette.body',
+  {
+    id: 'fonts',
+    labelKey: 'ppt_generator.theme.editor.steps.fonts',
+    titleKey: 'ppt_generator.theme.editor.stepMeta.fonts.title',
+    descriptionKey: 'ppt_generator.theme.editor.stepMeta.fonts.body',
   },
-  3: {
-    titleKey: 'presenton.theme.editor.stepMeta.fonts.title',
-    descriptionKey: 'presenton.theme.editor.stepMeta.fonts.body',
+  {
+    id: 'brand',
+    labelKey: 'ppt_generator.theme.editor.steps.brand',
+    titleKey: 'ppt_generator.theme.editor.stepMeta.brand.title',
+    descriptionKey: 'ppt_generator.theme.editor.stepMeta.brand.body',
   },
-  4: {
-    titleKey: 'presenton.theme.editor.stepMeta.brand.title',
-    descriptionKey: 'presenton.theme.editor.stepMeta.brand.body',
-  },
-}
-
-export const THEME_EDITOR_STEPS: Array<{ step: number; labelKey: TranslationKey }> = [
-  { step: 1, labelKey: 'presenton.theme.editor.steps.brand' },
-  { step: 2, labelKey: 'presenton.theme.editor.steps.palette' },
-  { step: 3, labelKey: 'presenton.theme.editor.steps.fonts' },
-  { step: 4, labelKey: 'presenton.theme.editor.steps.logo' },
 ]
+
+export const THEME_EDITOR_STEP_IDS: ThemeEditorStepId[] = THEME_EDITOR_STEPS.map(
+  (step) => step.id
+)
 
 export const PREVIEW_BASE_WIDTH = 1280
 export const PREVIEW_BASE_HEIGHT = 720
@@ -275,3 +273,4 @@ export const PREVIEW_SCROLLBAR_WIDTH = 8
 export const PREVIEW_FALLBACK_SCALE = 0.62
 export const PREVIEW_MIN_SCALE = 0.42
 export const PREVIEW_MAX_SCALE = 0.74
+

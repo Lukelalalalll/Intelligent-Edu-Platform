@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from 'react'
 
 import { HexColorPicker, HexColorInput } from 'react-colorful'
@@ -64,3 +64,4 @@ export const ColorPickerComponent: React.FC<ColorPickerComponentProps> = ({
     </div>
   </div>
 )
+

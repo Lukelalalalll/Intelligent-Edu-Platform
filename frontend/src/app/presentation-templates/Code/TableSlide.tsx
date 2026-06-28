@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const DEFAULT_TABLE_COLUMNS = ["Feature", "Column 1", "Column 2", "Column 3"];
 
@@ -88,8 +88,7 @@ function renderCell(value: string, isFirstColumn: boolean, columnCount: number, 
         className="block w-full text-center text-[26px] leading-none"
         style={{ color: "var(--graph-2,#37f08e)" }}
       >
-        ✓
-      </span>
+        鉁?      </span>
     );
   }
 
@@ -185,3 +184,5 @@ const CodeSlide05ComparisonTable = ({ data }: { data: Partial<SchemaType> }) => 
 };
 
 export default CodeSlide05ComparisonTable;
+
+

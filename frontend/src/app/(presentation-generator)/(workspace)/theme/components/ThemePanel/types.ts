@@ -1,4 +1,4 @@
-import type { TranslationKey } from '@/shared/i18n'
+﻿import type { TranslationKey } from '@/shared/i18n'
 
 export interface ThemeColors {
   primary: string
@@ -34,13 +34,22 @@ export interface ThemeFontOption {
   cssUrl: string
 }
 
+export type ThemeEditorStepId = 'colors' | 'fonts' | 'brand'
+
 export interface UserFontLibrary {
   fonts: ThemeFontDefinition[]
 }
 
 export interface ThemeStepMeta {
+  id: ThemeEditorStepId
+  labelKey: TranslationKey
   titleKey: TranslationKey
   descriptionKey: TranslationKey
+}
+
+export interface ThemePaletteSeedSnapshot {
+  primary: string
+  background: string
 }
 
 export interface ThemeEditorValues {
@@ -53,3 +62,4 @@ export interface ThemeEditorValues {
 
 export type ThemeTab = 'custom' | 'default'
 export type ThemePaletteGenerationSource = 'new_theme' | 'refresh'
+

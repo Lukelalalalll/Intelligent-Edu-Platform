@@ -300,8 +300,50 @@ def test_handler_preview_wrapper_defaults_max_slides_to_25(monkeypatch):
             pptx_file=_FakeUploadFile("deck.pptx"),
             font_files=None,
             original_font_names=None,
+            font_replacements="[]",
         )
     )
 
     assert isinstance(result, handler.FontsUploadAndSlidesPreviewResponse)
     assert captured["max_slides"] == 25
+    assert captured["font_replacements"] == "[]"
+
+
+def test_init_create_template_falls_back_when_pptx_to_html_fails(monkeypatch, tmp_path):
+    session = _FakeTemplateSession()
+    pptx_path = tmp_path / "deck.pptx"
+    pptx_path.write_bytes(b"pptx-bytes")
+
+    async def fake_convert_pptx_to_html(_pptx_path: str, get_fonts: bool = False):
+        raise HTTPException(status_code=500, detail=f"failed get_fonts={get_fonts}")
+
+    def fake_extract_slide_htmls_from_pptx(_pptx_path: str):
+        return ["<section>Fallback slide</section>"]
+
+    monkeypatch.setattr(
+        "templates.handler_support.layout_generation.resolve_app_path_to_filesystem",
+        lambda _url: str(pptx_path),
+    )
+    monkeypatch.setattr(
+        "templates.handler_support.layout_generation.EXPORT_TASK_SERVICE",
+        types.SimpleNamespace(convert_pptx_to_html=fake_convert_pptx_to_html),
+    )
+    monkeypatch.setattr(
+        "templates.handler_support.layout_generation.extract_slide_htmls_from_pptx",
+        fake_extract_slide_htmls_from_pptx,
+    )
+
+    result = asyncio.run(
+        handler.init_create_template(
+            handler.CreateTemplateInitRequest(
+                pptx_url="/app_data/deck.pptx",
+                slide_image_urls=["/app_data/slide-1.png"],
+                fonts={"Inter": {"name": "Inter"}},
+            ),
+            sql_session=session,
+        )
+    )
+
+    created = session.template_infos[result]
+    assert created.slide_htmls == ["<section>Fallback slide</section>"]
+    assert created.slide_image_urls == ["/app_data/slide-1.png"]

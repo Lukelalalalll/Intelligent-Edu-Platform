@@ -42,8 +42,8 @@ describe('useAuthBootstrap', () => {
 
   it('bypasses auth bootstrap for export routes', () => {
     expect(shouldBypassAuthBootstrap('/pdf-maker')).toBe(true);
-    expect(shouldBypassAuthBootstrap('/slides/presenton/pdf-maker')).toBe(true);
-    expect(shouldBypassAuthBootstrap('/slides/presenton/presentation')).toBe(false);
+    expect(shouldBypassAuthBootstrap('/slides/ppt_generator/pdf-maker')).toBe(true);
+    expect(shouldBypassAuthBootstrap('/slides/ppt_generator/presentation')).toBe(false);
   });
 
   it('does not call session bootstrap when disabled for export rendering', () => {

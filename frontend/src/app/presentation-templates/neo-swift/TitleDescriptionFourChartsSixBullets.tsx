@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import * as z from 'zod';
 import {
     ResponsiveContainer,
@@ -98,7 +98,7 @@ export const Schema = z.object({
         'Retention above 95% across key cohorts.',
         'Forecast accuracy improved this quarter.',
     ]).describe('Up to 6 bullet points'),
-    charts: z.array(ChartItemSchema).min(1).max(4).default(defaultCharts).describe('Array of 1–4 charts'),
+    charts: z.array(ChartItemSchema).min(1).max(4).default(defaultCharts).describe('Array of 1鈥? charts'),
     showLegend: z.boolean().default(true).describe('Whether to show chart legends'),
     showGrid: z.boolean().default(true).describe('Whether to show chart grid lines'),
     footerWebsite: z.string().max(30).default('www.hello.com').describe('Footer website URL'),
@@ -543,3 +543,5 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+

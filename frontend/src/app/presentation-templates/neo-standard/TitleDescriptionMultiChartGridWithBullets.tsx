@@ -1,5 +1,5 @@
-/**
- * Neo-standard layout: title, description, up to 6 bullets, and 1–4 charts in a responsive grid.
+﻿/**
+ * Neo-standard layout: title, description, up to 6 bullets, and 1鈥? charts in a responsive grid.
  */
 import React from 'react';
 import * as z from "zod";
@@ -26,7 +26,7 @@ import {
 
 export const layoutId = 'title-description-multi-chart-grid-bullets';
 export const layoutName = 'Title Description With Multi-Chart Grid + Bullets';
-export const layoutDescription = 'A neo-standard dashboard with title, description, up to 6 bullet points, and 1–4 auto-arranged charts. Supports bar (vertical, horizontal, grouped, stacked, clustered, diverging), line, area, pie, donut, and scatter charts.';
+export const layoutDescription = 'A neo-standard dashboard with title, description, up to 6 bullet points, and 1鈥? auto-arranged charts. Supports bar (vertical, horizontal, grouped, stacked, clustered, diverging), line, area, pie, donut, and scatter charts.';
 
 const DEFAULT_CHART_COLORS = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 
@@ -559,3 +559,5 @@ const TitleDescriptionMultiChartGridWithBulletsLayout: React.FC<MultiChartGridSl
 };
 
 export default TitleDescriptionMultiChartGridWithBulletsLayout;
+
+

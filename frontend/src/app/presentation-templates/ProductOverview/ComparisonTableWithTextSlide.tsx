@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "title-description-with-table-slide";
 export const slideLayoutName = "Title Description with Table Slide";
@@ -233,3 +233,5 @@ const ComparisonTableWithTextSlide = ({ data }: { data: Partial<SchemaType> }) =
 };
 
 export default ComparisonTableWithTextSlide;
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { AnimatePresence, motion } from "framer-motion";
 import React, { memo, useEffect, useRef, useState } from "react";
@@ -361,3 +361,4 @@ const SidePanelComponent = ({
 };
 
 export default memo(SidePanelComponent);
+

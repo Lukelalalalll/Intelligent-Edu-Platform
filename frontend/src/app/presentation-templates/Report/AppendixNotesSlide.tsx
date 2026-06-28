@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const AppendixNoteSchema = z.object({
   label: z.string().min(3).max(28).meta({
@@ -125,3 +125,5 @@ const AppendixNotesSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default AppendixNotesSlide;
+
+

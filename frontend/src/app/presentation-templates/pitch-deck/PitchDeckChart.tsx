@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
@@ -725,3 +725,5 @@ export default function PitchDeckChart({ payload }: Props) {
     </div>
   );
 }
+
+

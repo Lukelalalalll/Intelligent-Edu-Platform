@@ -1,4 +1,4 @@
-import { ChevronRight, MessageCircleMore } from "lucide-react";
+﻿import { ChevronRight, MessageCircleMore } from "lucide-react";
 
 const AssistantMarker = () => (
   <div className="mb-3 flex items-center gap-1.5 text-[#A4A7AE]">
@@ -8,3 +8,4 @@ const AssistantMarker = () => (
 );
 
 export default AssistantMarker;
+

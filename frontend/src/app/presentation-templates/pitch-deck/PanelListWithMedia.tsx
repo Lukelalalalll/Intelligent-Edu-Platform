@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "panel-list-with-media";
 export const slideLayoutName = "Panel List with Media";
@@ -267,3 +267,5 @@ const PanelListWithMedia = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default PanelListWithMedia;
+
+

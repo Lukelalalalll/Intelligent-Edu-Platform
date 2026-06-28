@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Enhanced TitleBadgeChart with multiple chart type support
  */
 import * as z from "zod";
@@ -1028,3 +1028,5 @@ const dynamicSlideLayout: React.FC<{
 };
 
 export default dynamicSlideLayout;
+
+

@@ -1,4 +1,4 @@
-import type { Key, MutableRefObject } from "react";
+﻿import type { Key, MutableRefObject } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Slide } from "../../../types/slide";
 import LoadingState from "../LoadingState";
@@ -163,3 +163,4 @@ const PresentationSlidesViewport = ({
 };
 
 export default PresentationSlidesViewport;
+

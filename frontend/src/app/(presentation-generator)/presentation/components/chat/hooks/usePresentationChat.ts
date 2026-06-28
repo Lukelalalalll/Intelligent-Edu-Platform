@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useRef,
@@ -607,3 +607,4 @@ export const usePresentationChat = ({
     toggleFollowAgentMode,
   };
 };
+

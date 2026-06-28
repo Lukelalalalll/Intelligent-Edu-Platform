@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 /**
- * Neo-modern layout: title, description, and 1–6 charts in a responsive grid.
+ * Neo-modern layout: title, description, and 1鈥? charts in a responsive grid.
  * Same schema and chart types as neo-general MultiChartGridSlideLayout.
  */
 import React from 'react';
@@ -31,7 +31,7 @@ import {
 
 export const layoutId = 'title-description-multi-chart-grid';
 export const layoutName = 'Title Description With Multi-Chart Grid';
-export const layoutDescription = 'A neo-modern dashboard layout with title, description, and 1–6 auto-arranged charts. Supports bar (vertical, horizontal, grouped, stacked, clustered, diverging), line, area, pie, donut, and scatter charts.';
+export const layoutDescription = 'A neo-modern dashboard layout with title, description, and 1鈥? auto-arranged charts. Supports bar (vertical, horizontal, grouped, stacked, clustered, diverging), line, area, pie, donut, and scatter charts.';
 
 const DEFAULT_CHART_COLORS = ['#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 
@@ -537,3 +537,5 @@ const TitleDescriptionMultiChartGridLayout: React.FC<MultiChartGridSlideLayoutPr
 };
 
 export default TitleDescriptionMultiChartGridLayout;
+
+

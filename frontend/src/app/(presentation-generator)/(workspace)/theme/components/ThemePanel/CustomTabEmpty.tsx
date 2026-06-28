@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { ArrowRight, Plus, Sparkles } from 'lucide-react'
 import React from 'react'
-import Link from '@/presenton/shims/next-link'
+import Link from '@/ppt_generator/shims/next-link'
 import { useI18n } from '@/shared/i18n'
 import styles from './CustomTabEmpty.module.css'
 
@@ -26,9 +26,9 @@ const CustomTabEmpty = () => {
         </div>
 
         <div className={styles.copy}>
-          <h4 className={styles.title}>{t('presenton.theme.empty.title')}</h4>
+          <h4 className={styles.title}>{t('ppt_generator.theme.empty.title')}</h4>
           <p className={styles.subtitle}>
-            {t('presenton.theme.empty.body')}
+            {t('ppt_generator.theme.empty.body')}
           </p>
         </div>
 
@@ -41,3 +41,4 @@ const CustomTabEmpty = () => {
 }
 
 export default CustomTabEmpty
+

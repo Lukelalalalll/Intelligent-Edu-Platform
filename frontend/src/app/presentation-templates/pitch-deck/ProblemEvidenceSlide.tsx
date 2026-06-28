@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const PainPointSchema = z.object({
   label: z.string().min(3).max(20).meta({
@@ -186,3 +186,5 @@ const ProblemEvidenceSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default ProblemEvidenceSlide;
+
+

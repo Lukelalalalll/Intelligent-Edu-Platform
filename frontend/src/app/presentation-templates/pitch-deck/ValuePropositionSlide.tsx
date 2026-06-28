@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const ValuePillarSchema = z.object({
   title: z.string().min(4).max(28).meta({
@@ -141,3 +141,5 @@ const ValuePropositionSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default ValuePropositionSlide;
+
+

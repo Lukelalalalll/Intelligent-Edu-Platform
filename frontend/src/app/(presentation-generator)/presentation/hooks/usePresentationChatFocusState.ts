@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AgentSlideFocusPayload } from "../components/chat/Chat.types";
 import type { SlideScrollBehavior } from "./usePresentationSlidesViewport";
 
@@ -140,3 +140,4 @@ export const usePresentationChatFocusState = ({
     handleFollowModeChange,
   };
 };
+

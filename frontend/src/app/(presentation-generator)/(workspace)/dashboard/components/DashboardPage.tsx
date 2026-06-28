@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "@/presenton/shims/next-link";
+import Link from "@/ppt_generator/shims/next-link";
 import {
   ArrowRight,
   Clock3,
@@ -24,11 +24,10 @@ import {
   sortPresentations,
 } from "@/app/(presentation-generator)/(workspace)/dashboard/components/dashboardUtils";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
-import { usePathname } from "@/presenton/shims/next-navigation";
+import { usePathname } from "@/ppt_generator/shims/next-navigation";
 import { cn } from "@/lib/utils";
 import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
 import {
-  PAGE_ENTRANCE_SETTLE_MS,
   usePageEntrance,
 } from "@/shared/page-entrance/usePageEntrance";
 import Card from "@/shared/components/Card/Card";
@@ -92,7 +91,6 @@ const DashboardPage: React.FC = () => {
   const { locale, t } = useI18n();
   const pathname = usePathname();
   const isEntranceActive = usePageEntrance();
-  const [showHistoryGrid, setShowHistoryGrid] = useState(false);
   const [presentations, setPresentations] = useState<PresentationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +112,7 @@ const DashboardPage: React.FC = () => {
       setError(
         err instanceof Error && err.message.trim()
           ? err.message
-          : t("presenton.dashboard.loadError.fallback")
+          : t("ppt_generator.dashboard.loadError.fallback")
       );
       setPresentations([]);
     } finally {
@@ -130,25 +128,6 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     void fetchPresentations();
   }, [fetchPresentations]);
-
-  useEffect(() => {
-    if (showHistoryGrid) {
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      setShowHistoryGrid(true);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowHistoryGrid(true);
-    }, PAGE_ENTRANCE_SETTLE_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [showHistoryGrid]);
 
   const sortedPresentations = useMemo(
     () => sortPresentations(presentations, deckSortDirection),
@@ -178,9 +157,9 @@ const DashboardPage: React.FC = () => {
         getPresentationTimestamp(latestPresentation),
         locale,
         "dateTime",
-        t("presenton.dashboard.card.unknownDate")
+        t("ppt_generator.dashboard.card.unknownDate")
       )
-    : t("presenton.dashboard.summary.activity.none");
+    : t("ppt_generator.dashboard.summary.activity.none");
 
   const removePresentation = (presentationId: string) => {
     setPresentations((prev) => prev.filter((presentation) => presentation.id !== presentationId));
@@ -199,11 +178,11 @@ const DashboardPage: React.FC = () => {
     setDeckSortDirection(value);
   };
 
-  const presentonNavItems = useMemo(
+  const pptGeneratorNavItems = useMemo(
     () => [
       {
         href: "/dashboard",
-        label: t("presenton.workspace.nav.dashboard"),
+        label: t("ppt_generator.workspace.nav.dashboard"),
         renderIcon: (active: boolean) => (
           <LayoutDashboard
             className={styles.navIcon}
@@ -213,12 +192,12 @@ const DashboardPage: React.FC = () => {
       },
       {
         href: "/templates",
-        label: t("presenton.workspace.nav.templates"),
+        label: t("ppt_generator.workspace.nav.templates"),
         renderIcon: (active: boolean) => <TemplateNavIcon active={active} />,
       },
       {
         href: "/theme",
-        label: t("presenton.workspace.nav.theme"),
+        label: t("ppt_generator.workspace.nav.theme"),
         renderIcon: (active: boolean) => (
           <Palette className={styles.navIcon} color={active ? "#007b55" : "#667085"} />
         ),
@@ -231,13 +210,13 @@ const DashboardPage: React.FC = () => {
     () => [
       {
         value: "desc",
-        label: t("presenton.dashboard.history.sort.latest.label"),
-        description: t("presenton.dashboard.history.sort.latest.description"),
+        label: t("ppt_generator.dashboard.history.sort.latest.label"),
+        description: t("ppt_generator.dashboard.history.sort.latest.description"),
       },
       {
         value: "asc",
-        label: t("presenton.dashboard.history.sort.oldest.label"),
-        description: t("presenton.dashboard.history.sort.oldest.description"),
+        label: t("ppt_generator.dashboard.history.sort.oldest.label"),
+        description: t("ppt_generator.dashboard.history.sort.oldest.description"),
       },
     ],
     [t]
@@ -253,15 +232,15 @@ const DashboardPage: React.FC = () => {
         )}
       >
         <WelcomeBanner
-          title={t("presenton.dashboard.banner.title")}
-          subtitle={t("presenton.dashboard.banner.subtitle")}
+          title={t("ppt_generator.dashboard.banner.title")}
+          subtitle={t("ppt_generator.dashboard.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
 
         <div className={styles.navShell}>
-          <nav className={styles.navList} aria-label={t("presenton.workspace.nav.aria")}>
-            {presentonNavItems.map(({ href, label, renderIcon }) => {
+          <nav className={styles.navList} aria-label={t("ppt_generator.workspace.nav.aria")}>
+            {pptGeneratorNavItems.map(({ href, label, renderIcon }) => {
               const isActive = pathname === href;
               return (
                 <Link
@@ -284,13 +263,13 @@ const DashboardPage: React.FC = () => {
               <div className={styles.heroHeader}>
                 <div className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t("presenton.dashboard.hero.badge")}
+                  {t("ppt_generator.dashboard.hero.badge")}
                 </div>
                 <h2 className={styles.heroTitle}>
-                  {t("presenton.dashboard.hero.title")}
+                  {t("ppt_generator.dashboard.hero.title")}
                 </h2>
                 <p className={styles.heroDescription}>
-                  {t("presenton.dashboard.hero.body")}
+                  {t("ppt_generator.dashboard.hero.body")}
                 </p>
               </div>
 
@@ -300,53 +279,53 @@ const DashboardPage: React.FC = () => {
                   onClick={() => handleCreatePresentationClick("dashboard_primary_cta")}
                   className={styles.primaryAction}
                 >
-                  <span>{t("presenton.dashboard.hero.cta")}</span>
+                  <span>{t("ppt_generator.dashboard.hero.cta")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <p className={styles.helperText}>
-                  {t("presenton.dashboard.hero.helper")}
+                  {t("ppt_generator.dashboard.hero.helper")}
                 </p>
               </div>
 
               <div className={styles.summaryGrid}>
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.history.label")}</span>
+                    <span className={styles.summaryLabel}>{t("ppt_generator.dashboard.summary.history.label")}</span>
                     <LayoutDashboard className={styles.summaryIcon} />
                   </div>
                   <div className={styles.summaryValue}>{presentations.length}</div>
                   <div className={styles.summaryMeta}>
                     {presentations.length === 1
-                      ? t("presenton.dashboard.summary.history.single")
-                      : t("presenton.dashboard.summary.history.other")}
+                      ? t("ppt_generator.dashboard.summary.history.single")
+                      : t("ppt_generator.dashboard.summary.history.other")}
                   </div>
                 </div>
 
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.activity.label")}</span>
+                    <span className={styles.summaryLabel}>{t("ppt_generator.dashboard.summary.activity.label")}</span>
                     <Clock3 className={styles.summaryIcon} />
                   </div>
                   <div className={styles.summaryValue}>
                       {latestPresentation
                       ? formatPresentationDate(getPresentationTimestamp(latestPresentation), locale, "short")
-                      : t("presenton.dashboard.summary.activity.empty")}
+                      : t("ppt_generator.dashboard.summary.activity.empty")}
                   </div>
                   <div className={styles.summaryMeta}>{latestUpdatedLabel}</div>
                 </div>
 
                 <div className={styles.summaryCard}>
                   <div className={styles.summaryHead}>
-                    <span className={styles.summaryLabel}>{t("presenton.dashboard.summary.scope.label")}</span>
+                    <span className={styles.summaryLabel}>{t("ppt_generator.dashboard.summary.scope.label")}</span>
                     <History className={styles.summaryIcon} />
                   </div>
                   <div className={styles.summaryValue}>
-                    {totalSlides > 0 ? totalSlides : t("presenton.dashboard.summary.scope.ready")}
+                    {totalSlides > 0 ? totalSlides : t("ppt_generator.dashboard.summary.scope.ready")}
                   </div>
                   <div className={styles.summaryMeta}>
                     {totalSlides > 0
-                      ? t("presenton.dashboard.summary.scope.metaTracked")
-                      : t("presenton.dashboard.summary.scope.metaWaiting")}
+                      ? t("ppt_generator.dashboard.summary.scope.metaTracked")
+                      : t("ppt_generator.dashboard.summary.scope.metaWaiting")}
                   </div>
                 </div>
               </div>
@@ -358,7 +337,7 @@ const DashboardPage: React.FC = () => {
               <div className={styles.previewStage}>
                 <div className={styles.previewPill}>
                   <PanelTop className="h-3.5 w-3.5" />
-                  {t("presenton.dashboard.preview.badge")}
+                  {t("ppt_generator.dashboard.preview.badge")}
                 </div>
                 <div className={styles.previewDecks} aria-hidden="true">
                   <div
@@ -385,31 +364,31 @@ const DashboardPage: React.FC = () => {
               <div className={styles.historyIntro}>
                 <div className={styles.mutedBadge}>
                   <History className="h-3.5 w-3.5" />
-                  {t("presenton.dashboard.history.badge")}
+                  {t("ppt_generator.dashboard.history.badge")}
                 </div>
-                <h2 className={styles.historyTitle}>{t("presenton.dashboard.history.title")}</h2>
+                <h2 className={styles.historyTitle}>{t("ppt_generator.dashboard.history.title")}</h2>
                 <p className={styles.historyDescription}>
-                  {t("presenton.dashboard.history.body")}
+                  {t("ppt_generator.dashboard.history.body")}
                 </p>
               </div>
 
               <div className={styles.historyControls}>
                 <div className={styles.miniStats}>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatLabel}>{t("presenton.dashboard.history.stats.total")}</span>
+                    <span className={styles.miniStatLabel}>{t("ppt_generator.dashboard.history.stats.total")}</span>
                     <div className={styles.miniStatValue}>{presentations.length}</div>
                   </div>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatLabel}>{t("presenton.dashboard.history.stats.recentUpdate")}</span>
+                    <span className={styles.miniStatLabel}>{t("ppt_generator.dashboard.history.stats.recentUpdate")}</span>
                     <div className={styles.miniStatValue}>
                       {latestPresentation
                         ? formatPresentationDate(getPresentationTimestamp(latestPresentation), locale, "short")
-                        : t("presenton.dashboard.history.stats.none")}
+                        : t("ppt_generator.dashboard.history.stats.none")}
                     </div>
                   </div>
                 </div>
 
-                <div className={styles.sortTabs} role="tablist" aria-label={t("presenton.dashboard.history.sort.aria")}>
+                <div className={styles.sortTabs} role="tablist" aria-label={t("ppt_generator.dashboard.history.sort.aria")}>
                   {sortOptions.map((option) => {
                     const isActive = option.value === deckSortDirection;
                     return (
@@ -431,20 +410,16 @@ const DashboardPage: React.FC = () => {
             </div>
 
             <div className={styles.historyContent}>
-              {showHistoryGrid ? (
-                <Suspense fallback={<DashboardHistorySkeleton />}>
-                  <PresentationGrid
-                    groups={historyGroups}
-                    isLoading={isLoading}
-                    error={error}
-                    onRetry={fetchPresentations}
-                    onCreatePresentationClick={() => handleCreatePresentationClick("dashboard_history_empty")}
-                    onPresentationDeleted={removePresentation}
-                  />
-                </Suspense>
-              ) : (
-                <DashboardHistorySkeleton />
-              )}
+              <Suspense fallback={<DashboardHistorySkeleton />}>
+                <PresentationGrid
+                  groups={historyGroups}
+                  isLoading={isLoading}
+                  error={error}
+                  onRetry={fetchPresentations}
+                  onCreatePresentationClick={() => handleCreatePresentationClick("dashboard_history_empty")}
+                  onPresentationDeleted={removePresentation}
+                />
+              </Suspense>
             </div>
           </div>
         </Card>
@@ -454,3 +429,4 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
+

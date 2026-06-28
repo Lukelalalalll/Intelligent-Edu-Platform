@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Hooks Index
  * Central export point for all custom template hooks
  */
@@ -9,4 +9,5 @@ export { useLayoutSaving } from "./useLayoutSaving";
 export { useCompiledLayout } from "./useCompiledLayout";
 export { useSlideEdit } from "./useSlideEdit";
 export { useSlideUndoRedo } from "./useSlideUndoRedo";
+
 

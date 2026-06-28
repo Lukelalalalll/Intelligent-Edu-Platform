@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zod Schema for the slide content.
  */
 import * as z from 'zod'
@@ -106,4 +106,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<DataType> }> = ({ data }) => 
     );
 };
 export default dynamicSlideLayout;
+
+
 

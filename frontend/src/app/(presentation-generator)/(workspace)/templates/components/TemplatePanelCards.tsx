@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Loader2 } from "lucide-react";
@@ -159,8 +159,8 @@ export const CustomTemplateCard = React.memo(function CustomTemplateCard({
     return (
         <TemplateWorkspaceCard
             title={template.name}
-            description={t("presenton.templates.cards.customDescription")}
-            badgeLabel={t("presenton.templates.cards.customBadge")}
+            description={t("ppt_generator.templates.cards.customDescription")}
+            badgeLabel={t("ppt_generator.templates.cards.customBadge")}
             onOpen={handleOpen}
             previewOverlay={<LayoutsBadge count={template.layoutCount} />}
             previewReady={shouldRenderPreview}
@@ -198,7 +198,7 @@ export const BuiltInTemplateCard = React.memo(function BuiltInTemplateCard({
         <TemplateWorkspaceCard
             title={localizedTemplate.name}
             description={localizedTemplate.description}
-            badgeLabel={t("presenton.templates.cards.builtInBadge")}
+            badgeLabel={t("ppt_generator.templates.cards.builtInBadge")}
             onOpen={handleOpen}
             previewOverlay={<LayoutsBadge count={template.layouts.length} />}
             previewReady={shouldRenderPreview}
@@ -240,10 +240,11 @@ export function CustomTemplatesLoadingCard() {
     return (
         <div className={styles.loadingCard}>
             <Loader2 className={cn("animate-spin", styles.loadingIcon)} />
-            <p className={styles.loadingTitle}>{t("presenton.templates.cards.loading.title")}</p>
+            <p className={styles.loadingTitle}>{t("ppt_generator.templates.cards.loading.title")}</p>
             <p className={styles.loadingText}>
-                {t("presenton.templates.cards.loading.body")}
+                {t("ppt_generator.templates.cards.loading.body")}
             </p>
         </div>
     );
 }
+

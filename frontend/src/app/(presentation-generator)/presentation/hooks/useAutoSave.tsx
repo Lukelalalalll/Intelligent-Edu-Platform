@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
@@ -90,3 +90,4 @@ export const useAutoSave = ({
         isSaving,
     };
 };
+

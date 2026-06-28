@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { CompiledLayout, compileCustomLayout } from "@/app/hooks/compileLayout";
 import { RotateCcw } from "lucide-react";
@@ -63,3 +63,4 @@ const SlideContent = memo(({ slide, data, compiledLayout, retrySlide }: SlideCon
 SlideContent.displayName = 'SlideContent';
 
 export default SlideContent;
+

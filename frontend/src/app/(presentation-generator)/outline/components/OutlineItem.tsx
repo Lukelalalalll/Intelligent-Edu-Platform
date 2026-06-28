@@ -1,4 +1,4 @@
-import {
+﻿import {
   memo,
   useCallback,
   useEffect,
@@ -148,14 +148,14 @@ function OutlineItemCard({
                 ? styles.itemHandleSortable
                 : styles.itemHandleStatic
             )}
-              aria-label={enableSorting && !isStreaming ? t("presenton.outline.item.drag", { count: index }) : undefined}
+              aria-label={enableSorting && !isStreaming ? t("ppt_generator.outline.item.drag", { count: index }) : undefined}
             >
             <GripVertical className="h-4 w-4" aria-hidden="true" />
           </div>
 
           <div className={styles.itemMeta}>
             <div className={styles.itemPillRow}>
-              <span className={styles.itemPill}>{t("presenton.outline.item.slideLabel", { count: index })}</span>
+              <span className={styles.itemPill}>{t("ppt_generator.outline.item.slideLabel", { count: index })}</span>
               <span
                 className={cn(
                   styles.itemStatus,
@@ -163,17 +163,17 @@ function OutlineItemCard({
                 )}
               >
                 {showStreamingText
-                  ? t("presenton.outline.item.status.generating")
+                  ? t("ppt_generator.outline.item.status.generating")
                   : isEditing
-                    ? t("presenton.outline.item.status.editing")
-                    : t("presenton.outline.item.status.ready")}
+                    ? t("ppt_generator.outline.item.status.editing")
+                    : t("ppt_generator.outline.item.status.ready")}
               </span>
             </div>
           </div>
         </div>
 
         {!isStreaming ? (
-          <ToolTip content={t("presenton.outline.item.delete")}>
+          <ToolTip content={t("ppt_generator.outline.item.delete")}>
             <button
               type="button"
               onClick={handleSlideDelete}
@@ -192,7 +192,7 @@ function OutlineItemCard({
               {content}
               <span className={styles.streamCaret} aria-hidden="true" />
             </div>
-            <div className={styles.streamNote}>{t("presenton.outline.item.streamNote")}</div>
+            <div className={styles.streamNote}>{t("ppt_generator.outline.item.streamNote")}</div>
           </>
         ) : isEditing ? (
           <Textarea
@@ -200,14 +200,14 @@ function OutlineItemCard({
             value={content}
             onChange={handleTextareaChange}
             onBlur={() => setIsEditing(false)}
-            placeholder={t("presenton.outline.item.placeholder")}
+            placeholder={t("ppt_generator.outline.item.placeholder")}
             className={styles.itemTextarea}
           />
         ) : (
           <div
             role="button"
             tabIndex={0}
-            aria-label={t("presenton.outline.item.ariaEdit", { count: index })}
+            aria-label={t("ppt_generator.outline.item.ariaEdit", { count: index })}
             onClick={() => setIsEditing(true)}
             onFocus={() => setIsEditing(true)}
             onKeyDown={handleKeyDown}
@@ -221,7 +221,7 @@ function OutlineItemCard({
             ) : content.trim() ? (
               <div className={styles.itemStreamingBody}>{content}</div>
             ) : (
-              <p className={styles.emptyText}>{t("presenton.outline.item.empty")}</p>
+              <p className={styles.emptyText}>{t("ppt_generator.outline.item.empty")}</p>
             )}
           </div>
         )}
@@ -296,3 +296,4 @@ export const OutlineItem = memo(
     prevProps.isStableStreaming === nextProps.isStableStreaming &&
     prevProps.enableSorting === nextProps.enableSorting
 );
+

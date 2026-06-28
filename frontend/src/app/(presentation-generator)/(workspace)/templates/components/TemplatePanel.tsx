@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 
@@ -38,8 +38,8 @@ export default function TemplatePanel() {
                 )}
             >
                 <WelcomeBanner
-                    title={t("presenton.templates.banner.title")}
-                    subtitle={t("presenton.templates.banner.subtitle")}
+                    title={t("ppt_generator.templates.banner.title")}
+                    subtitle={t("ppt_generator.templates.banner.subtitle")}
                     variant="workspace"
                     className={styles.banner}
                 />
@@ -64,3 +64,4 @@ export default function TemplatePanel() {
         </div>
     );
 }
+

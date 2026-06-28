@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { ArrowLeft, Palette } from "lucide-react";
@@ -38,7 +38,7 @@ const CustomTemplatePage = () => {
           <Palette className="h-6 w-6" aria-hidden="true" /> Template Studio
         </>
       }
-      bannerSubtitle="Convert an existing PPTX into a reusable Presenton template workflow with branded controls, slide previews, schema editing, and template packaging."
+      bannerSubtitle="Convert an existing PPTX into a reusable PPT Generator template workflow with branded controls, slide previews, schema editing, and template packaging."
       toolbar={<CustomTemplateShellToolbar toolbar={controller.shell.toolbar} />}
     >
       {controller.flow.showFileUpload ? (
@@ -61,3 +61,4 @@ const CustomTemplatePage = () => {
 };
 
 export default CustomTemplatePage;
+

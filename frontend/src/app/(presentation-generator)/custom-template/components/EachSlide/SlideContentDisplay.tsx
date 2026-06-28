@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React from "react";
 import SlideContent from "../SlideContent";
@@ -120,3 +120,4 @@ export const SlideContentDisplay: React.FC<SlideContentDisplayProps> = ({
     </div>
   );
 };
+

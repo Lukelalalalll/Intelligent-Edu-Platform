@@ -1,4 +1,4 @@
-import React, { Suspense, type ReactNode } from 'react';
+﻿import React, { Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ScrollToTop from './shared/ScrollToTop';
@@ -58,9 +58,9 @@ function wrapRoute(route: RouteConfig) {
 const layoutRoutes = ROUTES.filter((r) => !r.fullScreen);
 const fullScreenRoutes = ROUTES.filter((r) => r.fullScreen);
 
-function isPresentonRoutePath(pathname: string) {
+function isPptGeneratorRoutePath(pathname: string) {
   return (
-    pathname.startsWith('/slides/presenton') ||
+    pathname.startsWith('/slides/ppt_generator') ||
     [
       '/upload',
       '/documents-preview',
@@ -79,7 +79,7 @@ function isPresentonRoutePath(pathname: string) {
 function AppShell() {
   const location = useLocation();
   useAuthBootstrap({ enabled: !shouldBypassAuthBootstrap(location.pathname) });
-  const suspenseTone = isPresentonRoutePath(location.pathname) ? 'presenton' : 'default';
+  const suspenseTone = isPptGeneratorRoutePath(location.pathname) ? 'pptGenerator' : 'default';
 
   return (
     <>
@@ -136,3 +136,4 @@ function App() {
 }
 
 export default App;
+

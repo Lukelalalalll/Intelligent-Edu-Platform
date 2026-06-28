@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import * as z from 'zod';
 import {
     ResponsiveContainer,
@@ -446,7 +446,7 @@ export const Schema = z.object({
         { value: '1.9x', label: 'ROI' },
         { value: '42', label: 'Accounts' },
     ]).describe('Up to 4 KPI metrics'),
-    charts: z.array(ChartItemSchema).min(1).max(6).default(defaultCharts).describe('Array of 1–6 charts'),
+    charts: z.array(ChartItemSchema).min(1).max(6).default(defaultCharts).describe('Array of 1鈥? charts'),
     showLegend: z.boolean().default(true).describe('Whether to show chart legends'),
     showGrid: z.boolean().default(true).describe('Whether to show chart grid lines'),
     footerWebsite: z.string().max(30).default('www.hello.com').describe('Footer website URL'),
@@ -538,3 +538,5 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+

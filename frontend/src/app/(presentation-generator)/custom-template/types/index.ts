@@ -1,4 +1,4 @@
-import type React from "react";
+﻿import type React from "react";
 
 // ================== Core Types ==================
 
@@ -14,6 +14,8 @@ export interface UploadedFont {
   fontName: string;
   fontUrl: string;
   fontPath: string;
+  resolutionKey: string;
+  sourceFontName: string;
   file: File; // Original file for re-upload
 }
 
@@ -31,6 +33,54 @@ export interface FontData {
   unavailable_fonts: FontItem[];
 }
 
+export interface SelectedFontReplacement {
+  original_name: string;
+  original_variant: string;
+  replacement_family_name: string;
+  replacement_variant: string;
+  replacement_label: string;
+}
+
+export type FontResolution =
+  | {
+      type: "upload";
+      uploadedFontName: string;
+    }
+  | {
+      type: "replacement";
+      selection: SelectedFontReplacement;
+    };
+
+export type FontResolutionMap = Record<string, FontResolution | undefined>;
+
+export function fontOriginalName(
+  font: Pick<FontItem, "name" | "original_name">
+): string {
+  return font.original_name?.trim() || font.name.trim();
+}
+
+export function fontVariantName(font: Pick<FontItem, "variant">): string {
+  return font.variant?.trim() || "regular";
+}
+
+export function fontFamilyName(
+  font: Pick<FontItem, "name" | "family_name">
+): string {
+  return font.family_name?.trim() || font.name.trim();
+}
+
+export function fontResolutionKey(
+  font: Pick<FontItem, "name" | "original_name" | "variant">
+): string {
+  return `${fontOriginalName(font)}::${fontVariantName(font)}`;
+}
+
+export function matchedFontOptionValue(
+  font: Pick<FontItem, "name" | "family_name" | "variant">
+): string {
+  return `${fontFamilyName(font)}::${fontVariantName(font)}`;
+}
+
 // ================== Template Creation Flow Types ==================
 
 export type TemplateCreationStep =
@@ -43,7 +93,7 @@ export type TemplateCreationStep =
 
 export interface FontUploadPreviewResponse {
   slide_image_urls: string[];
-  original_pptx_url: string;
+  pptx_url: string;
   modified_pptx_url: string;
   fonts: {
     [key: string]: string;
@@ -120,10 +170,13 @@ export interface EachSlideProps {
 
 export interface FontManagerProps {
   fontsData: FontData;
+  fontResolutionsByKey: FontResolutionMap;
   uploadedFonts: UploadedFont[];
-  uploadFont: (fontName: string, file: File) => string | null;
-  removeFont: (fontName: string) => void;
-  onContinue: () => void;
+  uploadFont: (font: FontItem, file: File) => string | null;
+  removeFont: (resolutionKey: string) => void;
+  setFontReplacement: (font: FontItem, replacement: FontItem | null) => void;
+  allFontsResolved: boolean;
+  onContinue: () => void | Promise<void>;
   isUploading?: boolean;
 }
 
@@ -152,5 +205,4 @@ export interface DrawingCanvasProps {
   onEraserModeChange: (isEraser: boolean) => void;
   onClearCanvas: () => void;
 }
-
 

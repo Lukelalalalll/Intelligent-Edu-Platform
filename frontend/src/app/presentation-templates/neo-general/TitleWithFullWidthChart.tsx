@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Enhanced Full Width Chart Slide
  * Supports multiple bar chart types including grouped, stacked, clustered, and diverging
  */
@@ -834,3 +834,5 @@ const dynamicSlideLayout: React.FC<{ data: Partial<FormData> }> = ({
 };
 
 export default dynamicSlideLayout;
+
+

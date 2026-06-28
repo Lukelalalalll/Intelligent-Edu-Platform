@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "description-text-slide";
 export const slideLayoutName = "Description Text Slide";
@@ -51,3 +51,5 @@ const CodeSlide08CodeExplanationText = ({ data }: { data: Partial<SchemaType> })
 };
 
 export default CodeSlide08CodeExplanationText;
+
+

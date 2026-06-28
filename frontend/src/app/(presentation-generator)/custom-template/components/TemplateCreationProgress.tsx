@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
     Upload,
     Type,
@@ -158,3 +158,4 @@ export const TemplateCreationProgress: React.FC<TemplateCreationProgressProps> =
         </div>
     );
 };
+

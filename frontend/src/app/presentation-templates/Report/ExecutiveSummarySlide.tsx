@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const SummaryMetricSchema = z.object({
   value: z.string().min(1).max(10).meta({
@@ -175,3 +175,5 @@ const ExecutiveSummarySlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default ExecutiveSummarySlide;
+
+

@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   --outline-body-font: var(--body-font-family, inherit);
   --outline-heading-font: var(--heading-font-family, var(--outline-body-font));
   width: 100%;
@@ -363,3 +363,4 @@
     max-width: 100%;
   }
 }
+

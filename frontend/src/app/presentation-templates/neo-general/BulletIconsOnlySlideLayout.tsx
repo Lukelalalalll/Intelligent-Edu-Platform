@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 import { ImageSchema, IconSchema } from '../defaultSchemes';
 import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
@@ -210,3 +210,5 @@ const BulletIconsOnlySlideLayout: React.FC<BulletIconsOnlySlideLayoutProps> = ({
 }
 
 export default BulletIconsOnlySlideLayout 
+
+

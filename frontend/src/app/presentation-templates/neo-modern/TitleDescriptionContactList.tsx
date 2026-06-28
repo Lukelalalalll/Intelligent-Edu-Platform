@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zod Schema for the Thank You / Contact slide.
  */
 import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
@@ -21,7 +21,7 @@ export const Schema = z.object({
                 __icon_query__: 'envelope',
             },
             label: 'Email',
-            value: 'presenton@gmail.com',
+            value: 'hello@example.com',
         },
         {
             icon: {
@@ -37,7 +37,7 @@ export const Schema = z.object({
                 __icon_query__: 'globe',
             },
             label: 'Website',
-            value: 'www.presenton.com',
+            value: 'www.ppt_generator.com',
         },
     ]),
 });
@@ -150,5 +150,7 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
     );
 };
 export default dynamicSlideLayout;
+
+
 
 

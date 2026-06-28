@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import uuid
@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.core.security import get_current_user
-from backend.schemas import PresentonAssistantMessageSchema, PresentonOutlineRequestSchema
+from backend.schemas import PptGeneratorAssistantMessageSchema, PptGeneratorOutlineRequestSchema
 from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
 router = APIRouter()
@@ -19,17 +19,17 @@ def _delivery_module():
     return delivery_module
 
 
-@router.post("/presenton/outline")
-async def generate_presenton_outline(
-    req: PresentonOutlineRequestSchema,
+@router.post("/ppt_generator/outline")
+async def generate_ppt_generator_outline(
+    req: PptGeneratorOutlineRequestSchema,
     user: dict = Depends(get_current_user),
     request: Request = None,
 ):
     delivery_module = _delivery_module()
     request_id = (request.headers.get("X-Request-ID") if request else None) or uuid.uuid4().hex
-    runtime = await delivery_module._resolve_presenton_runtime(
+    runtime = await delivery_module._resolve_ppt_generator_runtime(
         req.provider or "auto",
-        feature="slides.presenton.outline",
+        feature="slides.ppt_generator.outline",
         user=user,
         require_healthy=True,
     )
@@ -38,7 +38,7 @@ async def generate_presenton_outline(
         raise HTTPException(status_code=400, detail="content or chapterData is required")
 
     total_pages = max(1, min(int(req.total_pages or 8), 40))
-    adapter = delivery_module.PresentonAdapterService(runtime=runtime)
+    adapter = delivery_module.PptGeneratorAdapterService(runtime=runtime)
     outline = await adapter.generate_outline(
         source_text=source_text,
         total_pages=total_pages,
@@ -71,26 +71,26 @@ async def generate_presenton_outline(
     }
 
 
-@router.post("/presenton/assistant/stream")
-async def stream_presenton_assistant(
-    req: PresentonAssistantMessageSchema,
+@router.post("/ppt_generator/assistant/stream")
+async def stream_ppt_generator_assistant(
+    req: PptGeneratorAssistantMessageSchema,
     user: dict = Depends(get_current_user),
 ):
     delivery_module = _delivery_module()
-    runtime = await delivery_module._resolve_presenton_runtime(
+    runtime = await delivery_module._resolve_ppt_generator_runtime(
         req.provider or "auto",
-        feature="slides.presenton.assistant",
+        feature="slides.ppt_generator.assistant",
         user=user,
         require_healthy=True,
     )
-    prompt = delivery_module._build_presenton_assistant_prompt(req)
+    prompt = delivery_module._build_ppt_generator_assistant_prompt(req)
     ai_gateway = get_ai_gateway_service()
 
     async def event_stream():
         try:
             async for chunk in ai_gateway.chat_stream_with_runtime(
                 message=prompt,
-                context={"surface": "presenton_assistant", "response_format": "text"},
+                context={"surface": "ppt_generator_assistant", "response_format": "text"},
                 runtime=runtime,
             ):
                 payload = json.dumps({"choices": [{"delta": {"content": chunk}}]}, ensure_ascii=False)
@@ -105,3 +105,4 @@ async def stream_presenton_assistant(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
+

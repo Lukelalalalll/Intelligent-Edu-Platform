@@ -103,7 +103,7 @@ def _build_export_download_url(file_name: str) -> str:
 
 def _resolve_request_web_origin(request: Request) -> str:
     return resolve_web_origin(
-        explicit_origin=request.headers.get("x-presenton-web-origin"),
+        explicit_origin=request.headers.get("x-ppt-generator-web-origin"),
         forwarded_proto=request.headers.get("x-forwarded-proto"),
         forwarded_host=request.headers.get("x-forwarded-host")
         or request.headers.get("host"),

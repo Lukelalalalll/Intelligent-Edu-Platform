@@ -1,4 +1,4 @@
-import React from "react"
+﻿import React from "react"
 import * as z from "zod"
 
 import { IconSchema } from '../defaultSchemes';
@@ -241,6 +241,8 @@ const InfographicFourIcons: React.FC<SlideLayoutProps> = ({ data }) => {
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default InfographicFourIcons
+
+
 
 
 

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import React, { useEffect, useRef, useState } from 'react'
 
 interface TimerProps {
@@ -99,3 +99,4 @@ const Timer = ({ duration }: TimerProps) => {
 }
 
 export default Timer
+

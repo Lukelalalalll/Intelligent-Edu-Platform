@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import json
@@ -46,7 +46,7 @@ async def _run_generate_v2_dispatch_job(
         return
 
     await delivery_module._run_generate_v2_task(task_id, req, runtime, user=user)
-    task = await delivery_module.PresentonTaskService.get_task(task_id)
+    task = await delivery_module.PptGeneratorTaskService.get_task(task_id)
     if (task or {}).get("status") == "completed":
         await background_job_dispatcher.mark_done(
             job_id=dispatch_job_id,
@@ -70,13 +70,13 @@ async def generate_v2(
 ):
     delivery_module = _delivery_module()
     request_id = (request.headers.get("X-Request-ID") if request else None) or uuid.uuid4().hex
-    runtime = await delivery_module._resolve_presenton_runtime(
+    runtime = await delivery_module._resolve_ppt_generator_runtime(
         req.provider or "auto",
         feature="slides.generate_v2",
         user=user,
         require_healthy=True,
     )
-    task = await delivery_module.PresentonTaskService.create_task(
+    task = await delivery_module.PptGeneratorTaskService.create_task(
         request_id=request_id,
         meta={
             "provider_requested": runtime.requested_provider,
@@ -101,7 +101,7 @@ async def generate_v2(
         },
         metadata={"task_id": task["task_id"], "request_id": request_id},
     )
-    await delivery_module.PresentonTaskService.add_event(
+    await delivery_module.PptGeneratorTaskService.add_event(
         task["task_id"],
         "step_progress",
         "queued",
@@ -124,7 +124,7 @@ async def generate_v2(
 @router.get("/tasks/{task_id}")
 async def get_generate_v2_task(task_id: str, user: dict = Depends(get_current_user)):
     delivery_module = _delivery_module()
-    task = await delivery_module.PresentonTaskService.get_task(task_id)
+    task = await delivery_module.PptGeneratorTaskService.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return {
@@ -143,14 +143,14 @@ async def get_generate_v2_task(task_id: str, user: dict = Depends(get_current_us
 @router.get("/tasks/{task_id}/stream")
 async def stream_generate_v2_task(task_id: str, user: dict = Depends(get_current_user)):
     delivery_module = _delivery_module()
-    task = await delivery_module.PresentonTaskService.get_task(task_id)
+    task = await delivery_module.PptGeneratorTaskService.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     async def event_stream():
         index = 0
         while True:
-            events, index, status = await delivery_module.PresentonTaskService.get_events_since(task_id, index)
+            events, index, status = await delivery_module.PptGeneratorTaskService.get_events_since(task_id, index)
             for event in events:
                 payload = json.dumps(event, ensure_ascii=False)
                 yield f"event: {event.get('type', 'step_progress')}\n"
@@ -163,3 +163,4 @@ async def stream_generate_v2_task(task_id: str, user: dict = Depends(get_current
             await asyncio.sleep(0.8)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+

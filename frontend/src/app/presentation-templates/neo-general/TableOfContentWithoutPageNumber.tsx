@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zod Schema for Table of Content Slide
  * Defined based on the visual elements observed in the reference.
  */
@@ -161,3 +161,4 @@ const dynamicSlideLayout: React.FC<{ data: Partial<DataProps> }> = ({ data }) =>
 };
 
 export default dynamicSlideLayout;
+

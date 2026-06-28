@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { notify } from "@/components/ui/sonner";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
 import { ProcessedSlide } from "../types";
@@ -125,3 +125,4 @@ export const useLayoutSaving = (
     saveLayout,
   };
 }; 
+

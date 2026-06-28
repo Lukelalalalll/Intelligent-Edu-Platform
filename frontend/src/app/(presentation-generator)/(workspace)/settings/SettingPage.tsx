@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { Loader2, ChevronRight } from "lucide-react";
 import { notify } from "@/components/ui/sonner";
@@ -365,7 +365,7 @@ const SettingsPage = () => {
                 Settings
               </h3>
               <p className="text-[10px] px-2.5 py-0.5 rounded-[50px] text-[#7A5AF8] border border-[#EDEEEF]  font-medium ">
-                {textSummary} · {imageSummary} · {webSearchSummary}
+                {textSummary} 路 {imageSummary} 路 {webSearchSummary}
               </p>
             </div>
           </div>
@@ -395,7 +395,7 @@ const SettingsPage = () => {
         </div>
       </main>
 
-      {/* Fixed Bottom Button — hidden on Sign out; nothing to save there */}
+      {/* Fixed Bottom Button 鈥?hidden on Sign out; nothing to save there */}
       {selectedProvider !== "session" ? (
         <div className="fixed bottom-24 right-6 z-40 xl:absolute xl:bottom-4 xl:right-0">
           <button
@@ -429,3 +429,4 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
+

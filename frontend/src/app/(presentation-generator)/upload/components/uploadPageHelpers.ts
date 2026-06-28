@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { LLMConfig } from "@/types/llm_config";
 import { type Locale } from "@/shared/i18n";
@@ -12,7 +12,7 @@ import {
 import {
   getGenerationLanguageForLocale,
   getGenerationLanguageLabel,
-} from "../../utils/presentonLanguage";
+} from "../../utils/pptGeneratorLanguage";
 
 export const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
 
@@ -261,23 +261,23 @@ export function buildUploadActionSummary({
 }): UploadActionItem[] {
   return [
     {
-      labelKey: "presenton.upload.summary.inputReady",
-      label: t("presenton.upload.summary.inputReady"),
+      labelKey: "ppt_generator.upload.summary.inputReady",
+      label: t("ppt_generator.upload.summary.inputReady"),
       value: inputReady
-        ? t("presenton.upload.summary.inputReady.ready")
-        : t("presenton.upload.summary.inputReady.empty"),
+        ? t("ppt_generator.upload.summary.inputReady.ready")
+        : t("ppt_generator.upload.summary.inputReady.empty"),
     },
     {
-      labelKey: "presenton.upload.summary.attachments",
-      label: t("presenton.upload.summary.attachments"),
+      labelKey: "ppt_generator.upload.summary.attachments",
+      label: t("ppt_generator.upload.summary.attachments"),
       value:
         filesCount > 0
-          ? t("presenton.upload.summary.attachments.count", { count: filesCount })
-          : t("presenton.upload.summary.attachments.optional"),
+          ? t("ppt_generator.upload.summary.attachments.count", { count: filesCount })
+          : t("ppt_generator.upload.summary.attachments.optional"),
     },
     {
-      labelKey: "presenton.upload.summary.nextStep",
-      label: t("presenton.upload.summary.nextStep"),
+      labelKey: "ppt_generator.upload.summary.nextStep",
+      label: t("ppt_generator.upload.summary.nextStep"),
       value: nextStepLabel,
     },
   ];
@@ -296,21 +296,22 @@ export function buildUploadStatusCards({
 }): UploadStatusItem[] {
   return [
     {
-      labelKey: "presenton.upload.status.path",
-      label: t("presenton.upload.status.path"),
+      labelKey: "ppt_generator.upload.status.path",
+      label: t("ppt_generator.upload.status.path"),
       value: generationPathLabel,
     },
     {
-      labelKey: "presenton.upload.status.slides",
-      label: t("presenton.upload.status.slides"),
+      labelKey: "ppt_generator.upload.status.slides",
+      label: t("ppt_generator.upload.status.slides"),
       value: slides
-        ? t("presenton.upload.status.slides.count", { count: slides })
-        : t("presenton.upload.status.slides.auto"),
+        ? t("ppt_generator.upload.status.slides.count", { count: slides })
+        : t("ppt_generator.upload.status.slides.auto"),
     },
     {
-      labelKey: "presenton.upload.status.language",
-      label: t("presenton.upload.status.language"),
-      value: getGenerationLanguageLabel(language) || t("presenton.upload.status.language.auto"),
+      labelKey: "ppt_generator.upload.status.language",
+      label: t("ppt_generator.upload.status.language"),
+      value: getGenerationLanguageLabel(language) || t("ppt_generator.upload.status.language.auto"),
     },
   ];
 }
+

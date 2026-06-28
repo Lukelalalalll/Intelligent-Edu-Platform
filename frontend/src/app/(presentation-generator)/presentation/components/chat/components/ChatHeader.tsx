@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw } from "lucide-react";
+﻿import { Loader2, RefreshCw } from "lucide-react";
 
 type ChatHeaderProps = {
   isHistoryLoading: boolean;
@@ -54,3 +54,4 @@ const ChatHeader = ({
 );
 
 export default ChatHeader;
+

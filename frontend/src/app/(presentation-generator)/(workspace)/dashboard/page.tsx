@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import DashboardPage from './components/DashboardPage'
 
 const page = () => {
@@ -8,3 +8,4 @@ const page = () => {
 }
 
 export default page
+

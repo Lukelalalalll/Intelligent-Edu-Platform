@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+﻿import { useCallback, useEffect, useRef } from "react";
 import type { ChatStreamTrace } from "../../../../services/api/chat";
 import {
   MIN_SLIDE_FOCUS_DWELL_MS,
@@ -144,3 +144,4 @@ export const useAgentSlideFollow = ({
     resetFollowState,
   };
 };
+

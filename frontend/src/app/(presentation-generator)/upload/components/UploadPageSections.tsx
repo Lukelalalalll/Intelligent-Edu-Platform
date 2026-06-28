@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { ArrowRight, Paperclip, Sparkles } from "lucide-react";
 import type { LLMConfig } from "@/types/llm_config";
-import type { PresentonSelectableProvider } from "@/presenton/providerOverride";
+import type { PptGeneratorSelectableProvider } from "@/ppt_generator/providerOverride";
 
 import Button from "@/shared/components/Button/Button";
 import Card from "@/shared/components/Card/Card";
@@ -33,17 +33,17 @@ type UploadSetupSectionProps = {
   isLoading: boolean;
   llmConfig: LLMConfig;
   providerCards: Array<{
-    id: PresentonSelectableProvider;
+    id: PptGeneratorSelectableProvider;
     label: string;
     configured: boolean;
     model: string;
   }>;
   primaryActionLabel: string;
-  selectedProvider: PresentonSelectableProvider | null;
+  selectedProvider: PptGeneratorSelectableProvider | null;
   statusCards: UploadStatusItem[];
   onConfigChange: (key: keyof PresentationConfig, value: unknown) => void;
   onGeneratePresentation: () => void;
-  onProviderSelect: (provider: PresentonSelectableProvider) => void;
+  onProviderSelect: (provider: PptGeneratorSelectableProvider) => void;
 };
 
 export function UploadInputSection({
@@ -65,7 +65,7 @@ export function UploadInputSection({
               <Paperclip className="h-4 w-4" />
             </div>
             <div>
-              <h3 className={styles.subsectionTitle}>{t("presenton.upload.attach.title")}</h3>
+              <h3 className={styles.subsectionTitle}>{t("ppt_generator.upload.attach.title")}</h3>
             </div>
           </div>
 
@@ -99,10 +99,10 @@ export function UploadSetupSection({
           <Sparkles />
         </div>
         <div>
-          <p className={styles.sectionEyebrow}>{t("presenton.upload.setup.eyebrow")}</p>
-          <h2 className={styles.sectionTitle}>{t("presenton.upload.setup.title")}</h2>
+          <p className={styles.sectionEyebrow}>{t("ppt_generator.upload.setup.eyebrow")}</p>
+          <h2 className={styles.sectionTitle}>{t("ppt_generator.upload.setup.title")}</h2>
           <p className={styles.sectionDescription}>
-            {t("presenton.upload.setup.description")}
+            {t("ppt_generator.upload.setup.description")}
           </p>
         </div>
       </div>
@@ -138,7 +138,7 @@ export function UploadSetupSection({
 
         <div className={styles.controlsBody}>
           <ConfigurationSelects config={config} onConfigChange={onConfigChange} />
-          <p className={styles.controlsNote}>{t("presenton.upload.flowNote")}</p>
+          <p className={styles.controlsNote}>{t("ppt_generator.upload.flowNote")}</p>
         </div>
 
         <div className={styles.setupActionBar}>
@@ -158,3 +158,4 @@ export function UploadSetupSection({
     </Card>
   );
 }
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React from 'react'
 import {
@@ -9,7 +9,7 @@ import {
   PanelTop,
   Sparkles,
 } from 'lucide-react'
-import Link from '@/presenton/shims/next-link'
+import Link from '@/ppt_generator/shims/next-link'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
 import WorkspaceCard from '@/shared/components/Card/Card'
 import WelcomeBanner from '@/shared/components/WelcomeBanner'
@@ -42,7 +42,7 @@ const TemplateNavIcon = ({ active }: { active: boolean }) => (
   </svg>
 )
 
-const presentonNavItems = [
+const pptGeneratorNavItems = [
   {
     href: '/dashboard',
     label: 'Dashboard',
@@ -73,6 +73,8 @@ const ThemePanel: React.FC = () => {
     selectedTheme,
     isSheetOpen,
     currentStep,
+    currentStepIndex,
+    totalSteps,
     currentStepMeta,
     isNewTheme,
     customColors,
@@ -80,6 +82,9 @@ const ThemePanel: React.FC = () => {
     customBrandLogo,
     isLogoUploading,
     isFontUploading,
+    isPaletteGenerating,
+    paletteDirty,
+    hasGeneratedPalette,
     showColorPicker,
     themeCompanyName,
     userFonts,
@@ -95,14 +100,14 @@ const ThemePanel: React.FC = () => {
   const {
     handleCloseSheet,
     handleThemeSelect,
-    handleDelete,
-    handleClickOutside,
-    handleColorChange,
-    handleShowColorPicker,
-    handleRefreshTheme,
-    handleFontSelect,
-    handleBrandLogoUpload,
-    handleCustomFontChange,
+      handleDelete,
+      handleClickOutside,
+      handleColorChange,
+      handleShowColorPicker,
+      handleGeneratePalette,
+      handleFontSelect,
+      handleBrandLogoUpload,
+      handleCustomFontChange,
     handleTabChange,
     handleThemeNameBlur,
     handleThemeCompanyNameBlur,
@@ -112,27 +117,27 @@ const ThemePanel: React.FC = () => {
   } = actions
 
   const sectionTitle = tab === 'default'
-    ? t('presenton.theme.section.builtIn.title')
-    : t('presenton.theme.section.custom.title')
+    ? t('ppt_generator.theme.section.builtIn.title')
+    : t('ppt_generator.theme.section.custom.title')
   const sectionDescription = tab === 'default'
-    ? t('presenton.theme.section.builtIn.body')
-    : t('presenton.theme.section.custom.body')
+    ? t('ppt_generator.theme.section.builtIn.body')
+    : t('ppt_generator.theme.section.custom.body')
 
   const navItems = [
     {
       href: '/dashboard',
-      label: t('presenton.workspace.nav.dashboard'),
-      renderIcon: presentonNavItems[0].renderIcon,
+      label: t('ppt_generator.workspace.nav.dashboard'),
+      renderIcon: pptGeneratorNavItems[0].renderIcon,
     },
     {
       href: '/templates',
-      label: t('presenton.workspace.nav.templates'),
-      renderIcon: presentonNavItems[1].renderIcon,
+      label: t('ppt_generator.workspace.nav.templates'),
+      renderIcon: pptGeneratorNavItems[1].renderIcon,
     },
     {
       href: '/theme',
-      label: t('presenton.workspace.nav.theme'),
-      renderIcon: presentonNavItems[2].renderIcon,
+      label: t('ppt_generator.workspace.nav.theme'),
+      renderIcon: pptGeneratorNavItems[2].renderIcon,
     },
   ] as const
 
@@ -146,14 +151,14 @@ const ThemePanel: React.FC = () => {
         ])}
       >
         <WelcomeBanner
-          title={t('presenton.theme.banner.title')}
-          subtitle={t('presenton.theme.banner.subtitle')}
+          title={t('ppt_generator.theme.banner.title')}
+          subtitle={t('ppt_generator.theme.banner.subtitle')}
           variant="workspace"
           className={styles.banner}
         />
 
         <div className={styles.navShell}>
-          <nav className={styles.navList} aria-label={t('presenton.workspace.nav.aria')}>
+          <nav className={styles.navList} aria-label={t('ppt_generator.workspace.nav.aria')}>
             {navItems.map(({ href, label, renderIcon }) => {
               const isActive = pathname === href
               return (
@@ -171,17 +176,17 @@ const ThemePanel: React.FC = () => {
           </nav>
         </div>
 
-        <WorkspaceCard className={styles.surfaceCard}>
+        <WorkspaceCard className={joinClassNames([styles.surfaceCard, styles.controlCard])}>
           <div className={styles.controlSection}>
             <div className={styles.controlTop}>
               <div className={styles.controlCopy}>
                 <div className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t('presenton.theme.controls.badge')}
+                  {t('ppt_generator.theme.controls.badge')}
                 </div>
-                <h2 className={styles.controlTitle}>{t('presenton.theme.controls.title')}</h2>
+                <h2 className={styles.controlTitle}>{t('ppt_generator.theme.controls.title')}</h2>
                 <p className={styles.controlDescription}>
-                  {t('presenton.theme.controls.body')}
+                  {t('ppt_generator.theme.controls.body')}
                 </p>
               </div>
 
@@ -193,20 +198,20 @@ const ThemePanel: React.FC = () => {
                     source: 'theme_workspace_primary_cta',
                   })}
                   className={styles.primaryAction}
-                  aria-label={t('presenton.theme.controls.createAria')}
+                  aria-label={t('ppt_generator.theme.controls.createAria')}
                 >
-                  <span>{t('presenton.theme.controls.create')}</span>
+                  <span>{t('ppt_generator.theme.controls.create')}</span>
                   <ChevronRight className="h-4 w-4" />
                 </Link>
                 <p className={styles.controlHelper}>
-                  {t('presenton.theme.controls.helper')}
+                  {t('ppt_generator.theme.controls.helper')}
                 </p>
               </div>
             </div>
 
             <div className={styles.controlBottom}>
               <div className={styles.tabBlock}>
-                <div className={styles.tabRail} role="tablist" aria-label={t('presenton.theme.tabs.aria')}>
+                <div className={styles.tabRail} role="tablist" aria-label={t('ppt_generator.theme.tabs.aria')}>
                   <button
                     type="button"
                     role="tab"
@@ -214,7 +219,7 @@ const ThemePanel: React.FC = () => {
                     className={joinClassNames([styles.tabButton, tab === 'default' && styles.tabButtonActive])}
                     onClick={() => handleTabChange('default')}
                   >
-                    {t('presenton.theme.tabs.builtIn')}
+                    {t('ppt_generator.theme.tabs.builtIn')}
                   </button>
                   <button
                     type="button"
@@ -223,7 +228,7 @@ const ThemePanel: React.FC = () => {
                     className={joinClassNames([styles.tabButton, tab === 'custom' && styles.tabButtonActive])}
                     onClick={() => handleTabChange('custom')}
                   >
-                    {t('presenton.theme.tabs.custom')}
+                    {t('ppt_generator.theme.tabs.custom')}
                   </button>
                 </div>
                 <p className={styles.activeTabNote}>{activeTabDescription}</p>
@@ -231,28 +236,28 @@ const ThemePanel: React.FC = () => {
 
               <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>{t('presenton.theme.stats.builtIn.label')}</span>
+                  <span className={styles.statLabel}>{t('ppt_generator.theme.stats.builtIn.label')}</span>
                   <div className={styles.statValue}>{defaultThemes.length}</div>
-                  <p className={styles.statMeta}>{t('presenton.theme.stats.builtIn.meta')}</p>
+                  <p className={styles.statMeta}>{t('ppt_generator.theme.stats.builtIn.meta')}</p>
                 </div>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>{t('presenton.theme.stats.custom.label')}</span>
+                  <span className={styles.statLabel}>{t('ppt_generator.theme.stats.custom.label')}</span>
                   <div className={styles.statValue}>{isCustomThemesLoading ? '...' : customThemes.length}</div>
                   <p className={styles.statMeta}>
                     {isCustomThemesLoading
-                      ? t('presenton.theme.stats.custom.metaLoading')
+                      ? t('ppt_generator.theme.stats.custom.metaLoading')
                       : customThemes.length === 1
-                        ? t('presenton.theme.stats.custom.metaOne')
-                        : t('presenton.theme.stats.custom.metaOther')}
+                        ? t('ppt_generator.theme.stats.custom.metaOne')
+                        : t('ppt_generator.theme.stats.custom.metaOther')}
                   </p>
                 </div>
                 <div className={styles.statCard}>
-                  <span className={styles.statLabel}>{t('presenton.theme.stats.active.label')}</span>
-                  <div className={styles.statValue}>{tab === 'default' ? t('presenton.theme.tabs.builtIn') : t('presenton.theme.tabs.custom')}</div>
+                  <span className={styles.statLabel}>{t('ppt_generator.theme.stats.active.label')}</span>
+                  <div className={styles.statValue}>{tab === 'default' ? t('ppt_generator.theme.tabs.builtIn') : t('ppt_generator.theme.tabs.custom')}</div>
                   <p className={styles.statMeta}>
                     {activeThemeCount === 1
-                      ? t('presenton.theme.stats.active.countOne', { count: activeThemeCount })
-                      : t('presenton.theme.stats.active.countOther', { count: activeThemeCount })}
+                      ? t('ppt_generator.theme.stats.active.countOne', { count: activeThemeCount })
+                      : t('ppt_generator.theme.stats.active.countOther', { count: activeThemeCount })}
                   </p>
                 </div>
               </div>
@@ -260,13 +265,13 @@ const ThemePanel: React.FC = () => {
           </div>
         </WorkspaceCard>
 
-        <WorkspaceCard className={styles.surfaceCard}>
+        <WorkspaceCard className={joinClassNames([styles.surfaceCard, styles.libraryCard])}>
           <div className={styles.contentSection}>
             <div className={styles.sectionIntro}>
               <div className={styles.sectionTitleWrap}>
                 <div className={styles.mutedBadge}>
                   <PanelTop className="h-3.5 w-3.5" />
-                  {tab === 'default' ? t('presenton.theme.section.builtIn.badge') : t('presenton.theme.section.custom.badge')}
+                  {tab === 'default' ? t('ppt_generator.theme.section.builtIn.badge') : t('ppt_generator.theme.section.custom.badge')}
                 </div>
                 <h2 className={styles.sectionTitle}>{sectionTitle}</h2>
                 <p className={styles.sectionDescription}>{sectionDescription}</p>
@@ -274,10 +279,10 @@ const ThemePanel: React.FC = () => {
 
               <div className={styles.groupCount}>
                 {tab === 'custom' && isCustomThemesLoading
-                  ? t('presenton.theme.section.loading')
+                  ? t('ppt_generator.theme.section.loading')
                   : activeThemeCount === 1
-                    ? t('presenton.theme.section.countOne', { count: activeThemeCount })
-                    : t('presenton.theme.section.countOther', { count: activeThemeCount })}
+                    ? t('ppt_generator.theme.section.countOne', { count: activeThemeCount })
+                    : t('ppt_generator.theme.section.countOther', { count: activeThemeCount })}
               </div>
             </div>
 
@@ -296,9 +301,9 @@ const ThemePanel: React.FC = () => {
             ) : isCustomThemesLoading ? (
               <div className={styles.loadingCard}>
                 <Loader2 className={joinClassNames(['animate-spin', styles.loadingIcon])} />
-                <p className={styles.loadingTitle}>{t('presenton.theme.loading.title')}</p>
+                <p className={styles.loadingTitle}>{t('ppt_generator.theme.loading.title')}</p>
                 <p className={styles.loadingText}>
-                  {t('presenton.theme.loading.body')}
+                  {t('ppt_generator.theme.loading.body')}
                 </p>
               </div>
             ) : customThemes.length > 0 ? (
@@ -326,12 +331,17 @@ const ThemePanel: React.FC = () => {
           selectedTheme={selectedTheme}
           isNewTheme={isNewTheme}
           currentStep={currentStep}
+          currentStepIndex={currentStepIndex}
+          totalSteps={totalSteps}
           currentStepMeta={currentStepMeta}
           customColors={customColors}
           customFonts={customFonts}
           customBrandLogo={customBrandLogo}
           isLogoUploading={isLogoUploading}
           isFontUploading={isFontUploading}
+          isPaletteGenerating={isPaletteGenerating}
+          paletteDirty={paletteDirty}
+          hasGeneratedPalette={hasGeneratedPalette}
           showColorPicker={showColorPicker}
           themeCompanyName={themeCompanyName}
           userFonts={userFonts}
@@ -345,7 +355,7 @@ const ThemePanel: React.FC = () => {
           onClickOutside={handleClickOutside}
           onShowColorPicker={handleShowColorPicker}
           onColorChange={handleColorChange}
-          onRefreshTheme={handleRefreshTheme}
+          onGeneratePalette={handleGeneratePalette}
           onFontSelect={handleFontSelect}
           onFontUpload={handleCustomFontChange}
           onBrandLogoUpload={handleBrandLogoUpload}
@@ -361,3 +371,4 @@ const ThemePanel: React.FC = () => {
 }
 
 export default ThemePanel
+

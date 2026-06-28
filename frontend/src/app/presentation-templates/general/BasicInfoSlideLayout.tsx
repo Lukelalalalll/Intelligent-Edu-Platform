@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 import { ImageSchema } from '../defaultSchemes';
 
@@ -105,3 +105,4 @@ const BasicInfoSlideLayout: React.FC<BasicInfoSlideLayoutProps> = ({ data: slide
 }
 
 export default BasicInfoSlideLayout 
+

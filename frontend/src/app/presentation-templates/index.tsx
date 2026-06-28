@@ -1,4 +1,4 @@
-import {
+﻿import {
   TemplateWithData,
   TemplateGroupSettings,
   createTemplateEntry,
@@ -3549,3 +3549,5 @@ export function getLayoutByLayoutId(
 
   return allLayouts.find((t) => t.layoutId.endsWith(`:${layout}`));
 }
+
+

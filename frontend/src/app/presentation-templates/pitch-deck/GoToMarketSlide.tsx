@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const ChannelSchema = z.object({
   channel: z.string().min(3).max(24).meta({
@@ -118,3 +118,5 @@ const GoToMarketSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default GoToMarketSlide;
+
+

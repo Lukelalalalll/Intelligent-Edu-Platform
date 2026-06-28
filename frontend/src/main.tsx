@@ -1,8 +1,8 @@
-import { StrictMode } from 'react'
+﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
 import './index.css'
-import './presenton/presenton-globals.css'
+import './ppt_generator/ppt_generator-globals.css'
 import './styles/base.css'
 import './styles/utilities.css'
 import App from './App'
@@ -19,7 +19,7 @@ const globalWithProcess = globalThis as typeof globalThis & {
   process?: BrowserProcessShim
 }
 
-// Presenton's browser-side AST editor code expects a minimal Node-like process.env.
+// PPT Generator's browser-side AST editor code expects a minimal Node-like process.env.
 if (!globalWithProcess.process) {
   globalWithProcess.process = { env: {} }
 } else if (!globalWithProcess.process.env) {
@@ -60,3 +60,5 @@ createRoot(document.getElementById('root')!).render(
     </Provider>
   </StrictMode>,
 )
+
+

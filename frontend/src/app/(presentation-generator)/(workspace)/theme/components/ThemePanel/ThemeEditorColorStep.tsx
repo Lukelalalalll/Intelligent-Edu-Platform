@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import React from 'react'
 import { Label } from '@/components/ui/label'
-import { RefreshCcw } from 'lucide-react'
+import { Loader2, RefreshCcw } from 'lucide-react'
 import { useI18n } from '@/shared/i18n'
 import { ColorPickerComponent } from './ColorPickerComponent'
 import { joinClassNames } from './themePanelHelpers'
@@ -23,12 +23,14 @@ const GRAPH_COLOR_KEYS: Array<keyof ThemeColors> = [
 ]
 
 interface ThemeEditorColorStepProps {
-  step: 1 | 2
   customColors: ThemeColors
   showColorPicker: string | null
   onColorChange: (colorKey: keyof ThemeColors, value: string) => void
   onShowColorPicker: (colorKey: string | null) => void
-  onRefreshTheme: (options: { primary?: string; background?: string }) => Promise<void>
+  onGeneratePalette: () => Promise<void>
+  isPaletteGenerating: boolean
+  paletteDirty: boolean
+  hasGeneratedPalette: boolean
 }
 
 function renderColorFields(
@@ -52,59 +54,70 @@ function renderColorFields(
 }
 
 export const ThemeEditorColorStep: React.FC<ThemeEditorColorStepProps> = ({
-  step,
   customColors,
   showColorPicker,
   onColorChange,
   onShowColorPicker,
-  onRefreshTheme,
+  onGeneratePalette,
+  isPaletteGenerating,
+  paletteDirty,
+  hasGeneratedPalette,
 }) => {
   const { t } = useI18n()
 
   const brandColorFields: Array<{ key: keyof ThemeColors; label: string }> = [
-    { key: 'primary', label: t('presenton.theme.editor.colors.primary') },
-    { key: 'background', label: t('presenton.theme.editor.colors.background') },
+    { key: 'primary', label: t('ppt_generator.theme.editor.colors.primary') },
+    { key: 'background', label: t('ppt_generator.theme.editor.colors.background') },
   ]
 
   const textColorFields: Array<{ key: keyof ThemeColors; label: string }> = [
-    { key: 'background_text', label: t('presenton.theme.editor.colors.backgroundText') },
-    { key: 'primary_text', label: t('presenton.theme.editor.colors.primaryText') },
+    { key: 'background_text', label: t('ppt_generator.theme.editor.colors.backgroundText') },
+    { key: 'primary_text', label: t('ppt_generator.theme.editor.colors.primaryText') },
   ]
 
   return (
-    <div
-      className={styles.stepScrollable}
-      style={{
-        paddingInline: step === 1 ? '20px' : '10px',
-      }}
-    >
+    <div className={styles.stepScrollable} style={{ paddingInline: '20px' }}>
       <Label className={styles.stepHeading}>
-        {step === 1 ? t('presenton.theme.editor.colors.brandHeading') : t('presenton.theme.editor.colors.paletteHeading')}
-        <RefreshCcw
-          onClick={() =>
-            void onRefreshTheme(
-              step === 1
-                ? {}
-                : {
-                    primary: customColors.primary,
-                    background: customColors.background,
-                  }
-            )
-          }
-          className={styles.stepRefresh}
-          aria-label={t('presenton.theme.editor.colors.refresh')}
-        />
+        {t('ppt_generator.theme.editor.colors.heading')}
       </Label>
       <div className="space-y-4">
-        <div className={joinClassNames([styles.stepCard, step === 2 && styles.stepCardMuted])}>
-          {step === 2 ? <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.brandSection')}</p> : null}
+        <div className={styles.stepCard}>
+          <div className={styles.paletteActionRow}>
+            <div className={styles.paletteActionCopy}>
+              <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.colors.seedSection')}</p>
+              <p className={styles.paletteHelperText}>{t('ppt_generator.theme.editor.colors.seedHint')}</p>
+            </div>
+            <button
+              type="button"
+              className={styles.inlineGenerateButton}
+              onClick={() => void onGeneratePalette()}
+              disabled={isPaletteGenerating}
+            >
+              {isPaletteGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCcw className="h-4 w-4" />
+              )}
+              {isPaletteGenerating
+                ? t('ppt_generator.theme.editor.colors.generating')
+                : hasGeneratedPalette
+                  ? t('ppt_generator.theme.editor.colors.regenerate')
+                  : t('ppt_generator.theme.editor.colors.generate')}
+            </button>
+          </div>
+
           <div
-            className="space-y-4"
-            style={{
-              padding: step === 2 ? '10px' : '0px',
-              backgroundColor: 'transparent',
-            }}
+            className={joinClassNames([
+              styles.paletteSyncNotice,
+              paletteDirty ? styles.paletteSyncDirty : styles.paletteSyncFresh,
+            ])}
           >
+            {paletteDirty
+              ? t('ppt_generator.theme.editor.colors.syncDirty')
+              : t('ppt_generator.theme.editor.colors.syncFresh')}
+          </div>
+
+          <div className="space-y-4">
             {renderColorFields(
               brandColorFields,
               customColors,
@@ -115,65 +128,54 @@ export const ThemeEditorColorStep: React.FC<ThemeEditorColorStepProps> = ({
           </div>
         </div>
 
-        {step === 2 ? (
-          <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-            <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.textSection')}</p>
-            <div
-              className="space-y-4"
-              style={{
-                padding: '10px',
-                backgroundColor: 'transparent',
-              }}
-            >
-              {renderColorFields(
-                textColorFields,
-                customColors,
-                showColorPicker,
-                onColorChange,
-                onShowColorPicker
-              )}
+        <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
+          <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.colors.supportingSection')}</p>
+          <div className="space-y-4">
+            <div>
+              <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.colors.textSection')}</p>
+              <div className="space-y-4">
+                {renderColorFields(
+                  textColorFields,
+                  customColors,
+                  showColorPicker,
+                  onColorChange,
+                  onShowColorPicker
+                )}
+              </div>
             </div>
-          </div>
-        ) : null}
 
-        {step === 2 ? (
-          <div className={styles.stepCard}>
-            <ColorPickerComponent
-              colorKey="card"
-              label={t('presenton.theme.editor.colors.card')}
-              currentColor={customColors.card}
-              onColorChange={onColorChange}
-              showColorPicker={showColorPicker}
-              onShowColorPicker={onShowColorPicker}
-            />
-          </div>
-        ) : null}
+            <div>
+              <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.colors.surfaceSection')}</p>
+              <ColorPickerComponent
+                colorKey="card"
+                label={t('ppt_generator.theme.editor.colors.card')}
+                currentColor={customColors.card}
+                onColorChange={onColorChange}
+                showColorPicker={showColorPicker}
+                onShowColorPicker={onShowColorPicker}
+              />
+            </div>
 
-        {step === 2 ? (
-          <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-            <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.colors.chartSection')}</p>
-            <div
-              className="space-y-4"
-              style={{
-                padding: '10px',
-                backgroundColor: 'transparent',
-              }}
-            >
+            <div>
+              <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.colors.chartSection')}</p>
+              <div className="space-y-4">
               {GRAPH_COLOR_KEYS.map((colorKey, index) => (
                 <ColorPickerComponent
                   key={colorKey}
                   colorKey={colorKey}
-                  label={t('presenton.theme.editor.colors.chartColor', { index: index + 1 })}
+                  label={t('ppt_generator.theme.editor.colors.chartColor', { index: index + 1 })}
                   currentColor={customColors[colorKey]}
                   onColorChange={onColorChange}
                   showColorPicker={showColorPicker}
                   onShowColorPicker={onShowColorPicker}
                 />
               ))}
+              </div>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import * as z from "zod";
 import { ImageSchema } from "../defaultSchemes";
 
@@ -191,3 +191,5 @@ const ImageListWithDescriptionSlideLayout: React.FC<ImageListWithDescriptionSlid
 };
 
 export default ImageListWithDescriptionSlideLayout;
+
+

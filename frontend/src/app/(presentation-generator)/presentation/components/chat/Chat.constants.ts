@@ -1,4 +1,4 @@
-export const MESSAGE_UPDATE_FLUSH_MS = 50;
+﻿export const MESSAGE_UPDATE_FLUSH_MS = 50;
 
 export const TOOL_LABELS: Record<string, string> = {
   getPresentationOutline: "Outline reader",
@@ -24,3 +24,4 @@ export const SLIDE_FOCUS_TOOLS = new Set(["saveSlide", "deleteSlide"]);
 export const SLIDE_FOCUS_STATUSES = new Set(["start"]);
 
 export const MIN_SLIDE_FOCUS_DWELL_MS = 700;
+

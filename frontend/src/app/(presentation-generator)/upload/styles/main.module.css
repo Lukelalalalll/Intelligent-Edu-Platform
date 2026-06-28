@@ -1,4 +1,4 @@
-.SwitchRoot {
+﻿.SwitchRoot {
   width: 34px;
   height: 18px;
   background-color: white;
@@ -30,3 +30,4 @@
     transform: translateX(16px);
   }
 }
+

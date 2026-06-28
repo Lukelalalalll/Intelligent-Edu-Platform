@@ -1,4 +1,4 @@
-export type TextType =
+﻿export type TextType =
   | "title"
   | "heading 1"
   | "heading 2"
@@ -36,3 +36,4 @@ export interface Slide {
 
   content: SlideContent;
 }
+

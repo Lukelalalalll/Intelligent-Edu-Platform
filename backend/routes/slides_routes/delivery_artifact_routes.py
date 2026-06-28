@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -40,13 +40,13 @@ async def slides_provider_health(
     user: dict = Depends(get_current_user),
 ):
     delivery_module = _delivery_module()
-    runtime = await delivery_module._resolve_presenton_runtime(
+    runtime = await delivery_module._resolve_ppt_generator_runtime(
         provider or "auto",
         feature="slides.provider_health",
         user=user,
         require_healthy=False,
     )
-    adapter = delivery_module.PresentonAdapterService(runtime=runtime)
+    adapter = delivery_module.PptGeneratorAdapterService(runtime=runtime)
     healthy, message = await adapter.check_provider_health()
     return {
         "success": healthy,
@@ -119,3 +119,4 @@ async def get_slides_delivery_artifact(
     user: dict = Depends(get_current_user),
 ):
     return await get_delivery_artifact(job_id=job_id, artifact_type=artifact_type, user=user)
+

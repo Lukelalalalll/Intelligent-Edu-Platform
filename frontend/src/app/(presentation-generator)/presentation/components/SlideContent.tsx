@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+﻿import React, { memo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -433,3 +433,4 @@ const areSlideContentPropsEqual = (
   previousProps.isChatTargeted === nextProps.isChatTargeted;
 
 export default memo(SlideContent, areSlideContentPropsEqual);
+

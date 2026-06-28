@@ -1,4 +1,4 @@
-export interface PresentationState {
+﻿export interface PresentationState {
   loading: boolean;
   selectedSlide: number;
   isFullscreen: boolean;

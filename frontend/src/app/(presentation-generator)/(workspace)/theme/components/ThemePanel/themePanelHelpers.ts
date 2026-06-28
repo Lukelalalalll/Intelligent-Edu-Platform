@@ -1,4 +1,4 @@
-import { Theme, ThemeParams } from '@/app/(presentation-generator)/services/api/types'
+﻿import { Theme, ThemeParams } from '@/app/(presentation-generator)/services/api/types'
 import type { TranslationKey } from '@/shared/i18n'
 import {
   FALLBACK_THEME,
@@ -48,7 +48,7 @@ function getBuiltInThemeTranslationKey(
   themeId: string,
   field: 'name' | 'description'
 ): TranslationKey {
-  return `presenton.theme.builtIn.${themeId}.${field}` as TranslationKey
+  return `ppt_generator.theme.builtIn.${themeId}.${field}` as TranslationKey
 }
 
 function localizeBuiltInTheme(theme: Theme, t: ThemeTranslator): Theme {
@@ -145,8 +145,8 @@ export function mapGeneratedThemeColors(generatedTheme: Record<string, string>):
 export function createNewCustomThemeDraft(t: ThemeTranslator): Theme {
   return {
     id: `custom-${Date.now()}`,
-    name: t('presenton.theme.defaults.newThemeName'),
-    description: t('presenton.theme.defaults.newThemeDescription'),
+    name: t('ppt_generator.theme.defaults.newThemeName'),
+    description: t('ppt_generator.theme.defaults.newThemeDescription'),
     user: 'local',
     logo: '',
     logo_url: '',
@@ -223,3 +223,4 @@ export function getThemeSource(theme: Theme) {
 export function isPersistedCustomTheme(theme: Theme) {
   return Boolean(theme.user && theme.user !== 'system' && !theme.id.startsWith('custom-'))
 }
+

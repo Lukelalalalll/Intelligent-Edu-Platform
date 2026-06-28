@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Wrapper from "@/components/Wrapper";
 import React from "react";
@@ -72,3 +72,4 @@ const Header = () => {
 };
 
 export default Header;
+

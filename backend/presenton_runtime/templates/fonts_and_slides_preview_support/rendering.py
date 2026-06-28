@@ -6,11 +6,18 @@ import html
 import mimetypes
 import os
 import re
+import tempfile
 import urllib.parse
 from pathlib import Path
 from typing import List, Set, Tuple
 
+from fastapi import HTTPException
+
 from ..pptx_font_utils_support.font_metadata import get_font_details
+from ..pptx_fallback import (
+    extract_slide_htmls_from_pptx,
+    render_fallback_slide_pngs_from_pptx,
+)
 try:
     from utils.asset_directory_utils import (
         absolute_fastapi_asset_url,
@@ -27,6 +34,92 @@ from .font_mapping import actual_uploaded_font_name, font_detail_variant
 PREVIEW_WIDTH = 1280
 PREVIEW_HEIGHT = 720
 EXPORT_TASK_SERVICE = None
+
+
+def _log_preview_warning(logger, message: str) -> None:
+    warning = getattr(logger, "warning", None)
+    if callable(warning):
+        warning(message)
+        return
+    info = getattr(logger, "info", None)
+    if callable(info):
+        info(message)
+
+
+async def _render_pptx_slides_with_python_fallback(
+    *,
+    modified_pptx_path: str,
+    max_slides,
+    logger,
+    export_task_service,
+    local_font_css: str = "",
+    extra_font_css: str = "",
+) -> List[str]:
+    _log_preview_warning(
+        logger,
+        "PPTX-to-HTML export is unavailable for this PPTX; using simplified python-pptx "
+        "fallback previews so template creation can continue.",
+    )
+    try:
+        slide_htmls = await asyncio.to_thread(
+            extract_slide_htmls_from_pptx,
+            modified_pptx_path,
+            max_slides=max_slides,
+            width=PREVIEW_WIDTH,
+            height=PREVIEW_HEIGHT,
+        )
+    except Exception as exc:
+        slide_htmls = []
+        _log_preview_warning(
+            logger,
+            f"Python fallback HTML extraction failed; falling back to Pillow previews. detail={exc}",
+        )
+
+    if slide_htmls:
+        localized_font_css = _localize_preview_asset_urls(
+            "\n".join(css for css in (local_font_css, extra_font_css) if css)
+        )
+        localized_slide_htmls = [
+            _build_slide_preview_html(
+                slide_html,
+                localized_font_css,
+                width=PREVIEW_WIDTH,
+                height=PREVIEW_HEIGHT,
+            )
+            for slide_html in slide_htmls
+        ]
+        try:
+            rendered = await export_task_service.render_htmls_to_images(
+                htmls=localized_slide_htmls,
+                width=PREVIEW_WIDTH,
+                height=PREVIEW_HEIGHT,
+            )
+            logger.info(
+                "Rendered %d fallback HTML slide previews in one Chromium task",
+                len(rendered.paths),
+            )
+            return rendered.paths
+        except Exception as exc:
+            _log_preview_warning(
+                logger,
+                f"Fallback HTML preview rendering failed; falling back to Pillow previews. detail={exc}",
+            )
+
+    slide_pngs = await asyncio.to_thread(
+        render_fallback_slide_pngs_from_pptx,
+        modified_pptx_path,
+        max_slides=max_slides,
+    )
+    if not slide_pngs:
+        raise RuntimeError("Fallback PPTX preview renderer returned no slides")
+
+    temp_dir = tempfile.mkdtemp(prefix="pptx-preview-fallback-")
+    screenshot_paths: List[str] = []
+    for index, slide_png in enumerate(slide_pngs, start=1):
+        output_path = os.path.join(temp_dir, f"slide-{index}.png")
+        await asyncio.to_thread(Path(output_path).write_bytes, slide_png)
+        screenshot_paths.append(output_path)
+    return screenshot_paths
 
 
 def _get_export_task_service():
@@ -151,18 +244,47 @@ async def render_pptx_slides_to_images(
     font_paths_for_install: List[str],
     max_slides,
     logger,
+    extra_font_css: str = "",
 ) -> List[str]:
     export_task_service = _get_export_task_service()
     local_font_css = await asyncio.to_thread(_font_face_css_for_local_fonts, font_paths_for_install) if font_paths_for_install else ""
     if local_font_css:
         logger.info("Prepared custom font CSS for HTML preview rendering")
-    pptx_document = await export_task_service.convert_pptx_to_html(modified_pptx_path, get_fonts=True)
+    if extra_font_css:
+        logger.info("Prepared replacement font CSS for HTML preview rendering")
+    try:
+        pptx_document = await export_task_service.convert_pptx_to_html(
+            modified_pptx_path,
+            get_fonts=True,
+        )
+    except HTTPException as exc:
+        _log_preview_warning(
+            logger,
+            "PPTX-to-HTML font extraction failed for preview generation; retrying without "
+            f"runtime font extraction. detail={exc.detail}",
+        )
+        try:
+            pptx_document = await export_task_service.convert_pptx_to_html(
+                modified_pptx_path,
+                get_fonts=False,
+            )
+        except HTTPException:
+            return await _render_pptx_slides_with_python_fallback(
+                modified_pptx_path=modified_pptx_path,
+                max_slides=max_slides,
+                logger=logger,
+                export_task_service=export_task_service,
+                local_font_css=local_font_css,
+                extra_font_css=extra_font_css,
+            )
     if not pptx_document.slides:
         raise RuntimeError("PPTX-to-HTML returned no slides")
     slide_htmls = pptx_document.slides[:max_slides] if max_slides else pptx_document.slides
     width, height = preview_dimensions_from_document(pptx_document.width, pptx_document.height)
     logger.info(f"Rendering {len(slide_htmls)} slide previews from PPTX-to-HTML at {width}x{height}")
-    localized_font_css = _localize_preview_asset_urls("\n".join(css for css in (pptx_document.font_css, local_font_css) if css))
+    localized_font_css = _localize_preview_asset_urls(
+        "\n".join(css for css in (pptx_document.font_css, local_font_css, extra_font_css) if css)
+    )
     localized_slide_htmls = [
         _build_slide_preview_html(
             _localize_preview_asset_urls(slide_html),

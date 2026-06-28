@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -202,7 +202,7 @@ const PresentationMode: React.FC<PresentationModeProps> = ({
         Slide {currentSlide + 1} of {slides.length}
       </span>
 
-      {/* Top bar — fullscreen: auto-hide */}
+      {/* Top bar 鈥?fullscreen: auto-hide */}
       <div
         className={`presentation-controls absolute left-0 right-0 top-0 z-50 flex justify-end gap-2 px-3 py-3 transition-opacity duration-300 md:px-4 ${isFullscreen && !chromeVisible ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
@@ -237,7 +237,7 @@ const PresentationMode: React.FC<PresentationModeProps> = ({
         </div>
       </div>
 
-      {/* Slide stage — large viewport; SlideScale uses width+height so slides scale up */}
+      {/* Slide stage 鈥?large viewport; SlideScale uses width+height so slides scale up */}
       <div
         className={`flex min-h-0 flex-1 items-stretch justify-stretch ${isFullscreen ? "p-0" : "px-3 pb-24 pt-14 sm:px-4 md:pb-28 md:pt-16"
           }`}
@@ -319,7 +319,7 @@ const PresentationMode: React.FC<PresentationModeProps> = ({
         >
           <Keyboard className="h-3.5 w-3.5 shrink-0" />
           <span>
-            ← → space · Home/End · F fullscreen · N notes · Esc exit
+            鈫?鈫?space 路 Home/End 路 F fullscreen 路 N notes 路 Esc exit
           </span>
         </div>
       </div>
@@ -375,3 +375,4 @@ const PresentationMode: React.FC<PresentationModeProps> = ({
 };
 
 export default PresentationMode;
+

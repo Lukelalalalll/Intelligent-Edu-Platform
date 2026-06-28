@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo, useRef } from "react";
 import EditableLayoutWrapper from "../components/EditableLayoutWrapper";
@@ -145,4 +145,5 @@ export const V1ContentRender = ({ slide, isEditMode, theme }: { slide: any, isEd
         </SlideErrorBoundary>
     );
 };
+
 

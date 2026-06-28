@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useEffect, useMemo } from "react";
 import { DashboardApi, PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { usePathname, useRouter } from "@/presenton/shims/next-navigation";
+import { usePathname, useRouter } from "@/ppt_generator/shims/next-navigation";
 import { notify } from "@/components/ui/sonner";
 import { useFontLoader } from "@/app/(presentation-generator)/hooks/useFontLoad";
 import SlideScale from "@/app/(presentation-generator)/components/PresentationRender";
@@ -61,7 +61,7 @@ export const PresentationCard = ({
   const cardTimestamp = getPresentationTimestamp({ created_at, updated_at } as PresentationResponse);
   const slideCount = getPresentationSlideCount({ slides, n_slides } as PresentationResponse);
   const firstSlide = slides?.[0];
-  const unknownDateLabel = t("presenton.dashboard.card.unknownDate");
+  const unknownDateLabel = t("ppt_generator.dashboard.card.unknownDate");
   const dateLabel = formatPresentationDate(cardTimestamp, locale, "long", unknownDateLabel);
   const detailedDateLabel = formatPresentationDate(cardTimestamp, locale, "dateTime", unknownDateLabel);
   const createdTimestamp = created_at ? new Date(created_at).getTime() : 0;
@@ -138,15 +138,15 @@ export const PresentationCard = ({
         slide_count: slideCount,
       });
       notify.success(
-        t("presenton.dashboard.notify.deleteSuccess.title"),
-        t("presenton.dashboard.notify.deleteSuccess.body"),
+        t("ppt_generator.dashboard.notify.deleteSuccess.title"),
+        t("ppt_generator.dashboard.notify.deleteSuccess.body"),
       );
       setShowDeleteDialog(false);
       onDeleted?.(id);
     } else {
       notify.error(
-        t("presenton.dashboard.notify.deleteFailed.title"),
-        response?.message || t("presenton.dashboard.notify.deleteFailed.body")
+        t("ppt_generator.dashboard.notify.deleteFailed.title"),
+        response?.message || t("ppt_generator.dashboard.notify.deleteFailed.body")
       );
     }
     setIsDeleting(false);
@@ -170,8 +170,8 @@ export const PresentationCard = ({
           onClick={() => handlePreview()}
           onKeyDown={handleCardKeyDown}
           className="flex h-full flex-col focus-visible:outline-none"
-          aria-label={t("presenton.dashboard.card.ariaOpen", {
-            title: title || t("presenton.dashboard.card.untitled"),
+          aria-label={t("ppt_generator.dashboard.card.ariaOpen", {
+            title: title || t("ppt_generator.dashboard.card.untitled"),
           })}
         >
           <div className="relative overflow-hidden border-b border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,rgba(232,245,238,0.95)_0%,rgba(248,250,252,0.98)_80%)] p-[1.05rem] sm:p-[1.15rem]">
@@ -183,7 +183,7 @@ export const PresentationCard = ({
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 py-3 opacity-0 transition duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div className="rounded-full bg-[linear-gradient(135deg,#007b55_0%,#0b6b4b_100%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-                  {t("presenton.dashboard.card.openBadge")}
+                  {t("ppt_generator.dashboard.card.openBadge")}
                 </div>
                 <div className="rounded-full border border-white/70 bg-white/88 p-2 text-[#171923] shadow-sm">
                   <ArrowUpRight className="h-4 w-4" />
@@ -195,7 +195,7 @@ export const PresentationCard = ({
                 </div>
               ) : (
                 <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,rgba(248,250,252,1)_0%,rgba(232,245,238,0.92)_100%)] text-sm font-medium text-slate-500">
-                  {t("presenton.dashboard.card.noPreview")}
+                  {t("ppt_generator.dashboard.card.noPreview")}
                 </div>
               )}
             </div>
@@ -206,12 +206,12 @@ export const PresentationCard = ({
               <div className="min-w-0 space-y-3 pr-2">
                 <div className="text-[1.04rem] font-semibold leading-7 text-[#101828]">
                   <MarkdownRenderer
-                    content={title || t("presenton.dashboard.card.untitled")}
+                    content={title || t("ppt_generator.dashboard.card.untitled")}
                     className="mb-0 line-clamp-2 text-[1.04rem] font-semibold leading-7 text-[#101828]"
                   />
                 </div>
                 <p className="pr-4 text-sm leading-6 text-slate-500" title={detailedDateLabel}>
-                  {t("presenton.dashboard.card.lastUpdated", { date: dateLabel })}
+                  {t("ppt_generator.dashboard.card.lastUpdated", { date: dateLabel })}
                 </p>
               </div>
 
@@ -219,7 +219,7 @@ export const PresentationCard = ({
                 <PopoverTrigger
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-slate-500 transition hover:border-[rgba(0,123,85,0.16)] hover:text-[#0b6b4b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.22)]"
                   onClick={(e) => e.stopPropagation()}
-                  aria-label={t("presenton.dashboard.card.actions")}
+                  aria-label={t("ppt_generator.dashboard.card.actions")}
                 >
                   <EllipsisVertical className="h-4 w-4" />
                 </PopoverTrigger>
@@ -232,7 +232,7 @@ export const PresentationCard = ({
                       handlePreview(e);
                     }}
                   >
-                    <span>{t("presenton.dashboard.card.action.open")}</span>
+                    <span>{t("ppt_generator.dashboard.card.action.open")}</span>
                     <ArrowUpRight className="h-4 w-4 text-slate-500" />
                   </button>
                   <button
@@ -243,7 +243,7 @@ export const PresentationCard = ({
                       setShowDeleteDialog(true);
                     }}
                   >
-                    <span>{t("presenton.dashboard.card.action.delete")}</span>
+                    <span>{t("ppt_generator.dashboard.card.action.delete")}</span>
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </PopoverContent>
@@ -256,14 +256,14 @@ export const PresentationCard = ({
                 <span>
                   {slideCount > 0
                     ? slideCount === 1
-                      ? t("presenton.dashboard.card.slideSingle", { count: slideCount })
-                      : t("presenton.dashboard.card.slideOther", { count: slideCount })
-                    : t("presenton.dashboard.card.slideAuto")}
+                      ? t("ppt_generator.dashboard.card.slideSingle", { count: slideCount })
+                      : t("ppt_generator.dashboard.card.slideOther", { count: slideCount })
+                    : t("ppt_generator.dashboard.card.slideAuto")}
                 </span>
               </div>
               <div className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-4 py-2.5">
                 <CalendarDays className="h-4 w-4 text-slate-500" />
-                <span>{t("presenton.dashboard.card.created", { date: createdDateLabel })}</span>
+                <span>{t("ppt_generator.dashboard.card.created", { date: createdDateLabel })}</span>
               </div>
             </div>
           </div>
@@ -292,10 +292,10 @@ export const PresentationCard = ({
                 <AlertTriangle className="h-5 w-5 text-red-500" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-[#101828]">{t("presenton.dashboard.card.delete.title")}</h3>
+                <h3 className="text-lg font-semibold text-[#101828]">{t("ppt_generator.dashboard.card.delete.title")}</h3>
                 <p className="text-sm leading-6 text-slate-600">
-                  {t("presenton.dashboard.card.delete.body", {
-                    title: title || t("presenton.dashboard.card.untitled"),
+                  {t("ppt_generator.dashboard.card.delete.body", {
+                    title: title || t("ppt_generator.dashboard.card.untitled"),
                   })}
                 </p>
               </div>
@@ -306,7 +306,7 @@ export const PresentationCard = ({
                 disabled={isDeleting}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {t("presenton.dashboard.card.delete.cancel")}
+                {t("ppt_generator.dashboard.card.delete.cancel")}
               </button>
               <button
                 onClick={() => void handleDelete()}
@@ -316,12 +316,12 @@ export const PresentationCard = ({
                 {isDeleting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("presenton.dashboard.card.delete.deleting")}
+                    {t("ppt_generator.dashboard.card.delete.deleting")}
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" />
-                    {t("presenton.dashboard.card.delete.confirm")}
+                    {t("ppt_generator.dashboard.card.delete.confirm")}
                   </>
                 )}
               </button>
@@ -332,3 +332,4 @@ export const PresentationCard = ({
     </>
   );
 };
+

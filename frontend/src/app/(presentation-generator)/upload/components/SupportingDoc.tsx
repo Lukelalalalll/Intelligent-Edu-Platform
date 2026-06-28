@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { Paperclip, Plus, X } from 'lucide-react'
@@ -92,8 +92,8 @@ const SupportingDoc = ({
         const disallowed = filesToReview.filter((file) => !isAllowedFile(file))
         if (disallowed.length > 0) {
             notify.error(
-                t('presenton.upload.supporting.notify.unsupported.title'),
-                t('presenton.upload.supporting.notify.unsupported.body')
+                t('ppt_generator.upload.supporting.notify.unsupported.title'),
+                t('ppt_generator.upload.supporting.notify.unsupported.body')
             )
         }
     }
@@ -104,8 +104,8 @@ const SupportingDoc = ({
         }
 
         notify.warning(
-            t('presenton.upload.supporting.notify.limit.title'),
-            t('presenton.upload.supporting.notify.limit.body', { count: MAX_SUPPORTED_FILES })
+            t('ppt_generator.upload.supporting.notify.limit.title'),
+            t('ppt_generator.upload.supporting.notify.limit.body', { count: MAX_SUPPORTED_FILES })
         )
 
         return candidateFiles.slice(0, MAX_SUPPORTED_FILES)
@@ -122,8 +122,8 @@ const SupportingDoc = ({
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
             notify.success(
-                t('presenton.upload.supporting.notify.selected.title'),
-                t('presenton.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
+                t('ppt_generator.upload.supporting.notify.selected.title'),
+                t('ppt_generator.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
             )
         }
         e.currentTarget.value = ''
@@ -143,8 +143,8 @@ const SupportingDoc = ({
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
             notify.success(
-                t('presenton.upload.supporting.notify.selected.title'),
-                t('presenton.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
+                t('ppt_generator.upload.supporting.notify.selected.title'),
+                t('ppt_generator.upload.supporting.notify.selected.body', { count: allowedFiles.length - files.length })
             )
         }
     }
@@ -175,10 +175,10 @@ const SupportingDoc = ({
                 <div className={styles.metaInfo}>
                     <p className={styles.metaText}>
                         {hasFiles
-                            ? t('presenton.upload.supporting.meta.ready', { count: filteredFiles.length })
-                            : t('presenton.upload.supporting.meta.optional')}
+                            ? t('ppt_generator.upload.supporting.meta.ready', { count: filteredFiles.length })
+                            : t('ppt_generator.upload.supporting.meta.optional')}
                     </p>
-                    <span className={styles.limitChip}>{t('presenton.upload.supporting.limit', { count: MAX_SUPPORTED_FILES })}</span>
+                    <span className={styles.limitChip}>{t('ppt_generator.upload.supporting.limit', { count: MAX_SUPPORTED_FILES })}</span>
                 </div>
                 {hasFiles && <button
                     type="button"
@@ -188,7 +188,7 @@ const SupportingDoc = ({
                     data-testid="attachments-clear-button"
                     aria-disabled={!hasFiles}
                 >
-                    {t('presenton.upload.supporting.clear')}
+                    {t('ppt_generator.upload.supporting.clear')}
                 </button>}
             </div>
 
@@ -213,23 +213,23 @@ const SupportingDoc = ({
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <p className={styles.dropTitle}>{t('presenton.upload.supporting.dropTitle')}</p>
+                        <p className={styles.dropTitle}>{t('ppt_generator.upload.supporting.dropTitle')}</p>
                         <p className={styles.dropHint}>
-                            {t('presenton.upload.supporting.dropHint')}
+                            {t('ppt_generator.upload.supporting.dropHint')}
                         </p>
                     </div>
                     <div className={styles.typeList} aria-hidden="true">
-                        <span className={styles.typeChip}>{t('presenton.upload.supporting.docs')}</span>
-                        <span className={styles.typeChip}>{t('presenton.upload.supporting.slides')}</span>
-                        <span className={styles.typeChip}>{t('presenton.upload.supporting.sheets')}</span>
-                        <span className={styles.typeChip}>{t('presenton.upload.supporting.images')}</span>
+                        <span className={styles.typeChip}>{t('ppt_generator.upload.supporting.docs')}</span>
+                        <span className={styles.typeChip}>{t('ppt_generator.upload.supporting.slides')}</span>
+                        <span className={styles.typeChip}>{t('ppt_generator.upload.supporting.sheets')}</span>
+                        <span className={styles.typeChip}>{t('ppt_generator.upload.supporting.images')}</span>
                     </div>
                 </div>
             </label>
 
             {hasFiles && (
                 <div className="mt-1">
-                    <ul data-testid="file-list" className={styles.fileList} aria-label={t('presenton.upload.supporting.attached')}>
+                    <ul data-testid="file-list" className={styles.fileList} aria-label={t('ppt_generator.upload.supporting.attached')}>
                         {filteredFiles.map((file, idx) => (
                             <li
                                 key={`${file.name}-${idx}`}
@@ -237,7 +237,7 @@ const SupportingDoc = ({
                                 data-testid="attached-file-item"
                             >
                                 {previewUrls[idx] ? (
-                                    <img src={previewUrls[idx] as string} alt={t('presenton.upload.supporting.preview')} className={styles.previewImage} />
+                                    <img src={previewUrls[idx] as string} alt={t('ppt_generator.upload.supporting.preview')} className={styles.previewImage} />
                                 ) : (
                                     <div className={styles.previewFallback}>
                                         <Paperclip className="h-4 w-4" />
@@ -255,7 +255,7 @@ const SupportingDoc = ({
                                     type="button"
                                     onClick={() => handleRemoveFileAt(idx)}
                                     className={styles.removeButton}
-                                    aria-label={t('presenton.upload.supporting.remove', { name: file.name })}
+                                    aria-label={t('ppt_generator.upload.supporting.remove', { name: file.name })}
                                     data-testid="remove-file-button"
                                 >
                                     <X className="h-4 w-4" />
@@ -265,7 +265,7 @@ const SupportingDoc = ({
                     </ul>
                     {filteredFiles.length !== files.length && (
                         <p className={styles.warning}>
-                            {t('presenton.upload.supporting.unsupported')}
+                            {t('ppt_generator.upload.supporting.unsupported')}
                         </p>
                     )}
                 </div>
@@ -289,3 +289,4 @@ function isAllowedFile(file: File): boolean {
 }
 
 export default SupportingDoc
+

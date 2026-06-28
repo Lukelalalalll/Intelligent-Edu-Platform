@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, {
   RefObject,
   useCallback,
@@ -779,3 +779,4 @@ const HtmlSelectionEditor = ({
 };
 
 export default HtmlSelectionEditor;
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Title Metrics With Chart - Enhanced with multiple bar chart variations
  */
 
@@ -859,3 +859,5 @@ const dynamicSlideLayout: React.FC<{ data: Partial<SlideData> }> = ({
 };
 
 export default dynamicSlideLayout;
+
+

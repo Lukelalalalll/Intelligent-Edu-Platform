@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const AllocationSchema = z.object({
   label: z.string().min(3).max(24).meta({
@@ -117,3 +117,5 @@ const FundingAskSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default FundingAskSlide;
+
+

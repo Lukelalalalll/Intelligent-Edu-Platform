@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const ImageSchema = z.object({
     __image_url__: z.url().meta({
@@ -17,3 +17,4 @@ export const IconSchema = z.object({
         description: "Query used to search the icon",
     }).min(5).max(20),
 })
+

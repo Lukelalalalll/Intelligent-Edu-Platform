@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { memo, useCallback, useMemo } from "react";
 import { Loader2, LayoutTemplate, Sparkles } from "lucide-react";
@@ -33,56 +33,56 @@ const BUILT_IN_TEMPLATE_COPY: Partial<
   >
 > = {
   general: {
-    name: "presenton.templates.family.general.name",
-    description: "presenton.templates.family.general.description",
+    name: "ppt_generator.templates.family.general.name",
+    description: "ppt_generator.templates.family.general.description",
   },
   modern: {
-    name: "presenton.templates.family.modern.name",
-    description: "presenton.templates.family.modern.description",
+    name: "ppt_generator.templates.family.modern.name",
+    description: "ppt_generator.templates.family.modern.description",
   },
   standard: {
-    name: "presenton.templates.family.standard.name",
-    description: "presenton.templates.family.standard.description",
+    name: "ppt_generator.templates.family.standard.name",
+    description: "ppt_generator.templates.family.standard.description",
   },
   swift: {
-    name: "presenton.templates.family.swift.name",
-    description: "presenton.templates.family.swift.description",
+    name: "ppt_generator.templates.family.swift.name",
+    description: "ppt_generator.templates.family.swift.description",
   },
   code: {
-    name: "presenton.templates.family.code.name",
-    description: "presenton.templates.family.code.description",
+    name: "ppt_generator.templates.family.code.name",
+    description: "ppt_generator.templates.family.code.description",
   },
   education: {
-    name: "presenton.templates.family.education.name",
-    description: "presenton.templates.family.education.description",
+    name: "ppt_generator.templates.family.education.name",
+    description: "ppt_generator.templates.family.education.description",
   },
   "product-overview": {
-    name: "presenton.templates.family.productOverview.name",
-    description: "presenton.templates.family.productOverview.description",
+    name: "ppt_generator.templates.family.productOverview.name",
+    description: "ppt_generator.templates.family.productOverview.description",
   },
   report: {
-    name: "presenton.templates.family.report.name",
-    description: "presenton.templates.family.report.description",
+    name: "ppt_generator.templates.family.report.name",
+    description: "ppt_generator.templates.family.report.description",
   },
   "pitch-deck": {
-    name: "presenton.templates.family.pitchDeck.name",
-    description: "presenton.templates.family.pitchDeck.description",
+    name: "ppt_generator.templates.family.pitchDeck.name",
+    description: "ppt_generator.templates.family.pitchDeck.description",
   },
   "neo-general": {
-    name: "presenton.templates.family.neoGeneral.name",
-    description: "presenton.templates.family.neoGeneral.description",
+    name: "ppt_generator.templates.family.neoGeneral.name",
+    description: "ppt_generator.templates.family.neoGeneral.description",
   },
   "neo-standard": {
-    name: "presenton.templates.family.neoStandard.name",
-    description: "presenton.templates.family.neoStandard.description",
+    name: "ppt_generator.templates.family.neoStandard.name",
+    description: "ppt_generator.templates.family.neoStandard.description",
   },
   "neo-modern": {
-    name: "presenton.templates.family.neoModern.name",
-    description: "presenton.templates.family.neoModern.description",
+    name: "ppt_generator.templates.family.neoModern.name",
+    description: "ppt_generator.templates.family.neoModern.description",
   },
   "neo-swift": {
-    name: "presenton.templates.family.neoSwift.name",
-    description: "presenton.templates.family.neoSwift.description",
+    name: "ppt_generator.templates.family.neoSwift.name",
+    description: "ppt_generator.templates.family.neoSwift.description",
   },
 };
 
@@ -185,7 +185,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
         <div className={styles.loadingState}>
           <Loader2 className="h-8 w-8 animate-spin text-[#0b6b4b]" />
           <p className={styles.loadingText}>
-            {t("presenton.outline.templates.loadingCustom")}
+            {t("ppt_generator.outline.templates.loadingCustom")}
           </p>
         </div>
       );
@@ -222,7 +222,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
               ? t(BUILT_IN_TEMPLATE_COPY[template.id]!.description)
               : template.description
           }
-          selectedLabel={t("presenton.outline.templates.selected")}
+          selectedLabel={t("ppt_generator.outline.templates.selected")}
           isSelected={selectedBuiltInId === template.id}
           onSelect={handleBuiltInSelect}
         />
@@ -237,13 +237,13 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
           <div className={styles.controlCopy}>
             <span className={styles.badge}>
               <Sparkles className="h-3.5 w-3.5" />
-              {t("presenton.outline.templates.custom.badge")}
+              {t("ppt_generator.outline.templates.custom.badge")}
             </span>
             <h3 className={styles.groupTitle}>
-              {t("presenton.outline.templates.custom.title")}
+              {t("ppt_generator.outline.templates.custom.title")}
             </h3>
             <p className={styles.groupDescription}>
-              {t("presenton.outline.templates.custom.body")}
+              {t("ppt_generator.outline.templates.custom.body")}
             </p>
           </div>
         </div>
@@ -255,13 +255,13 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
           <div className={styles.controlCopy}>
             <span className={styles.mutedBadge}>
               <LayoutTemplate className="h-3.5 w-3.5" />
-              {t("presenton.outline.templates.builtIn.badge")}
+              {t("ppt_generator.outline.templates.builtIn.badge")}
             </span>
             <h3 className={styles.groupTitle}>
-              {t("presenton.outline.templates.builtIn.title")}
+              {t("ppt_generator.outline.templates.builtIn.title")}
             </h3>
             <p className={styles.groupDescription}>
-              {t("presenton.outline.templates.builtIn.body")}
+              {t("ppt_generator.outline.templates.builtIn.body")}
             </p>
           </div>
         </div>
@@ -272,3 +272,4 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
 });
 
 export default TemplateSelection;
+

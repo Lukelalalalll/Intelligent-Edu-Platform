@@ -1,4 +1,4 @@
-export type AssistantActivity = {
+﻿export type AssistantActivity = {
   id: string;
   label: string;
   kind?: string;
@@ -32,3 +32,4 @@ export type ChatProps = {
   onChatSendingStateChange?: (isSending: boolean) => void;
   onFollowModeChange?: (isEnabled: boolean) => void;
 };
+

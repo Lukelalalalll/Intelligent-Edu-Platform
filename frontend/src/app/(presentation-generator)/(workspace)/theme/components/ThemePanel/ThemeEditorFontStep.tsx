@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useRef } from 'react'
 import { Label } from '@/components/ui/label'
@@ -36,11 +36,11 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
       }}
       >
         <Label className={joinClassNames([styles.stepHeading, styles.stepHeadingInset])}>
-        {t('presenton.theme.editor.fonts.heading')}
+        {t('ppt_generator.theme.editor.fonts.heading')}
       </Label>
 
       <div className={styles.stepCard}>
-        <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.fonts.uploadSection')}</p>
+        <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.fonts.uploadSection')}</p>
         <div
           className={`p-3 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer group ${
             isFontUploading
@@ -61,8 +61,8 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
                 <Loader2 className="w-5 h-5 text-[#7A5AF8] animate-spin" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#7A5AF8]">{t('presenton.theme.editor.fonts.uploading')}</p>
-                <p className="text-xs text-[#888]">{t('presenton.theme.editor.fonts.uploadingHint')}</p>
+                <p className="text-sm font-medium text-[#7A5AF8]">{t('ppt_generator.theme.editor.fonts.uploading')}</p>
+                <p className="text-xs text-[#888]">{t('ppt_generator.theme.editor.fonts.uploadingHint')}</p>
               </div>
             </div>
           ) : (
@@ -71,7 +71,7 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
                 <Plus className="w-5 h-5 text-[#7A5AF8]" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#151515]">{t('presenton.theme.editor.fonts.uploadButton')}</p>
+                <p className="text-sm font-medium text-[#151515]">{t('ppt_generator.theme.editor.fonts.uploadButton')}</p>
                 <p className="text-xs text-[#888]">.ttf, .otf, .woff, .woff2</p>
               </div>
               <ChevronRight className="w-4 h-4 text-[#999] group-hover:text-[#7A5AF8] transition-colors" />
@@ -94,7 +94,7 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
 
       {userFonts.fonts.length > 0 ? (
         <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-          <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.fonts.userFonts')}</p>
+          <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.fonts.userFonts')}</p>
           <div className="grid grid-cols-2 gap-2">
             {userFonts.fonts.map((font) => (
               <FontCard
@@ -112,7 +112,7 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
       ) : null}
 
       <div className={joinClassNames([styles.stepCard, styles.stepCardMuted])}>
-        <p className={styles.stepSectionCaption}>{t('presenton.theme.editor.fonts.presets')}</p>
+        <p className={styles.stepSectionCaption}>{t('ppt_generator.theme.editor.fonts.presets')}</p>
         <div className="grid grid-cols-2 gap-2 overflow-y-auto custom_scrollbar">
           {FONT_OPTIONS.map((font) => (
             <FontCard
@@ -127,3 +127,4 @@ export const ThemeEditorFontStep: React.FC<ThemeEditorFontStepProps> = ({
     </div>
   )
 }
+

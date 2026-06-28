@@ -1,4 +1,4 @@
-const readCookie = (name: string): string => {
+﻿const readCookie = (name: string): string => {
   if (typeof document === "undefined") {
     return "";
   }
@@ -33,3 +33,4 @@ export const getHeaderForFormData = (): Record<string, string> => {
     ...buildCsrfHeaders(),
   };
 };
+

@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const RecommendationSchema = z.object({
   priority: z.string().min(2).max(14).meta({
@@ -143,3 +143,5 @@ const RecommendationsSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default RecommendationsSlide;
+
+

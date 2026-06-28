@@ -8,7 +8,7 @@ from backend.services.auth.user_profile_service import load_ai_config
 
 from .auth_bridge import get_presenton_current_user, resolve_request_public_origin
 from .bootstrap import ensure_presenton_ready
-from .config_bridge import load_presenton_host_config
+from .config_bridge import load_ppt_generator_host_config
 
 bootstrap_router = APIRouter()
 
@@ -16,7 +16,7 @@ bootstrap_router = APIRouter()
 @bootstrap_router.get("/api/v1/app/bootstrap")
 async def presenton_bootstrap(request: Request, current_user: dict = Depends(get_presenton_current_user)):
     await ensure_presenton_ready()
-    summary, _ = await load_presenton_host_config(request, current_user)
+    summary, _ = await load_ppt_generator_host_config(request, current_user)
     ai_config = await load_ai_config(current_user)
     has_required_key = bool(
         ai_config.get("openai", {}).get("api_key_set")
@@ -45,7 +45,7 @@ async def presenton_bootstrap(request: Request, current_user: dict = Depends(get
 @bootstrap_router.get("/api/v1/app/user-config")
 async def presenton_user_config(request: Request, current_user: dict = Depends(get_presenton_current_user)):
     await ensure_presenton_ready()
-    summary, _ = await load_presenton_host_config(request, current_user)
+    summary, _ = await load_ppt_generator_host_config(request, current_user)
     return summary
 
 
@@ -56,5 +56,5 @@ async def presenton_user_config_update(
 ):
     raise HTTPException(
         status_code=403,
-        detail="Presenton AI settings are managed from your profile AI config.",
+        detail="PPT Generator AI settings are managed from your profile AI config.",
     )

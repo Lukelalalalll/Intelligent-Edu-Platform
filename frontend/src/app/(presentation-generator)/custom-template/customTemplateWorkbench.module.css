@@ -1,4 +1,4 @@
-.shell {
+﻿.shell {
     --ct-primary: var(--primary-color, #007B55);
     --ct-primary-dark: var(--primary-dark, #006644);
     --ct-primary-light: rgba(0, 123, 85, 0.1);
@@ -414,6 +414,14 @@
     gap: 20px;
     position: sticky;
     top: 20px;
+    min-height: 0;
+    align-self: start;
+}
+
+.editorSidebarActive {
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+    overflow: hidden;
 }
 
 .editorSidebarPanel {
@@ -422,10 +430,22 @@
     background: #ffffff;
     box-shadow: 0 10px 24px rgba(21, 52, 45, 0.06);
     overflow: hidden;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .editorSidebarPanelPad {
     padding: 18px;
+    flex-shrink: 0;
+}
+
+.editorSidebarPanelBody {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
 }
 
 .editorLayoutActive {
@@ -535,6 +555,9 @@
 
     .editorSidebar {
         position: static;
+        height: auto;
+        max-height: none;
+        overflow: visible;
     }
 }
 
@@ -561,3 +584,4 @@
         padding: 18px;
     }
 }
+

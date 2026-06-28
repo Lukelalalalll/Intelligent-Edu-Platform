@@ -1,4 +1,4 @@
-import * as z from 'zod';
+﻿import * as z from 'zod';
 import React from 'react';
 
 export const Schema = z.object({
@@ -17,7 +17,7 @@ export const Schema = z.object({
             name: 'Hannah Morales',
             designation: 'Founder & CEO',
             image: {
-                __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+                __image_url__: '/placeholder.jpg',
                 __image_prompt__: 'Professional headshot of a female executive smiling'
             },
             summary: 'Focus on companies with 500+ employees.'
@@ -26,7 +26,7 @@ export const Schema = z.object({
             name: 'Hannah Morales',
             designation: 'Founder & CEO',
             image: {
-                __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+                __image_url__: '/placeholder.jpg',
                 __image_prompt__: 'Professional headshot of a female executive smiling'
             },
             summary: 'Focus on companies with 500+ employees.'
@@ -35,7 +35,7 @@ export const Schema = z.object({
             name: 'Hannah Morales',
             designation: 'Founder & CEO',
             image: {
-                __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+                __image_url__: '/placeholder.jpg',
                 __image_prompt__: 'Professional headshot of a female executive smiling'
             },
             summary: 'Focus on companies with 500+ employees.'
@@ -44,7 +44,7 @@ export const Schema = z.object({
             name: 'Hannah Morales',
             designation: 'Founder & CEO',
             image: {
-                __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+                __image_url__: '/placeholder.jpg',
                 __image_prompt__: 'Professional headshot of a female executive smiling'
             },
             summary: 'Focus on companies with 500+ employees.'
@@ -162,4 +162,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+
 

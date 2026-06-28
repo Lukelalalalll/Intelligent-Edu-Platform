@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, {
   useEffect,
   useState,
@@ -325,3 +325,4 @@ const NewSlideV1 = ({
 };
 
 export default NewSlideV1;
+

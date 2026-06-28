@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import APIRouter
 
@@ -21,11 +21,12 @@ from .delivery_generate_routes import (
     stream_generate_v2_task,
 )
 from .delivery_outline_routes import (
-    generate_presenton_outline,
+    generate_ppt_generator_outline,
     router as outline_router,
-    stream_presenton_assistant,
+    stream_ppt_generator_assistant,
 )
 
 router = APIRouter()
 for child_router in (artifact_router, generate_router, outline_router):
     router.include_router(child_router)
+

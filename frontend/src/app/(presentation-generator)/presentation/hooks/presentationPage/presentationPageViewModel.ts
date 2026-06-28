@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+﻿import type { MutableRefObject } from "react";
 import type { PresentationData } from "@/store/slices/presentationGeneration";
 import type { Slide } from "../../../types/slide";
 import type { Theme } from "../../../services/api/types";
@@ -145,3 +145,4 @@ export const buildEditorViewProps = ({
     onAgentSlideFocus,
   },
 });
+

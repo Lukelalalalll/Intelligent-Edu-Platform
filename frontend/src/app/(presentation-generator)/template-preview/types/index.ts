@@ -1,4 +1,4 @@
-
+﻿
 export interface LayoutInfo {
     name: string
     component: React.ComponentType<any>
@@ -46,3 +46,4 @@ export interface ComponentProps {
     className?: string
     children?: React.ReactNode
 }
+

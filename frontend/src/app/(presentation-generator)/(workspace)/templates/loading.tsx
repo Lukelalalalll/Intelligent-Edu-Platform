@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+﻿import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 
 const TemplateCardSkeleton = () => (
@@ -57,3 +57,4 @@ const Loading = () => {
 }
 
 export default Loading
+

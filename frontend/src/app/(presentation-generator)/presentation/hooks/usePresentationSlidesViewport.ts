@@ -1,4 +1,4 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
+﻿import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useRef } from "react";
 
 type PresentationSlideLike = {
@@ -125,3 +125,4 @@ export const usePresentationSlidesViewport = ({
     handleEditorSlideSelect,
   };
 };
+

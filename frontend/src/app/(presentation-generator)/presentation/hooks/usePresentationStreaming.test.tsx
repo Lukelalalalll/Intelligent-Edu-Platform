@@ -1,11 +1,11 @@
-import React, { StrictMode } from "react";
+﻿import React, { StrictMode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePresentationStreaming } from "./usePresentationStreaming";
 
 const encoder = new TextEncoder();
 const mockDispatch = vi.fn();
-const mockPresentonFetch = vi.fn();
+const mockPptGeneratorFetch = vi.fn();
 const mockTrackEvent = vi.fn();
 const mockNotifyError = vi.fn();
 const mockNotifyWarning = vi.fn();
@@ -56,8 +56,8 @@ vi.mock("@/utils/api", () => ({
   normalizeBackendAssetUrls: <T,>(value: T) => value,
 }));
 
-vi.mock("../../services/api/presenton-fetch", () => ({
-  presentonFetch: (...args: unknown[]) => mockPresentonFetch(...args),
+vi.mock("../../services/api/ppt_generator-fetch", () => ({
+  pptGeneratorFetch: (...args: unknown[]) => mockPptGeneratorFetch(...args),
 }));
 
 vi.mock("@/store/store", () => ({
@@ -74,7 +74,7 @@ const buildStatusFrame = (status: string) =>
 describe("usePresentationStreaming", () => {
   beforeEach(() => {
     mockDispatch.mockReset();
-    mockPresentonFetch.mockReset();
+    mockPptGeneratorFetch.mockReset();
     mockTrackEvent.mockReset();
     mockNotifyError.mockReset();
     mockNotifyWarning.mockReset();
@@ -101,7 +101,7 @@ describe("usePresentationStreaming", () => {
       { status: 200 }
     );
 
-    mockPresentonFetch.mockResolvedValue(response);
+    mockPptGeneratorFetch.mockResolvedValue(response);
 
     const { result, unmount } = renderHook(() =>
       usePresentationStreaming(
@@ -155,7 +155,7 @@ describe("usePresentationStreaming", () => {
       cancel: secondCancel,
     };
 
-    mockPresentonFetch
+    mockPptGeneratorFetch
       .mockResolvedValueOnce({
         ok: true,
         body: { getReader: () => firstReader },
@@ -182,7 +182,7 @@ describe("usePresentationStreaming", () => {
     );
 
     await waitFor(() => {
-      expect(mockPresentonFetch).toHaveBeenCalledTimes(2);
+      expect(mockPptGeneratorFetch).toHaveBeenCalledTimes(2);
     });
 
     await waitFor(() => {
@@ -231,7 +231,7 @@ describe("usePresentationStreaming", () => {
       }),
     };
 
-    mockPresentonFetch.mockResolvedValue({
+    mockPptGeneratorFetch.mockResolvedValue({
       ok: true,
       body: { getReader: () => reader },
     });
@@ -265,3 +265,5 @@ describe("usePresentationStreaming", () => {
     ).toBe(false);
   });
 });
+
+

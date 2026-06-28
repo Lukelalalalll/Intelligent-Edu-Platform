@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 
 const MemberSchema = z.object({
@@ -127,4 +127,6 @@ const TeamSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default TeamSlide;
+
+
 

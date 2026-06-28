@@ -143,7 +143,7 @@ export default function OllamaConfig({
       if (reachable.usedFallback) {
         notify.success(
           "Using Ollama on localhost",
-          "The configured Ollama host did not respond, so Presenton switched to localhost."
+          "The configured Ollama host did not respond, so PPT Generator switched to localhost."
         );
       }
       if (!reachable.usedFallback && reachable.resolvedUrl !== ollamaUrl.trim()) {
@@ -370,7 +370,7 @@ export default function OllamaConfig({
           }}
         />
         <p className="mt-2 text-sm text-gray-500">
-          Default: {defaultOllamaUrl}. If Presenton runs in Docker and Ollama runs on the host,
+          Default: {defaultOllamaUrl}. If PPT Generator runs in Docker and Ollama runs on the host,
           try http://host.docker.internal:11434.
         </p>
         <Button

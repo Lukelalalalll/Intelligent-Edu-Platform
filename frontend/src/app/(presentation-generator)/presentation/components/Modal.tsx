@@ -1,4 +1,4 @@
-const Modal = ({
+﻿const Modal = ({
   isOpen,
   onClose,
   children,
@@ -43,3 +43,4 @@ const Modal = ({
   );
 };
 export default Modal;
+

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useEffect, useRef } from 'react'
 import * as z from 'zod'
@@ -11,7 +11,7 @@ const layoutDescription = 'A slide with header label, a left-side inline bar cha
 
 const ChartDatumSchema = z.object({
   label: z.string().min(1).max(12).default('A').meta({ description: 'Category label' }),
-  value: z.number().min(0).max(100).default(60).meta({ description: 'Value 0–100' }),
+  value: z.number().min(0).max(100).default(60).meta({ description: 'Value 0鈥?00' }),
 })
 
 const Schema = z.object({
@@ -384,3 +384,5 @@ const dynamicSlideLayout: React.FC<SlideLayoutProps> = ({ data: slideData }) => 
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default dynamicSlideLayout
+
+

@@ -1,4 +1,4 @@
-import { RemoteSvgIcon } from "@/app/hooks/useRemoteSvgIcon";
+﻿import { RemoteSvgIcon } from "@/app/hooks/useRemoteSvgIcon";
 import * as z from "zod";
 
 export const slideLayoutId = "adaptive-value-card-grid";
@@ -260,4 +260,6 @@ const AdaptiveValueCardGrid = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default AdaptiveValueCardGrid;
+
+
 

@@ -1,4 +1,4 @@
-import { fitCodeBlock } from "./codeBlockFitting";
+﻿import { fitCodeBlock } from "./codeBlockFitting";
 
 interface CodeBlockPanelProps {
   title?: string;
@@ -108,3 +108,5 @@ export function CodeBlockPanel({
     </div>
   );
 }
+
+

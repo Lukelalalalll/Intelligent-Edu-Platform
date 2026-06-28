@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
@@ -32,7 +32,7 @@ def to_iso(ts: float | int | None) -> str | None:
         return None
 
 
-def build_presenton_source(req, *, title: str, request_id: str) -> dict:
+def build_ppt_generator_source(req, *, title: str, request_id: str) -> dict:
     source_kind = (req.source_kind or "").strip() or "text"
     source_filename = str(req.source_filename or "").strip()
     source_display_name = str(req.source_display_name or "").strip()
@@ -53,7 +53,7 @@ def build_presenton_source(req, *, title: str, request_id: str) -> dict:
     return source
 
 
-def build_presenton_result_artifacts(
+def build_ppt_generator_result_artifacts(
     *,
     title: str,
     request_id: str,
@@ -80,7 +80,7 @@ def build_presenton_result_artifacts(
     return result
 
 
-def build_workflow_snapshot(task: dict | None, *, task_type: str = "presenton_generate_v2") -> dict | None:
+def build_workflow_snapshot(task: dict | None, *, task_type: str = "ppt_generator_generate_v2") -> dict | None:
     if not isinstance(task, dict):
         return None
     events = task.get("events") or []
@@ -154,7 +154,7 @@ def build_workflow_snapshot(task: dict | None, *, task_type: str = "presenton_ge
     }
 
 
-def build_presenton_history_params(
+def build_ppt_generator_history_params(
     *,
     req,
     runtime,
@@ -164,7 +164,7 @@ def build_presenton_history_params(
     title: str = "",
 ) -> dict:
     return {
-        "tool": "presenton_generate_v2",
+        "tool": "ppt_generator_generate_v2",
         "provider": req.provider or "auto",
         "provider_requested": runtime.requested_provider,
         "provider_resolved": runtime.provider_id,
@@ -198,7 +198,7 @@ async def persist_generate_v2_history(
     runtime,
     title: str,
     result: dict,
-    save_presenton_history,
+    save_ppt_generator_history,
     slides_results: list[dict] | None = None,
     pptx_filename: str = "",
     design_spec_url: str = "",
@@ -207,9 +207,9 @@ async def persist_generate_v2_history(
     request_id = str((task or {}).get("request_id") or "")
     task_id = str((task or {}).get("task_id") or "")
     workflow = build_workflow_snapshot(task)
-    source = build_presenton_source(req, title=title, request_id=request_id)
+    source = build_ppt_generator_source(req, title=title, request_id=request_id)
     source["workflow"] = workflow
-    source["result_artifacts"] = build_presenton_result_artifacts(
+    source["result_artifacts"] = build_ppt_generator_result_artifacts(
         title=title,
         request_id=request_id,
         slides_results=slides_results,
@@ -217,7 +217,7 @@ async def persist_generate_v2_history(
         design_spec_url=design_spec_url,
         script_payload=script_payload,
     )
-    params = build_presenton_history_params(
+    params = build_ppt_generator_history_params(
         req=req,
         runtime=runtime,
         request_id=request_id,
@@ -229,11 +229,12 @@ async def persist_generate_v2_history(
     if not preview:
         artifacts = source.get("result_artifacts")
         page_count = artifacts.get("page_count", 0) if isinstance(artifacts, dict) else 0
-        preview = f"Presenton generated {page_count} slides with {runtime.provider_id}"
-    await save_presenton_history(
+        preview = f"PPT Generator generated {page_count} slides with {runtime.provider_id}"
+    await save_ppt_generator_history(
         user_id=user_id,
         params=params,
         result_preview=preview,
         result_full=result,
         source=source,
     )
+

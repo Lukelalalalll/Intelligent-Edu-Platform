@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 import { ImageSchema } from '../defaultSchemes';
 
@@ -139,3 +139,4 @@ const MetricsWithImageSlideLayout: React.FC<MetricsWithImageSlideLayoutProps> = 
 }
 
 export default MetricsWithImageSlideLayout 
+

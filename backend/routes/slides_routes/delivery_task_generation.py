@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 
 async def generate_outline_and_slides(
@@ -6,7 +6,7 @@ async def generate_outline_and_slides(
     req,
     adapter,
     task_id: str,
-    presenton_task_service,
+    ppt_generator_task_service,
     extract_source_text_and_chapters_fn,
     normalize_outline_slides_fn,
 ) -> tuple[list[dict], list[dict]]:
@@ -20,7 +20,7 @@ async def generate_outline_and_slides(
     words = max(8, min(int(req.words_each_bullet or 15), 80))
 
     if req.outlineSlides:
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_start",
             "outline",
@@ -28,7 +28,7 @@ async def generate_outline_and_slides(
             progress=25,
         )
         outline = normalize_outline_slides_fn(req.outlineSlides, pages)
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "outline",
@@ -37,7 +37,7 @@ async def generate_outline_and_slides(
             payload={"outline_source": "edited"},
         )
     else:
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_start",
             "outline",
@@ -49,7 +49,7 @@ async def generate_outline_and_slides(
             total_pages=pages,
             chapter_data=chapter_data_clean,
         )
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "outline",
@@ -57,7 +57,7 @@ async def generate_outline_and_slides(
             progress=45,
         )
 
-    await presenton_task_service.add_event(
+    await ppt_generator_task_service.add_event(
         task_id,
         "step_start",
         "slide_content",
@@ -69,7 +69,7 @@ async def generate_outline_and_slides(
         num_of_bullets=bullets,
         words_each_bullet=words,
     )
-    await presenton_task_service.add_event(
+    await ppt_generator_task_service.add_event(
         task_id,
         "step_done",
         "slide_content",
@@ -77,3 +77,4 @@ async def generate_outline_and_slides(
         progress=78,
     )
     return outline, slides_results
+

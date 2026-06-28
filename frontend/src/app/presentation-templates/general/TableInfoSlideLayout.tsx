@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import * as z from "zod";
 
 export const layoutId = "table-info-slide";
@@ -259,3 +259,5 @@ const TableInfoSlideLayout: React.FC<TableInfoSlideLayoutProps> = ({
 };
 
 export default TableInfoSlideLayout;
+
+

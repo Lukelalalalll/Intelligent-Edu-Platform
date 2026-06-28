@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -7,11 +7,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { notify } from "@/components/ui/sonner";
 import { aiConfigApi, type AIConfigResponse } from "@/features/ai-config/api/aiConfigApi";
 import {
-  getConfiguredPresentonProviders,
-  resolvePresentonProviderOverride,
-  writeStoredPresentonProviderOverride,
-  type PresentonSelectableProvider,
-} from "@/presenton/providerOverride";
+  getConfiguredPptGeneratorProviders,
+  resolvePptGeneratorProviderOverride,
+  writeStoredPptGeneratorProviderOverride,
+  type PptGeneratorSelectableProvider,
+} from "@/ppt_generator/providerOverride";
 import { useI18n } from "@/shared/i18n";
 import { RootState } from "@/store/store";
 import { clearOutlines, setPresentationId } from "@/store/slices/presentationGeneration";
@@ -25,7 +25,7 @@ import { LanguageType, type PresentationConfig } from "../type";
 import {
   getGenerationLanguageForLocale,
   normalizeGenerationLanguage,
-} from "../../utils/presentonLanguage";
+} from "../../utils/pptGeneratorLanguage";
 import {
   buildUploadActionSummary,
   buildUploadSnapshotProps,
@@ -96,11 +96,11 @@ export function useUploadPageController() {
   );
 
   const configuredProviders = useMemo(
-    () => getConfiguredPresentonProviders(aiConfig),
+    () => getConfiguredPptGeneratorProviders(aiConfig),
     [aiConfig]
   );
   const selectedProvider = useMemo(
-    () => resolvePresentonProviderOverride(aiConfig),
+    () => resolvePptGeneratorProviderOverride(aiConfig),
     [aiConfig]
   );
   useEffect(() => {
@@ -134,7 +134,7 @@ export function useUploadPageController() {
   );
   const generationDisabledReason = useMemo(() => {
     if (aiConfig && configuredProviders.length === 0) {
-      return t("presenton.upload.currentConfig.noneConfigured");
+      return t("ppt_generator.upload.currentConfig.noneConfigured");
     }
     return null;
   }, [aiConfig, configuredProviders.length, t]);
@@ -152,16 +152,16 @@ export function useUploadPageController() {
 
   const generationPathLabel =
     files.length > 0
-      ? t("presenton.upload.path.documents")
-      : t("presenton.upload.path.promptOnly");
+      ? t("ppt_generator.upload.path.documents")
+      : t("ppt_generator.upload.path.promptOnly");
   const nextStepLabel =
     files.length > 0
-      ? t("presenton.upload.next.documents")
-      : t("presenton.upload.next.outline");
+      ? t("ppt_generator.upload.next.documents")
+      : t("ppt_generator.upload.next.outline");
   const primaryActionLabel =
     files.length > 0
-      ? t("presenton.upload.cta.documents")
-      : t("presenton.upload.cta.outline");
+      ? t("ppt_generator.upload.cta.documents")
+      : t("ppt_generator.upload.cta.outline");
 
   const actionSummary = useMemo(
     () =>
@@ -210,11 +210,11 @@ export function useUploadPageController() {
   }, []);
 
   const handleProviderSelect = useCallback(
-    (provider: PresentonSelectableProvider) => {
+    (provider: PptGeneratorSelectableProvider) => {
       if (!configuredProviders.includes(provider)) {
         return;
       }
-      writeStoredPresentonProviderOverride(provider);
+      writeStoredPptGeneratorProviderOverride(provider);
       dispatch(
         setLLMConfig({
           ...llmConfig,
@@ -250,9 +250,9 @@ export function useUploadPageController() {
       return true;
     } catch (error: any) {
       notify.error(
-        t("presenton.upload.notify.imageUnavailable.title"),
+        t("ppt_generator.upload.notify.imageUnavailable.title"),
         error?.message ||
-          t("presenton.upload.notify.imageUnavailable.body", {
+          t("ppt_generator.upload.notify.imageUnavailable.body", {
             provider: selectedProvider,
           })
       );
@@ -264,7 +264,7 @@ export function useUploadPageController() {
     if (generationDisabledReason) {
       trackUploadValidationFailure("provider_not_configured");
       notify.warning(
-        t("presenton.upload.notify.providerRequired.title"),
+        t("ppt_generator.upload.notify.providerRequired.title"),
         generationDisabledReason
       );
       return false;
@@ -273,8 +273,8 @@ export function useUploadPageController() {
     if (!effectiveConfig.language) {
       trackUploadValidationFailure("language_missing");
       notify.warning(
-        t("presenton.upload.notify.languageRequired.title"),
-        t("presenton.upload.notify.languageRequired.body")
+        t("ppt_generator.upload.notify.languageRequired.title"),
+        t("ppt_generator.upload.notify.languageRequired.body")
       );
       return false;
     }
@@ -282,8 +282,8 @@ export function useUploadPageController() {
     if (files.length > 0 && effectiveConfig.language === LanguageType.Auto) {
       trackUploadValidationFailure("language_auto_with_documents");
       notify.warning(
-        t("presenton.upload.notify.languageRequired.title"),
-        t("presenton.upload.notify.languageRequired.documents")
+        t("ppt_generator.upload.notify.languageRequired.title"),
+        t("ppt_generator.upload.notify.languageRequired.documents")
       );
       return false;
     }
@@ -291,8 +291,8 @@ export function useUploadPageController() {
     if (!effectiveConfig.prompt.trim() && files.length === 0) {
       trackUploadValidationFailure("prompt_or_document_missing");
       notify.warning(
-        t("presenton.upload.notify.inputRequired.title"),
-        t("presenton.upload.notify.inputRequired.body")
+        t("ppt_generator.upload.notify.inputRequired.title"),
+        t("ppt_generator.upload.notify.inputRequired.body")
       );
       return false;
     }
@@ -316,19 +316,19 @@ export function useUploadPageController() {
       showProgress: false,
     });
     notify.error(
-      t("presenton.upload.notify.generationFailed.title"),
-      error.message || t("presenton.upload.notify.generationFailed.body")
+      t("ppt_generator.upload.notify.generationFailed.title"),
+      error.message || t("ppt_generator.upload.notify.generationFailed.body")
     );
   }, [t]);
 
   const handleDocumentProcessing = useCallback(async () => {
     setLoadingState({
       isLoading: true,
-      message: t("presenton.upload.loading.documents"),
+      message: t("ppt_generator.upload.loading.documents"),
       showProgress: true,
       duration: 90,
       extra_info:
-        files.length > 0 ? t("presenton.upload.loading.documentsExtra") : "",
+        files.length > 0 ? t("ppt_generator.upload.loading.documentsExtra") : "",
     });
 
     let documents = [];
@@ -373,7 +373,7 @@ export function useUploadPageController() {
   const handleDirectPresentationGeneration = useCallback(async () => {
     setLoadingState({
       isLoading: true,
-      message: t("presenton.upload.loading.outlines"),
+      message: t("ppt_generator.upload.loading.outlines"),
       showProgress: true,
       duration: 30,
     });
@@ -463,3 +463,4 @@ export function useUploadPageController() {
     },
   };
 }
+

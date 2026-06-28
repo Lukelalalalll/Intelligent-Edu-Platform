@@ -1,4 +1,4 @@
-import { useSortable } from '@dnd-kit/sortable';
+﻿import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Slide } from '../../types/slide';
 import { CSSProperties, useMemo, useRef } from 'react';
@@ -66,3 +66,4 @@ export function SortableSlide({
         />
     );
 }
+

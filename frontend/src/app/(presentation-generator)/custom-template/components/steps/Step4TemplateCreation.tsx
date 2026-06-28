@@ -1,4 +1,4 @@
-
+﻿
 
 import React, { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -111,7 +111,9 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
             />
         </div>
 
-        <aside className={styles.editorSidebar}>
+        <aside
+          className={`${styles.editorSidebar} ${isSchemaEditorOpen ? styles.editorSidebarActive : ""}`.trim()}
+        >
           <section className={styles.summaryCard}>
             <div className={styles.summaryHeader}>
               <h3>Generation Status</h3>
@@ -152,7 +154,7 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
                   </p>
                 </div>
               </div>
-              <div className="border-t border-[#e6efeb]">
+              <div className={styles.editorSidebarPanelBody}>
                   <SchemaEditorPanel
                     slide={schemaEditorSlide}
                     slideIndex={schemaEditorSlideIndex}
@@ -185,7 +187,7 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
               <div className={styles.summaryHeader}>
                 <h3>Save Template</h3>
                 <p>
-                  When all required slides are reconstructed, package the result as a reusable custom Presenton template.
+                  When all required slides are reconstructed, package the result as a reusable custom PPT Generator template.
                 </p>
               </div>
 
@@ -221,3 +223,4 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
     </SchemaHighlightProvider>
   );
 };
+

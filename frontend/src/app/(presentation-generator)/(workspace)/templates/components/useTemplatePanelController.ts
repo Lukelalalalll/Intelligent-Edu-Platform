@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -6,7 +6,7 @@ import {
     type CustomTemplates,
     useCustomTemplateSummaries,
 } from "@/app/hooks/useCustomTemplates";
-import { usePathname, useRouter } from "@/presenton/shims/next-navigation";
+import { usePathname, useRouter } from "@/ppt_generator/shims/next-navigation";
 import { useI18n } from "@/shared/i18n";
 import { PAGE_ENTRANCE_SETTLE_MS } from "@/shared/page-entrance/usePageEntrance";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
@@ -249,3 +249,4 @@ export function useTemplatePanelController() {
         },
     };
 }
+

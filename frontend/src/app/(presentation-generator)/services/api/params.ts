@@ -1,4 +1,4 @@
-export interface ImageSearch {
+﻿export interface ImageSearch {
   presentation_id: string;
   query: string;
   page: number;
@@ -30,3 +30,4 @@ export interface PreviousGeneratedImagesResponse {
   path: string;
   file_url?: string;
 }
+

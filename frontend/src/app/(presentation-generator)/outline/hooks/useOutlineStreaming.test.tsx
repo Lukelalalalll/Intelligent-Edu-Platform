@@ -1,9 +1,9 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+﻿import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useOutlineStreaming } from "./useOutlineStreaming";
 
 const mockDispatch = vi.fn();
-const mockEnsurePresentonSession = vi.fn();
+const mockEnsurePptGeneratorSession = vi.fn();
 const mockNotifyError = vi.fn();
 const storeState = {
   presentationGeneration: {
@@ -34,9 +34,9 @@ vi.mock("@/utils/api", () => ({
   getApiUrl: (path: string) => path,
 }));
 
-vi.mock("../../services/api/presenton-fetch", () => ({
-  ensurePresentonSession: (...args: unknown[]) =>
-    mockEnsurePresentonSession(...args),
+vi.mock("../../services/api/ppt_generator-fetch", () => ({
+  ensurePptGeneratorSession: (...args: unknown[]) =>
+    mockEnsurePptGeneratorSession(...args),
 }));
 
 class MockEventSource {
@@ -79,8 +79,8 @@ describe("useOutlineStreaming", () => {
 
   beforeEach(() => {
     mockDispatch.mockReset();
-    mockEnsurePresentonSession.mockReset();
-    mockEnsurePresentonSession.mockResolvedValue(undefined);
+    mockEnsurePptGeneratorSession.mockReset();
+    mockEnsurePptGeneratorSession.mockResolvedValue(undefined);
     mockNotifyError.mockReset();
     storeState.presentationGeneration.outlines = [];
     MockEventSource.reset();
@@ -103,7 +103,7 @@ describe("useOutlineStreaming", () => {
     const { result } = renderHook(() => useOutlineStreaming("presentation-1"));
 
     await waitFor(() => {
-      expect(mockEnsurePresentonSession).toHaveBeenCalledTimes(1);
+      expect(mockEnsurePptGeneratorSession).toHaveBeenCalledTimes(1);
       expect(MockEventSource.instances).toHaveLength(1);
     });
 
@@ -165,3 +165,5 @@ describe("useOutlineStreaming", () => {
     });
   });
 });
+
+

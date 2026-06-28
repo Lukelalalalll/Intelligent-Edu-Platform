@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { LogOut, Search, Shield } from 'lucide-react'
 import { IMAGE_PROVIDERS, LLM_PROVIDERS } from '@/utils/providerConstants'
 import { useSelector } from 'react-redux'
@@ -66,3 +66,4 @@ const SettingSideBar = ({ selectedProvider, setSelectedProvider }: { selectedPro
 }
 
 export default SettingSideBar
+

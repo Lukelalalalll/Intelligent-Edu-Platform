@@ -16,7 +16,7 @@ from .bootstrap import load_presenton_runtime
 def resolve_request_public_origin(request: Request) -> str:
     runtime = load_presenton_runtime()
     return runtime.resolve_web_origin(
-        explicit_origin=request.headers.get("x-presenton-web-origin"),
+        explicit_origin=request.headers.get("x-ppt-generator-web-origin"),
         forwarded_proto=request.headers.get("x-forwarded-proto"),
         forwarded_host=request.headers.get("x-forwarded-host") or request.headers.get("host"),
         origin_header=request.headers.get("origin"),

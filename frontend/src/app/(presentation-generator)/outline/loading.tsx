@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+﻿import { Skeleton } from '@/components/ui/skeleton'
 import React from 'react'
 
 const CreatePageLoadingSkeleton = () => {
@@ -29,3 +29,4 @@ const CreatePageLoadingSkeleton = () => {
 }
 
 export default CreatePageLoadingSkeleton
+

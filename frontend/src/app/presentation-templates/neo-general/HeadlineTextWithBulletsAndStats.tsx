@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 
 export const layoutId = 'headline-text-with-stats-layout'
@@ -142,3 +142,4 @@ const HeadlineTextWithBulletsAndStatsLayout: React.FC<HeadlineTextWithBulletsAnd
 }
 
 export default HeadlineTextWithBulletsAndStatsLayout;
+

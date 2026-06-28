@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { memo } from "react";
 import { Card } from "@/components/ui/card";
@@ -60,12 +60,12 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
               {template.name}
             </h3>
             <p className="mt-1 text-xs text-[#667085]">
-              {t("presenton.outline.templates.custom.cardDescription")}
+              {t("ppt_generator.outline.templates.custom.cardDescription")}
             </p>
           </div>
           {isSelected ? (
             <span className="rounded-full border border-[rgba(0,123,85,0.14)] bg-[rgba(0,123,85,0.08)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#0b6b4b]">
-              {t("presenton.outline.templates.selected")}
+              {t("ppt_generator.outline.templates.selected")}
             </span>
           ) : null}
         </div>
@@ -73,3 +73,4 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
     </Card>
   );
 });
+

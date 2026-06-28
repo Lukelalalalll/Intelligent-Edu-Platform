@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import UploadPage from './UploadPage'
 import { mount } from 'cypress/react'
 import { store } from '@/store/store'
@@ -93,14 +93,14 @@ describe('<UploadPage />', () => {
       // Force click to handle any overlay issues
       cy.get('[data-testid="language-select"]').click({ force: true })
       // Wait for content to be visible and click Simplified Chinese
-      cy.get('[role="option"]').contains('Chinese (Simplified - 中文, 汉语)').should('be.visible').click()
+      cy.get('[role="option"]').contains('Chinese (Simplified - 涓枃, 姹夎)').should('be.visible').click()
       // Verify selection
-      cy.get('[data-testid="language-select"]').should('contain', 'Chinese (Simplified - 中文, 汉语)')
+      cy.get('[data-testid="language-select"]').should('contain', 'Chinese (Simplified - 涓枃, 姹夎)')
 
       // Now test Traditional Chinese as well
       cy.get('[data-testid="language-select"]').click({ force: true })
-      cy.get('[role="option"]').contains('Chinese (Traditional - 中文, 漢語)').should('be.visible').click()
-      cy.get('[data-testid="language-select"]').should('contain', 'Chinese (Traditional - 中文, 漢語)')
+      cy.get('[role="option"]').contains('Chinese (Traditional - 涓枃, 婕㈣獮)').should('be.visible').click()
+      cy.get('[data-testid="language-select"]').should('contain', 'Chinese (Traditional - 涓枃, 婕㈣獮)')
     })
   })
 

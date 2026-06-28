@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
@@ -15,8 +15,8 @@ __all__ = [
     "StepRecord",
     "ErrorCategory",
     "AuditLogger",
-    "PresentonAdapterService",
-    "PresentonTaskService",
+    "PptGeneratorAdapterService",
+    "PptGeneratorTaskService",
 ]
 
 _EXPORTS: dict[str, tuple[str, str]] = {
@@ -31,8 +31,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "StepRecord": (".infra.task_tracker", "StepRecord"),
     "ErrorCategory": (".infra.task_tracker", "ErrorCategory"),
     "AuditLogger": (".infra.audit_logger", "AuditLogger"),
-    "PresentonAdapterService": (".presenton.adapter_service", "PresentonAdapterService"),
-    "PresentonTaskService": (".presenton.task_service", "PresentonTaskService"),
+    "PptGeneratorAdapterService": (".ppt_generator.adapter_service", "PptGeneratorAdapterService"),
+    "PptGeneratorTaskService": (".ppt_generator.task_service", "PptGeneratorTaskService"),
 }
 
 if TYPE_CHECKING:
@@ -43,8 +43,8 @@ if TYPE_CHECKING:
     from .output.ppt_creator import PPTCreator
     from .output.word_generator import generate_talking_script_word
     from .parsing.md_parser import MarkdownViewer
-    from .presenton.adapter_service import PresentonAdapterService
-    from .presenton.task_service import PresentonTaskService
+    from .ppt_generator.adapter_service import PptGeneratorAdapterService
+    from .ppt_generator.task_service import PptGeneratorTaskService
 
 
 def __getattr__(name: str) -> Any:
@@ -59,3 +59,4 @@ def __getattr__(name: str) -> Any:
 
 def __dir__() -> list[str]:
     return sorted(set(globals()) | set(__all__))
+

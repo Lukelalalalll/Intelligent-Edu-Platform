@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   width: 100%;
   min-height: calc(100dvh - var(--nav-height, 60px));
 }
@@ -17,11 +17,27 @@
   --banner-padding-block: 2.15rem;
   --banner-intro-padding-block: 3.05rem;
   margin-bottom: 0.1rem;
+  animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+.banner :global(h1) {
+  animation: slideUpFade 0.8s forwards 0.2s;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.banner :global(.subtitle) {
+  animation: slideUpFade 0.8s forwards 0.4s;
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .navShell {
   display: flex;
   justify-content: center;
+  animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.4s;
+  opacity: 0;
 }
 
 .navList {
@@ -96,6 +112,16 @@
     background-color 180ms ease,
     transform 180ms ease;
   contain: layout paint style;
+  opacity: 0;
+  animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.controlCard {
+  animation-delay: 0.42s;
+}
+
+.libraryCard {
+  animation-delay: 0.58s;
 }
 
 .surfaceCard::before {
@@ -323,6 +349,20 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 18px -22px rgba(15, 23, 42, 0.24);
+  opacity: 0;
+  animation: tabPopIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.statCard:nth-child(1) {
+  animation-delay: 0.56s;
+}
+
+.statCard:nth-child(2) {
+  animation-delay: 0.64s;
+}
+
+.statCard:nth-child(3) {
+  animation-delay: 0.72s;
 }
 
 .statLabel,
@@ -395,6 +435,18 @@
   gap: 1rem;
   content-visibility: auto;
   contain-intrinsic-size: 420px;
+  opacity: 0;
+  animation: tabPopIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.groupStack > .templateGroup:nth-child(1),
+.contentSection > .templateGroup:nth-child(2) {
+  animation-delay: 0.68s;
+}
+
+.groupStack > .templateGroup:nth-child(2),
+.contentSection > .templateGroup:nth-child(3) {
+  animation-delay: 0.76s;
 }
 
 .templateGroup + .templateGroup {
@@ -441,6 +493,28 @@
   gap: 1rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
+  perspective: 1000px;
+}
+
+.templateGrid > * {
+  opacity: 0;
+  animation: tabPopIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.templateGrid > *:nth-child(1) {
+  animation-delay: 0.74s;
+}
+
+.templateGrid > *:nth-child(2) {
+  animation-delay: 0.82s;
+}
+
+.templateGrid > *:nth-child(3) {
+  animation-delay: 0.9s;
+}
+
+.templateGrid > *:nth-child(4) {
+  animation-delay: 0.98s;
 }
 
 .previewViewport {
@@ -633,6 +707,31 @@
   line-height: 1.65;
 }
 
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes slideUpFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tabPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 1200px) {
   .controlBottom {
     grid-template-columns: 1fr;
@@ -704,12 +803,22 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .banner,
+  .banner :global(h1),
+  .banner :global(.subtitle),
+  .navShell,
   .surfaceCard,
+  .statCard,
+  .templateGroup,
+  .templateGrid > *,
   .templateCardSurface,
   .primaryAction,
   .tabButton,
   .templateButton {
     animation: none !important;
+    opacity: 1;
+    transform: none;
     transition: none !important;
   }
 }
+

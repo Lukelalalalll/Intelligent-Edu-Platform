@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import {
@@ -222,30 +222,38 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
   }, [prefersReducedMotion, visibleSlides]);
 
   return (
-    <section className={cn(styles.surfaceCard, styles.contentCard)}>
+    <section
+      className={cn(
+        styles.surfaceCard,
+        styles.contentCard,
+        styles.outlineWorkspaceCard,
+        styles.motionCard,
+        styles.motionCardPrimary
+      )}
+    >
       <div className={styles.contentHeader}>
         <div className={styles.controlCopy}>
           <span className={styles.badge}>
             <Sparkles className="h-3.5 w-3.5" />
-            {t("presenton.outline.workspace.badge")}
+            {t("ppt_generator.outline.workspace.badge")}
           </span>
           <h2 className={styles.sectionTitle}>
-            {t("presenton.outline.workspace.title")}
+            {t("ppt_generator.outline.workspace.title")}
           </h2>
           <p className={styles.sectionDescription}>
-            {t("presenton.outline.workspace.body")}
+            {t("ppt_generator.outline.workspace.body")}
           </p>
         </div>
 
         <div className={styles.itemPillRow}>
           <span className={styles.mutedBadge}>
             <FileText className="h-3.5 w-3.5" />
-            {t("presenton.outline.workspace.slidesCount", { count: visibleSlides })}
+            {t("ppt_generator.outline.workspace.slidesCount", { count: visibleSlides })}
           </span>
           <span className={styles.mutedBadge}>
             {isStreaming
-              ? t("presenton.outline.workspace.mode.live")
-              : t("presenton.outline.workspace.mode.manual")}
+              ? t("ppt_generator.outline.workspace.mode.live")
+              : t("ppt_generator.outline.workspace.mode.manual")}
           </span>
         </div>
       </div>
@@ -260,14 +268,14 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
           ) : (
             <>
               <span className={styles.statusDot} aria-hidden="true" />
-              <span>{t("presenton.outline.workspace.status.ready")}</span>
+              <span>{t("ppt_generator.outline.workspace.status.ready")}</span>
             </>
           )}
         </div>
         <p className={styles.statusHint}>
           {isStreaming
-            ? t("presenton.outline.workspace.hint.live")
-            : t("presenton.outline.workspace.hint.manual")}
+            ? t("ppt_generator.outline.workspace.hint.live")
+            : t("ppt_generator.outline.workspace.hint.manual")}
         </p>
       </div>
 
@@ -293,7 +301,7 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
 
           <div className={styles.listFooter}>
             <p className={styles.helperText}>
-              {t("presenton.outline.workspace.footer")}
+              {t("ppt_generator.outline.workspace.footer")}
             </p>
             <Button
               type="button"
@@ -303,7 +311,7 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
               className={styles.secondaryButton}
             >
               <Plus className="h-4 w-4" />
-              {t("presenton.outline.workspace.add")}
+              {t("ppt_generator.outline.workspace.add")}
             </Button>
           </div>
         </>
@@ -314,9 +322,9 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
           <div className={styles.emptyIcon}>
             <FileText className="h-6 w-6" />
           </div>
-          <h3 className={styles.groupTitle}>{t("presenton.outline.workspace.empty.title")}</h3>
+          <h3 className={styles.groupTitle}>{t("ppt_generator.outline.workspace.empty.title")}</h3>
           <p className={styles.groupDescription}>
-            {t("presenton.outline.workspace.empty.body")}
+            {t("ppt_generator.outline.workspace.empty.body")}
           </p>
           <Button
             type="button"
@@ -325,7 +333,7 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
             className={styles.secondaryButton}
           >
             <Plus className="h-4 w-4" />
-            {t("presenton.outline.workspace.addFirst")}
+            {t("ppt_generator.outline.workspace.addFirst")}
           </Button>
         </div>
       ) : null}
@@ -334,3 +342,4 @@ const OutlineContent: React.FC<OutlineContentProps> = ({
 };
 
 export default OutlineContent;
+

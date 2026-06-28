@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "cover-slide";
 export const slideLayoutName = "Cover Slide";
@@ -50,3 +50,5 @@ const CodeSlide01RoadmapCover = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default CodeSlide01RoadmapCover;
+
+

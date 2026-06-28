@@ -1,4 +1,4 @@
-export interface Presentation {
+﻿export interface Presentation {
   id: string;
   title: string;
   date: string;

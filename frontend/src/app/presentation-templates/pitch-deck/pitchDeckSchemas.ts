@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const DARK_BG = "var(--background-color,#27292d)";
 export const ACCENT_TEXT = "var(--primary-color,#dddac7)";
@@ -130,3 +130,5 @@ export const ChartPayloadSchema = z.object({
       description: "Dataset for stacked bar charts using value and value2.",
     }),
 });
+
+

@@ -1,4 +1,4 @@
-"""Presenton delivery compatibility facade and route exports."""
+﻿"""PPT Generator delivery facade and route exports."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from backend.core.ai_provider import check_runtime_health, resolve_provider_runt
 from backend.core.database import compute_history_expires_at
 from backend.schemas import SlidesGenerateV2Schema
 from backend.services.history_service import save_history_record
-from backend.services.slides import ChapterSummarizer, PresentonAdapterService, PresentonTaskService, generate_talking_script_word
+from backend.services.slides import ChapterSummarizer, PptGeneratorAdapterService, PptGeneratorTaskService, generate_talking_script_word
 from backend.services.slides.svg_pipeline import build_svg_deck
 from backend.services.slides.pipeline_service import create_ppt as create_ppt_from_schema
 
 from .delivery_history import (
     attach_pptx_export,
-    build_presenton_history_params,
-    build_presenton_result_artifacts,
-    build_presenton_source,
+    build_ppt_generator_history_params,
+    build_ppt_generator_result_artifacts,
+    build_ppt_generator_source,
     build_workflow_snapshot,
     persist_generate_v2_history,
 )
 from .delivery_outline import (
-    build_presenton_assistant_prompt,
+    build_ppt_generator_assistant_prompt,
     coerce_outline_points,
     extract_outline_title,
     extract_source_text_and_chapters,
@@ -31,17 +31,17 @@ from .delivery_outline import (
     outline_to_markdown,
     strip_html,
 )
-from .delivery_runtime import resolve_presenton_runtime_impl
+from .delivery_runtime import resolve_ppt_generator_runtime_impl
 from .delivery_task_runner import run_generate_v2_task_impl
 
 logger = logging.getLogger(__name__)
 SLIDES_GENERATE_V2_JOB_TYPE = "slides.generate_v2"
 
 _attach_pptx_export = attach_pptx_export
-_build_presenton_source = build_presenton_source
-_build_presenton_result_artifacts = build_presenton_result_artifacts
+_build_ppt_generator_source = build_ppt_generator_source
+_build_ppt_generator_result_artifacts = build_ppt_generator_result_artifacts
 _build_workflow_snapshot = build_workflow_snapshot
-_build_presenton_history_params = build_presenton_history_params
+_build_ppt_generator_history_params = build_ppt_generator_history_params
 _strip_html = strip_html
 _extract_source_text_and_chapters = extract_source_text_and_chapters
 _coerce_outline_points = coerce_outline_points
@@ -49,17 +49,17 @@ _outline_to_markdown = outline_to_markdown
 _extract_outline_title = extract_outline_title
 _normalize_outline_slide = normalize_outline_slide
 _normalize_outline_slides = normalize_outline_slides
-_build_presenton_assistant_prompt = build_presenton_assistant_prompt
+_build_ppt_generator_assistant_prompt = build_ppt_generator_assistant_prompt
 
 
-async def _resolve_presenton_runtime(
+async def _resolve_ppt_generator_runtime(
     requested: str | None,
     *,
     feature: str,
     user: dict | None,
     require_healthy: bool = False,
 ):
-    return await resolve_presenton_runtime_impl(
+    return await resolve_ppt_generator_runtime_impl(
         requested,
         feature=feature,
         user=user,
@@ -69,7 +69,7 @@ async def _resolve_presenton_runtime(
     )
 
 
-async def _save_presenton_history(
+async def _save_ppt_generator_history(
     *,
     user_id: str,
     params: dict,
@@ -80,7 +80,7 @@ async def _save_presenton_history(
     await save_history_record(
         tool="slides",
         user_id=user_id,
-        tool_name="presenton_generate_v2",
+        tool_name="ppt_generator_generate_v2",
         params=params,
         result_preview=result_preview,
         result_full=result_full,
@@ -109,7 +109,7 @@ async def _persist_generate_v2_history(
         runtime=runtime,
         title=title,
         result=result,
-        save_presenton_history=_save_presenton_history,
+        save_ppt_generator_history=_save_ppt_generator_history,
         slides_results=slides_results,
         pptx_filename=pptx_filename,
         design_spec_url=design_spec_url,
@@ -125,8 +125,8 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runti
         user=user,
         config=Config,
         logger=logger,
-        presenton_adapter_service_cls=PresentonAdapterService,
-        presenton_task_service=PresentonTaskService,
+        ppt_generator_adapter_service_cls=PptGeneratorAdapterService,
+        ppt_generator_task_service=PptGeneratorTaskService,
         chapter_summarizer_cls=ChapterSummarizer,
         generate_talking_script_word_fn=generate_talking_script_word,
         create_ppt_from_schema_fn=create_ppt_from_schema,
@@ -142,7 +142,7 @@ async def _run_generate_v2_task(task_id: str, req: SlidesGenerateV2Schema, runti
 from .delivery_routes import (  # noqa: E402
     _deck_dir,
     create_slides_delivery_job,
-    generate_presenton_outline,
+    generate_ppt_generator_outline,
     generate_v2,
     get_generate_v2_task,
     get_slides_delivery_artifact,
@@ -154,5 +154,6 @@ from .delivery_routes import (  # noqa: E402
     slides_provider_health,
     slides_providers,
     stream_generate_v2_task,
-    stream_presenton_assistant,
+    stream_ppt_generator_assistant,
 )
+

@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 
 export const slideLayoutId = "cover-slide";
@@ -71,3 +71,5 @@ const EducationCoverSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default EducationCoverSlide;
+
+

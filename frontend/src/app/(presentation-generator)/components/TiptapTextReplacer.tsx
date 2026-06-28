@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useEffect, useState, ReactNode } from "react";
 import ReactDOM from "react-dom/client";
@@ -396,3 +396,4 @@ const TiptapTextReplacer: React.FC<TiptapTextReplacerProps> = ({
 };
 
 export default TiptapTextReplacer;
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Zod Schema for the slide content.
  * Enhanced with multiple chart type support
  */
@@ -980,3 +980,5 @@ const dynamicSlideLayout: React.FC<{
   );
 };
 export default dynamicSlideLayout;
+
+

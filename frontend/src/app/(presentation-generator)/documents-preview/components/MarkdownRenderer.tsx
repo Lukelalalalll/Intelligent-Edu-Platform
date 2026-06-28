@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 
@@ -34,3 +34,4 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
 };
 
 export default MarkdownRenderer;
+

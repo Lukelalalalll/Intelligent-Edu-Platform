@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useRef } from 'react';
 import Chart from "chart.js/auto";
@@ -852,3 +852,5 @@ export const Legend: React.FC<any> = () => null;
 export const LabelList: React.FC<any> = () => null;
 export const ReferenceLine: React.FC<any> = () => null;
 export const Text: React.FC<any> = () => null;
+
+

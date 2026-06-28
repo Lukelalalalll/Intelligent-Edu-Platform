@@ -1,4 +1,4 @@
-export const loadGoogleFont = (fontFamily: string) => {
+﻿export const loadGoogleFont = (fontFamily: string) => {
   // Check if font is already loaded
   const existingLink = document.querySelector(`link[href*="${fontFamily.replace(' ', '+')}"]`)
   if (existingLink) return
@@ -8,3 +8,4 @@ export const loadGoogleFont = (fontFamily: string) => {
   link.rel = 'stylesheet'
   document.head.appendChild(link)
 }
+

@@ -1,7 +1,7 @@
-import type { TemplateWithData } from "@/app/presentation-templates/utils";
+﻿import type { TemplateWithData } from "@/app/presentation-templates/utils";
 
 const THEME_PREVIEW_TEMPLATE_ID = "neo-general";
-const THEME_PREVIEW_LAYOUT_LIMIT = 2;
+export const THEME_PREVIEW_LAYOUT_LIMIT = 2;
 
 export type ThemePreviewLayout = Pick<
   TemplateWithData,
@@ -37,3 +37,4 @@ export async function loadThemePreviewLayouts(): Promise<ThemePreviewLayout[]> {
 
   return themePreviewLayoutsRequest;
 }
+

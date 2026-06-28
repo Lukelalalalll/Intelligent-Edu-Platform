@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+﻿import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { arrayMove } from "@dnd-kit/sortable";
 import { setOutlines } from "@/store/slices/presentationGeneration";
@@ -56,3 +56,4 @@ export const useOutlineManagement = (outlines: { content: string }[] | null) => 
     handleDeleteSlide,
   };
 }; 
+

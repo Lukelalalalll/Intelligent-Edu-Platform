@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { ReactNode, useRef, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
@@ -470,3 +470,4 @@ const EditableLayoutWrapper: React.FC<EditableLayoutWrapperProps> = ({
 };
 
 export default EditableLayoutWrapper;
+

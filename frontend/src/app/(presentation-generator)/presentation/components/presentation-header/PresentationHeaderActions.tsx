@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Play, Redo2, RotateCcw, Undo2 } from "lucide-react";
@@ -18,7 +18,7 @@ import ThemeSelector from "../ThemeSelector";
 import { usePresentationUndoRedo } from "../../hooks/PresentationUndoRedo";
 import { PresentationGenerationApi } from "../../../services/api/presentation-generation";
 import { getHeader } from "../../../services/api/header";
-import { presentonFetch } from "../../../services/api/presenton-fetch";
+import { pptGeneratorFetch } from "../../../services/api/ppt_generator-fetch";
 import ThemeApi from "../../../services/api/theme";
 import { Theme } from "../../../services/api/types";
 import PresentationHeaderExportMenu from "./PresentationHeaderExportMenu";
@@ -256,11 +256,11 @@ const PresentationHeaderActions = ({
       );
       const safeTitle = safeFileName.replace(exportTitlePattern(format), "");
       setExportPopupPhase(format, "exporting");
-      const response = await presentonFetch("/api/v1/app/export", {
+      const response = await pptGeneratorFetch("/api/v1/app/export", {
         method: "POST",
         headers: {
           ...getHeader(),
-          "x-presenton-web-origin": window.location.origin,
+          "x-ppt-generator-web-origin": window.location.origin,
         },
         signal: abortController.signal,
         body: JSON.stringify({
@@ -421,3 +421,5 @@ const PresentationHeaderActions = ({
 };
 
 export default PresentationHeaderActions;
+
+

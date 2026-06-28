@@ -1,8 +1,8 @@
-import {
+﻿import {
   getHeader,
 } from "@/app/(presentation-generator)/services/api/header";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
-import { presentonFetch } from "@/app/(presentation-generator)/services/api/presenton-fetch";
+import { pptGeneratorFetch } from "@/app/(presentation-generator)/services/api/ppt_generator-fetch";
 import { getApiUrl } from "@/utils/api";
 
 export interface PresentationResponse {
@@ -28,7 +28,7 @@ export class DashboardApi {
 
   static async getPresentations(): Promise<PresentationResponse[]> {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/all`),
         {
           method: "GET",
@@ -50,7 +50,7 @@ export class DashboardApi {
 
   static async getPresentation(id: string) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/${id}`),
         {
           method: "GET",
@@ -66,7 +66,7 @@ export class DashboardApi {
 
   static async deletePresentation(presentation_id: string) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/${presentation_id}`),
         {
           method: "DELETE",
@@ -84,3 +84,4 @@ export class DashboardApi {
     }
   }
 }
+

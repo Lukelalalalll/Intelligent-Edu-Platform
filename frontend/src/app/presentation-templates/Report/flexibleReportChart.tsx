@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
@@ -1004,3 +1004,5 @@ export function FlexibleReportChart({
 
   return <canvas ref={canvasRef} className="block h-full w-full" />;
 }
+
+

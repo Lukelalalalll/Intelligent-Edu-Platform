@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+﻿import type { MutableRefObject } from "react";
 import { jsonrepair } from "jsonrepair";
 import type { Slide } from "@/app/(presentation-generator)/types/slide";
 import { notify } from "@/components/ui/sonner";
@@ -554,3 +554,4 @@ export function startPresentationStreamingSession({
     clearAllTimers();
   };
 }
+

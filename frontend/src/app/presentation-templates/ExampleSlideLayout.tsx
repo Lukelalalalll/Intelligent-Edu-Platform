@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 import { ImageSchema, IconSchema } from "@/app/presentation-templates/defaultSchemes";
 
 export const Schema = z.object({
@@ -98,3 +98,5 @@ export default function ExampleSlideLayout({ data }: { data: SchemaType }) {
     </div>
   );
 }
+
+

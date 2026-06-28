@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Slides List Component
  * Renders the grid of slides being edited
  */
@@ -59,3 +59,4 @@ export const SlidesList: React.FC<SlidesListProps> = ({
     </div>
   );
 };
+

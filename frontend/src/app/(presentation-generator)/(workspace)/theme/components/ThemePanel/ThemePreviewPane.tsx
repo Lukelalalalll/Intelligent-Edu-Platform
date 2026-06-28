@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import React from 'react'
 import { useI18n } from '@/shared/i18n'
-import type { ThemePreviewLayout } from './themePreviewLoader'
+import { THEME_PREVIEW_LAYOUT_LIMIT, type ThemePreviewLayout } from './themePreviewLoader'
 import styles from './ThemePanel.module.css'
 
 interface ThemePreviewPaneProps {
@@ -25,17 +25,23 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
   isLoading,
 }) => {
   const { t } = useI18n()
+  const previewCount = previewLayouts.length || THEME_PREVIEW_LAYOUT_LIMIT
 
   return (
     <div className={styles.previewPane}>
       <div className={styles.previewHeader}>
-        <div className={styles.previewBadge}>{t('presenton.theme.preview.badge')}</div>
-        <h3 className={styles.previewTitle}>{t('presenton.theme.preview.title')}</h3>
+        <div className={styles.previewBadge}>{t('ppt_generator.theme.preview.badge')}</div>
+        <h3 className={styles.previewTitle}>{t('ppt_generator.theme.preview.title')}</h3>
         <p className={styles.previewText}>
           {totalThemeCount > 0
-            ? t('presenton.theme.preview.bodyReady')
-            : t('presenton.theme.preview.bodyEmpty')}
+            ? t('ppt_generator.theme.preview.bodyReady')
+            : t('ppt_generator.theme.preview.bodyEmpty')}
         </p>
+        <div className={styles.previewMetaRow}>
+          <span className={styles.previewMetaPill}>
+            {t('ppt_generator.theme.preview.meta', { count: previewCount })}
+          </span>
+        </div>
       </div>
 
       <div
@@ -90,7 +96,7 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
         }) : (
           <div className={styles.previewEmptyState}>
             <p className={styles.previewEmptyText}>
-              {t('presenton.theme.preview.empty')}
+              {t('ppt_generator.theme.preview.empty')}
             </p>
           </div>
         )}
@@ -98,3 +104,4 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
     </div>
   )
 }
+

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import uuid
 
@@ -24,6 +26,7 @@ from templates.handler_support.models import (
     EditSlideLayoutSectionRequest,
     EditSlideLayoutSectionResponse,
 )
+from templates.pptx_fallback import extract_slide_htmls_from_pptx
 from templates.preview import (
     FontsUploadAndSlidesPreviewResponse,
     upload_fonts_and_slides_preview_handler,
@@ -42,6 +45,8 @@ from templates.slide_layout_jobs import (
 )
 from utils.asset_directory_utils import resolve_app_path_to_filesystem
 
+LOGGER = logging.getLogger(__name__)
+
 
 async def upload_fonts_and_slides_preview(
     pptx_file: UploadFile = File(..., description="PPTX file to preview"),
@@ -50,11 +55,13 @@ async def upload_fonts_and_slides_preview(
         description="Font files to upload",
     ),
     original_font_names: list[str] | None = Form(default=None),
+    font_replacements: str | None = Form(default=None),
 ) -> FontsUploadAndSlidesPreviewResponse:
     return await upload_fonts_and_slides_preview_handler(
         pptx_file=pptx_file,
         font_files=font_files,
         original_font_names=original_font_names,
+        font_replacements=font_replacements,
         max_slides=25,
     )
 
@@ -70,17 +77,31 @@ async def init_create_template(
     if not pptx_path or not os.path.isfile(pptx_path):
         raise HTTPException(status_code=400, detail="PPTX file not found")
 
-    pptx_document = await EXPORT_TASK_SERVICE.convert_pptx_to_html(pptx_path, get_fonts=False)
-    if not pptx_document.slides:
-        raise HTTPException(status_code=500, detail="PPTX-to-HTML export returned no slides")
+    try:
+        pptx_document = await EXPORT_TASK_SERVICE.convert_pptx_to_html(
+            pptx_path,
+            get_fonts=False,
+        )
+        slide_htmls = list(pptx_document.slides)
+    except HTTPException as exc:
+        LOGGER.warning(
+            "PPTX-to-HTML export failed during template init; using python-pptx fallback "
+            "HTML extraction for %s. detail=%s",
+            pptx_path,
+            exc.detail,
+        )
+        slide_htmls = await asyncio.to_thread(extract_slide_htmls_from_pptx, pptx_path)
 
-    if len(pptx_document.slides) < len(request.slide_image_urls):
+    if not slide_htmls:
+        raise HTTPException(status_code=500, detail="PPTX slide extraction returned no slides")
+
+    if len(slide_htmls) < len(request.slide_image_urls):
         raise HTTPException(
             status_code=400,
             detail=(
-                "PPTX-to-HTML export returned fewer slides than the preview images. "
+                "PPTX slide extraction returned fewer slides than the preview images. "
                 f"Expected at least {len(request.slide_image_urls)}, "
-                f"got {len(pptx_document.slides)}."
+                f"got {len(slide_htmls)}."
             ),
         )
 
@@ -88,7 +109,7 @@ async def init_create_template(
         fonts=request.fonts or {},
         pptx_url=request.pptx_url,
         slide_image_urls=request.slide_image_urls,
-        slide_htmls=pptx_document.slides[: len(request.slide_image_urls)],
+        slide_htmls=slide_htmls[: len(request.slide_image_urls)],
     )
     sql_session.add(template_create_info)
     await sql_session.commit()

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
@@ -246,3 +246,4 @@ const PresentationMode: React.FC<PresentationModeProps> = ({
 };
 
 export default PresentationMode;
+

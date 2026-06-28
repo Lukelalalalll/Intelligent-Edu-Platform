@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,17 +8,17 @@ vi.mock("@/shared/i18n", () => ({
   useI18n: () => ({
     t: (key: string) =>
       ({
-        "presenton.upload.currentConfig.text": "Text",
-        "presenton.upload.currentConfig.images": "Images",
-        "presenton.upload.currentConfig.web": "Web",
-        "presenton.upload.currentConfig.imagesDisabled": "Image generation disabled",
-        "presenton.upload.currentConfig.noImageProvider": "No image provider",
-        "presenton.upload.currentConfig.webState.on": "On",
-        "presenton.upload.currentConfig.webState.off": "Off",
-        "presenton.upload.currentConfig.configured": "已配置",
-        "presenton.upload.currentConfig.unconfigured": "未配置",
-        "presenton.upload.currentConfig.selected": "当前使用",
-        "presenton.upload.currentConfig.defaultModel": "Default model",
+        "ppt_generator.upload.currentConfig.text": "Text",
+        "ppt_generator.upload.currentConfig.images": "Images",
+        "ppt_generator.upload.currentConfig.web": "Web",
+        "ppt_generator.upload.currentConfig.imagesDisabled": "Image generation disabled",
+        "ppt_generator.upload.currentConfig.noImageProvider": "No image provider",
+        "ppt_generator.upload.currentConfig.webState.on": "On",
+        "ppt_generator.upload.currentConfig.webState.off": "Off",
+        "ppt_generator.upload.currentConfig.configured": "宸查厤缃?,
+        "ppt_generator.upload.currentConfig.unconfigured": "鏈厤缃?,
+        "ppt_generator.upload.currentConfig.selected": "褰撳墠浣跨敤",
+        "ppt_generator.upload.currentConfig.defaultModel": "Default model",
       }[key] ?? key),
   }),
 }));
@@ -55,9 +55,9 @@ describe("CurrentConfig", () => {
       />
     );
 
-    expect(screen.getByText("已配置")).toBeInTheDocument();
-    expect(screen.getByText("未配置")).toBeInTheDocument();
-    expect(screen.getByText("当前使用")).toBeInTheDocument();
+    expect(screen.getByText("宸查厤缃?)).toBeInTheDocument();
+    expect(screen.getByText("鏈厤缃?)).toBeInTheDocument();
+    expect(screen.getByText("褰撳墠浣跨敤")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /OpenAI/i }));
     expect(onProviderSelect).toHaveBeenCalledWith("openai");
@@ -65,3 +65,4 @@ describe("CurrentConfig", () => {
     expect(screen.getByRole("button", { name: /DeepSeek/i })).toBeDisabled();
   });
 });
+

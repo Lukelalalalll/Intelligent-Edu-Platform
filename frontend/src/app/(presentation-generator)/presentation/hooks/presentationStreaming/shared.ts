@@ -1,4 +1,4 @@
-import type { PresentationData } from "@/store/slices/presentationGeneration";
+﻿import type { PresentationData } from "@/store/slices/presentationGeneration";
 
 export const MAX_STREAM_RETRIES = 3;
 export const STREAM_RETRY_DELAY_MS = 1_000;
@@ -107,3 +107,4 @@ export function getFailureLoadingState(description: string): StreamLoadingState 
     waitingForFirstContent: false,
   };
 }
+

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import * as z from "zod";
 import { ImageSchema } from '../defaultSchemes';
 
@@ -137,3 +137,4 @@ const QuoteSlideLayout: React.FC<QuoteSlideLayoutProps> = ({ data: slideData }) 
 }
 
 export default QuoteSlideLayout 
+

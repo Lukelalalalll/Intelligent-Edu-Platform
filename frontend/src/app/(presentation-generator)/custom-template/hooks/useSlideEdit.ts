@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { ProcessedSlide } from "../types";
 import { getHeader } from "@/app/(presentation-generator)/services/api/header";
 import { notify } from "@/components/ui/sonner";

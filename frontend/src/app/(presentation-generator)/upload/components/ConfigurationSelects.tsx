@@ -1,4 +1,4 @@
-import {
+﻿import {
     Select,
     SelectContent,
     SelectItem,
@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import AdvanceSettings from "./AdvanceSettings";
-import { getGenerationLanguageLabel } from "../../utils/presentonLanguage";
+import { getGenerationLanguageLabel } from "../../utils/pptGeneratorLanguage";
 import { useI18n } from "@/shared/i18n";
 
 // Types
@@ -76,8 +76,8 @@ const SlideCountSelect: React.FC<{
     };
 
     const displayLabel = value
-        ? t("presenton.upload.slides.label", { count: value })
-        : t("presenton.upload.slides.auto");
+        ? t("ppt_generator.upload.slides.label", { count: value })
+        : t("ppt_generator.upload.slides.auto");
 
     return (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -128,7 +128,7 @@ const SlideCountSelect: React.FC<{
                             placeholder="--"
                             className="h-8 w-16 px-2 text-sm"
                         />
-                        <span className="text-sm font-medium">{t("presenton.upload.slides.inputSuffix")}</span>
+                        <span className="text-sm font-medium">{t("ppt_generator.upload.slides.inputSuffix")}</span>
                     </div>
                 </div>
                 <Command>
@@ -137,7 +137,7 @@ const SlideCountSelect: React.FC<{
                             {SLIDE_OPTIONS.map((option) => (
                                 <CommandItem
                                     key={option}
-                                    value={t("presenton.upload.slides.label", { count: option })}
+                                    value={t("ppt_generator.upload.slides.label", { count: option })}
                                     role="option"
                                     onSelect={() => {
                                         onValueChange(option);
@@ -152,7 +152,7 @@ const SlideCountSelect: React.FC<{
                                             value === option ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {t("presenton.upload.slides.label", { count: option })}
+                                    {t("ppt_generator.upload.slides.label", { count: option })}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -201,7 +201,7 @@ const LanguageSelectInner: React.FC<{
                 <Languages className="w-3.5 h-3.5" />
                 <span className="w-[40px] text-left">
                     <span className="text-xs font-medium truncate block">
-                        {getGenerationLanguageLabel(value) || t("presenton.upload.language.select")}
+                        {getGenerationLanguageLabel(value) || t("ppt_generator.upload.language.select")}
                     </span>
                 </span>
                 <ChevronUp className="ml-2 h-4 w-4 shrink-0" />
@@ -211,11 +211,11 @@ const LanguageSelectInner: React.FC<{
         <PopoverContent className="w-[300px] p-0" align="end">
             <Command>
                 <CommandInput
-                    placeholder={t("presenton.upload.language.search")}
+                    placeholder={t("ppt_generator.upload.language.search")}
                     className="font-instrument_sans"
                 />
                 <CommandList>
-                    <CommandEmpty>{t("presenton.upload.language.empty")}</CommandEmpty>
+                    <CommandEmpty>{t("ppt_generator.upload.language.empty")}</CommandEmpty>
                     <CommandGroup>
                         {Object.values(LanguageType).map((language) => (
                             <CommandItem
@@ -270,3 +270,4 @@ export function ConfigurationSelects({
         </div>
     );
 }
+

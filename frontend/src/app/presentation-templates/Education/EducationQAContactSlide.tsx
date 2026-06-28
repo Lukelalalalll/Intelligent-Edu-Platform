@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 import { ImageSchema } from "../defaultSchemes";
 
 export const slideLayoutId = "closing-contact-slide";
@@ -237,3 +237,5 @@ const EducationQAContactSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default EducationQAContactSlide;
+
+

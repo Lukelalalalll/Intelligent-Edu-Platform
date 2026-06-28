@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+﻿import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { useI18n } from "@/shared/i18n";
 
@@ -20,13 +20,13 @@ const PresentationErrorState = ({
         role="alert"
       >
         <AlertCircle className="mb-4 h-16 w-16 text-red-500" />
-        <h2 className="mb-2 text-xl font-semibold">{t("presenton.presentation.error.title")}</h2>
+        <h2 className="mb-2 text-xl font-semibold">{t("ppt_generator.presentation.error.title")}</h2>
         <p className="mb-4 text-center">
-          {t("presenton.presentation.error.body")}
+          {t("ppt_generator.presentation.error.body")}
         </p>
         <div className="flex items-center justify-center gap-2">
-          <Button onClick={onRefresh}>{t("presenton.presentation.error.refresh")}</Button>
-          <Button onClick={onGoToUpload}>{t("presenton.presentation.error.upload")}</Button>
+          <Button onClick={onRefresh}>{t("ppt_generator.presentation.error.refresh")}</Button>
+          <Button onClick={onGoToUpload}>{t("ppt_generator.presentation.error.upload")}</Button>
         </div>
       </div>
     </div>
@@ -34,3 +34,4 @@ const PresentationErrorState = ({
 };
 
 export default PresentationErrorState;
+

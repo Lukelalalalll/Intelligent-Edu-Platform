@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -584,7 +584,7 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
 
             // Convert constraints when changing type
             if (f.type === 'string' && newType === 'number') {
-                // String to number: minLength → minimum, maxLength → maximum
+                // String to number: minLength 鈫?minimum, maxLength 鈫?maximum
                 return {
                     ...f,
                     type: newType,
@@ -594,7 +594,7 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
                     maxLength: undefined,
                 };
             } else if (f.type === 'number' && newType === 'string') {
-                // Number to string: minimum → minLength, maximum → maxLength
+                // Number to string: minimum 鈫?minLength, maximum 鈫?maxLength
                 return {
                     ...f,
                     type: newType,
@@ -690,15 +690,15 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
     const getConstraintSummary = (field: SchemaField): string | null => {
         if (field.type === 'string') {
             if (field.minLength !== undefined || field.maxLength !== undefined) {
-                return `${field.minLength ?? '∞'}-${field.maxLength ?? '∞'} chars`;
+                return `${field.minLength ?? '鈭?}-${field.maxLength ?? '鈭?} chars`;
             }
         } else if (field.type === 'number') {
             if (field.minimum !== undefined || field.maximum !== undefined) {
-                return `${field.minimum ?? '∞'}-${field.maximum ?? '∞'}`;
+                return `${field.minimum ?? '鈭?}-${field.maximum ?? '鈭?}`;
             }
         } else if (field.type === 'array') {
             if (field.minItems !== undefined || field.maxItems !== undefined) {
-                return `${field.minItems ?? '∞'}-${field.maxItems ?? '∞'} items`;
+                return `${field.minItems ?? '鈭?}-${field.maxItems ?? '鈭?} items`;
             }
         }
         return null;
@@ -848,7 +848,7 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
     const areAllCollapsed = expandedFields.size === 0;
 
     return (
-        <div className="w-full relative  pb-2     bg-white overflow-hidden flex flex-col">
+        <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-white pb-2">
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
                 <div className="flex items-center justify-between">
@@ -881,11 +881,11 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 px-2  ">
+            <div className="min-h-0 flex-1 px-2">
 
 
                 {/* Fields Section */}
-                <div className="px-4 py-3 h-[calc(100vh-350px)] overflow-y-auto custom_scrollbar pb-10">
+                <div className="custom_scrollbar h-full min-h-0 overflow-y-auto px-4 py-3 pb-10">
                     {/* Section Header */}
                     <div className="mb-3">
                         <div className="flex items-center justify-between mb-1">
@@ -1175,3 +1175,4 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
         </div>
     );
 };
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from 'react';
 import { ArrowUpRight, Plus, Sparkles } from 'lucide-react';
@@ -71,7 +71,7 @@ export default function CreateCustomTemplate({
                     </div>
                     {isWorkspace ? (
                         <span className="absolute left-4 top-3.5 z-40 inline-flex items-center rounded-full bg-[#0f172a] px-3 py-1 text-xs font-semibold text-white">
-                            {t('presenton.templates.createCustom.badge')}
+                            {t('ppt_generator.templates.createCustom.badge')}
                         </span>
                     ) : null}
                 </div>
@@ -95,7 +95,7 @@ export default function CreateCustomTemplate({
                         </div>
                         <div className="min-w-0">
                             <h4 className={cn('font-semibold', isWorkspace ? 'text-base text-[#111827]' : 'text-sm text-[#191919]')}>
-                                {t('presenton.templates.createCustom.title')}
+                                {t('ppt_generator.templates.createCustom.title')}
                             </h4>
                             <p
                                 className={cn(
@@ -104,8 +104,8 @@ export default function CreateCustomTemplate({
                                 )}
                             >
                                 {isWorkspace
-                                    ? t('presenton.templates.createCustom.bodyWorkspace')
-                                    : t('presenton.templates.createCustom.bodyDefault')}
+                                    ? t('ppt_generator.templates.createCustom.bodyWorkspace')
+                                    : t('ppt_generator.templates.createCustom.bodyDefault')}
                             </p>
                         </div>
                     </div>
@@ -118,3 +118,4 @@ export default function CreateCustomTemplate({
         </button>
     );
 }
+

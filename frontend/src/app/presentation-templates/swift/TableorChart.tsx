@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useEffect, useRef } from "react"
 import * as z from "zod"
@@ -47,7 +47,7 @@ const Schema = z
       .min(1)
       .max(30)
       .default([
-        { cells: ["Row A", "✓", "-"] },
+        { cells: ["Row A", "鉁?, "-"] },
         { cells: ["Row B", "Text", "123"] },
         { cells: ["Row C", "More text", "456"] },
       ]),
@@ -86,7 +86,7 @@ const Schema = z
     mode: "table",
     columns: ["Column 1", "Column 2", "Column 3"],
     rows: [
-      { cells: ["Row A", "✓", "-"] },
+      { cells: ["Row A", "鉁?, "-"] },
       { cells: ["Row B", "Text", "123"] },
       { cells: ["Row C", "More text", "456"] },
     ],
@@ -489,3 +489,5 @@ const TableOrChart: React.FC<SlideLayoutProps> = ({ data: slideData }) => {
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default TableOrChart
+
+

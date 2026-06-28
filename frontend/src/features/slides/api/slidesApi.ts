@@ -129,7 +129,7 @@ export interface SlidesThemeItem {
     layout_count?: number;
 }
 
-export interface PresentonOutlineSlide {
+export interface PptGeneratorOutlineSlide {
     id?: string;
     index: number;
     title?: string;
@@ -138,7 +138,7 @@ export interface PresentonOutlineSlide {
     content: string;
 }
 
-export interface PresentonOutlineRequestPayload {
+export interface PptGeneratorOutlineRequestPayload {
     provider?: SlidesRuntimeProvider;
     content?: string;
     chapterData?: Array<{ sectionTitle?: string; text?: string }>;
@@ -150,7 +150,7 @@ export interface PresentonOutlineRequestPayload {
     combined_markdown_filename?: string;
 }
 
-export interface PresentonOutlineResponse {
+export interface PptGeneratorOutlineResponse {
     success: boolean;
     request_id: string;
     title: string;
@@ -158,7 +158,7 @@ export interface PresentonOutlineResponse {
     provider_resolved?: Exclude<SlidesRuntimeProvider, 'auto'>;
     provider_source?: string;
     provider_model?: string;
-    slides: PresentonOutlineSlide[];
+    slides: PptGeneratorOutlineSlide[];
 }
 
 export type SlidesGenerateV2Payload = {
@@ -216,7 +216,7 @@ export type SlidesGenerateV2TaskStatusResponse = {
         provider_model?: string;
         fallback_events?: Array<Record<string, unknown>>;
         deck_id?: string;
-        outline_slides?: PresentonOutlineSlide[];
+        outline_slides?: PptGeneratorOutlineSlide[];
         design_spec_url?: string;
         spec_lock?: Record<string, unknown>;
         quality_report?: SlidesQualityReport;
@@ -265,8 +265,8 @@ export const slidesGenerationApi = {
         const res = await client.post('/slides/generate_v2', payload);
         return res.data;
     },
-    async generatePresentonOutline(payload: PresentonOutlineRequestPayload): Promise<PresentonOutlineResponse> {
-        const res = await client.post('/slides/presenton/outline', payload);
+    async generatePptGeneratorOutline(payload: PptGeneratorOutlineRequestPayload): Promise<PptGeneratorOutlineResponse> {
+        const res = await client.post('/slides/ppt_generator/outline', payload);
         return res.data;
     },
     async getTask(taskId: string): Promise<SlidesGenerateV2TaskStatusResponse> {

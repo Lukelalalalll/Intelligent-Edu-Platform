@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 
 export const slideLayoutId = "content-split-slide";
@@ -94,3 +94,5 @@ const EducationContentSplitSlide = ({ data }: { data: Partial<SchemaType> }) => 
 };
 
 export default EducationContentSplitSlide;
+
+

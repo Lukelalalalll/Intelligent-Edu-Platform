@@ -1,4 +1,4 @@
-import * as z from 'zod'
+﻿import * as z from 'zod'
 
 export const Schema = z.object({
     title: z.string().max(30).describe('The main heading of the slide').default('KPI Snapshot'),
@@ -106,4 +106,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
     );
 };
 export default dynamicSlideLayout;
+
+
 

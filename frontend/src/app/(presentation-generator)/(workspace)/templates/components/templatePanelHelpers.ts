@@ -1,4 +1,4 @@
-import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
+﻿import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import type { TranslationKey } from "@/shared/i18n";
 
 import type {
@@ -18,67 +18,67 @@ type TemplateTranslator = (
 
 const BUILT_IN_GROUP_TRANSLATION_KEYS = {
     core: {
-        title: "presenton.templates.builtIn.group.core.title",
-        body: "presenton.templates.builtIn.group.core.body",
+        title: "ppt_generator.templates.builtIn.group.core.title",
+        body: "ppt_generator.templates.builtIn.group.core.body",
     },
     neo: {
-        title: "presenton.templates.builtIn.group.neo.title",
-        body: "presenton.templates.builtIn.group.neo.body",
+        title: "ppt_generator.templates.builtIn.group.neo.title",
+        body: "ppt_generator.templates.builtIn.group.neo.body",
     },
 } as const;
 
 const BUILT_IN_TEMPLATE_TRANSLATION_KEYS = {
     general: {
-        name: "presenton.templates.family.general.name",
-        description: "presenton.templates.family.general.description",
+        name: "ppt_generator.templates.family.general.name",
+        description: "ppt_generator.templates.family.general.description",
     },
     modern: {
-        name: "presenton.templates.family.modern.name",
-        description: "presenton.templates.family.modern.description",
+        name: "ppt_generator.templates.family.modern.name",
+        description: "ppt_generator.templates.family.modern.description",
     },
     standard: {
-        name: "presenton.templates.family.standard.name",
-        description: "presenton.templates.family.standard.description",
+        name: "ppt_generator.templates.family.standard.name",
+        description: "ppt_generator.templates.family.standard.description",
     },
     swift: {
-        name: "presenton.templates.family.swift.name",
-        description: "presenton.templates.family.swift.description",
+        name: "ppt_generator.templates.family.swift.name",
+        description: "ppt_generator.templates.family.swift.description",
     },
     code: {
-        name: "presenton.templates.family.code.name",
-        description: "presenton.templates.family.code.description",
+        name: "ppt_generator.templates.family.code.name",
+        description: "ppt_generator.templates.family.code.description",
     },
     education: {
-        name: "presenton.templates.family.education.name",
-        description: "presenton.templates.family.education.description",
+        name: "ppt_generator.templates.family.education.name",
+        description: "ppt_generator.templates.family.education.description",
     },
     "product-overview": {
-        name: "presenton.templates.family.productOverview.name",
-        description: "presenton.templates.family.productOverview.description",
+        name: "ppt_generator.templates.family.productOverview.name",
+        description: "ppt_generator.templates.family.productOverview.description",
     },
     report: {
-        name: "presenton.templates.family.report.name",
-        description: "presenton.templates.family.report.description",
+        name: "ppt_generator.templates.family.report.name",
+        description: "ppt_generator.templates.family.report.description",
     },
     "pitch-deck": {
-        name: "presenton.templates.family.pitchDeck.name",
-        description: "presenton.templates.family.pitchDeck.description",
+        name: "ppt_generator.templates.family.pitchDeck.name",
+        description: "ppt_generator.templates.family.pitchDeck.description",
     },
     "neo-general": {
-        name: "presenton.templates.family.neoGeneral.name",
-        description: "presenton.templates.family.neoGeneral.description",
+        name: "ppt_generator.templates.family.neoGeneral.name",
+        description: "ppt_generator.templates.family.neoGeneral.description",
     },
     "neo-standard": {
-        name: "presenton.templates.family.neoStandard.name",
-        description: "presenton.templates.family.neoStandard.description",
+        name: "ppt_generator.templates.family.neoStandard.name",
+        description: "ppt_generator.templates.family.neoStandard.description",
     },
     "neo-modern": {
-        name: "presenton.templates.family.neoModern.name",
-        description: "presenton.templates.family.neoModern.description",
+        name: "ppt_generator.templates.family.neoModern.name",
+        description: "ppt_generator.templates.family.neoModern.description",
     },
     "neo-swift": {
-        name: "presenton.templates.family.neoSwift.name",
-        description: "presenton.templates.family.neoSwift.description",
+        name: "ppt_generator.templates.family.neoSwift.name",
+        description: "ppt_generator.templates.family.neoSwift.description",
     },
 } as const;
 
@@ -113,7 +113,7 @@ export function buildBuiltInTemplateGroups(sourceTemplates: TemplateLayoutsWithS
         {
             key: "neo",
             title: "Neo families",
-            description: "Newer Presenton layout systems with broader coverage for longer-form decks and refreshed pacing.",
+            description: "Newer PPT Generator layout systems with broader coverage for longer-form decks and refreshed pacing.",
             templates: neo,
         },
     ].filter((group) => group.templates.length > 0);
@@ -199,8 +199,8 @@ export function buildPreviewItems<TTemplate>(
 
 export function getActiveTabDescription(tab: TemplateTab, t: TemplateTranslator) {
     return tab === "default"
-        ? t("presenton.templates.activeTab.builtIn")
-        : t("presenton.templates.activeTab.custom");
+        ? t("ppt_generator.templates.activeTab.builtIn")
+        : t("ppt_generator.templates.activeTab.custom");
 }
 
 export function getTemplatePanelStats({
@@ -218,27 +218,27 @@ export function getTemplatePanelStats({
 }, t: TemplateTranslator): TemplatePanelStat[] {
     return [
         {
-            label: t("presenton.templates.stats.builtIn.label"),
+            label: t("ppt_generator.templates.stats.builtIn.label"),
             value: builtInLoading ? "..." : builtInCount,
-            meta: t("presenton.templates.stats.builtIn.meta"),
+            meta: t("ppt_generator.templates.stats.builtIn.meta"),
         },
         {
-            label: t("presenton.templates.stats.custom.label"),
+            label: t("ppt_generator.templates.stats.custom.label"),
             value: customLoading ? "..." : customCount,
             meta: customLoading
-                ? t("presenton.templates.stats.custom.metaLoading")
+                ? t("ppt_generator.templates.stats.custom.metaLoading")
                 : customCount === 1
-                    ? t("presenton.templates.stats.custom.metaOne")
-                    : t("presenton.templates.stats.custom.metaOther"),
+                    ? t("ppt_generator.templates.stats.custom.metaOne")
+                    : t("ppt_generator.templates.stats.custom.metaOther"),
         },
         {
-            label: t("presenton.templates.stats.active.label"),
+            label: t("ppt_generator.templates.stats.active.label"),
             value: tab === "default"
-                ? t("presenton.templates.stats.active.builtIn")
-                : t("presenton.templates.stats.active.custom"),
+                ? t("ppt_generator.templates.stats.active.builtIn")
+                : t("ppt_generator.templates.stats.active.custom"),
             meta: tab === "default"
-                ? t("presenton.templates.stats.active.metaBuiltIn")
-                : t("presenton.templates.stats.active.metaCustom"),
+                ? t("ppt_generator.templates.stats.active.metaBuiltIn")
+                : t("ppt_generator.templates.stats.active.metaCustom"),
         },
     ];
 }
@@ -246,14 +246,14 @@ export function getTemplatePanelStats({
 export function getTemplateSectionCopy(tab: TemplateTab, t: TemplateTranslator): TemplatePanelSectionCopy {
     return tab === "default"
         ? {
-            badgeLabel: t("presenton.templates.section.builtIn.badge"),
-            title: t("presenton.templates.section.builtIn.title"),
-            description: t("presenton.templates.section.builtIn.body"),
+            badgeLabel: t("ppt_generator.templates.section.builtIn.badge"),
+            title: t("ppt_generator.templates.section.builtIn.title"),
+            description: t("ppt_generator.templates.section.builtIn.body"),
         }
         : {
-            badgeLabel: t("presenton.templates.section.custom.badge"),
-            title: t("presenton.templates.section.custom.title"),
-            description: t("presenton.templates.section.custom.body"),
+            badgeLabel: t("ppt_generator.templates.section.custom.badge"),
+            title: t("ppt_generator.templates.section.custom.title"),
+            description: t("ppt_generator.templates.section.custom.body"),
         };
 }
 
@@ -300,3 +300,4 @@ export function getBuiltInTemplateCopy(
         description: t(translationKeys.description),
     };
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { memo, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
@@ -163,3 +163,4 @@ export const CustomTemplatePreview = memo(function CustomTemplatePreview({
         </div>
     );
 });
+

@@ -1,4 +1,4 @@
-import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
+﻿import { RemoteSvgIcon } from '@/app/hooks/useRemoteSvgIcon';
 import React from 'react'
 // Charts removed
 import * as z from "zod";
@@ -183,3 +183,4 @@ const dynamicSlideLayout: React.FC<SlideLayoutProps> = ({ data: slideData }) => 
 
 export { Schema, layoutId, layoutName, layoutDescription }
 export default dynamicSlideLayout
+

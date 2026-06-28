@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from fastapi import HTTPException
 
 
-async def resolve_presenton_runtime_impl(
+async def resolve_ppt_generator_runtime_impl(
     requested: str | None,
     *,
     feature: str,
@@ -53,3 +53,4 @@ async def resolve_presenton_runtime_impl(
         user=user,
         require_healthy=require_healthy,
     )
+

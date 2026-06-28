@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "bullet-list-slide";
 export const slideLayoutName = "Two Column Bullet List Slide";
@@ -87,3 +87,5 @@ const CodeSlide07UseCaseList = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default CodeSlide07UseCaseList;
+
+

@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "module-grid-slide";
 export const slideLayoutName = "Multi Column Module Grid Slide";
@@ -162,3 +162,5 @@ const EducationCurriculumStructureSlide = ({ data }: { data: Partial<SchemaType>
 };
 
 export default EducationCurriculumStructureSlide;
+
+

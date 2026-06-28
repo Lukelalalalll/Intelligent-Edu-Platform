@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -32,8 +32,8 @@ const EmptyStateView: React.FC = () => {
         )}
       >
         <WelcomeBanner
-          title={t("presenton.outline.empty.banner.title")}
-          subtitle={t("presenton.outline.empty.banner.subtitle")}
+          title={t("ppt_generator.outline.empty.banner.title")}
+          subtitle={t("ppt_generator.outline.empty.banner.subtitle")}
           variant="workspace"
           className={styles.banner}
         />
@@ -44,7 +44,7 @@ const EmptyStateView: React.FC = () => {
               <div className={styles.heroBlock}>
                 <span className={styles.badge}>
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t("presenton.outline.empty.badge")}
+                  {t("ppt_generator.outline.empty.badge")}
                 </span>
 
                 <div className={styles.iconCluster} aria-hidden="true">
@@ -58,8 +58,8 @@ const EmptyStateView: React.FC = () => {
                 </div>
 
                 <div className={styles.copyBlock}>
-                  <h1 className={styles.title}>{t("presenton.outline.empty.title")}</h1>
-                  <p className={styles.description}>{t("presenton.outline.empty.body")}</p>
+                  <h1 className={styles.title}>{t("ppt_generator.outline.empty.title")}</h1>
+                  <p className={styles.description}>{t("ppt_generator.outline.empty.body")}</p>
                 </div>
               </div>
 
@@ -69,12 +69,12 @@ const EmptyStateView: React.FC = () => {
                   className={styles.primaryAction}
                 >
                   <Plus className="h-4 w-4" />
-                  <span>{t("presenton.outline.empty.cta")}</span>
+                  <span>{t("ppt_generator.outline.empty.cta")}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
 
                 <p className={styles.helperText}>
-                  {t("presenton.outline.empty.helper")}
+                  {t("ppt_generator.outline.empty.helper")}
                 </p>
               </div>
             </div>
@@ -84,21 +84,21 @@ const EmptyStateView: React.FC = () => {
             <section className={`${styles.surfaceCard} ${styles.sideCard}`}>
               <span className={styles.mutedBadge}>
                 <Layers3 className="h-3.5 w-3.5" />
-                {t("presenton.outline.empty.status.badge")}
+                {t("ppt_generator.outline.empty.status.badge")}
               </span>
-              <h2 className={styles.sideTitle}>{t("presenton.outline.empty.status.title")}</h2>
+              <h2 className={styles.sideTitle}>{t("ppt_generator.outline.empty.status.title")}</h2>
               <div className={styles.statusList}>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.source")}</span>
-                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.sourceValue")}</strong>
+                  <span className={styles.statusLabel}>{t("ppt_generator.outline.empty.status.source")}</span>
+                  <strong className={styles.statusValue}>{t("ppt_generator.outline.empty.status.sourceValue")}</strong>
                 </div>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.stream")}</span>
-                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.streamValue")}</strong>
+                  <span className={styles.statusLabel}>{t("ppt_generator.outline.empty.status.stream")}</span>
+                  <strong className={styles.statusValue}>{t("ppt_generator.outline.empty.status.streamValue")}</strong>
                 </div>
                 <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>{t("presenton.outline.empty.status.next")}</span>
-                  <strong className={styles.statusValue}>{t("presenton.outline.empty.status.nextValue")}</strong>
+                  <span className={styles.statusLabel}>{t("ppt_generator.outline.empty.status.next")}</span>
+                  <strong className={styles.statusValue}>{t("ppt_generator.outline.empty.status.nextValue")}</strong>
                 </div>
               </div>
             </section>
@@ -106,13 +106,13 @@ const EmptyStateView: React.FC = () => {
             <section className={`${styles.surfaceCard} ${styles.sideCard}`}>
               <span className={styles.mutedBadge}>
                 <Compass className="h-3.5 w-3.5" />
-                {t("presenton.outline.empty.route.badge")}
+                {t("ppt_generator.outline.empty.route.badge")}
               </span>
-              <h2 className={styles.sideTitle}>{t("presenton.outline.empty.route.title")}</h2>
+              <h2 className={styles.sideTitle}>{t("ppt_generator.outline.empty.route.title")}</h2>
               <ul className={styles.stepList}>
-                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step1")}</li>
-                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step2")}</li>
-                <li className={styles.stepItem}>{t("presenton.outline.empty.route.step3")}</li>
+                <li className={styles.stepItem}>{t("ppt_generator.outline.empty.route.step1")}</li>
+                <li className={styles.stepItem}>{t("ppt_generator.outline.empty.route.step2")}</li>
+                <li className={styles.stepItem}>{t("ppt_generator.outline.empty.route.step3")}</li>
               </ul>
             </section>
           </aside>
@@ -123,3 +123,4 @@ const EmptyStateView: React.FC = () => {
 };
 
 export default EmptyStateView;
+

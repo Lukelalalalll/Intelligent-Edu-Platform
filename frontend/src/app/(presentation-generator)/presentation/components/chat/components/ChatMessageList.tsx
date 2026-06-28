@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+﻿import type { RefObject } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import MarkdownRenderer from "@/components/MarkDownRender";
 import type { ChatMessage } from "../Chat.types";
@@ -34,8 +34,7 @@ const ChatMessageList = ({
     {isHistoryLoading && messages.length === 0 ? (
       <div className="flex items-center justify-center py-8 text-sm text-[#99A1AF]">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Loading chat…
-      </div>
+        Loading chat鈥?      </div>
     ) : messages.length === 0 ? (
       <ChatEmptyState onApplyPrompt={onApplyPrompt} />
     ) : (
@@ -135,3 +134,4 @@ const ChatMessageList = ({
 );
 
 export default ChatMessageList;
+

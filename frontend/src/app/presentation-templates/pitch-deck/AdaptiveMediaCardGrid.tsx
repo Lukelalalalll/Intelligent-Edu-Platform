@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "adaptive-media-card-grid";
 export const slideLayoutName = "Adaptive Media Card Grid";
@@ -196,3 +196,5 @@ const AdaptiveMediaCardGrid = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default AdaptiveMediaCardGrid;
+
+

@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/input';
+﻿import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import React, { useState } from 'react'
 
@@ -88,3 +88,4 @@ const NumberOfSlide = ({ value, onValueChange }: { value: string, onValueChange:
 }
 
 export default NumberOfSlide
+

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import io
 import json
@@ -156,7 +156,7 @@ def test_generate_v2_workflow_snapshot_and_result_artifacts():
     }
 
     workflow = delivery._build_workflow_snapshot(task)
-    artifacts = delivery._build_presenton_result_artifacts(
+    artifacts = delivery._build_ppt_generator_result_artifacts(
         title="Deck Title",
         request_id="req-1",
         slides_results=[{"title": "1"}, {"title": "2"}],
@@ -167,7 +167,7 @@ def test_generate_v2_workflow_snapshot_and_result_artifacts():
 
     assert workflow is not None
     assert workflow["request_id"] == "req-1"
-    assert workflow["task_type"] == "presenton_generate_v2"
+    assert workflow["task_type"] == "ppt_generator_generate_v2"
     assert workflow["total_latency_ms"] == 4500
     assert workflow["steps"][0]["step"] == "outline"
     assert workflow["steps"][0]["status"] == "success"
@@ -179,18 +179,18 @@ def test_generate_v2_workflow_snapshot_and_result_artifacts():
     assert artifacts["script_doc_download_url"] == "/slides/download_script/script.docx"
 
 
-def test_generate_v2_build_presenton_source_uses_download_routes():
+def test_generate_v2_build_ppt_generator_source_uses_download_routes():
     from backend.routes.slides_routes import delivery
     from backend.schemas.slides import SlidesGenerateV2Schema
 
     req = SlidesGenerateV2Schema(
-        theme="Presenton Code",
+        theme="PPT Generator Code",
         source_kind="upload",
         source_filename="stored.md",
         source_display_name="Lecture.md",
         combined_markdown_filename="combined.md",
     )
-    source = delivery._build_presenton_source(req, title="Deck", request_id="req-1")
+    source = delivery._build_ppt_generator_source(req, title="Deck", request_id="req-1")
 
     assert source["kind"] == "upload"
     assert source["source_download_url"] == "/api/slides/download_source/stored.md"
@@ -213,11 +213,11 @@ def test_generate_v2_history_params_include_theme():
     )()
     req = SlidesGenerateV2Schema(
         provider="openai",
-        theme="Presenton Code",
+        theme="PPT Generator Code",
         total_pages=8,
     )
 
-    params = delivery._build_presenton_history_params(
+    params = delivery._build_ppt_generator_history_params(
         req=req,
         runtime=runtime,
         request_id="req-1",
@@ -226,24 +226,24 @@ def test_generate_v2_history_params_include_theme():
         title="Deck",
     )
 
-    assert params["theme"] == "Presenton Code"
+    assert params["theme"] == "PPT Generator Code"
 
 
-def test_presenton_theme_aliases_support_hyphenated_template_families():
+def test_ppt_generator_theme_aliases_support_hyphenated_template_families():
     from backend.services.slides.output.theme_catalog import resolve_base_theme
 
     available = ["Business", "Classic", "Dark", "Light"]
 
     assert resolve_base_theme("Pitch Deck", available) == "Business"
     assert resolve_base_theme("pitch-deck", available) == "Business"
-    assert resolve_base_theme("Presenton Pitch Deck", available) == "Business"
+    assert resolve_base_theme("PPT Generator Pitch Deck", available) == "Business"
     assert resolve_base_theme("Product Overview", available) == "Business"
     assert resolve_base_theme("product-overview", available) == "Business"
-    assert resolve_base_theme("Presenton Product Overview", available) == "Business"
+    assert resolve_base_theme("PPT Generator Product Overview", available) == "Business"
 
 
 @pytest.mark.asyncio
-async def test_resolve_presenton_runtime_prefers_user_profile_provider(monkeypatch):
+async def test_resolve_ppt_generator_runtime_prefers_user_profile_provider(monkeypatch):
     from backend.routes.slides_routes import delivery
 
     calls: list[tuple[str, bool]] = []
@@ -268,7 +268,7 @@ async def test_resolve_presenton_runtime_prefers_user_profile_provider(monkeypat
     monkeypatch.setattr(delivery, "resolve_provider_runtime", fake_resolve_provider_runtime)
     monkeypatch.setattr(delivery, "check_runtime_health", fake_check_runtime_health)
 
-    runtime = await delivery._resolve_presenton_runtime(
+    runtime = await delivery._resolve_ppt_generator_runtime(
         "auto",
         feature="slides.generate_v2",
         user={"id": "u1"},
@@ -327,10 +327,10 @@ async def test_run_generate_v2_task_carries_theme_into_ppt_schema(monkeypatch):
     async def fake_complete(*_args, **_kwargs):
         return None
 
-    monkeypatch.setattr(delivery, "PresentonAdapterService", _FakeAdapter)
-    monkeypatch.setattr(delivery.PresentonTaskService, "set_status", fake_set_status)
-    monkeypatch.setattr(delivery.PresentonTaskService, "add_event", fake_add_event)
-    monkeypatch.setattr(delivery.PresentonTaskService, "complete", fake_complete)
+    monkeypatch.setattr(delivery, "PptGeneratorAdapterService", _FakeAdapter)
+    monkeypatch.setattr(delivery.PptGeneratorTaskService, "set_status", fake_set_status)
+    monkeypatch.setattr(delivery.PptGeneratorTaskService, "add_event", fake_add_event)
+    monkeypatch.setattr(delivery.PptGeneratorTaskService, "complete", fake_complete)
     monkeypatch.setattr(delivery, "build_svg_deck", lambda **_kwargs: {
         "deck_id": "deck-1",
         "design_spec_url": "/api/slides/decks/deck-1/design-spec",
@@ -349,7 +349,7 @@ async def test_run_generate_v2_task_carries_theme_into_ppt_schema(monkeypatch):
 
     req = SlidesGenerateV2Schema(
         provider="openai",
-        theme="Presenton Code",
+        theme="PPT Generator Code",
         outlineSlides=[{
             "title": "Intro",
             "objective": "Set the frame",
@@ -364,8 +364,8 @@ async def test_run_generate_v2_task_carries_theme_into_ppt_schema(monkeypatch):
 
     await delivery._run_generate_v2_task("task-1", req, _Runtime(), user=None)
 
-    assert captured_schema["theme"] == "Presenton Code"
-    assert captured_schema["metadata"]["theme"] == "Presenton Code"
+    assert captured_schema["theme"] == "PPT Generator Code"
+    assert captured_schema["metadata"]["theme"] == "PPT Generator Code"
 
 
 def test_normalize_outline_slide_builds_structure_from_markdown():
@@ -384,9 +384,9 @@ def test_normalize_outline_slide_builds_structure_from_markdown():
 
 
 @pytest.mark.asyncio
-async def test_presenton_outline_route_returns_editable_outline(monkeypatch):
+async def test_ppt_generator_outline_route_returns_editable_outline(monkeypatch):
     from backend.routes.slides_routes import delivery
-    from backend.schemas.slides import PresentonOutlineRequestSchema
+    from backend.schemas.slides import PptGeneratorOutlineRequestSchema
 
     class _Runtime:
         requested_provider = "openai"
@@ -411,10 +411,10 @@ async def test_presenton_outline_route_returns_editable_outline(monkeypatch):
             }]
 
     monkeypatch.setattr(delivery, "resolve_provider_runtime", fake_resolve_provider_runtime)
-    monkeypatch.setattr(delivery, "PresentonAdapterService", _FakeAdapter)
+    monkeypatch.setattr(delivery, "PptGeneratorAdapterService", _FakeAdapter)
 
-    result = await delivery.generate_presenton_outline(
-        PresentonOutlineRequestSchema(
+    result = await delivery.generate_ppt_generator_outline(
+        PptGeneratorOutlineRequestSchema(
             provider="openai",
             content="Hello world",
             total_pages=1,
@@ -465,3 +465,4 @@ async def test_parse_md_stores_unique_internal_name_and_preserves_display_name(m
     assert response_one["filename"] != response_two["filename"]
     assert (tmp_path / "uploads" / "abc123.md").exists()
     assert (tmp_path / "uploads" / "def456.md").exists()
+

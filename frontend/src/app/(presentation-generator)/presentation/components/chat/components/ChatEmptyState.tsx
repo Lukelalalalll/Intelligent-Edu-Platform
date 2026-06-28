@@ -1,4 +1,4 @@
-type ChatEmptyStateProps = {
+﻿type ChatEmptyStateProps = {
   onApplyPrompt: (prompt: string) => void;
 };
 
@@ -217,3 +217,4 @@ const ChatEmptyState = ({ onApplyPrompt }: ChatEmptyStateProps) => (
 );
 
 export default ChatEmptyState;
+

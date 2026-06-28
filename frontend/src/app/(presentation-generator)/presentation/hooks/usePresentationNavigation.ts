@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+﻿import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export const usePresentationNavigation = (
@@ -75,3 +75,4 @@ export const usePresentationNavigation = (
     handleSlideChange,
   };
 };
+

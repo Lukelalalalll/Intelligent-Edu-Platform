@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 
@@ -19,8 +19,8 @@ async def run_generate_v2_task_impl(
     user: dict | None,
     config,
     logger,
-    presenton_adapter_service_cls,
-    presenton_task_service,
+    ppt_generator_adapter_service_cls,
+    ppt_generator_task_service,
     chapter_summarizer_cls,
     generate_talking_script_word_fn,
     create_ppt_from_schema_fn,
@@ -40,10 +40,10 @@ async def run_generate_v2_task_impl(
 
     try:
         resolved_provider = runtime.provider_id
-        adapter = presenton_adapter_service_cls(runtime=runtime)
-        await presenton_task_service.set_status(task_id, "running", progress=5)
+        adapter = ppt_generator_adapter_service_cls(runtime=runtime)
+        await ppt_generator_task_service.set_status(task_id, "running", progress=5)
 
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_start",
             "provider_health",
@@ -53,7 +53,7 @@ async def run_generate_v2_task_impl(
         healthy, message = await adapter.check_provider_health()
         if not healthy:
             raise RuntimeError(f"Provider health check failed: {message}")
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "provider_health",
@@ -65,7 +65,7 @@ async def run_generate_v2_task_impl(
             req=req,
             adapter=adapter,
             task_id=task_id,
-            presenton_task_service=presenton_task_service,
+            ppt_generator_task_service=ppt_generator_task_service,
             extract_source_text_and_chapters_fn=extract_source_text_and_chapters_fn,
             normalize_outline_slides_fn=normalize_outline_slides_fn,
         )
@@ -77,7 +77,7 @@ async def run_generate_v2_task_impl(
             slides_results=slides_results,
         )
 
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_start",
             "svg_deck",
@@ -90,7 +90,7 @@ async def run_generate_v2_task_impl(
             slides=slides_results,
             runtime=runtime,
         )
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "svg_deck",
@@ -98,7 +98,7 @@ async def run_generate_v2_task_impl(
             progress=84,
         )
 
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_start",
             "pptx_export",
@@ -107,7 +107,7 @@ async def run_generate_v2_task_impl(
         )
         pptx_filename = await asyncio.to_thread(create_ppt_from_schema_fn, ppt_schema)
         attach_pptx_export_fn(deck_manifest, pptx_filename)
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "pptx_export",
@@ -116,7 +116,7 @@ async def run_generate_v2_task_impl(
         )
 
         if req.generate_talking_script:
-            await presenton_task_service.add_event(
+            await ppt_generator_task_service.add_event(
                 task_id,
                 "step_start",
                 "script",
@@ -132,7 +132,7 @@ async def run_generate_v2_task_impl(
                 config=config,
                 title=title,
             )
-            await presenton_task_service.add_event(
+            await ppt_generator_task_service.add_event(
                 task_id,
                 "step_done",
                 "script",
@@ -140,7 +140,7 @@ async def run_generate_v2_task_impl(
                 progress=98,
             )
 
-        await presenton_task_service.add_event(
+        await ppt_generator_task_service.add_event(
             task_id,
             "step_done",
             "complete",
@@ -159,11 +159,11 @@ async def run_generate_v2_task_impl(
             outline_to_markdown_fn=outline_to_markdown_fn,
             script_payload=script_payload,
         )
-        await presenton_task_service.complete(task_id, result)
+        await ppt_generator_task_service.complete(task_id, result)
         await persist_success_history(
             user=user,
             task_id=task_id,
-            presenton_task_service=presenton_task_service,
+            ppt_generator_task_service=ppt_generator_task_service,
             persist_generate_v2_history_fn=persist_generate_v2_history_fn,
             req=req,
             runtime=runtime,
@@ -178,8 +178,8 @@ async def run_generate_v2_task_impl(
 
     except Exception as exc:  # noqa: BLE001
         logger.exception("[slides.generate_v2][%s] failed", task_id)
-        await presenton_task_service.fail(task_id, str(exc), step="generate_v2")
-        task = await presenton_task_service.get_task(task_id) if user and user.get("id") else None
+        await ppt_generator_task_service.fail(task_id, str(exc), step="generate_v2")
+        task = await ppt_generator_task_service.get_task(task_id) if user and user.get("id") else None
         failed_result = build_failed_result(
             exc=exc,
             task_id=task_id,
@@ -190,7 +190,7 @@ async def run_generate_v2_task_impl(
         await persist_failure_history(
             user=user,
             task_id=task_id,
-            presenton_task_service=presenton_task_service,
+            ppt_generator_task_service=ppt_generator_task_service,
             persist_generate_v2_history_fn=persist_generate_v2_history_fn,
             req=req,
             runtime=runtime,
@@ -202,3 +202,4 @@ async def run_generate_v2_task_impl(
             script_payload=script_payload,
             logger=logger,
         )
+

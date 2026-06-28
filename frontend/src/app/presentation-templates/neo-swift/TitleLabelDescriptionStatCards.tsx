@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 export const Schema = z.object({
     title: z.string().max(17).describe("The main heading of the slide").default("Executive Summary"),
@@ -151,4 +151,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<DataType> }> = ({ data }) => 
     );
 };
 export default dynamicSlideLayout;
+
+
 

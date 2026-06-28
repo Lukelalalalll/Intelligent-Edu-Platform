@@ -1,0 +1,69 @@
+﻿.root {
+  margin: 0;
+}
+
+.workflowRail {
+  width: min(100%, 1160px);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  gap: 24px;
+}
+
+.leading {
+  margin-right: 6px;
+}
+
+.workflowPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 19px;
+  border-radius: 999px;
+  background: var(--primary-color, #007b55);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow-primary, 0 14px 28px -18px rgba(0, 123, 85, 0.45));
+}
+
+.workflowPill :global(i) {
+  font-size: 0.9em;
+}
+
+.stepperButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .workflowRail {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .leading {
+    width: 100%;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .workflowRail {
+    padding-inline: 18px;
+  }
+
+  .workflowPill {
+    width: 100%;
+  }
+}
+

@@ -1,4 +1,4 @@
-import * as z from 'zod';
+﻿import * as z from 'zod';
 export const Schema = z.object({
     slideNumber: z.string().max(2).describe('Slide number or index').default('1'),
     title: z.string().max(30).describe('The main heading of the slide').default('Executive Summary'),
@@ -7,14 +7,14 @@ export const Schema = z.object({
         __image_url__: z.string(),
         __image_prompt__: z.string().max(100)
     }).default({
-        __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+        __image_url__: '/placeholder.jpg',
         __image_prompt__: 'A close-up image of a professional team joining hands in a circle, symbolizing unity and partnership.'
     }),
     secondImage: z.object({
         __image_url__: z.string(),
         __image_prompt__: z.string().max(100)
     }).default({
-        __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+        __image_url__: '/placeholder.jpg',
         __image_prompt__: 'A close-up image of a professional team joining hands in a circle, symbolizing unity and partnership.'
     })
 });
@@ -126,3 +126,4 @@ const HeadlineDescriptionWithDoubleImageLayout = ({ data }: { data: Partial<z.in
     );
 };
 export default HeadlineDescriptionWithDoubleImageLayout;
+

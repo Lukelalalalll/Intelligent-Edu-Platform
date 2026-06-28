@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect } from "react";
 import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
@@ -146,3 +146,4 @@ const TiptapText: React.FC<TiptapTextProps> = ({
 };
 
 export default TiptapText;
+

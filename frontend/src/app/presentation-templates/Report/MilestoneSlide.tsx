@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const MilestoneItemSchema = z.object({
   bulletNumber: z.string().min(2).max(4).meta({
@@ -139,3 +139,5 @@ const MilestoneSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default MilestoneSlide;
+
+

@@ -1,4 +1,4 @@
-import { resolveBackendAssetUrl } from "@/utils/api";
+﻿import { resolveBackendAssetUrl } from "@/utils/api";
 
 const MAX_EXPORT_TITLE_LENGTH = 40;
 
@@ -79,3 +79,4 @@ export const downloadBackendAsset = (path: string, fileName: string) => {
   link.click();
   document.body.removeChild(link);
 };
+

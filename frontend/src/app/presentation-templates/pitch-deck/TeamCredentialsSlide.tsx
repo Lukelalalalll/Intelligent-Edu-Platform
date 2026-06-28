@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const MemberImageSchema = z.object({
   __image_url__: z.string().url().meta({
@@ -116,3 +116,5 @@ const TeamCredentialsSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default TeamCredentialsSlide;
+
+

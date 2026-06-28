@@ -1,17 +1,18 @@
-'use client'
+﻿'use client'
 
 import React, { useMemo, useRef } from 'react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { ChevronRight, SquarePen } from 'lucide-react'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import { useI18n } from '@/shared/i18n'
+import { THEME_EDITOR_STEPS } from './constants'
 import { StepIndicator } from './StepIndicator'
 import { ThemeEditorBrandStep } from './ThemeEditorBrandStep'
 import { ThemeEditorColorStep } from './ThemeEditorColorStep'
 import { ThemeEditorFontStep } from './ThemeEditorFontStep'
 import { ThemePreviewPane } from './ThemePreviewPane'
 import type { ThemePreviewLayout } from './themePreviewLoader'
-import { ThemeColors, ThemeFonts, ThemeStepMeta, UserFontLibrary } from './types'
+import { ThemeColors, ThemeEditorStepId, ThemeFonts, ThemeStepMeta, UserFontLibrary } from './types'
 import styles from './ThemePanel.module.css'
 
 interface ThemeEditorSheetProps {
@@ -19,13 +20,18 @@ interface ThemeEditorSheetProps {
   onOpenChange: (open: boolean) => void
   selectedTheme: Theme
   isNewTheme: boolean
-  currentStep: number
+  currentStep: ThemeEditorStepId
+  currentStepIndex: number
+  totalSteps: number
   currentStepMeta: ThemeStepMeta
   customColors: ThemeColors
   customFonts: ThemeFonts
   customBrandLogo: string | null
   isLogoUploading: boolean
   isFontUploading: boolean
+  isPaletteGenerating: boolean
+  paletteDirty: boolean
+  hasGeneratedPalette: boolean
   showColorPicker: string | null
   themeCompanyName: string
   userFonts: UserFontLibrary
@@ -39,7 +45,7 @@ interface ThemeEditorSheetProps {
   onClickOutside: () => void
   onShowColorPicker: (colorKey: string | null) => void
   onColorChange: (colorKey: keyof ThemeColors, value: string) => void
-  onRefreshTheme: (options: { primary?: string; background?: string }) => Promise<void>
+  onGeneratePalette: () => Promise<void>
   onFontSelect: (fontName: string, url: string) => void
   onFontUpload: (fontFile: File) => Promise<void>
   onBrandLogoUpload: (file: File) => Promise<void>
@@ -51,13 +57,12 @@ interface ThemeEditorSheetProps {
 }
 
 function getPrimaryActionLabel(
-  currentStep: number,
+  currentStep: ThemeEditorStepId,
   t: ReturnType<typeof useI18n>['t']
 ) {
-  if (currentStep === 1) return t('presenton.theme.editor.primary.generate')
-  if (currentStep === 2) return t('presenton.theme.editor.primary.fonts')
-  if (currentStep === 3) return t('presenton.theme.editor.primary.design')
-  return t('presenton.theme.editor.primary.save')
+  if (currentStep === 'colors') return t('ppt_generator.theme.editor.primary.fonts')
+  if (currentStep === 'fonts') return t('ppt_generator.theme.editor.primary.brand')
+  return t('ppt_generator.theme.editor.primary.save')
 }
 
 export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
@@ -66,12 +71,17 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
   selectedTheme,
   isNewTheme,
   currentStep,
+  currentStepIndex,
+  totalSteps,
   currentStepMeta,
   customColors,
   customFonts,
   customBrandLogo,
   isLogoUploading,
   isFontUploading,
+  isPaletteGenerating,
+  paletteDirty,
+  hasGeneratedPalette,
   showColorPicker,
   themeCompanyName,
   userFonts,
@@ -85,7 +95,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
   onClickOutside,
   onShowColorPicker,
   onColorChange,
-  onRefreshTheme,
+  onGeneratePalette,
   onFontSelect,
   onFontUpload,
   onBrandLogoUpload,
@@ -97,11 +107,14 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
 }) => {
   const { t } = useI18n()
   const themeNameInputRef = useRef<HTMLInputElement>(null)
+  const nextStepMeta = currentStepIndex < totalSteps - 1
+    ? THEME_EDITOR_STEPS[currentStepIndex + 1]
+    : null
   const editorEyebrow = useMemo(() => {
-    if (isNewTheme) return t('presenton.theme.editor.eyebrow.new')
+    if (isNewTheme) return t('ppt_generator.theme.editor.eyebrow.new')
     return selectedTheme.user === 'system'
-      ? t('presenton.theme.editor.eyebrow.customize')
-      : t('presenton.theme.editor.eyebrow.edit')
+      ? t('ppt_generator.theme.editor.eyebrow.customize')
+      : t('ppt_generator.theme.editor.eyebrow.edit')
   }, [isNewTheme, selectedTheme.user, t])
 
   return (
@@ -127,7 +140,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                     type="button"
                     className={styles.editorIconButton}
                     onClick={() => themeNameInputRef.current?.focus()}
-                    aria-label={t('presenton.theme.editor.editThemeName')}
+                    aria-label={t('ppt_generator.theme.editor.editThemeName')}
                   >
                     <SquarePen className="h-4 w-4" />
                   </button>
@@ -138,32 +151,37 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
               <StepIndicator currentStep={currentStep} />
               <div className={styles.stepStage}>
                 <div className={styles.stepIntro}>
+                  <div className={styles.stepIntroMeta}>
+                    <span className={styles.stepCounter}>
+                      {t('ppt_generator.theme.editor.stepCounter', {
+                        current: currentStepIndex + 1,
+                        total: totalSteps,
+                      })}
+                    </span>
+                    {currentStep === 'brand' ? (
+                      <span className={styles.stepOptionalBadge}>
+                        {t('ppt_generator.theme.editor.optional')}
+                      </span>
+                    ) : null}
+                  </div>
                   <h3 className={styles.stepIntroTitle}>{t(currentStepMeta.titleKey)}</h3>
                   <p className={styles.stepIntroText}>{t(currentStepMeta.descriptionKey)}</p>
                 </div>
 
                 <div className={styles.stepContent}>
-                  {currentStep === 1 ? (
+                  {currentStep === 'colors' ? (
                     <ThemeEditorColorStep
-                      step={1}
                       customColors={customColors}
                       showColorPicker={showColorPicker}
                       onColorChange={onColorChange}
                       onShowColorPicker={onShowColorPicker}
-                      onRefreshTheme={onRefreshTheme}
+                      onGeneratePalette={onGeneratePalette}
+                      isPaletteGenerating={isPaletteGenerating}
+                      paletteDirty={paletteDirty}
+                      hasGeneratedPalette={hasGeneratedPalette}
                     />
                   ) : null}
-                  {currentStep === 2 ? (
-                    <ThemeEditorColorStep
-                      step={2}
-                      customColors={customColors}
-                      showColorPicker={showColorPicker}
-                      onColorChange={onColorChange}
-                      onShowColorPicker={onShowColorPicker}
-                      onRefreshTheme={onRefreshTheme}
-                    />
-                  ) : null}
-                  {currentStep === 3 ? (
+                  {currentStep === 'fonts' ? (
                     <ThemeEditorFontStep
                       customFonts={customFonts}
                       userFonts={userFonts}
@@ -172,8 +190,11 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                       onFontUpload={onFontUpload}
                     />
                   ) : null}
-                  {currentStep === 4 ? (
+                  {currentStep === 'brand' ? (
                     <ThemeEditorBrandStep
+                      themeName={selectedTheme.name}
+                      customColors={customColors}
+                      customFonts={customFonts}
                       themeCompanyName={themeCompanyName}
                       customBrandLogo={customBrandLogo}
                       isLogoUploading={isLogoUploading}
@@ -185,24 +206,41 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
                 </div>
 
                 <div className={styles.editorFooter}>
-                  {currentStep > 1 ? (
+                  <div className={styles.footerMeta}>
+                    <span className={styles.footerStepCounter}>
+                      {t('ppt_generator.theme.editor.stepCounter', {
+                        current: currentStepIndex + 1,
+                        total: totalSteps,
+                      })}
+                    </span>
+                    <span className={styles.footerStepHint}>
+                      {currentStep === 'brand'
+                        ? t('ppt_generator.theme.editor.footer.final')
+                        : t('ppt_generator.theme.editor.footer.next', {
+                            step: nextStepMeta ? t(nextStepMeta.labelKey) : '',
+                          })}
+                    </span>
+                  </div>
+                  <div className={styles.footerActions}>
+                    {currentStepIndex > 0 ? (
+                      <button
+                        type="button"
+                        className={styles.footerSecondaryAction}
+                        onClick={onPreviousStep}
+                      >
+                        {t('ppt_generator.theme.editor.back')}
+                      </button>
+                    ) : null}
+
                     <button
                       type="button"
-                      className={styles.footerSecondaryAction}
-                      onClick={onPreviousStep}
+                      className={styles.footerPrimaryAction}
+                      onClick={onPrimaryAction}
                     >
-                      {t('presenton.theme.editor.back')}
+                      {getPrimaryActionLabel(currentStep, t)}
+                      <ChevronRight className="h-4 w-4" />
                     </button>
-                  ) : null}
-
-                  <button
-                    type="button"
-                    className={styles.footerPrimaryAction}
-                    onClick={onPrimaryAction}
-                  >
-                    {getPrimaryActionLabel(currentStep, t)}
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -222,3 +260,4 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
     </Sheet>
   )
 }
+

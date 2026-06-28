@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 import React from "react";
 
 export const Schema = z.object({
@@ -322,3 +322,4 @@ const dynamicSlideLayout = ({ data }: { data: z.infer<typeof Schema> }) => {
 };
 
 export default dynamicSlideLayout;
+

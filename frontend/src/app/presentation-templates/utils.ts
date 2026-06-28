@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 /**
  * Extracts default values from a Zod schema by parsing an empty object
@@ -90,3 +90,5 @@ export interface TemplateLayoutsWithSettings {
     settings: TemplateGroupSettings;
     layouts: TemplateWithData[];
 }
+
+

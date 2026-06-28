@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const WorkflowStepSchema = z.object({
   label: z.string().min(2).max(10).meta({
@@ -164,3 +164,5 @@ const ProductWorkflowSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default ProductWorkflowSlide;
+
+

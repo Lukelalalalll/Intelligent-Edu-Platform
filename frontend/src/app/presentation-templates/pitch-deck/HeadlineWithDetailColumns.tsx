@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "headline-with-detail-columns";
 export const slideLayoutName = "Headline with Detail Columns";
@@ -150,3 +150,5 @@ const HeadlineWithDetailColumns = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default HeadlineWithDetailColumns;
+
+

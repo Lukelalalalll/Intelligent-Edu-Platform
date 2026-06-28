@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+﻿import { Skeleton } from '@/components/ui/skeleton'
 
 const ThemeCardSkeleton = () => (
     <div className="rounded-xl px-6 border border-[#EDEEEF] w-[305px] bg-white overflow-hidden">
@@ -51,4 +51,5 @@ const Loading = () => {
 }
 
 export default Loading
+
 

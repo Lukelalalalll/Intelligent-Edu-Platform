@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
@@ -131,22 +131,23 @@ def test_enrich_slides_history_detail_falls_back_to_persisted_workflow(monkeypat
     monkeypatch.setattr(history_service.TaskTracker, "get_task", get_task)
 
     payload = asyncio.run(history_service.enrich_slides_history_detail({
-        "params": {"request_id": "req-presenton"},
+        "params": {"request_id": "req-ppt-generator"},
         "source": {
             "workflow": {
-                "request_id": "req-presenton",
-                "task_type": "presenton_generate_v2",
+                "request_id": "req-ppt-generator",
+                "task_type": "ppt_generator_generate_v2",
                 "status": "failed",
                 "steps": [{"step": "outline", "status": "failed", "error": "boom"}],
             },
             "result_artifacts": {
-                "pptx_download_url": "/api/slides/download_ppt/presenton.pptx",
-                "pptx_filename": "presenton.pptx",
+                "pptx_download_url": "/api/slides/download_ppt/ppt-generator.pptx",
+                "pptx_filename": "ppt-generator.pptx",
             },
         },
         "result": {"status": "failed", "error": "boom"},
     }))
 
-    assert payload["slides_detail"]["workflow"]["task_type"] == "presenton_generate_v2"
+    assert payload["slides_detail"]["workflow"]["task_type"] == "ppt_generator_generate_v2"
     assert payload["slides_detail"]["workflow"]["steps"][0]["step"] == "outline"
-    assert payload["slides_detail"]["result_artifacts"]["pptx_filename"] == "presenton.pptx"
+    assert payload["slides_detail"]["result_artifacts"]["pptx_filename"] == "ppt-generator.pptx"
+

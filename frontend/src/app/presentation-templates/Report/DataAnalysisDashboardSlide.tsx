@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { ReactNode } from "react";
 import * as z from "zod";
@@ -43,7 +43,7 @@ const SummaryCardSchema = z.object({
 export const slideLayoutId = "data-analysis-dashboard-slide";
 export const slideLayoutName = "Data Analysis Dashboard Slide";
 export const slideLayoutDescription =
-  "A dashboard-style slide with a title, summary cards, and a responsive grid of chart panels (1鈥?). Each panel uses the same flexible chart types as other report slides; labels and margins are compact for small cells.";
+  "A dashboard-style slide with a title, summary cards, and a responsive grid of chart panels (1閳?). Each panel uses the same flexible chart types as other report slides; labels and margins are compact for small cells.";
 
 const ChartItemSchema = z.object({
 
@@ -270,4 +270,6 @@ const DataAnalysisDashboardSlide = ({ data }: { data: Partial<SchemaType> }) => 
 };
 
 export default DataAnalysisDashboardSlide;
+
+
 

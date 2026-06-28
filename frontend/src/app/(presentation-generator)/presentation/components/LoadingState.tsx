@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Loader2 } from "lucide-react";
 
 type LoadingStateProps = {
@@ -29,3 +29,4 @@ const LoadingState: React.FC<LoadingStateProps> = ({
 };
 
 export default LoadingState;
+

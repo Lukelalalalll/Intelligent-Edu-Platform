@@ -1,7 +1,7 @@
-import { getHeaderForFormData } from "./header";
+﻿import { getHeaderForFormData } from "./header";
 import { ApiResponseHandler } from "./api-error-handler";
 import { ImageAssetResponse } from "./types";
-import { presentonFetch } from "./presenton-fetch";
+import { pptGeneratorFetch } from "./ppt_generator-fetch";
 import { getApiUrl } from "@/utils/api";
 
 interface StockSearchOptions {
@@ -17,7 +17,7 @@ export class ImagesApi {
     try {
           const formData = new FormData();
       formData.append("file", file);
-    const response = await presentonFetch(getApiUrl(`/api/v1/ppt/images/upload`), {
+    const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/images/upload`), {
       method: "POST",
       headers: getHeaderForFormData(),
       body: formData,
@@ -31,7 +31,7 @@ export class ImagesApi {
 
   static async getUploadedImages(): Promise<ImageAssetResponse[]> {
     try {
-    const response = await presentonFetch(getApiUrl(`/api/v1/ppt/images/uploaded`));
+    const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/images/uploaded`));
    return await ApiResponseHandler.handleResponse(response, "Failed to get uploaded images") as ImageAssetResponse[];
   } catch (error:any) {
     console.log("Get uploaded images error:", error);
@@ -41,7 +41,7 @@ export class ImagesApi {
 
   static async deleteImage(image_id: string): Promise<{success: boolean, message?: string}> {
     try {
-      const response = await presentonFetch(getApiUrl(`/api/v1/ppt/images/${image_id}`), {
+      const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/images/${image_id}`), {
         method: "DELETE"
       });
       return await ApiResponseHandler.handleResponse(response, "Failed to delete image") as {success: boolean, message?: string};
@@ -75,7 +75,7 @@ export class ImagesApi {
         headers["X-Provider-Api-Key"] = trimmedApiKey;
       }
 
-      const response = await presentonFetch(getApiUrl(`/api/v1/ppt/images/search?${params.toString()}`), {
+      const response = await pptGeneratorFetch(getApiUrl(`/api/v1/ppt/images/search?${params.toString()}`), {
         method: "GET",
         headers,
       });
@@ -86,4 +86,5 @@ export class ImagesApi {
     }
   }
 }
+
 

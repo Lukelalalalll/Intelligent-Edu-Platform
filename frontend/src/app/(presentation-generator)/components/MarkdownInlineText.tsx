@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
 import { marked } from "marked";
@@ -54,3 +54,4 @@ const MarkdownInlineText: React.FC<MarkdownInlineTextProps> = ({
 };
 
 export default MarkdownInlineText;
+

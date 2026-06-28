@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Palette } from 'lucide-react';
@@ -89,3 +89,4 @@ const ThemeSelector = ({ current_theme, themes: allThemes }: { current_theme: an
 }
 
 export default ThemeSelector
+

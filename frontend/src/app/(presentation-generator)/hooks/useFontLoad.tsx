@@ -1,4 +1,4 @@
-export type FontLoadSkipReason =
+﻿export type FontLoadSkipReason =
   | "missing_name_or_url"
   | "invalid_url"
   | "unsupported_stylesheet_origin"
@@ -161,3 +161,4 @@ export const useFontLoader = (fonts: Record<string, string>): FontLoadResult => 
 
   return result;
 };
+

@@ -1,9 +1,9 @@
-import { getHeader, getHeaderForFormData } from "./header";
+﻿import { getHeader, getHeaderForFormData } from "./header";
 import { IconSearch, ImageGenerate, ImageSearch, PreviousGeneratedImagesResponse } from "./params";
 import { ApiResponseHandler } from "./api-error-handler";
-import { presentonFetch } from "./presenton-fetch";
+import { pptGeneratorFetch } from "./ppt_generator-fetch";
 import { getApiUrl, resolveBackendAssetUrl } from "@/utils/api";
-import { getGenerationLanguageLabel } from "../../utils/presentonLanguage";
+import { getGenerationLanguageLabel } from "../../utils/pptGeneratorLanguage";
 
 export class PresentationGenerationApi {
   static async uploadDoc(documents: File[]) {
@@ -14,7 +14,7 @@ export class PresentationGenerationApi {
     });
 
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/files/upload`),
         {
           method: "POST",
@@ -36,7 +36,7 @@ export class PresentationGenerationApi {
     language?: string | null
   ) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/files/decompose`),
         {
           method: "POST",
@@ -81,7 +81,7 @@ export class PresentationGenerationApi {
     web_search?: boolean;
   }) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/create`),
         {
           method: "POST",
@@ -114,7 +114,7 @@ export class PresentationGenerationApi {
     prompt: string
   ) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/slide/edit`),
         {
           method: "POST",
@@ -136,10 +136,10 @@ export class PresentationGenerationApi {
 
   static async updatePresentationContent(
     body: any,
-    requestInit?: Pick<Parameters<typeof presentonFetch>[1], "signal">
+    requestInit?: Pick<Parameters<typeof pptGeneratorFetch>[1], "signal">
   ) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/update`),
         {
           method: "PATCH",
@@ -159,7 +159,7 @@ export class PresentationGenerationApi {
 
   static async presentationPrepare(presentationData: any) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/presentation/prepare`),
         {
           method: "POST",
@@ -181,7 +181,7 @@ export class PresentationGenerationApi {
   
   static async generateImage(imageGenerate: ImageGenerate) {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/images/generate?prompt=${imageGenerate.prompt}`),
         {
           method: "GET",
@@ -199,7 +199,7 @@ export class PresentationGenerationApi {
 
   static getPreviousGeneratedImages = async (): Promise<PreviousGeneratedImagesResponse[]> => {
     try {
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/images/generated`),
         {
           method: "GET",
@@ -223,7 +223,7 @@ export class PresentationGenerationApi {
       if (iconSearch.icon_weight) {
         params.set("icon_weight", iconSearch.icon_weight);
       }
-      const response = await presentonFetch(
+      const response = await pptGeneratorFetch(
         getApiUrl(`/api/v1/ppt/icons/search?${params.toString()}`),
         {
           method: "GET",
@@ -245,3 +245,4 @@ export class PresentationGenerationApi {
   }
 
 }
+

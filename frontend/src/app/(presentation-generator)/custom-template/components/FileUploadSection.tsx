@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   ChevronRight,
   FileText,
@@ -51,7 +51,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             <h2>Upload Source Deck</h2>
             <p>
               Drop a `.pptx` file to extract slides, audit font availability, and
-              move into Presenton&apos;s template reconstruction workflow.
+              move into PPT Generator&apos;s template reconstruction workflow.
             </p>
           </div>
 
@@ -76,7 +76,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 </div>
                 <div className={styles.uploadHeadline}>Click to upload or drag and drop</div>
                 <p className={styles.supportText}>
-                  Import the original presentation file so Presenton can map slide
+                  Import the original presentation file so PPT Generator can map slide
                   images, font dependencies, and reusable layout code.
                 </p>
               </>
@@ -233,3 +233,4 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     </div>
   );
 };
+

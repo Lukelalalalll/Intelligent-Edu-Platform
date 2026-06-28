@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from 'react';
 import * as z from "zod";
@@ -134,7 +134,7 @@ const renderPieLabel = (props: any) => {
 export const Schema = z.object({
     title: z.string().min(3).max(50).default('Data Analytics Dashboard').describe('Main title of the slide'),
     description: z.string().min(10).max(200).default('Comprehensive overview of key metrics and performance indicators across multiple data dimensions.').describe('Description text below the title'),
-    charts: z.array(ChartItemSchema).min(1).max(6).default(defaultCharts).describe('Array of 1–6 charts'),
+    charts: z.array(ChartItemSchema).min(1).max(6).default(defaultCharts).describe('Array of 1鈥? charts'),
     showLegend: z.boolean().default(true).describe('Whether to show chart legends'),
     showGrid: z.boolean().default(true).describe('Whether to show chart grid lines'),
     footerWebsite: z.string().max(30).default('www.hello.com').describe('Footer website URL'),
@@ -514,3 +514,5 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+

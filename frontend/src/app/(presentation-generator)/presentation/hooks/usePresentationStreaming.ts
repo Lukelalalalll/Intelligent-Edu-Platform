@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { getApiUrl } from "@/utils/api";
 import { store, type AppDispatch } from "@/store/store";
-import { presentonFetch } from "../../services/api/presenton-fetch";
+import { pptGeneratorFetch } from "../../services/api/ppt_generator-fetch";
 import {
   DEFAULT_STREAM_LOADING_STATE,
   type FetchUserSlides,
@@ -44,7 +44,7 @@ export const usePresentationStreaming = (
       getCurrentPresentationData: () =>
         store.getState().presentationGeneration.presentationData,
       requestStream: (signal) =>
-        presentonFetch(getApiUrl(`/api/v1/ppt/presentation/stream/${presentationId}`), {
+        pptGeneratorFetch(getApiUrl(`/api/v1/ppt/presentation/stream/${presentationId}`), {
           method: "GET",
           headers: {
             Accept: "text/event-stream",
@@ -57,3 +57,4 @@ export const usePresentationStreaming = (
 
   return { loadingState };
 };
+

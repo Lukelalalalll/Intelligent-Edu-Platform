@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 const FindingSchema = z.object({
   number: z.string().min(1).max(4).meta({
@@ -134,3 +134,5 @@ const KeyFindingsSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default KeyFindingsSlide;
+
+

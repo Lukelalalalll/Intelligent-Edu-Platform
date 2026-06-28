@@ -1,4 +1,4 @@
-export interface ChartData {
+﻿export interface ChartData {
     seriesTitles: string[];
     label: string;
     values: string[];
@@ -38,5 +38,6 @@ export interface OutlineItem {
     number: number;     
     charts: ChartConfig[]; 
 }
+
 
 

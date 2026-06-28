@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from typing import Any
 
-from backend.schemas import PresentonAssistantMessageSchema
+from backend.schemas import PptGeneratorAssistantMessageSchema
 
 
 def strip_html(html_text: str) -> str:
@@ -106,7 +106,7 @@ def normalize_outline_slide(item: dict[str, Any], slide_number: int) -> dict[str
         if not key_points:
             key_points = [
                 segment.strip()
-                for segment in re.split(r"[。.!！？?\n]+", raw_content)
+                for segment in re.split(r"[銆?!锛侊紵?\n]+", raw_content)
                 if len(segment.strip()) > 4
             ][:4]
 
@@ -138,7 +138,7 @@ def normalize_outline_slides(
     return [normalize_outline_slide({}, idx + 1) for idx in range(max(1, fallback_total_pages))]
 
 
-def build_presenton_assistant_prompt(req: PresentonAssistantMessageSchema) -> str:
+def build_ppt_generator_assistant_prompt(req: PptGeneratorAssistantMessageSchema) -> str:
     title = (req.presentation_title or "").strip() or "Untitled Presentation"
     history_lines: list[str] = []
     for message in req.history[-8:]:
@@ -173,7 +173,7 @@ def build_presenton_assistant_prompt(req: PresentonAssistantMessageSchema) -> st
     deck_context = "\n".join(slide_lines) if slide_lines else "No deck content available yet."
 
     return (
-        "You are Presenton AI Assistant inside a presentation editing workspace. "
+        "You are the PPT Generator assistant inside a presentation workspace. "
         "Help the user improve the deck, answer questions about structure and wording, "
         "and stay grounded in the current presentation. Be concise, practical, and specific.\n\n"
         f"Presentation title: {title}\n"
@@ -183,3 +183,4 @@ def build_presenton_assistant_prompt(req: PresentonAssistantMessageSchema) -> st
         f"Conversation so far:\n{conversation}\n\n"
         f"User request:\n{req.message.strip()}"
     )
+

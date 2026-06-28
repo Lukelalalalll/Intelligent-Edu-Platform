@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   width: 100%;
   min-height: calc(100dvh - var(--nav-height, 60px));
 }
@@ -456,3 +456,4 @@
     padding: 0.8rem;
   }
 }
+

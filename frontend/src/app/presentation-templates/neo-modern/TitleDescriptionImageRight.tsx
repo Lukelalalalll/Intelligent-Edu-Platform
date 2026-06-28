@@ -1,4 +1,4 @@
-import * as z from 'zod'
+﻿import * as z from 'zod'
 
 export const Schema = z.object({
     title: z.string().max(50).describe('The main title of the slide').default('Image with Description'),
@@ -7,7 +7,7 @@ export const Schema = z.object({
         __image_url__: z.string().describe('The URL of the featured image'),
         __image_prompt__: z.string().max(100).describe('A description for generating a replacement image')
     }).describe('The large image displayed on the right side of the slide').default({
-        __image_url__: 'https://presenton-public-assets.s3.ap-southeast-1.amazonaws.com/replaceable_template_image.png',
+        __image_url__: '/placeholder.jpg',
         __image_prompt__: 'Close up of diverse business hands joined together in a circle, representing teamwork and partnership.'
     })
 });
@@ -81,4 +81,6 @@ const dynamicSlideLayout: React.FC<{ data: Partial<z.infer<typeof Schema>> }> = 
 };
 
 export default dynamicSlideLayout;
+
+
 

@@ -1,4 +1,4 @@
-import Link from "@/presenton/shims/next-link";
+﻿import Link from "@/ppt_generator/shims/next-link";
 import { Button } from "@/components/ui/button";
 import WorkspaceCard from "@/shared/components/Card/Card";
 import { useI18n } from "@/shared/i18n";
@@ -40,18 +40,18 @@ export function TemplatePreviewControls({
           <div className={styles.controlCopy}>
             <Link href="/templates" className={styles.secondaryAction}>
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span>{t("presenton.templatePreview.back")}</span>
+              <span>{t("ppt_generator.templatePreview.back")}</span>
             </Link>
             <div className={styles.badge}>
               <Sparkles className="h-3.5 w-3.5" />
               {isCustom
-                ? t("presenton.templatePreview.badge.custom")
-                : t("presenton.templatePreview.badge.builtIn")}
+                ? t("ppt_generator.templatePreview.badge.custom")
+                : t("ppt_generator.templatePreview.badge.builtIn")}
             </div>
             <div className={styles.controlHeadingRow}>
               <h2 className={styles.controlTitle}>{summaryTitle}</h2>
               {isCustom && !isMissingTemplate ? (
-                <span className={styles.inlinePill}>{t("presenton.templatePreview.badge.customInline")}</span>
+                <span className={styles.inlinePill}>{t("ppt_generator.templatePreview.badge.customInline")}</span>
               ) : null}
             </div>
             <p className={styles.controlDescription}>{summaryDescription}</p>
@@ -66,11 +66,11 @@ export function TemplatePreviewControls({
                 className={styles.dangerAction}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
-                <span>{t("presenton.templatePreview.delete")}</span>
+                <span>{t("ppt_generator.templatePreview.delete")}</span>
               </Button>
             ) : null}
             <p className={styles.controlHelper}>
-              {t("presenton.templatePreview.helper")}
+              {t("ppt_generator.templatePreview.helper")}
             </p>
           </div>
         </div>
@@ -90,3 +90,4 @@ export function TemplatePreviewControls({
     </WorkspaceCard>
   );
 }
+

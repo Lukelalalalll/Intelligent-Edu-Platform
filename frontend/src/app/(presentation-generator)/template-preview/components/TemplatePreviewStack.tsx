@@ -1,4 +1,4 @@
-import type { CustomTemplateLayout } from "@/app/hooks/useCustomTemplates";
+﻿import type { CustomTemplateLayout } from "@/app/hooks/useCustomTemplates";
 
 import type { BuiltInPreviewLayout } from "./templatePreviewData";
 import styles from "./TemplatePreviewClient.module.css";
@@ -108,3 +108,4 @@ export function TemplatePreviewStack({
     </div>
   );
 }
+

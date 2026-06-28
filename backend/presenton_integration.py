@@ -13,8 +13,8 @@ from backend.presenton_host.bootstrap_routes import (
     presenton_user_config_update,
 )
 from backend.presenton_host.config_bridge import (
-    build_presenton_user_config_summary as _build_presenton_user_config_summary,
-    load_presenton_host_config as _load_presenton_host_config,
+    build_ppt_generator_user_config_summary as _build_ppt_generator_user_config_summary,
+    load_ppt_generator_host_config as _load_ppt_generator_host_config,
 )
 from backend.presenton_host.export_routes import (
     PresentonAppExportRequest,

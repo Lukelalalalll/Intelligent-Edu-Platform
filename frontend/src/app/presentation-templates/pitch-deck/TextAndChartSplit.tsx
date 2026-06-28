@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as z from "zod";
 
@@ -143,3 +143,5 @@ const TextAndChartSplit = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default TextAndChartSplit;
+
+

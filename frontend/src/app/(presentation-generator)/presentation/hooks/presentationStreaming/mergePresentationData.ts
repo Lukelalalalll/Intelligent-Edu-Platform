@@ -1,4 +1,4 @@
-import type { PresentationData } from "@/store/slices/presentationGeneration";
+﻿import type { PresentationData } from "@/store/slices/presentationGeneration";
 
 /** Chunk JSON replays each slide as first streamed; don't clobber URLs filled by `slide_assets`. */
 const PLACEHOLDER_ASSET_MARKERS = [
@@ -153,3 +153,4 @@ export function mergeStreamedPresentationData(
     slides: mergeSlidesPreservingResolvedAssets(previous?.slides, incoming.slides),
   } as PresentationData;
 }
+

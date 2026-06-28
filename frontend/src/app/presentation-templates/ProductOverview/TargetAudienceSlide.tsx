@@ -1,4 +1,4 @@
-import * as z from "zod";
+﻿import * as z from "zod";
 
 export const slideLayoutId = "segment-cards-slide";
 export const slideLayoutName = "Segment Cards Slide";
@@ -199,3 +199,5 @@ const TargetAudienceSlide = ({ data }: { data: Partial<SchemaType> }) => {
 };
 
 export default TargetAudienceSlide;
+
+

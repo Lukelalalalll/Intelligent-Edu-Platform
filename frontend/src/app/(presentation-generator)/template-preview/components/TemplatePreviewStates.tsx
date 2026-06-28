@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { Eye, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -27,9 +27,9 @@ export function TemplatePreviewStateBranch({
       {customLoading ? (
         <div className={styles.statusPanel} role="status">
           <Loader2 className={cn("animate-spin", styles.statusIcon)} />
-          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.loading.title")}</h3>
+          <h3 className={styles.statusTitle}>{t("ppt_generator.templatePreview.state.loading.title")}</h3>
           <p className={styles.statusText}>
-            {t("presenton.templatePreview.state.loading.body")}
+            {t("ppt_generator.templatePreview.state.loading.body")}
           </p>
         </div>
       ) : null}
@@ -37,7 +37,7 @@ export function TemplatePreviewStateBranch({
       {customError ? (
         <div className={styles.statusPanel}>
           <Eye className={styles.statusIcon} />
-          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.error.title")}</h3>
+          <h3 className={styles.statusTitle}>{t("ppt_generator.templatePreview.state.error.title")}</h3>
           <p className={styles.statusText}>{customError}</p>
         </div>
       ) : null}
@@ -45,9 +45,9 @@ export function TemplatePreviewStateBranch({
       {isMissingTemplate ? (
         <div className={styles.statusPanel}>
           <Eye className={styles.statusIcon} />
-          <h3 className={styles.statusTitle}>{t("presenton.templatePreview.state.missing.title")}</h3>
+          <h3 className={styles.statusTitle}>{t("ppt_generator.templatePreview.state.missing.title")}</h3>
           <p className={styles.statusText}>
-            {t("presenton.templatePreview.state.missing.body")}
+            {t("ppt_generator.templatePreview.state.missing.body")}
           </p>
         </div>
       ) : null}
@@ -56,3 +56,4 @@ export function TemplatePreviewStateBranch({
     </>
   );
 }
+
