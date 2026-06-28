@@ -1,7 +1,7 @@
 """
 Template font check and slide preview handlers.
 
-Implementation is ported from presenton-enterprise fonts_and_slides_preview flow,
+Implementation is ported from the original enterprise fonts_and_slides_preview flow,
 adapted for local app_data storage instead of S3.
 """
 

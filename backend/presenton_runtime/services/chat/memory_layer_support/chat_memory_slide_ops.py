@@ -8,9 +8,6 @@ from jsonschema import Draft202012Validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.services.presenton.presenton_projection_service import (
-    PRESENTON_MONGO_PROJECTION_SERVICE,
-)
 from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
 from services.chat.memory_layer_support.chat_memory_assets import (
@@ -19,6 +16,7 @@ from services.chat.memory_layer_support.chat_memory_assets import (
 from services.chat.memory_layer_support.chat_memory_queries import get_layout_by_id
 from services.image_generation_service import ImageGenerationService
 from services.mem0_presentation_memory_service import MEM0_PRESENTATION_MEMORY_SERVICE
+from services.search_indexing import update_slide_search_text
 from utils.asset_directory_utils import get_images_directory
 from utils.process_slides import (
     process_old_and_new_slides_and_fetch_assets,
@@ -105,6 +103,7 @@ async def save_slide(
         )
         existing_slide.content = updated_content
         existing_slide.speaker_note = extract_speaker_note(updated_content)
+        update_slide_search_text(existing_slide)
         sql_session.add(existing_slide)
         sql_session.add_all(new_assets)
         await sql_session.commit()
@@ -114,11 +113,6 @@ async def save_slide(
             slide_index=target_index,
             edit_prompt=f"[chat_tool_save_slide_replace] layout_id={layout_id}",
             edited_slide_content=updated_content,
-        )
-        await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-            sql_session,
-            presentation_id=presentation_id,
-            reason="chat_save_slide_replace",
         )
         return {
             "saved": True,
@@ -155,6 +149,7 @@ async def save_slide(
         content=new_slide_content,
         speaker_note=extract_speaker_note(new_slide_content),
     )
+    update_slide_search_text(new_slide)
     new_assets = await process_slide_and_fetch_assets(
         image_generation_service=image_generation_service,
         slide=new_slide,
@@ -171,11 +166,6 @@ async def save_slide(
         slide_index=insert_index,
         edit_prompt=f"[chat_tool_save_slide_new] layout_id={layout_id}",
         edited_slide_content=new_slide.content,
-    )
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation_id,
-        reason="chat_save_slide_create",
     )
     return {
         "saved": True,
@@ -222,11 +212,6 @@ async def delete_slide(
         shifted_count += 1
 
     await sql_session.commit()
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation_id,
-        reason="chat_delete_slide",
-    )
     return {
         "deleted": True,
         "message": f"Slide at index {target_index} was deleted successfully.",

@@ -132,7 +132,8 @@ def build_export_web_origin(request: Request) -> Optional[str]:
 
 def build_owner_user_id(request: Request) -> str:
     return resolve_presenton_owner_user_id(getattr(request.state, "current_user", None)) or str(
-        getattr(request.state, "presenton_owner_user_id", "") or ""
+        getattr(request.state, "ppt_generator_owner_user_id", "")
+        or getattr(request.state, "presenton_owner_user_id", "")
     ).strip()
 
 

@@ -20,7 +20,6 @@ from models.sql.template import TemplateModel
 from models.sql.template_create_info import TemplateCreateInfoModel
 from models.sql.slide import SlideModel
 from models.sql.webhook_subscription import WebhookSubscription
-from utils.get_env import get_migrate_database_on_startup_env
 from utils.db_utils import get_database_url_and_connect_args, get_pool_kwargs
 
 
@@ -43,27 +42,31 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 # Create Database and Tables
 async def create_db_and_tables():
-    should_run_alembic = get_migrate_database_on_startup_env() in ["true", "True"]
-    if not should_run_alembic:
-        async with sql_engine.begin() as conn:
-            await conn.run_sync(
-                lambda sync_conn: SQLModel.metadata.create_all(
-                    sync_conn,
-                    tables=[
-                        PresentationModel.__table__,
-                        SlideModel.__table__,
-                        KeyValueSqlModel.__table__,
-                        ChatHistoryMessageModel.__table__,
-                        ImageAsset.__table__,
-                        PresentationLayoutCodeModel.__table__,
-                        TemplateCreateInfoModel.__table__,
-                        TemplateModel.__table__,
-                        WebhookSubscription.__table__,
-                        AsyncPresentationGenerationTaskModel.__table__,
-                        OllamaPullStatus.__table__,
-                    ],
-                )
+    if "sqlite" not in database_url:
+        from migrations import verify_database_schema_current
+
+        await verify_database_schema_current()
+        return
+
+    async with sql_engine.begin() as conn:
+        await conn.run_sync(
+            lambda sync_conn: SQLModel.metadata.create_all(
+                sync_conn,
+                tables=[
+                    PresentationModel.__table__,
+                    SlideModel.__table__,
+                    KeyValueSqlModel.__table__,
+                    ChatHistoryMessageModel.__table__,
+                    ImageAsset.__table__,
+                    PresentationLayoutCodeModel.__table__,
+                    TemplateCreateInfoModel.__table__,
+                    TemplateModel.__table__,
+                    WebhookSubscription.__table__,
+                    AsyncPresentationGenerationTaskModel.__table__,
+                    OllamaPullStatus.__table__,
+                ],
             )
+        )
 
 
 async def dispose_engines():

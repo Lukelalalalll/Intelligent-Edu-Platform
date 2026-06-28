@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 import uuid
-from sqlalchemy import JSON, Column, DateTime, String
+from sqlalchemy import JSON, Column, DateTime, Index, String
 from sqlmodel import Boolean, Field, SQLModel
 
 from models.presentation_outline_model import PresentationOutlineModel
@@ -12,8 +12,12 @@ from utils.datetime_utils import get_current_utc_datetime
 
 class PresentationModel(SQLModel, table=True):
     __tablename__ = "presentations"
+    __table_args__ = (
+        Index("ix_presentations_owner_user_id_updated_at", "owner_user_id", "updated_at"),
+    )
 
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    owner_user_id: str = Field(default="", sa_column=Column(String, nullable=False, index=True))
     content: str
     n_slides: int
     language: str
@@ -41,11 +45,13 @@ class PresentationModel(SQLModel, table=True):
     include_table_of_contents: bool = Field(sa_column=Column(Boolean), default=False)
     include_title_slide: bool = Field(sa_column=Column(Boolean), default=True)
     web_search: bool = Field(sa_column=Column(Boolean), default=False)
+    search_text: str = Field(default="", sa_column=Column(String, nullable=False, default=""))
     theme: Optional[dict] = Field(sa_column=Column(JSON), default=None)
 
     def get_new_presentation(self):
         return PresentationModel(
             id=uuid.uuid4(),
+            owner_user_id=self.owner_user_id,
             content=self.content,
             n_slides=self.n_slides,
             language=self.language,
@@ -59,6 +65,7 @@ class PresentationModel(SQLModel, table=True):
             verbosity=self.verbosity,
             include_table_of_contents=self.include_table_of_contents,
             include_title_slide=self.include_title_slide,
+            search_text=self.search_text,
         )
 
     def get_presentation_outline(self):

@@ -41,7 +41,7 @@ def build_node_env(service, *, asset_base_url: str | None = None) -> Mapping[str
     if not fastapi_base:
         raise HTTPException(
             status_code=500,
-            detail="A public Presenton asset base URL is required for PPTX-to-HTML export",
+            detail="A public PPT Generator asset base URL is required for PPTX-to-HTML export",
         )
     env["ASSETS_BASE_URL"] = f"{fastapi_base.rstrip('/')}/app_data"
     env["BUILT_PYTHON_MODULE_PATH"] = service.converter_path

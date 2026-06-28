@@ -7,7 +7,7 @@ from fastapi import APIRouter
 
 from backend.apps.highlighter_router import build_highlighter_router
 from backend.config import Config
-from backend.presenton_integration import PRESENTON_APP_DATA_ROOT
+from backend.ppt_generator_integration import PPT_GENERATOR_APP_DATA_ROOT
 from backend.routes.admin_routes import admin_router
 from backend.routes.ai_gateway_routes import ai_gateway_router
 from backend.routes.ai_routes import ai_router
@@ -87,7 +87,7 @@ CORE_APP_MANIFEST = AppManifest(
         ("/grading_annotated", _base_path("static", "grading_annotated"), "grading_annotated"),
         ("/uploads", _base_path("uploads"), "uploads"),
         ("/generated/sub1", _base_path("generated", "sub1"), "generated_sub1"),
-        ("/app_data", str(PRESENTON_APP_DATA_ROOT), "presenton_app_data"),
+        ("/app_data", str(PPT_GENERATOR_APP_DATA_ROOT), "ppt_generator_app_data"),
     ),
     require_gateway_token=True,
     ensure_indexes_on_startup=True,

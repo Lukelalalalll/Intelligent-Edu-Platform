@@ -13,7 +13,7 @@ SUCCESS_HTML = """<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Presenton - Authentication successful</title>
+  <title>PPT Generator - Authentication successful</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -87,7 +87,7 @@ SUCCESS_HTML = """<!doctype html>
       <span>Authentication successful</span>
     </div>
     <h1>You're all set</h1>
-    <p>You can now return to Presenton to continue.</p>
+    <p>You can now return to PPT Generator to continue.</p>
     <p class="hint">This window can be safely closed.</p>
   </main>
 </body>
@@ -98,7 +98,7 @@ STATE_MISMATCH_HTML = """<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Presenton - Authentication issue</title>
+  <title>PPT Generator - Authentication issue</title>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -203,7 +203,7 @@ STATE_MISMATCH_HTML = """<!doctype html>
     </div>
     <h1>Almost there</h1>
     <p>We detected a small mismatch while completing authentication.</p>
-    <p>We'll gently reload this page. If the issue persists, close this window and restart sign-in from Presenton.</p>
+    <p>We'll gently reload this page. If the issue persists, close this window and restart sign-in from PPT Generator.</p>
     <button type="button" onclick="reloadNow()">Reload this page</button>
     <p class="hint">You can also safely close this window and try again from the app.</p>
   </main>

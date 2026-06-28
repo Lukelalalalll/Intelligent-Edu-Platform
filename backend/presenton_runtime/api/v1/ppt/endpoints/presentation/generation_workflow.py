@@ -10,7 +10,6 @@ import dirtyjson
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.services.presenton.presenton_projection_service import PRESENTON_MONGO_PROJECTION_SERVICE
 from enums.webhook_event import WebhookEvent
 from models.api_error_model import APIErrorModel
 from models.generate_presentation_request import GeneratePresentationRequest
@@ -20,6 +19,7 @@ from models.sql.async_presentation_generation_status import AsyncPresentationGen
 from services.concurrent_service import CONCURRENT_SERVICE
 from services.documents_loader import DocumentsLoader
 from services.mem0_presentation_memory_service import MEM0_PRESENTATION_MEMORY_SERVICE
+from services.search_indexing import update_presentation_search_text
 from services.webhook_service import WebhookService
 from utils.export_utils import export_presentation
 from utils.llm_calls.generate_presentation_outlines import (
@@ -68,16 +68,12 @@ async def generate_presentation_handler(
             using_slides_markdown=using_slides_markdown,
             language_to_use=language_to_use,
         )
+        presentation.owner_user_id = str(owner_user_id or "").strip()
+        update_presentation_search_text(presentation)
         sql_session.add(presentation)
         sql_session.add_all(slides)
         sql_session.add_all(generated_assets)
         await sql_session.commit()
-        await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-            sql_session,
-            presentation_id=presentation.id,
-            owner_user_id=owner_user_id,
-            reason="generate_presentation_handler",
-        )
 
         await _set_async_status(sql_session, async_status, message="Exporting presentation", commit=False)
         presentation_and_path = await export_presentation(

@@ -131,12 +131,22 @@ def _slice_tail_messages(messages: list[dict[str, Any]], limit: int | None = Non
     return messages[start:], start
 
 
-async def list_sessions_for_user(user_id: str) -> list[dict[str, Any]]:
-    docs = await ai_session_repo.list_for_user(
+async def list_sessions_for_user(
+    user_id: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, Any]:
+    result = await ai_session_repo.list_for_user(
         user_id,
         projection={"messages": 1, "bucketCount": 1, "messageCount": 1, "title": 1, "createdAt": 1, "updatedAt": 1, "clientId": 1},
+        page=page,
+        page_size=page_size,
     )
-    return [_serialize_session_summary(doc) for doc in docs]
+    return {
+        **result,
+        "items": [_serialize_session_summary(doc) for doc in result["items"]],
+    }
 
 
 async def create_session_for_user(*, user_id: str, system_content: str) -> dict[str, Any]:

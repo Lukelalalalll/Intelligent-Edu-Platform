@@ -9,7 +9,8 @@ from backend.services.grading_service import (
     load_courses, find_submission, find_submission_v2, load_annotations, render_annotations_to_pdf,
     get_source_pdf_web_path,
     # v2 helpers
-    list_course_sections, list_assignments, list_submissions,
+    list_all_assignments, list_all_course_sections, list_all_enrollments, list_all_submissions,
+    list_course_sections,
     get_submission_bundle, list_enrollments,
     get_course_section, get_assignment, get_submission as get_submission_v2,
 )
@@ -56,7 +57,10 @@ async def _assert_v2_course_access(course_section_id: str, user: dict) -> dict:
         return course
 
     # Enrolled as teacher/ta?
-    enrollments = await list_enrollments(course_section_id=course_section_id, user_id=user_id)
+    enrollments = await list_all_enrollments(
+        course_section_id=course_section_id,
+        user_id=user_id,
+    )
     for e in enrollments:
         if e.get("roleInCourse") in ("teacher", "ta"):
             return course
@@ -146,32 +150,28 @@ async def get_courses_v2(current_user: dict = Depends(get_current_user)):
     user_id = str(current_user.get("_id") or current_user.get("id") or "")
 
     if _is_admin(current_user):
-        courses = await list_course_sections()
+        courses = await list_all_course_sections()
     else:
-        enrollments = await list_enrollments(user_id=user_id)
-        section_ids = [e["courseSectionId"] for e in enrollments if e.get("roleInCourse") in ("teacher", "ta")]
-        # Also include courses where ownerTeacherId matches
-        owned = await list_course_sections({"ownerTeacherId": user_id})
-        owned_ids = {c["id"] for c in owned}
-        section_ids_set = set(section_ids) | owned_ids
-        if section_ids_set:
-            from bson import ObjectId as OID
-            courses = await list_course_sections({
-                "$or": [
-                    {"_id": {"$in": [OID(sid) for sid in section_ids_set if sid]}},
-                    {"ownerTeacherId": user_id},
-                ]
-            })
-        else:
-            courses = await list_course_sections({"ownerTeacherId": user_id})
+        enrollments = await list_all_enrollments(user_id=user_id)
+        section_ids = {
+            e["courseSectionId"]
+            for e in enrollments
+            if e.get("courseSectionId") and e.get("roleInCourse") in ("teacher", "ta")
+        }
+        courses = await list_all_course_sections({"ownerTeacherId": user_id})
+        known_ids = {course["id"] for course in courses}
+        for section_id in sorted(section_ids - known_ids):
+            course = await get_course_section(section_id)
+            if course:
+                courses.append(course)
 
     # Enrich with counts
     for c in courses:
-        assignments = await list_assignments(c["id"])
+        assignments = await list_all_assignments(c["id"])
         total_subs = 0
         graded_subs = 0
         for a in assignments:
-            subs = await list_submissions(a["id"])
+            subs = await list_all_submissions(a["id"])
             total_subs += len(subs)
             graded_subs += sum(1 for s in subs if s.get("status") == "graded")
         c["assignmentCount"] = len(assignments)
@@ -185,11 +185,11 @@ async def get_courses_v2(current_user: dict = Depends(get_current_user)):
 async def get_assignments_v2(course_section_id: str, current_user: dict = Depends(get_current_user)):
     _assert_teacher_or_admin(current_user)
     await _assert_v2_course_access(course_section_id, current_user)
-    assignments = await list_assignments(course_section_id)
+    assignments = await list_all_assignments(course_section_id)
 
     # Enrich each assignment with submission stats
     for a in assignments:
-        subs = await list_submissions(a["id"])
+        subs = await list_all_submissions(a["id"])
         a["submissionCount"] = len(subs)
         a["gradedCount"] = sum(1 for s in subs if s.get("status") == "graded")
         a["pendingCount"] = sum(1 for s in subs if s.get("status") == "pending")

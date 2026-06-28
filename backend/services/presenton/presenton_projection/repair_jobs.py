@@ -94,7 +94,7 @@ async def run_presenton_projection_repair_dispatch_job(
     dispatch_job_id: str,
     *,
     dispatcher,
-    replay_payload: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]],
+    replay_payload: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None,
 ) -> None:
     worker_id = f"api-presenton-projection-{str(dispatch_job_id or '')[:16]}"
     claimed = await dispatcher.claim(
@@ -106,19 +106,14 @@ async def run_presenton_projection_repair_dispatch_job(
     if not claimed:
         return
 
-    payload = dict(claimed.get("payload") or {})
-    try:
-        result = await replay_payload(payload)
-    except Exception as exc:  # noqa: BLE001
-        await dispatcher.mark_failed(
-            job_id=dispatch_job_id,
-            worker_id=worker_id,
-            error=str(exc),
-        )
-        return
-
     await dispatcher.mark_done(
         job_id=dispatch_job_id,
         worker_id=worker_id,
-        result=result,
+        result={
+            "disabled": True,
+            "reason": "mongo_projection_retired",
+            "jobType": PRESENTON_PROJECTION_REPAIR_JOB_TYPE,
+            "jobId": dispatch_job_id,
+            "ignored": True,
+        },
     )

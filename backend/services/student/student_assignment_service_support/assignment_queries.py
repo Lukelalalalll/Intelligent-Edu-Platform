@@ -6,8 +6,8 @@ from backend.core.database import db
 from backend.services.grading_service import (
     get_assignment,
     get_grade,
-    list_assignments,
-    list_submissions_for_student,
+    list_all_assignments,
+    list_all_submissions_for_student,
 )
 
 from .common import resolve_course_section_id, user_id_from_user
@@ -20,8 +20,8 @@ async def list_student_assignments(course_section_id: str, current_user: dict[st
     user_id = user_id_from_user(current_user)
     resolved_section_id = await resolve_course_section_id(course_section_id)
 
-    assignments = await list_assignments(resolved_section_id)
-    student_submissions = await list_submissions_for_student(user_id)
+    assignments = await list_all_assignments(resolved_section_id)
+    student_submissions = await list_all_submissions_for_student(user_id)
     submission_by_assignment = {
         submission.get("assignmentId", ""): submission
         for submission in student_submissions
@@ -93,7 +93,7 @@ async def list_student_assignments(course_section_id: str, current_user: dict[st
 
 async def list_my_submissions(current_user: dict[str, Any]) -> dict[str, Any]:
     user_id = user_id_from_user(current_user)
-    submissions = await list_submissions_for_student(user_id)
+    submissions = await list_all_submissions_for_student(user_id)
 
     result: list[dict[str, Any]] = []
     for submission in submissions:

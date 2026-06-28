@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from bson import ObjectId
-
 from backend.core.database import db
+from ._helpers import coerce_object_id
 
 
 async def insert_homework(document: dict[str, Any]):
@@ -23,9 +22,10 @@ async def list_homeworks(
 
 
 async def find_homework_by_id(homework_id: str) -> dict[str, Any] | None:
-    if not ObjectId.is_valid(homework_id):
+    oid = coerce_object_id(homework_id)
+    if oid is None:
         return None
-    return await db.homeworks.find_one({"_id": ObjectId(homework_id)})
+    return await db.homeworks.find_one({"_id": oid})
 
 
 async def list_student_course_ids(student_id: str) -> list[str]:
@@ -38,4 +38,4 @@ async def insert_submission(document: dict[str, Any]):
 
 
 async def list_submissions_by_student(student_id: str) -> list[dict[str, Any]]:
-    return await db.homework_submissions.find({"student_id": student_id}).to_list(length=None)
+    return [doc async for doc in db.homework_submissions.find({"student_id": student_id})]

@@ -230,11 +230,6 @@ def test_memory_layer_save_create_replace_and_delete(monkeypatch):
         "store_slide_edit",
         AsyncMock(return_value=None),
     )
-    monkeypatch.setattr(
-        slide_ops.PRESENTON_MONGO_PROJECTION_SERVICE,
-        "safe_sync_presentation_bundle",
-        AsyncMock(return_value=None),
-    )
 
     created = asyncio.run(
         memory.save_slide(
@@ -272,12 +267,6 @@ def test_memory_layer_theme_operations_preserve_response_shape(monkeypatch):
     memory = PresentationChatMemoryLayer(session, presentation.id)
     theme_ops = importlib.import_module(
         "services.chat.memory_layer_support.chat_memory_themes"
-    )
-
-    monkeypatch.setattr(
-        theme_ops.PRESENTON_MONGO_PROJECTION_SERVICE,
-        "safe_sync_presentation_bundle",
-        AsyncMock(return_value=None),
     )
 
     response = asyncio.run(

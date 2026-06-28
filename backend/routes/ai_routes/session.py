@@ -1,6 +1,6 @@
 ﻿"""Session CRUD endpoints, all scoped to current user."""
 
-from fastapi import Depends, Request
+from fastapi import Depends, Query, Request
 
 from backend.core.security import get_current_user
 from backend.schemas import UpdateAiSessionSchema
@@ -19,9 +19,19 @@ router = APIRouter()
 
 
 @router.get("/sessions")
-async def list_sessions(user: dict = Depends(get_current_user)):
+async def list_sessions(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_user),
+):
     """Return all sessions for the current user (title + meta only, no messages)."""
-    return {"sessions": await list_sessions_for_user(str(user["id"]))}
+    result = await list_sessions_for_user(str(user["id"]), page=page, page_size=page_size)
+    return {
+        "sessions": result["items"],
+        "total": result["total"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+    }
 
 
 @router.post("/sessions")

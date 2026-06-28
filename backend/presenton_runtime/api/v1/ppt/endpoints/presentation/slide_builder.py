@@ -10,6 +10,7 @@ from models.presentation_structure_model import PresentationStructureModel
 from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
 from services.image_generation_service import ImageGenerationService
+from services.search_indexing import update_presentation_search_text, update_slide_search_text
 from utils.asset_directory_utils import get_images_directory
 from utils.get_layout_by_name import get_layout_by_name
 from utils.llm_calls.generate_presentation_structure import generate_presentation_structure
@@ -71,6 +72,7 @@ async def build_presentation_assets(
         verbosity=request.verbosity.value,
         instructions=request.instructions,
     )
+    update_presentation_search_text(presentation)
     slides, generated_assets = await _generate_slides(
         presentation_id=presentation_id,
         presentation_outlines=presentation_outlines,
@@ -172,6 +174,7 @@ async def _generate_slides(
                 speaker_note=slide_content.get("__speaker_note__"),
                 content=slide_content,
             )
+            update_slide_search_text(slide)
             slides.append(slide)
             batch_slides.append(slide)
 

@@ -13,6 +13,7 @@ from backend.core.database import (
     _ensure_user_sessions_indexes,
     _find_equivalent_username_index_name,
     _is_equivalent_username_index,
+    ensure_indexes,
     close_database_client,
 )
 from backend.apps.factory import create_app
@@ -80,6 +81,9 @@ class _FakeCreateIndexesCollection:
         self.create_indexes_calls.append(indexes)
         return [f"idx_{i}" for i, _ in enumerate(indexes)]
 
+    async def drop_index(self, _name):
+        return None
+
 
 class _FakeProxyDatabase:
     def __init__(self, label):
@@ -138,6 +142,66 @@ class _LoopCheckingMotorClient:
 
     def close(self):
         self.closed = True
+
+
+class _FakeEnsureIndexesDatabase:
+    def __init__(self):
+        self.users = _FakeUsersCollection(indexes=[])
+        self._collections = {
+            "google_auth_tickets": _FakeCreateIndexesCollection(),
+            "user_sessions": _FakeCreateIndexesCollection(),
+            "auth_attempt_counters": _FakeCreateIndexesCollection(),
+            "security_audit_events": _FakeCreateIndexesCollection(),
+            "login_mfa_challenges": _FakeCreateIndexesCollection(),
+            "annotations": _FakeCreateIndexesCollection(),
+            "course_sections": _FakeCreateIndexesCollection(),
+            "enrollments": _FakeCreateIndexesCollection(),
+            "assignments": _FakeCreateIndexesCollection(),
+            "submissions": _FakeCreateIndexesCollection(),
+            "documents": _FakeCreateIndexesCollection(),
+            "grades": _FakeCreateIndexesCollection(),
+            "courses": _FakeCreateIndexesCollection(),
+            "llm_telemetry": _FakeCreateIndexesCollection(),
+            "sub1_task_tracking": _FakeCreateIndexesCollection(),
+            "sub1_checkpoints": _FakeCreateIndexesCollection(),
+            "sub1_audit_log": _FakeCreateIndexesCollection(),
+            "chat_contacts": _FakeCreateIndexesCollection(),
+            "chat_rooms": _FakeCreateIndexesCollection(),
+            "chat_messages": _FakeCreateIndexesCollection(),
+            "ai_chat_sessions": _FakeCreateIndexesCollection(),
+            "staff_codes": _FakeCreateIndexesCollection(),
+            "chat_ai_jobs": _FakeCreateIndexesCollection(),
+            "chat_file_transfers": _FakeCreateIndexesCollection(),
+            "indexing_jobs": _FakeCreateIndexesCollection(),
+            "background_jobs": _FakeCreateIndexesCollection(),
+            "file_assets": _FakeCreateIndexesCollection(),
+            "password_reset_tokens": _FakeCreateIndexesCollection(),
+            "question_ops_runs": _FakeCreateIndexesCollection(),
+            "question_ops_items": _FakeCreateIndexesCollection(),
+            "slides_delivery_jobs": _FakeCreateIndexesCollection(),
+            "study_plan_profiles": _FakeCreateIndexesCollection(),
+            "study_review_queue": _FakeCreateIndexesCollection(),
+            "ai_session_buckets": _FakeCreateIndexesCollection(),
+        }
+        for collection_name in (
+            "sub1_generation_history",
+            "sub2_generation_history",
+            "sub3_generation_history",
+            "sub4_generation_history",
+            "sub5_generation_history",
+            "video_generation_history",
+        ):
+            self._collections[collection_name] = _FakeCreateIndexesCollection()
+
+    def __getattr__(self, name):
+        if name == "users":
+            return self.users
+        if name in self._collections:
+            return self._collections[name]
+        raise AttributeError(name)
+
+    def __getitem__(self, name):
+        return self._collections[name]
 
 
 def test_is_equivalent_username_index_matches_unique_username_index():
@@ -302,6 +366,44 @@ def test_ensure_auth_security_indexes_creates_expected_indexes(monkeypatch):
     assert len(fake_attempts.create_indexes_calls[0]) == 3
     assert len(fake_audit.create_indexes_calls) == 1
     assert len(fake_audit.create_indexes_calls[0]) == 3
+
+
+def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypatch):
+    fake_db = _FakeEnsureIndexesDatabase()
+    monkeypatch.setattr("backend.core.database.db", fake_db)
+
+    asyncio.run(ensure_indexes())
+
+    def _documents(collection_name: str):
+        created = fake_db[collection_name].create_indexes_calls
+        assert created, f"expected indexes for {collection_name}"
+        return [index.document for index in created[0]]
+
+    course_specs = _documents("course_sections")
+    enrollment_specs = _documents("enrollments")
+    submission_specs = _documents("submissions")
+    grade_specs = _documents("grades")
+
+    assert any(
+        list(spec["key"].items()) == [("courseCode", 1), ("semester", 1)]
+        and spec.get("unique") is True
+        for spec in course_specs
+    )
+    assert any(
+        list(spec["key"].items()) == [("courseSectionId", 1), ("userId", 1)]
+        and spec.get("unique") is True
+        for spec in enrollment_specs
+    )
+    assert any(
+        list(spec["key"].items()) == [("assignmentId", 1), ("studentId", 1), ("attemptNo", 1)]
+        and spec.get("unique") is True
+        for spec in submission_specs
+    )
+    assert any(
+        list(spec["key"].items()) == [("submissionId", 1)]
+        and spec.get("unique") is True
+        for spec in grade_specs
+    )
 
 
 def test_db_proxy_recreates_client_when_event_loop_changes(monkeypatch):

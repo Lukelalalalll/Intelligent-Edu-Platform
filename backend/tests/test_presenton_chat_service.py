@@ -105,10 +105,6 @@ def _patch_service_dependencies(monkeypatch):
     monkeypatch.setattr("services.chat.service.ChatConversationStore", _FakeConversationStore)
     monkeypatch.setattr("services.chat.service.PresentationContextStore", _FakeMemory)
     monkeypatch.setattr("services.chat.service.ChatTools", _FakeTools)
-    monkeypatch.setattr(
-        "services.chat.service_support.persistence.PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_chat_conversation",
-        AsyncMock(return_value=None),
-    )
 
 
 def _patch_llm_runtime(monkeypatch, *, client, stream_impl=None):

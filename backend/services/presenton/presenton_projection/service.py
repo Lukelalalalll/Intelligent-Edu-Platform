@@ -135,7 +135,7 @@ class PresentonMongoProjectionService:
                 error=str(exc),
             )
             LOGGER.exception(
-                "Presenton projection sync failed (presentation_id=%s, reason=%s)",
+                "PPT Generator projection sync failed (presentation_id=%s, reason=%s)",
                 presentation_id,
                 reason,
             )
@@ -167,7 +167,7 @@ class PresentonMongoProjectionService:
                 error=str(exc),
             )
             LOGGER.exception(
-                "Presenton chat projection sync failed (presentation_id=%s, conversation_id=%s, reason=%s)",
+                "PPT Generator chat projection sync failed (presentation_id=%s, conversation_id=%s, reason=%s)",
                 presentation_id,
                 conversation_id,
                 reason,
@@ -196,7 +196,7 @@ class PresentonMongoProjectionService:
                 error=str(exc),
             )
             LOGGER.exception(
-                "Presenton projection delete failed (presentation_id=%s, reason=%s)",
+                "PPT Generator projection delete failed (presentation_id=%s, reason=%s)",
                 presentation_id,
                 reason,
             )
@@ -213,7 +213,7 @@ class PresentonMongoProjectionService:
     ) -> None:
         if not owner_user_id:
             LOGGER.warning(
-                "Skipping presenton repair job because owner user id is missing (presentation_id=%s, reason=%s)",
+                "Skipping PPT Generator projection repair job because owner user id is missing (presentation_id=%s, reason=%s)",
                 presentation_id,
                 reason,
             )
@@ -236,3 +236,6 @@ class PresentonMongoProjectionService:
             self._run_repair_dispatch_job(dispatch_job["job_id"]),
             label=f"presenton-projection-repair:{dispatch_job['job_id']}",
         )
+
+
+PptGeneratorMongoProjectionService = PresentonMongoProjectionService

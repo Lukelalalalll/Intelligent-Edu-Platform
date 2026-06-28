@@ -11,20 +11,20 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .auth_bridge import get_presenton_current_user, resolve_request_public_origin
-from .bootstrap import ensure_presenton_ready, load_presenton_runtime
+from .auth_bridge import get_ppt_generator_current_user, resolve_ppt_generator_public_origin
+from .bootstrap import ensure_ppt_generator_ready, load_ppt_generator_runtime
 
 export_router = APIRouter()
 
 
-class PresentonAppExportRequest(BaseModel):
+class PptGeneratorAppExportRequest(BaseModel):
     id: str
     title: str | None = None
     format: str
 
 
-async def get_presenton_async_session():
-    runtime = load_presenton_runtime()
+async def get_ppt_generator_async_session():
+    runtime = load_ppt_generator_runtime()
     async for session in runtime.get_async_session():
         yield session
 
@@ -34,13 +34,13 @@ def content_disposition(filename: str) -> str:
     return f'attachment; filename="{fallback}"; ' f"filename*=UTF-8''{quote(filename)}"
 
 
-def get_safe_export_file_path(name: str) -> Path:
+def get_safe_ppt_generator_export_file_path(name: str) -> Path:
     file_name = name.strip()
     if not file_name:
         raise HTTPException(status_code=400, detail="Invalid export file name")
     if Path(file_name).name != file_name or "/" in file_name or "\\" in file_name:
         raise HTTPException(status_code=400, detail="Invalid export file name")
-    runtime = load_presenton_runtime()
+    runtime = load_ppt_generator_runtime()
     exports_dir = Path(runtime.get_exports_directory()).resolve()
     candidate = (exports_dir / file_name).resolve()
     try:
@@ -51,13 +51,17 @@ def get_safe_export_file_path(name: str) -> Path:
 
 
 @export_router.post("/api/v1/app/export")
-async def presenton_export(request: Request, body: PresentonAppExportRequest, _current_user: dict = Depends(get_presenton_current_user)):
-    await ensure_presenton_ready()
+async def ppt_generator_export(
+    request: Request,
+    body: PptGeneratorAppExportRequest,
+    _current_user: dict = Depends(get_ppt_generator_current_user),
+):
+    await ensure_ppt_generator_ready()
     export_format = (body.format or "").strip().lower()
     if export_format not in {"pdf", "pptx"}:
         raise HTTPException(status_code=400, detail="Invalid export format")
-    public_origin = resolve_request_public_origin(request)
-    runtime = load_presenton_runtime()
+    public_origin = resolve_ppt_generator_public_origin(request)
+    runtime = load_ppt_generator_runtime()
     try:
         presentation_and_path = await runtime.export_presentation(
             uuid.UUID(body.id),
@@ -91,9 +95,12 @@ async def presenton_export(request: Request, body: PresentonAppExportRequest, _c
 
 
 @export_router.get("/api/v1/app/export/file")
-async def presenton_export_file(name: str = Query(...), _current_user: dict = Depends(get_presenton_current_user)):
-    await ensure_presenton_ready()
-    file_path = get_safe_export_file_path(name)
+async def ppt_generator_export_file(
+    name: str = Query(...),
+    _current_user: dict = Depends(get_ppt_generator_current_user),
+):
+    await ensure_ppt_generator_ready()
+    file_path = get_safe_ppt_generator_export_file_path(name)
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="Export file not found")
     media_type, _ = mimetypes.guess_type(file_path.name)
@@ -108,12 +115,15 @@ async def presenton_export_file(name: str = Query(...), _current_user: dict = De
 
 
 @export_router.post("/api/v1/app/read-file")
-async def presenton_read_file(body: dict = Body(...), _current_user: dict = Depends(get_presenton_current_user)):
-    await ensure_presenton_ready()
+async def ppt_generator_read_file(
+    body: dict = Body(...),
+    _current_user: dict = Depends(get_ppt_generator_current_user),
+):
+    await ensure_ppt_generator_ready()
     file_path = body.get("filePath")
     if not isinstance(file_path, str) or not file_path.strip():
         raise HTTPException(status_code=400, detail="Invalid file path")
-    runtime = load_presenton_runtime()
+    runtime = load_ppt_generator_runtime()
     try:
         content = runtime.TEMP_FILE_SERVICE.read_temp_file(file_path, binary=False)
     except HTTPException:
@@ -124,13 +134,13 @@ async def presenton_read_file(body: dict = Body(...), _current_user: dict = Depe
 
 
 @export_router.get("/api/export-presentation-data/{presentation_id}")
-async def presenton_export_presentation_data(
+async def ppt_generator_export_presentation_data(
     presentation_id: uuid.UUID,
-    sql_session: AsyncSession = Depends(get_presenton_async_session),
-    _current_user: dict = Depends(get_presenton_current_user),
+    sql_session: AsyncSession = Depends(get_ppt_generator_async_session),
+    _current_user: dict = Depends(get_ppt_generator_current_user),
 ):
-    await ensure_presenton_ready()
-    runtime = load_presenton_runtime()
+    await ensure_ppt_generator_ready()
+    runtime = load_ppt_generator_runtime()
     presentation = await sql_session.get(runtime.PresentationModel, presentation_id)
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
@@ -142,3 +152,12 @@ async def presenton_export_presentation_data(
     slides = list(slides_result)
     fonts = await runtime._resolve_presentation_fonts(presentation, slides, sql_session)
     return runtime.PresentationWithSlides(**presentation.model_dump(), slides=slides, fonts=fonts)
+
+
+PresentonAppExportRequest = PptGeneratorAppExportRequest
+get_presenton_async_session = get_ppt_generator_async_session
+get_safe_export_file_path = get_safe_ppt_generator_export_file_path
+presenton_export = ppt_generator_export
+presenton_export_file = ppt_generator_export_file
+presenton_read_file = ppt_generator_read_file
+presenton_export_presentation_data = ppt_generator_export_presentation_data

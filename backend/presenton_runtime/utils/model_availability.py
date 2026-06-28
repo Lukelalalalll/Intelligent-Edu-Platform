@@ -280,7 +280,7 @@ async def check_llm_and_image_provider_api_or_model_availability():
             if ollama_model not in {model.name for model in available_models}:
                 raise Exception(
                     f"Model {ollama_model} is not available in Ollama. "
-                    "Pull it in Ollama, then check models in Presenton."
+                    "Pull it in Ollama, then check models in PPT Generator."
                 )
 
         elif is_custom_llm_selected():

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from backend.services.presenton.presenton_projection_query_service import (
-    PRESENTON_PROJECTION_QUERY_SERVICE as _PROJECTION_QUERY_SERVICE,
+from backend.services.presenton.presenton_sql_query_service import (
+    PRESENTON_SQL_QUERY_SERVICE as _PROJECTION_QUERY_SERVICE,
 )
+
+PPT_GENERATOR_PROJECTION_QUERY_SERVICE = _PROJECTION_QUERY_SERVICE
 
 
 async def search_ppt_generator_presentations(

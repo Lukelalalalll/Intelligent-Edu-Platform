@@ -1,40 +1,88 @@
-"""Course section repository — CRUD for the course_sections collection."""
-from typing import Any, Dict, List, Optional
+"""Course section repository CRUD for the course_sections collection."""
+from __future__ import annotations
 
-from bson import ObjectId
+from typing import Any
 
 from backend.core.database import db
-from ._helpers import serialize_doc
+
+from ._helpers import (
+    build_page_result,
+    coerce_object_id,
+    normalize_pagination,
+    serialize_doc,
+    serialize_docs,
+    utcnow,
+)
 
 
-async def create_course_section(data: Dict[str, Any]) -> Dict[str, Any]:
+async def create_course_section(
+    data: dict[str, Any],
+    *,
+    session=None,
+) -> dict[str, Any]:
     data.pop("_id", None)
-    result = await db.course_sections.insert_one(data)
-    doc = await db.course_sections.find_one({"_id": result.inserted_id})
+    now = utcnow()
+    data.setdefault("createdAt", now)
+    data["updatedAt"] = now
+    result = await db.course_sections.insert_one(data, session=session)
+    doc = await db.course_sections.find_one({"_id": result.inserted_id}, session=session)
     return serialize_doc(doc)
 
 
-async def get_course_section(section_id: str) -> Optional[Dict[str, Any]]:
-    doc = await db.course_sections.find_one({"_id": ObjectId(section_id)})
+async def get_course_section(section_id: str, *, session=None) -> dict[str, Any] | None:
+    oid = coerce_object_id(section_id)
+    if oid is None:
+        return None
+    doc = await db.course_sections.find_one({"_id": oid}, session=session)
     if doc:
         return serialize_doc(doc)
     return None
 
 
-async def list_course_sections(filter_query: Optional[Dict] = None) -> List[Dict[str, Any]]:
-    docs = await db.course_sections.find(filter_query or {}).to_list(length=5000)
-    return [serialize_doc(d) for d in docs]
+async def list_course_sections(
+    filter_query: dict[str, Any] | None = None,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    session=None,
+) -> dict[str, Any]:
+    safe_page, safe_page_size = normalize_pagination(page=page, page_size=page_size)
+    query = filter_query or {}
+    skip = (safe_page - 1) * safe_page_size
+    total = await db.course_sections.count_documents(query, session=session)
+    docs = await (
+        db.course_sections.find(query, session=session)
+        .sort([("updatedAt", -1), ("createdAt", -1)])
+        .skip(skip)
+        .limit(safe_page_size)
+        .to_list(length=safe_page_size)
+    )
+    return build_page_result(
+        items=serialize_docs(docs),
+        total=total,
+        page=safe_page,
+        page_size=safe_page_size,
+    )
 
 
-async def update_course_section(section_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def update_course_section(
+    section_id: str,
+    data: dict[str, Any],
+    *,
+    session=None,
+) -> dict[str, Any] | None:
+    oid = coerce_object_id(section_id)
+    if oid is None:
+        return None
     data.pop("_id", None)
-    await db.course_sections.update_one({"_id": ObjectId(section_id)}, {"$set": data})
-    return await get_course_section(section_id)
+    data["updatedAt"] = utcnow()
+    await db.course_sections.update_one({"_id": oid}, {"$set": data}, session=session)
+    return await get_course_section(section_id, session=session)
 
 
-async def delete_course_section(section_id: str) -> bool:
-    result = await db.course_sections.delete_one({"_id": ObjectId(section_id)})
-    if result.deleted_count:
-        await db.enrollments.delete_many({"courseSectionId": section_id})
-        await db.assignments.delete_many({"courseSectionId": section_id})
+async def delete_course_section(section_id: str, *, session=None) -> bool:
+    oid = coerce_object_id(section_id)
+    if oid is None:
+        return False
+    result = await db.course_sections.delete_one({"_id": oid}, session=session)
     return result.deleted_count > 0

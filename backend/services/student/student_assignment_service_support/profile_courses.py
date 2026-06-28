@@ -6,8 +6,8 @@ from backend.services.auth.security_audit import log_security_event
 from backend.services.auth.user_profile_service import load_profile_courses
 from backend.services.grading_service import (
     get_course_section,
-    list_assignments,
-    list_enrollments,
+    list_all_assignments,
+    list_all_enrollments,
 )
 
 from .common import find_course_section_by_code, user_id_from_user
@@ -17,7 +17,7 @@ from .legacy_homework import count_extra_legacy_homeworks
 async def load_profile_courses_v2(current_user: dict[str, Any], *, semester_label: str) -> dict[str, Any]:
     user_id = user_id_from_user(current_user)
     role = current_user.get("role", "student")
-    enrollments = await list_enrollments(user_id=user_id)
+    enrollments = await list_all_enrollments(user_id=user_id)
 
     if not enrollments:
         legacy_result = await load_profile_courses(current_user)
@@ -29,7 +29,7 @@ async def load_profile_courses_v2(current_user: dict[str, Any], *, semester_labe
 
             course_section_id = str(section["_id"])
             course["courseSectionId"] = course_section_id
-            assignments = await list_assignments(course_section_id)
+            assignments = await list_all_assignments(course_section_id)
             total = len(assignments) + await count_extra_legacy_homeworks(course_section_id, assignments)
             if total > course.get("assignmentCount", 0):
                 course["assignmentCount"] = total
@@ -50,10 +50,10 @@ async def load_profile_courses_v2(current_user: dict[str, Any], *, semester_labe
             if not course:
                 continue
 
-            assignments = await list_assignments(section_id)
+            assignments = await list_all_assignments(section_id)
             course["assignmentCount"] = len(assignments) + await count_extra_legacy_homeworks(section_id, assignments)
 
-            section_enrollments = await list_enrollments(course_section_id=section_id)
+            section_enrollments = await list_all_enrollments(course_section_id=section_id)
             course["studentCount"] = sum(
                 1
                 for enrollment in section_enrollments

@@ -8,9 +8,6 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.services.presenton.presenton_projection_service import (
-    PRESENTON_MONGO_PROJECTION_SERVICE,
-)
 from models.sql.key_value import KeyValueSqlModel
 from models.sql.presentation import PresentationModel
 from services.chat.memory_layer_support.chat_memory_theme_customization import (
@@ -101,11 +98,6 @@ async def set_presentation_theme(
     presentation.theme = copy.deepcopy(selected_theme)
     sql_session.add(presentation)
     await sql_session.commit()
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation_id,
-        reason="chat_set_presentation_theme",
-    )
     selected_name = str(selected_theme.get("name") or "selected theme")
     return {
         "applied": True,

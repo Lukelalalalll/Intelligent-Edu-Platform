@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.schemas import AnnotationPayload, SubmissionScoreSchema, FinalizeAnnotationsSchema
 from backend.services.grading_service import (
     load_annotations, save_annotations, find_submission, render_annotations_to_pdf,
-    upsert_grade, update_submission, find_submission_v2, load_courses,
+    upsert_grade, find_submission_v2, load_courses,
 )
 from backend.core.security import get_current_user, can_access_course
 
@@ -97,7 +97,6 @@ async def save_score(submission_id: str, payload: SubmissionScoreSchema, current
             "overallFeedback": payload.overallFeedback,
             "gradingStatus": "draft",
         })
-        await update_submission(submission_id, {"status": "graded"})
     except Exception:
         pass  # v2 write is best-effort during migration
 
@@ -137,7 +136,6 @@ async def finalize_annotations(
                 "overallFeedback": store.get("overallFeedback", ""),
                 "gradingStatus": "final",
             })
-        await update_submission(submission_id, {"status": "graded"})
     except Exception:
         pass  # v2 write is best-effort during migration
 

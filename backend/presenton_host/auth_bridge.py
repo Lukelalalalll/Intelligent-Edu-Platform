@@ -10,11 +10,11 @@ from backend.core.security import get_current_user
 from backend.repositories import user_repo
 from backend.services.auth.auth_session_service import decode_access_token, get_active_session_for_access
 
-from .bootstrap import load_presenton_runtime
+from .bootstrap import load_ppt_generator_runtime
 
 
-def resolve_request_public_origin(request: Request) -> str:
-    runtime = load_presenton_runtime()
+def resolve_ppt_generator_public_origin(request: Request) -> str:
+    runtime = load_ppt_generator_runtime()
     return runtime.resolve_web_origin(
         explicit_origin=request.headers.get("x-ppt-generator-web-origin"),
         forwarded_proto=request.headers.get("x-forwarded-proto"),
@@ -36,7 +36,7 @@ def extract_cookie_value(raw_cookie_header: str, cookie_name: str) -> str:
     return (morsel.value or "").strip()
 
 
-async def authenticate_presenton_export_user(request: Request, raw_cookie_header: str) -> dict:
+async def authenticate_ppt_generator_export_user(request: Request, raw_cookie_header: str) -> dict:
     token = extract_cookie_value(raw_cookie_header, Config.JWT_ACCESS_COOKIE_NAME)
     if not token:
         raise HTTPException(status_code=401, detail="Please log in first")
@@ -72,11 +72,16 @@ async def authenticate_presenton_export_user(request: Request, raw_cookie_header
     return user
 
 
-async def get_presenton_current_user(request: Request) -> dict:
+async def get_ppt_generator_current_user(request: Request) -> dict:
     try:
         return await get_current_user(request)
     except HTTPException as exc:
         export_cookie_header = (request.headers.get("x-export-cookie") or "").strip()
         if not export_cookie_header:
             raise exc
-        return await authenticate_presenton_export_user(request, export_cookie_header)
+        return await authenticate_ppt_generator_export_user(request, export_cookie_header)
+
+
+resolve_request_public_origin = resolve_ppt_generator_public_origin
+authenticate_presenton_export_user = authenticate_ppt_generator_export_user
+get_presenton_current_user = get_ppt_generator_current_user

@@ -9,7 +9,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.services.presenton.presenton_projection_service import PRESENTON_MONGO_PROJECTION_SERVICE
 from constants.presentation import MAX_NUMBER_OF_SLIDES
 from enums.tone import Tone
 from enums.verbosity import Verbosity
@@ -21,6 +20,7 @@ from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
 from services.database import get_async_session
 from services.mem0_presentation_memory_service import MEM0_PRESENTATION_MEMORY_SERVICE
+from services.search_indexing import update_presentation_search_text, update_slide_search_text
 from services.temp_file_service import TEMP_FILE_SERVICE
 from utils.llm_calls.generate_presentation_structure import generate_presentation_structure
 from utils.outline_utils import (
@@ -88,11 +88,6 @@ async def delete_presentation(
         raise HTTPException(404, "Presentation not found")
     await sql_session.delete(presentation)
     await sql_session.commit()
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_delete_projection(
-        presentation_id=id,
-        owner_user_id=build_owner_user_id(request_http),
-        reason="delete_presentation",
-    )
 
 
 @crud_router.post("/create", response_model=PresentationModel)
@@ -137,6 +132,7 @@ async def create_presentation(
 
     presentation = PresentationModel(
         id=uuid.uuid4(),
+        owner_user_id=build_owner_user_id(request_http),
         content=content,
         n_slides=resolved_n_slides if resolved_n_slides is not None else 0,
         language=normalize_presentation_language(language) or AUTO_PRESENTATION_LANGUAGE,
@@ -148,14 +144,9 @@ async def create_presentation(
         include_title_slide=include_title_slide,
         web_search=web_search,
     )
+    update_presentation_search_text(presentation)
     sql_session.add(presentation)
     await sql_session.commit()
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation.id,
-        owner_user_id=build_owner_user_id(request_http),
-        reason="create_presentation",
-    )
 
     search_route, actual_search_provider = get_web_search_route()
     logger.info(
@@ -229,6 +220,7 @@ async def prepare_presentation(
     presentation.title = title or presentation.title
     presentation.set_layout(layout)
     presentation.set_structure(presentation_structure)
+    update_presentation_search_text(presentation)
     await sql_session.commit()
     await MEM0_PRESENTATION_MEMORY_SERVICE.store_generated_outlines(presentation.id, presentation.outlines)
     return presentation
@@ -257,22 +249,18 @@ async def update_presentation(
         presentation_update_dict["theme"] = theme
     if presentation_update_dict:
         presentation.sqlmodel_update(presentation_update_dict)
+        update_presentation_search_text(presentation)
     if slides:
         for slide in slides:
             slide.presentation = uuid.UUID(slide.presentation)
             slide.id = uuid.UUID(slide.id)
+            update_slide_search_text(slide)
         from sqlalchemy import delete
 
         await sql_session.execute(delete(SlideModel).where(SlideModel.presentation == presentation.id))
         sql_session.add_all(slides)
 
     await sql_session.commit()
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation.id,
-        owner_user_id=build_owner_user_id(request_http),
-        reason="update_presentation",
-    )
     response_slides = slides or []
     return PresentationWithSlides(
         **presentation.model_dump(),

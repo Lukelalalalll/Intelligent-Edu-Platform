@@ -1,11 +1,14 @@
 from typing import Optional
 import uuid
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlmodel import Field, Column, JSON, SQLModel
 
 
 class SlideModel(SQLModel, table=True):
     __tablename__ = "slides"
+    __table_args__ = (
+        UniqueConstraint("presentation", "index", name="uq_slides_presentation_index"),
+    )
 
     id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     presentation: uuid.UUID = Field(
@@ -18,6 +21,7 @@ class SlideModel(SQLModel, table=True):
     html_content: Optional[str] = None
     speaker_note: Optional[str] = None
     properties: Optional[dict] = Field(sa_column=Column(JSON))
+    search_text: str = Field(default="", sa_column=Column(String, nullable=False, default=""))
 
     def get_new_slide(self, presentation: uuid.UUID, content: Optional[dict] = None):
         return SlideModel(
@@ -29,4 +33,5 @@ class SlideModel(SQLModel, table=True):
             speaker_note=self.speaker_note,
             content=content or self.content,
             properties=self.properties,
+            search_text=self.search_text,
         )

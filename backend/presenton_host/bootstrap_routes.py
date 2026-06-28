@@ -6,16 +6,19 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 
 from backend.services.auth.user_profile_service import load_ai_config
 
-from .auth_bridge import get_presenton_current_user, resolve_request_public_origin
-from .bootstrap import ensure_presenton_ready
+from .auth_bridge import get_ppt_generator_current_user, resolve_ppt_generator_public_origin
+from .bootstrap import ensure_ppt_generator_ready
 from .config_bridge import load_ppt_generator_host_config
 
 bootstrap_router = APIRouter()
 
 
 @bootstrap_router.get("/api/v1/app/bootstrap")
-async def presenton_bootstrap(request: Request, current_user: dict = Depends(get_presenton_current_user)):
-    await ensure_presenton_ready()
+async def ppt_generator_bootstrap(
+    request: Request,
+    current_user: dict = Depends(get_ppt_generator_current_user),
+):
+    await ensure_ppt_generator_ready()
     summary, _ = await load_ppt_generator_host_config(request, current_user)
     ai_config = await load_ai_config(current_user)
     has_required_key = bool(
@@ -37,24 +40,32 @@ async def presenton_bootstrap(request: Request, current_user: dict = Depends(get
             "mcpProxy": True,
             "arbitraryLocalRead": False,
         },
-        "origins": {"publicWebOrigin": resolve_request_public_origin(request)},
+        "origins": {"publicWebOrigin": resolve_ppt_generator_public_origin(request)},
         "userConfig": summary,
     }
 
 
 @bootstrap_router.get("/api/v1/app/user-config")
-async def presenton_user_config(request: Request, current_user: dict = Depends(get_presenton_current_user)):
-    await ensure_presenton_ready()
+async def ppt_generator_user_config(
+    request: Request,
+    current_user: dict = Depends(get_ppt_generator_current_user),
+):
+    await ensure_ppt_generator_ready()
     summary, _ = await load_ppt_generator_host_config(request, current_user)
     return summary
 
 
 @bootstrap_router.put("/api/v1/app/user-config")
-async def presenton_user_config_update(
+async def ppt_generator_user_config_update(
     _body: dict = Body(...),
-    _current_user: dict = Depends(get_presenton_current_user),
+    _current_user: dict = Depends(get_ppt_generator_current_user),
 ):
     raise HTTPException(
         status_code=403,
         detail="PPT Generator AI settings are managed from your profile AI config.",
     )
+
+
+presenton_bootstrap = ppt_generator_bootstrap
+presenton_user_config = ppt_generator_user_config
+presenton_user_config_update = ppt_generator_user_config_update

@@ -3,9 +3,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 
-from backend.services.presenton.presenton_projection_service import (
-    PRESENTON_MONGO_PROJECTION_SERVICE,
-)
 from models.sql.presentation import PresentationModel
 from models.sql.slide import SlideModel
 from services.database import get_async_session
@@ -13,6 +10,7 @@ from services.image_generation_service import ImageGenerationService
 from services.mem0_presentation_memory_service import (
     MEM0_PRESENTATION_MEMORY_SERVICE,
 )
+from services.search_indexing import update_slide_search_text
 from utils.asset_directory_utils import get_images_directory
 from utils.llm_calls.edit_slide import get_edited_slide_content
 from utils.llm_calls.edit_slide_html import get_edited_slide_html
@@ -82,6 +80,7 @@ async def edit_slide(
     slide.content = edited_slide_content
     slide.layout = slide_layout.id
     slide.speaker_note = edited_slide_content.get("__speaker_note__", "")
+    update_slide_search_text(slide)
     sql_session.add_all(new_assets)
     await sql_session.commit()
 
@@ -91,12 +90,6 @@ async def edit_slide(
         edit_prompt=prompt,
         edited_slide_content=edited_slide_content,
     )
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation.id,
-        reason="edit_slide",
-    )
-
     return slide
 
 
@@ -136,6 +129,7 @@ async def edit_slide_html(
 
     sql_session.add(slide)
     slide.html_content = edited_slide_html
+    update_slide_search_text(slide)
     await sql_session.commit()
 
     await MEM0_PRESENTATION_MEMORY_SERVICE.store_slide_edit(
@@ -144,11 +138,5 @@ async def edit_slide_html(
         edit_prompt=prompt,
         edited_slide_content=edited_slide_html,
     )
-    await PRESENTON_MONGO_PROJECTION_SERVICE.safe_sync_presentation_bundle(
-        sql_session,
-        presentation_id=presentation.id,
-        reason="edit_slide_html",
-    )
-
     return slide
 

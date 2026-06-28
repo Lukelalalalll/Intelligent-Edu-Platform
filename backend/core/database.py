@@ -3,6 +3,7 @@ import logging
 import threading
 from datetime import datetime, timedelta, timezone
 
+from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ASCENDING, DESCENDING, IndexModel
 from pymongo.errors import OperationFailure
@@ -113,6 +114,15 @@ _EMAIL_NORMALIZED_INDEX_KEYS = [("email_normalized", ASCENDING)]
 _GOOGLE_SUB_INDEX_KEYS = [("google_auth.sub", ASCENDING)]
 
 
+def _maybe_object_id(value: str | ObjectId | None) -> ObjectId | None:
+    if isinstance(value, ObjectId):
+        return value
+    try:
+        return ObjectId(str(value))
+    except Exception:
+        return None
+
+
 def _normalize_index_keys(raw_keys) -> list[tuple[str, int]]:
     if raw_keys is None:
         return []
@@ -214,7 +224,10 @@ async def compute_history_expires_at(user_id: str) -> datetime | None:
     """Return the ``expires_at`` datetime for a new history document based on
     the user's ``history_ttl_days`` setting.  Returns ``None`` when the user
     chose permanent storage (ttl == 0)."""
-    user_doc = await db.users.find_one({"_id": user_id}, {"history_ttl_days": 1})
+    user_oid = _maybe_object_id(user_id)
+    if user_oid is None:
+        return datetime.now(timezone.utc) + timedelta(days=DEFAULT_HISTORY_TTL_DAYS)
+    user_doc = await db.users.find_one({"_id": user_oid}, {"history_ttl_days": 1})
     ttl = (user_doc or {}).get("history_ttl_days", DEFAULT_HISTORY_TTL_DAYS)
     if ttl == 0:
         return None
@@ -244,22 +257,24 @@ async def ensure_indexes() -> None:
         await db.course_sections.create_indexes([
             IndexModel([("courseCode", ASCENDING)]),
             IndexModel([("ownerTeacherId", ASCENDING)]),
-            IndexModel([("courseCode", ASCENDING), ("semester", ASCENDING)]),
+            IndexModel([("ownerTeacherId", ASCENDING), ("semester", ASCENDING), ("courseCode", ASCENDING)]),
+            IndexModel([("courseCode", ASCENDING), ("semester", ASCENDING)], unique=True),
         ])
 
         await db.enrollments.create_indexes([
             IndexModel([("courseSectionId", ASCENDING), ("userId", ASCENDING)], unique=True),
-            IndexModel([("userId", ASCENDING)]),
+            IndexModel([("userId", ASCENDING), ("roleInCourse", ASCENDING), ("courseSectionId", ASCENDING)]),
         ])
 
         await db.assignments.create_indexes([
-            IndexModel([("courseSectionId", ASCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING)]),
         ])
 
         await db.submissions.create_indexes([
-            IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING)]),
-            IndexModel([("studentId", ASCENDING)]),
+            IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING), ("attemptNo", ASCENDING)], unique=True),
+            IndexModel([("assignmentId", ASCENDING), ("submittedAt", DESCENDING)]),
+            IndexModel([("studentId", ASCENDING), ("submittedAt", DESCENDING)]),
             IndexModel([("status", ASCENDING), ("submittedAt", DESCENDING)]),
         ])
 
@@ -268,7 +283,7 @@ async def ensure_indexes() -> None:
         ])
 
         await db.grades.create_indexes([
-            IndexModel([("submissionId", ASCENDING)]),
+            IndexModel([("submissionId", ASCENDING)], unique=True),
             IndexModel([("graderId", ASCENDING), ("gradedAt", DESCENDING)]),
         ])
 
@@ -363,6 +378,7 @@ async def ensure_indexes() -> None:
 
         await db.ai_chat_sessions.create_indexes([
             IndexModel([("userId", ASCENDING), ("updatedAt", DESCENDING)]),
+            IndexModel([("userId", ASCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("updatedAt", ASCENDING)]),
         ])
 
@@ -410,32 +426,6 @@ async def ensure_indexes() -> None:
             # TTL: auto-delete records older than 30 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
         ])
-        await db.presenton_presentations.create_indexes([
-            IndexModel([("presentonPresentationId", ASCENDING)], unique=True),
-            IndexModel([("ownerUserId", ASCENDING), ("updatedAt", DESCENDING)]),
-            IndexModel([("ownerUserId", ASCENDING), ("createdAt", DESCENDING)]),
-        ])
-        await db.presenton_slides.create_indexes([
-            IndexModel(
-                [("presentonPresentationId", ASCENDING), ("index", ASCENDING)],
-                unique=True,
-            ),
-            IndexModel([("ownerUserId", ASCENDING), ("presentonPresentationId", ASCENDING)]),
-        ])
-        await db.presenton_chat_messages.create_indexes([
-            IndexModel(
-                [
-                    ("presentonPresentationId", ASCENDING),
-                    ("conversationId", ASCENDING),
-                    ("position", ASCENDING),
-                ],
-                unique=True,
-            ),
-            IndexModel(
-                [("ownerUserId", ASCENDING), ("presentonPresentationId", ASCENDING), ("createdAt", DESCENDING)]
-            ),
-        ])
-
         # ── file assets registry ──────────────────────────────────────────────
         await db.file_assets.create_indexes([
             IndexModel([("file_id", ASCENDING)], unique=True),

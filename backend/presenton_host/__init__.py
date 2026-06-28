@@ -1,1 +1,1 @@
-"""Presenton host integration internals."""
+"""PPT Generator host integration internals."""

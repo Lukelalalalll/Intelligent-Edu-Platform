@@ -6,7 +6,8 @@ from fastapi import Depends, HTTPException
 from backend.core.security import get_admin_user
 from backend.repositories import user_repo
 from backend.services.grading_service import (
-    create_course_section, list_course_sections, update_course_section, delete_course_section,
+    create_course_section, list_course_sections, list_all_assignments, list_all_course_sections,
+    list_all_enrollments, update_course_section, delete_course_section,
     enroll_user, unenroll_user, list_enrollments,
     create_assignment as v2_create_assignment, update_assignment as v2_update_assignment,
     delete_assignment as v2_delete_assignment, list_assignments as v2_list_assignments,
@@ -17,9 +18,9 @@ router = APIRouter()
 
 @router.get("/v2/courses")
 async def list_courses_v2(admin: dict = Depends(get_admin_user)):
-    courses = await list_course_sections()
+    courses = await list_all_course_sections()
     for c in courses:
-        enrolls = await list_enrollments(course_section_id=c["id"])
+        enrolls = await list_all_enrollments(course_section_id=c["id"])
         c["enrollmentCount"] = len(enrolls)
         c["teacherCount"] = sum(1 for e in enrolls if e.get("roleInCourse") == "teacher")
         c["studentCount"] = sum(1 for e in enrolls if e.get("roleInCourse") == "student")
@@ -59,7 +60,7 @@ async def delete_course_v2(section_id: str, admin: dict = Depends(get_admin_user
 
 @router.get("/v2/courses/{section_id}/enrollments")
 async def list_course_enrollments(section_id: str, admin: dict = Depends(get_admin_user)):
-    enrolls = await list_enrollments(course_section_id=section_id)
+    enrolls = await list_all_enrollments(course_section_id=section_id)
     # Enrich with user info
     for e in enrolls:
         user = await user_repo.find_by_id(e["userId"])
@@ -89,7 +90,7 @@ async def unenroll_user_v2(section_id: str, user_id: str, admin: dict = Depends(
 
 @router.get("/v2/courses/{section_id}/assignments")
 async def list_assignments_v2(section_id: str, admin: dict = Depends(get_admin_user)):
-    assignments = await v2_list_assignments(section_id)
+    assignments = await list_all_assignments(section_id)
     return {"assignments": assignments}
 
 
@@ -120,7 +121,10 @@ async def delete_assignment_v2(assignment_id: str, admin: dict = Depends(get_adm
 @router.get("/v2/relations/overview")
 async def get_relations_overview_v2(admin: dict = Depends(get_admin_user)):
     """Comprehensive relations overview using v2 flat model."""
-    users = await db.users.find().to_list(2000)
+    users = await user_repo.list_users(
+        projection={"username": 1, "email": 1, "role": 1},
+        limit=2000,
+    )
     teachers = [
         {"id": str(u["_id"]), "username": u.get("username", ""), "email": u.get("email", "")}
         for u in users if u.get("role") == "teacher"
@@ -130,9 +134,9 @@ async def get_relations_overview_v2(admin: dict = Depends(get_admin_user)):
         for u in users if u.get("role") == "student"
     ]
 
-    courses = await list_course_sections()
+    courses = await list_all_course_sections()
     for c in courses:
-        enrolls = await list_enrollments(course_section_id=c["id"])
+        enrolls = await list_all_enrollments(course_section_id=c["id"])
         c["enrollments"] = enrolls
 
     return {"teachers": teachers, "students": students, "courses": courses}

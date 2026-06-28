@@ -5,16 +5,20 @@ from functools import lru_cache
 from importlib import import_module
 from types import SimpleNamespace
 
-from .paths import configure_presenton_env_defaults, ensure_presenton_static_assets, ensure_presenton_sys_path
+from .paths import (
+    configure_ppt_generator_env_defaults,
+    ensure_ppt_generator_static_assets,
+    ensure_ppt_generator_sys_path,
+)
 
-_PRESENTON_READY = False
-_PRESENTON_READY_LOCK = asyncio.Lock()
+_PPT_GENERATOR_READY = False
+_PPT_GENERATOR_READY_LOCK = asyncio.Lock()
 
 
 @lru_cache(maxsize=1)
-def load_presenton_runtime() -> SimpleNamespace:
-    configure_presenton_env_defaults()
-    ensure_presenton_sys_path()
+def load_ppt_generator_runtime() -> SimpleNamespace:
+    configure_ppt_generator_env_defaults()
+    ensure_ppt_generator_sys_path()
     return SimpleNamespace(
         API_V1_PPT_ROUTER=import_module("api.v1.ppt.router").API_V1_PPT_ROUTER,
         PresentationWithSlides=import_module("models.presentation_with_slides").PresentationWithSlides,
@@ -32,14 +36,20 @@ def load_presenton_runtime() -> SimpleNamespace:
     )
 
 
-async def ensure_presenton_ready() -> None:
-    global _PRESENTON_READY
-    if _PRESENTON_READY:
+async def ensure_ppt_generator_ready() -> None:
+    global _PPT_GENERATOR_READY
+    if _PPT_GENERATOR_READY:
         return
-    runtime = load_presenton_runtime()
-    async with _PRESENTON_READY_LOCK:
-        if _PRESENTON_READY:
+    runtime = load_ppt_generator_runtime()
+    async with _PPT_GENERATOR_READY_LOCK:
+        if _PPT_GENERATOR_READY:
             return
-        ensure_presenton_static_assets()
+        ensure_ppt_generator_static_assets()
         await runtime.create_db_and_tables()
-        _PRESENTON_READY = True
+        _PPT_GENERATOR_READY = True
+
+
+load_presenton_runtime = load_ppt_generator_runtime
+ensure_presenton_ready = ensure_ppt_generator_ready
+_PRESENTON_READY = _PPT_GENERATOR_READY
+_PRESENTON_READY_LOCK = _PPT_GENERATOR_READY_LOCK

@@ -56,7 +56,7 @@ def require_owner_user_id(owner_user_id: str | None) -> str:
     resolved = normalize_owner_user_id(owner_user_id)
     if resolved:
         return resolved
-    raise ValueError("Presenton projection requires a non-empty owner user id.")
+    raise ValueError("PPT Generator projection requires a non-empty owner user id.")
 
 
 def serialize_presentation(
