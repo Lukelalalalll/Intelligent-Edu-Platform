@@ -31,12 +31,16 @@ DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
 COURSES_PATH = DATA_ROOT / "courses.json"
 
 
+async def _read_all(cursor):
+    return [doc async for doc in cursor]
+
+
 async def migrate():
     client = AsyncIOMotorClient(Config.MONGO_URI)
     db = client.get_default_database()
 
     # Load legacy courses
-    legacy_docs = await db.courses.find({}).to_list(length=5000)
+    legacy_docs = await _read_all(db.courses.find({}))
     if not legacy_docs:
         if COURSES_PATH.exists():
             raw = json.loads(COURSES_PATH.read_text())
@@ -49,7 +53,7 @@ async def migrate():
     logger.info("Found %d legacy courses to migrate", len(legacy_docs))
 
     # Load all users for ID mapping
-    users = await db.users.find().to_list(length=5000)
+    users = await _read_all(db.users.find())
     username_to_id = {}
     studentno_to_id = {}
     for u in users:

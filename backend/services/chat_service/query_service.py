@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from bson import ObjectId
@@ -8,10 +7,11 @@ from fastapi import HTTPException
 
 from backend.core.database import db
 from backend.core.utils import safe_object_id
+from backend.repositories._helpers import coerce_object_id, utcnow
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return utcnow().isoformat()
 
 
 def serialize_doc(doc: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -28,10 +28,11 @@ def hash_color(name: str) -> str:
 
 
 async def get_chat_user_by_id(user_id: str) -> dict[str, Any] | None:
-    if not ObjectId.is_valid(str(user_id or "")):
+    user_oid = coerce_object_id(user_id)
+    if user_oid is None:
         return None
 
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    user = await db.users.find_one({"_id": user_oid})
     if not user:
         return None
 
@@ -72,7 +73,7 @@ async def get_message_by_id(
 
 
 async def get_user_map(user_ids: list[str]) -> dict[str, dict[str, Any]]:
-    valid_oids = [ObjectId(user_id) for user_id in user_ids if ObjectId.is_valid(user_id)]
+    valid_oids = [user_oid for user_id in user_ids if (user_oid := coerce_object_id(user_id)) is not None]
     if not valid_oids:
         return {}
 

@@ -1,13 +1,13 @@
 ﻿from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from bson import ObjectId
 from fastapi import HTTPException
 
 from backend.repositories import ai_session_repo
+from backend.repositories._helpers import utcnow
 from backend.schemas import UpdateAiSessionSchema
 from backend.services.chat_service.session_bucket_service import (
     append_messages_bucketed,
@@ -40,6 +40,13 @@ def _get_session_oid(session_id: str) -> ObjectId:
     oid = ai_session_repo.session_oid(session_id)
     if oid is None:
         raise HTTPException(status_code=400, detail=ERR_INVALID_ID)
+    return oid
+
+
+def _get_user_oid(user_id: str) -> ObjectId:
+    oid = ai_session_repo.session_oid(user_id)
+    if oid is None:
+        raise HTTPException(status_code=400, detail="Invalid user id")
     return oid
 
 
@@ -150,9 +157,9 @@ async def list_sessions_for_user(
 
 
 async def create_session_for_user(*, user_id: str, system_content: str) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     doc = {
-        "userId": ObjectId(user_id),
+        "userId": _get_user_oid(user_id),
         "clientId": "",
         "title": DEFAULT_TITLE,
         "messages": [{"role": "system", "content": system_content, "createdAt": now}],
@@ -217,7 +224,7 @@ async def update_session_for_user(
         )
         raise HTTPException(status_code=400, detail=str(exc))
 
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     update_fields: dict[str, Any] = {"updatedAt": now, **sanitized}
     if idempotency_key:
         update_fields["lastIdempotencyKey"] = idempotency_key

@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import json
+from datetime import timezone
 from types import SimpleNamespace
 
 import pytest
@@ -257,7 +258,20 @@ async def test_create_session_for_user_initializes_revision(monkeypatch):
     )
 
     assert inserted["document"]["revision"] == 0
+    assert inserted["document"]["createdAt"].tzinfo == timezone.utc
+    assert inserted["document"]["updatedAt"].tzinfo == timezone.utc
     assert result["revision"] == 0
+
+
+async def test_create_session_for_user_rejects_invalid_user_id():
+    with pytest.raises(ai_session_service.HTTPException) as excinfo:
+        await ai_session_service.create_session_for_user(
+            user_id="not-an-object-id",
+            system_content="System prompt",
+        )
+
+    assert excinfo.value.status_code == 400
+    assert excinfo.value.detail == "Invalid user id"
 
 
 async def test_update_session_for_user_allows_legacy_session_without_revision(monkeypatch):
@@ -272,11 +286,19 @@ async def test_update_session_for_user_allows_legacy_session_without_revision(mo
             "messages": [],
         }
 
-    async def fake_save_messages_bucketed(session_id: str, messages: list[dict]):
+    async def fake_append_messages_bucketed(
+        session_id: str,
+        delta_messages: list[dict],
+        *,
+        existing_inline_messages,
+        existing_bucket_count,
+    ):
         seen["bucket_session_id"] = session_id
-        seen["bucket_messages"] = messages
+        seen["bucket_messages"] = delta_messages
+        seen["existing_inline_messages"] = existing_inline_messages
+        seen["existing_bucket_count"] = existing_bucket_count
         return {
-            "inline_messages": messages,
+            "inline_messages": delta_messages,
             "bucket_count": 0,
         }
 
@@ -290,7 +312,7 @@ async def test_update_session_for_user_allows_legacy_session_without_revision(mo
         seen["asset_user_id"] = user_id
 
     monkeypatch.setattr(ai_session_service, "_load_session_doc", fake_load_session_doc)
-    monkeypatch.setattr(ai_session_service, "save_messages_bucketed", fake_save_messages_bucketed)
+    monkeypatch.setattr(ai_session_service, "append_messages_bucketed", fake_append_messages_bucketed)
     monkeypatch.setattr(ai_session_service.ai_session_repo, "update_with_revision", fake_update_with_revision)
     monkeypatch.setattr(ai_session_service, "ensure_ai_session_image_assets", fake_sync_assets)
 
@@ -313,6 +335,8 @@ async def test_update_session_for_user_allows_legacy_session_without_revision(mo
     assert result == {"ok": True}
     assert seen["current_revision"] == 0
     assert seen["update_fields"]["revision"] == 1
+    assert seen["existing_inline_messages"] == []
+    assert seen["existing_bucket_count"] == 0
     assert seen["bucket_messages"][0]["content"] == "Hello"
     assert seen["asset_user_id"] == "user-1"
 
@@ -418,10 +442,10 @@ async def test_update_with_revision_matches_legacy_revisionless_sessions(monkeyp
     [
         "Hello",
         "hi",
-        "娴嬭瘯涓€涓?deepseek",
+        "测试一下 deepseek",
         "who are you are you deepseek",
-        "浣犳槸璋?,
-        "浣犳槸 deepseek 鍚?,
+        "你是谁",
+        "你是 deepseek 吗",
     ],
 )
 async def test_run_student_rag_does_not_force_response_for_small_talk(monkeypatch, question: str):

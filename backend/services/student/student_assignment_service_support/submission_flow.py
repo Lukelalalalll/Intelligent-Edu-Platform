@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from bson import ObjectId
 from fastapi import HTTPException
 
 from backend.core.database import db
+from backend.repositories._helpers import coerce_object_id
 from backend.services.auth.security_audit import log_security_event
 from backend.services.files.file_asset_service import register_file_asset
 from backend.services.grading_service import (
@@ -92,8 +92,12 @@ async def submit_student_assignment(
         }
     )
 
+    document_oid = coerce_object_id(document.get("id"))
+    if document_oid is None:
+        raise HTTPException(status_code=500, detail="Invalid document id returned for submission")
+
     await db.documents.update_one(
-        {"_id": ObjectId(document["id"])},
+        {"_id": document_oid},
         {"$set": {"ownerId": submission["id"]}},
     )
 

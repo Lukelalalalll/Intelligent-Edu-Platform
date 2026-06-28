@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from bson import ObjectId
-
 from backend.core.database import db
+from backend.repositories._helpers import coerce_object_id, utcnow
 
 
 async def count_extra_legacy_homeworks(course_section_id: str, assignments: list[dict[str, Any]]) -> int:
@@ -30,16 +28,18 @@ async def load_legacy_homework_submission_map(student_id: str) -> dict[str, dict
 
 
 async def load_legacy_homework(assignment_id: str) -> dict[str, Any] | None:
-    if not ObjectId.is_valid(assignment_id):
+    assignment_oid = coerce_object_id(assignment_id)
+    if assignment_oid is None:
         return None
-    return await db["homeworks"].find_one({"_id": ObjectId(assignment_id)})
+    return await db["homeworks"].find_one({"_id": assignment_oid})
 
 
 async def is_legacy_course_enrolled(*, user_id: str, course_section_id: str) -> bool:
-    if not ObjectId.is_valid(course_section_id):
+    section_oid = coerce_object_id(course_section_id)
+    if section_oid is None:
         return False
 
-    section = await db.course_sections.find_one({"_id": ObjectId(course_section_id)})
+    section = await db.course_sections.find_one({"_id": section_oid})
     code = str((section or {}).get("courseCode", "")).strip()
     if not code:
         return False
@@ -66,7 +66,7 @@ async def upsert_legacy_submission(
     existing = await db["homework_submissions"].find_one(
         {"homework_id": assignment_id, "student_id": user_id}
     )
-    submitted_at = datetime.utcnow()
+    submitted_at = utcnow()
     if existing:
         await db["homework_submissions"].update_one(
             {"_id": existing["_id"]},

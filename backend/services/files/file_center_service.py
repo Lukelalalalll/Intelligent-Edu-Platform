@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from backend.config import Config
 from backend.core.database import db
+from backend.repositories._helpers import coerce_object_id
 from backend.services.files.file_asset_service import ensure_ai_session_image_assets
 
 
@@ -79,8 +80,9 @@ async def list_chat_room_assets(*, room_id: str, status: str) -> dict[str, Any]:
     query["status"] = status if status else {"$ne": "hard_deleted"}
 
     room = None
-    if ObjectId.is_valid(room_id):
-        room = await db.chat_rooms.find_one({"_id": ObjectId(room_id)}, {"name": 1, "courseId": 1, "type": 1})
+    room_oid = coerce_object_id(room_id)
+    if room_oid is not None:
+        room = await db.chat_rooms.find_one({"_id": room_oid}, {"name": 1, "courseId": 1, "type": 1})
 
     assets = []
     async for doc in db.file_assets.find(query).sort("created_at", -1):
@@ -110,7 +112,7 @@ async def list_ai_users(*, role: str, skip: int, limit: int) -> dict[str, Any]:
     for user_id in user_ids:
         await ensure_ai_session_image_assets(user_id)
 
-    object_ids = [ObjectId(user_id) for user_id in user_ids if ObjectId.is_valid(user_id)]
+    object_ids = [user_oid for user_id in user_ids if (user_oid := coerce_object_id(user_id)) is not None]
     session_counts: dict[str, int] = {}
     if object_ids:
         pipeline = [

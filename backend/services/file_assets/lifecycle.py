@@ -3,11 +3,11 @@ from __future__ import annotations
 import shutil
 from typing import Any
 
-from bson import ObjectId
 from pymongo import ReturnDocument
 
 from backend.core.database import db
 from backend.repositories import file_asset_repo
+from backend.repositories._helpers import coerce_object_id
 
 from .shared import absolute_from_storage_path, to_iso, utcnow
 
@@ -51,16 +51,17 @@ async def restore_asset(asset_id: str, actor_id: str) -> dict | None:
 async def check_references(asset: dict) -> dict[str, Any]:
     owner_type = str(asset.get("owner_type", ""))
     owner_id = str(asset.get("owner_id", ""))
+    owner_oid = coerce_object_id(owner_id)
 
     if owner_type == "chat_message":
-        if ObjectId.is_valid(owner_id):
-            exists = await db.chat_messages.find_one({"_id": ObjectId(owner_id)})
+        if owner_oid is not None:
+            exists = await db.chat_messages.find_one({"_id": owner_oid})
             return {"ok_to_delete": exists is None, "reason": "chat_message_reference" if exists else ""}
         return {"ok_to_delete": True, "reason": ""}
 
     if owner_type == "submission_document":
-        if ObjectId.is_valid(owner_id):
-            exists = await db.documents.find_one({"_id": ObjectId(owner_id)})
+        if owner_oid is not None:
+            exists = await db.documents.find_one({"_id": owner_oid})
             return {"ok_to_delete": exists is None, "reason": "document_reference" if exists else ""}
         return {"ok_to_delete": True, "reason": ""}
 
@@ -133,10 +134,11 @@ async def _delete_ai_session_image(asset: dict) -> bool:
     metadata = dict(asset.get("metadata") or {})
     msg_idx = metadata.get("message_index")
     img_idx = metadata.get("image_index")
-    if not (ObjectId.is_valid(session_id) and isinstance(msg_idx, int) and isinstance(img_idx, int)):
+    session_oid = coerce_object_id(session_id)
+    if session_oid is None or not (isinstance(msg_idx, int) and isinstance(img_idx, int)):
         return False
 
-    session = await db.ai_chat_sessions.find_one({"_id": ObjectId(session_id)})
+    session = await db.ai_chat_sessions.find_one({"_id": session_oid})
     if not session:
         return False
 
@@ -153,7 +155,7 @@ async def _delete_ai_session_image(asset: dict) -> bool:
     message["images"] = images
     messages[msg_idx] = message
     await db.ai_chat_sessions.update_one(
-        {"_id": ObjectId(session_id)},
+        {"_id": session_oid},
         {"$set": {"messages": messages, "updatedAt": utcnow()}},
     )
     return True

@@ -1,9 +1,9 @@
 """Legacy course/submission data model backed by MongoDB + JSON snapshot."""
 import json
 import logging
+import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from bson import ObjectId
 from pymongo import UpdateOne
 
 from backend.core.database import db
@@ -18,10 +18,14 @@ from ._shared import (
 logger = logging.getLogger(__name__)
 
 
+async def _load_all_course_docs(courses_coll: Any) -> list[dict[str, Any]]:
+    return [doc async for doc in courses_coll.find({}, {"_id": 0})]
+
+
 async def load_courses() -> Dict[str, Any]:
     _ensure_directories()
     courses_coll = db[COURSES_COLLECTION]
-    docs = await courses_coll.find({}, {"_id": 0}).to_list(length=5000)
+    docs = await _load_all_course_docs(courses_coll)
     if docs:
         return normalize_courses_data({"courses": docs})
 
@@ -54,7 +58,7 @@ async def save_courses(data: Dict[str, Any]) -> None:
         return
 
     now = _utcnow()
-    sync_version = f"sync_{ObjectId()}"
+    sync_version = f"sync_{uuid.uuid4().hex}"
     operations: list[UpdateOne] = []
     course_ids: list[str] = []
 
