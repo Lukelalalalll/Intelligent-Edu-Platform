@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from backend.core.database import db
+from backend.repositories import file_asset_repo
 
 from .shared import normalize_path, to_iso, utcnow
 
@@ -53,5 +53,5 @@ async def register_file_asset(
         "status": "active",
         "metadata": metadata or {},
     }
-    await db.file_assets.insert_one(document)
+    await file_asset_repo.insert_asset(document)
     return to_iso(document)

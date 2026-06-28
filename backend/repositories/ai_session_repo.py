@@ -27,6 +27,17 @@ async def find_by_id_for_user(session_id: str | ObjectId, user_id: str | ObjectI
     return await db.ai_chat_sessions.find_one({"_id": oid, "userId": user_oid})
 
 
+def find_cursor_for_user(
+    user_id: str | ObjectId,
+    *,
+    projection: dict[str, Any] | None = None,
+):
+    user_oid = session_oid(user_id)
+    if user_oid is None:
+        return None
+    return db.ai_chat_sessions.find({"userId": user_oid}, projection)
+
+
 async def list_for_user(
     user_id: str | ObjectId,
     *,
@@ -53,6 +64,16 @@ async def list_for_user(
 
 async def insert_session(document: dict[str, Any]):
     return await db.ai_chat_sessions.insert_one(document)
+
+
+async def update_by_id(
+    session_id: str | ObjectId,
+    update: dict[str, Any],
+):
+    oid = session_oid(session_id)
+    if oid is None:
+        return None
+    return await db.ai_chat_sessions.update_one({"_id": oid}, update)
 
 
 async def update_with_revision(

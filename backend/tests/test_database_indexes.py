@@ -331,6 +331,11 @@ def test_ensure_user_sessions_indexes_creates_expected_indexes(monkeypatch):
     assert len(fake_sessions.create_indexes_calls) == 1
     created_indexes = fake_sessions.create_indexes_calls[0]
     assert len(created_indexes) == 6
+    created_specs = [index.document for index in created_indexes]
+    assert any(
+        list(spec["key"].items()) == [("user_id", 1), ("revoked_at", 1), ("last_seen_at", -1)]
+        for spec in created_specs
+    )
 
 
 def test_ensure_google_auth_ticket_indexes_creates_expected_indexes(monkeypatch):
@@ -374,35 +379,106 @@ def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypa
 
     asyncio.run(ensure_indexes())
 
-    def _documents(collection_name: str):
+    def _index_specs(collection_name: str):
         created = fake_db[collection_name].create_indexes_calls
         assert created, f"expected indexes for {collection_name}"
         return [index.document for index in created[0]]
 
-    course_specs = _documents("course_sections")
-    enrollment_specs = _documents("enrollments")
-    submission_specs = _documents("submissions")
-    grade_specs = _documents("grades")
+    def _has_index(
+        specs,
+        keys,
+        *,
+        unique: bool | None = None,
+    ) -> bool:
+        for spec in specs:
+            if list(spec["key"].items()) != keys:
+                continue
+            if unique is not None and spec.get("unique") is not unique:
+                continue
+            return True
+        return False
 
-    assert any(
-        list(spec["key"].items()) == [("courseCode", 1), ("semester", 1)]
-        and spec.get("unique") is True
-        for spec in course_specs
+    course_specs = _index_specs("course_sections")
+    enrollment_specs = _index_specs("enrollments")
+    assignment_specs = _index_specs("assignments")
+    submission_specs = _index_specs("submissions")
+    document_specs = _index_specs("documents")
+    grade_specs = _index_specs("grades")
+    indexing_job_specs = _index_specs("indexing_jobs")
+    background_job_specs = _index_specs("background_jobs")
+
+    assert _has_index(
+        course_specs,
+        [("courseCode", 1), ("semester", 1)],
+        unique=True,
     )
-    assert any(
-        list(spec["key"].items()) == [("courseSectionId", 1), ("userId", 1)]
-        and spec.get("unique") is True
-        for spec in enrollment_specs
+    assert _has_index(
+        enrollment_specs,
+        [("courseSectionId", 1), ("userId", 1)],
+        unique=True,
     )
-    assert any(
-        list(spec["key"].items()) == [("assignmentId", 1), ("studentId", 1), ("attemptNo", 1)]
-        and spec.get("unique") is True
-        for spec in submission_specs
+    assert _has_index(
+        enrollment_specs,
+        [("courseSectionId", 1), ("updatedAt", -1), ("createdAt", -1)],
     )
-    assert any(
-        list(spec["key"].items()) == [("submissionId", 1)]
-        and spec.get("unique") is True
-        for spec in grade_specs
+    assert _has_index(
+        enrollment_specs,
+        [("userId", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        assignment_specs,
+        [("courseSectionId", 1), ("dueAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        submission_specs,
+        [("assignmentId", 1), ("studentId", 1), ("attemptNo", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        submission_specs,
+        [("assignmentId", 1), ("submittedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        submission_specs,
+        [("studentId", 1), ("submittedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        document_specs,
+        [("ownerId", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        document_specs,
+        [("ownerId", 1), ("sourceType", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        grade_specs,
+        [("submissionId", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        indexing_job_specs,
+        [("course_id", 1), ("filename", 1), ("content_hash", 1), ("chapter_id", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        indexing_job_specs,
+        [("course_id", 1), ("normalized_hash", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("job_id", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        background_job_specs,
+        [("status", 1), ("available_at", 1), ("created_at", 1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("job_type", 1), ("status", 1), ("available_at", 1), ("created_at", 1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("status", 1), ("lease_expires_at", 1)],
     )
 
 

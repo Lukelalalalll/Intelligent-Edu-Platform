@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import datetime
 import logging
 from pathlib import Path
 from typing import Any
 
-from bson import ObjectId
 from fastapi import HTTPException
 
 from backend.repositories import homework_repo
+from backend.repositories._helpers import require_object_id, utcnow
 from backend.schemas.homework import HomeworkResponse, HomeworkSubmissionResponse
 from backend.services.grading_service import create_assignment
 
@@ -45,7 +44,7 @@ async def publish_homework(*, homework, current_user: dict[str, Any]) -> Homewor
         "description": homework.description,
         "required_file_types": homework.required_file_types,
         "deadline": homework.deadline,
-        "created_at": datetime.datetime.utcnow(),
+        "created_at": utcnow(),
     }
 
     result = await homework_repo.insert_homework(document)
@@ -146,8 +145,10 @@ async def submit_homework(
     current_user: dict[str, Any],
 ) -> HomeworkSubmissionResponse:
     _require_role(current_user, {"student"}, "Access denied")
-    if not ObjectId.is_valid(homework_id):
-        raise HTTPException(status_code=400, detail="Invalid homework ID")
+    try:
+        require_object_id(homework_id, detail="Invalid homework ID")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     homework = await homework_repo.find_homework_by_id(homework_id)
     if not homework:
@@ -168,7 +169,7 @@ async def submit_homework(
         ),
         "file_name": filename,
         "status": "submitted",
-        "submitted_at": datetime.datetime.utcnow(),
+        "submitted_at": utcnow(),
     }
 
     result = await homework_repo.insert_submission(document)

@@ -4,9 +4,10 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from bson import ObjectId
-
-from backend.core.database import db
+from backend.repositories.course_section_repo import (
+    find_course_section_by_code as find_course_section_by_code_repo,
+)
+from backend.repositories._helpers import coerce_object_id
 
 MAX_SUBMISSION_FILE_SIZE = 50 * 1024 * 1024
 
@@ -16,15 +17,15 @@ def user_id_from_user(current_user: dict[str, Any]) -> str:
 
 
 async def find_course_section_by_code(course_code: str) -> dict[str, Any] | None:
-    return await db.course_sections.find_one({"courseCode": course_code})
+    return await find_course_section_by_code_repo(course_code)
 
 
 async def resolve_course_section_id(course_section_id: str) -> str:
-    if ObjectId.is_valid(course_section_id):
+    if coerce_object_id(course_section_id) is not None:
         return course_section_id
 
     section = await find_course_section_by_code(course_section_id)
-    return str(section["_id"]) if section else course_section_id
+    return str(section["id"]) if section else course_section_id
 
 
 def submission_upload_root() -> Path:

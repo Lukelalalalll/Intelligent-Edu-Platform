@@ -7,6 +7,17 @@ from backend.core.database import db
 from backend.repositories._helpers import coerce_object_id, utcnow
 
 
+# Keep legacy homework/homework_submissions access isolated here so v2 student
+# flows can fallback without spreading legacy collection queries back into the
+# main service modules.
+async def list_legacy_homeworks_by_course(course_section_id: str) -> list[dict[str, Any]]:
+    homeworks: list[dict[str, Any]] = []
+    cursor = db["homeworks"].find({"course_id": course_section_id}).sort("deadline", 1)
+    async for homework in cursor:
+        homeworks.append(homework)
+    return homeworks
+
+
 async def count_extra_legacy_homeworks(course_section_id: str, assignments: list[dict[str, Any]]) -> int:
     v2_homework_ids = {
         assignment.get("homeworkId")
@@ -14,7 +25,7 @@ async def count_extra_legacy_homeworks(course_section_id: str, assignments: list
         if assignment.get("homeworkId")
     }
     count = 0
-    async for homework in db["homeworks"].find({"course_id": course_section_id}):
+    for homework in await list_legacy_homeworks_by_course(course_section_id):
         if str(homework["_id"]) not in v2_homework_ids:
             count += 1
     return count
@@ -96,6 +107,7 @@ async def upsert_legacy_submission(
 __all__ = [
     "count_extra_legacy_homeworks",
     "is_legacy_course_enrolled",
+    "list_legacy_homeworks_by_course",
     "load_legacy_homework",
     "load_legacy_homework_submission_map",
     "upsert_legacy_submission",

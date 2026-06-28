@@ -39,6 +39,13 @@ async def get_course_section(section_id: str, *, session=None) -> dict[str, Any]
     return None
 
 
+async def find_course_section_by_code(course_code: str, *, session=None) -> dict[str, Any] | None:
+    doc = await db.course_sections.find_one({"courseCode": course_code}, session=session)
+    if doc:
+        return serialize_doc(doc)
+    return None
+
+
 async def list_course_sections(
     filter_query: dict[str, Any] | None = None,
     *,

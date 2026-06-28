@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from backend.config import Config
 from backend.core.database import db
-from backend.repositories._helpers import coerce_object_id
+from backend.repositories._helpers import coerce_object_id, require_object_id
 from backend.services.files.file_asset_service import ensure_ai_session_image_assets
 
 
@@ -146,8 +146,10 @@ async def list_ai_users(*, role: str, skip: int, limit: int) -> dict[str, Any]:
 
 
 async def list_ai_user_assets(*, user_id: str, group_by: str, status: str) -> dict[str, Any]:
-    if not ObjectId.is_valid(user_id):
-        raise HTTPException(status_code=400, detail="Invalid user id")
+    try:
+        require_object_id(user_id, detail="Invalid user id")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     await ensure_ai_session_image_assets(user_id)
 

@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1].parent))
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from backend.config import Config
+from backend.repositories._helpers import require_object_id
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -198,9 +199,8 @@ async def migrate():
 
                 # Update document ownerId
                 if doc_id:
-                    from bson import ObjectId
                     await db.documents.update_one(
-                        {"_id": ObjectId(doc_id)},
+                        {"_id": require_object_id(doc_id, detail="Invalid inserted document id")},
                         {"$set": {"ownerId": submission_id}},
                     )
 

@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from bson import ObjectId
 from fastapi import HTTPException
 from pymongo import ReturnDocument
 
 from backend.core.database import db
-from backend.core.utils import safe_object_id
+from backend.repositories._helpers import coerce_object_id, require_object_id
 
 from .query_service import get_room_for_member, get_user_map, hash_color, serialize_doc, utcnow_iso
+
+
+def _http_object_id(value: str, *, detail: str):
+    try:
+        return require_object_id(value, detail=detail)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 async def list_rooms_for_user(user_id: str) -> list[dict[str, Any]]:
@@ -63,11 +69,12 @@ async def create_group_room(
 
     other_ids = [member_id for member_id in normalized_members if member_id != actor_id]
     if other_ids:
-        valid_oids: list[ObjectId] = []
+        valid_oids = []
         for member_id in other_ids:
-            if not ObjectId.is_valid(member_id):
-                raise HTTPException(status_code=400, detail=f"Invalid member ID: {member_id}")
-            valid_oids.append(ObjectId(member_id))
+            try:
+                valid_oids.append(require_object_id(member_id, detail=f"Invalid member ID: {member_id}"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         found_count = await db.users.count_documents({"_id": {"$in": valid_oids}})
         if found_count != len(valid_oids):
@@ -133,13 +140,14 @@ async def create_course_group_room(*, course_id: str, user: dict[str, Any]) -> d
     role = user.get("role", "student")
 
     section = None
-    if ObjectId.is_valid(course_id):
-        section = await db.course_sections.find_one({"_id": ObjectId(course_id)})
+    course_oid = coerce_object_id(course_id)
+    if course_oid is not None:
+        section = await db.course_sections.find_one({"_id": course_oid})
 
     legacy_course = None
     if not section:
-        if ObjectId.is_valid(course_id):
-            legacy_course = await db.courses.find_one({"_id": ObjectId(course_id)})
+        if course_oid is not None:
+            legacy_course = await db.courses.find_one({"_id": course_oid})
         if not legacy_course:
             legacy_course = await db.courses.find_one({"courseId": course_id})
 
@@ -211,7 +219,7 @@ async def create_course_group_room(*, course_id: str, user: dict[str, Any]) -> d
         }
     )
 
-    new_room = await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room")})
+    new_room = await db.chat_rooms.find_one({"_id": _http_object_id(room_id, detail=f"Invalid room: {room_id!r}")})
     return {
         "roomId": room_id,
         "isExisting": False,
@@ -240,7 +248,7 @@ async def list_courses_for_group(user: dict[str, Any]) -> list[dict[str, Any]]:
                 section_ids.add(str(section["_id"]))
 
     if section_ids:
-        oid_ids = [ObjectId(section_id) for section_id in section_ids if ObjectId.is_valid(section_id)]
+        oid_ids = [section_oid for section_id in section_ids if (section_oid := coerce_object_id(section_id)) is not None]
         async for course in db.course_sections.find(
             {"_id": {"$in": oid_ids}},
             {"_id": 1, "courseCode": 1, "courseName": 1},
@@ -294,7 +302,7 @@ async def add_room_member(
     if not new_member_id:
         raise HTTPException(status_code=400, detail="userId is required")
 
-    target = await db.users.find_one({"_id": safe_object_id(new_member_id, label="user")})
+    target = await db.users.find_one({"_id": _http_object_id(new_member_id, detail=f"Invalid user: {new_member_id!r}")})
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
     if new_member_id in room.get("members", []):
@@ -340,7 +348,7 @@ async def kick_room_member(
     if target_id not in room.get("members", []):
         raise HTTPException(status_code=400, detail="User is not a member")
 
-    target = await db.users.find_one({"_id": safe_object_id(target_id, label="user")})
+    target = await db.users.find_one({"_id": _http_object_id(target_id, detail=f"Invalid user: {target_id!r}")})
     target_name = target.get("username", "Unknown") if target else "Unknown"
 
     now = utcnow_iso()

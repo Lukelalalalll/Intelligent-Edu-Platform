@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 
 COLLECTION = "llm_telemetry"
 
+
+async def _read_all(cursor):
+    return [doc async for doc in cursor]
+
 # ---------------------------------------------------------------------------
 # Cost table  (USD per 1 000 tokens)
 # ---------------------------------------------------------------------------
@@ -245,7 +249,7 @@ class LLMTelemetry:
                 }
             },
         ]
-        return await db[COLLECTION].aggregate(pipeline).to_list(500)
+        return await _read_all(db[COLLECTION].aggregate(pipeline))
 
     # ---- read: breakdown by arbitrary dimension ----
     async def get_breakdown(

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from backend.config import Config
-from backend.core.database import db
+from backend.repositories import file_asset_repo
 
 from .shared import normalize_path
 
@@ -19,11 +19,9 @@ async def run_audit() -> dict:
     ]
 
     known_paths: set[str] = set()
-    cursor = db.file_assets.find(
-        {"status": {"$ne": "hard_deleted"}},
-        {"storage_path": 1, "file_id": 1, "file_type": 1},
-    )
-    async for document in cursor:
+    for document in await file_asset_repo.list_non_hard_deleted_assets(
+        projection={"storage_path": 1, "file_id": 1, "file_type": 1}
+    ):
         path = normalize_path(str(document.get("storage_path", "")))
         if path:
             known_paths.add(path)
@@ -38,7 +36,7 @@ async def run_audit() -> dict:
             if rel not in known_paths:
                 orphan_disk_files.append({"file_type": file_type, "storage_path": rel, "size": path.stat().st_size})
 
-    async for document in db.file_assets.find({"status": {"$ne": "hard_deleted"}}):
+    for document in await file_asset_repo.list_non_hard_deleted_assets():
         rel = normalize_path(str(document.get("storage_path", "")))
         abs_path = Path(Config.BASE_DIR) / rel
         if not abs_path.exists():

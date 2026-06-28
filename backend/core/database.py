@@ -197,11 +197,16 @@ async def _ensure_google_auth_ticket_indexes() -> None:
 
 
 async def _ensure_user_sessions_indexes() -> None:
+    try:
+        await db.user_sessions.drop_index("user_id_1_last_seen_at_-1")
+    except Exception:
+        pass
+
     await db.user_sessions.create_indexes([
         IndexModel([("session_id", ASCENDING)], unique=True),
         IndexModel([("refresh_token_hash", ASCENDING)], unique=True),
         IndexModel([("refresh_jti", ASCENDING)], unique=True),
-        IndexModel([("user_id", ASCENDING), ("last_seen_at", DESCENDING)]),
+        IndexModel([("user_id", ASCENDING), ("revoked_at", ASCENDING), ("last_seen_at", DESCENDING)]),
         IndexModel([("family_id", ASCENDING)]),
         IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
     ])
@@ -263,23 +268,45 @@ async def ensure_indexes() -> None:
 
         await db.enrollments.create_indexes([
             IndexModel([("courseSectionId", ASCENDING), ("userId", ASCENDING)], unique=True),
+            IndexModel([("courseSectionId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("userId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("userId", ASCENDING), ("roleInCourse", ASCENDING), ("courseSectionId", ASCENDING)]),
         ])
 
+        try:
+            await db.assignments.drop_index("courseSectionId_1_dueAt_-1")
+        except Exception:
+            pass
+
         await db.assignments.create_indexes([
             IndexModel([("courseSectionId", ASCENDING), ("createdAt", DESCENDING)]),
-            IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING), ("createdAt", DESCENDING)]),
         ])
+
+        try:
+            await db.submissions.drop_index("assignmentId_1_submittedAt_-1")
+        except Exception:
+            pass
+        try:
+            await db.submissions.drop_index("studentId_1_submittedAt_-1")
+        except Exception:
+            pass
 
         await db.submissions.create_indexes([
             IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING), ("attemptNo", ASCENDING)], unique=True),
-            IndexModel([("assignmentId", ASCENDING), ("submittedAt", DESCENDING)]),
-            IndexModel([("studentId", ASCENDING), ("submittedAt", DESCENDING)]),
+            IndexModel([("assignmentId", ASCENDING), ("submittedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("studentId", ASCENDING), ("submittedAt", DESCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("status", ASCENDING), ("submittedAt", DESCENDING)]),
         ])
 
+        try:
+            await db.documents.drop_index("ownerId_1_sourceType_1")
+        except Exception:
+            pass
+
         await db.documents.create_indexes([
-            IndexModel([("ownerId", ASCENDING), ("sourceType", ASCENDING)]),
+            IndexModel([("ownerId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("ownerId", ASCENDING), ("sourceType", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
         ])
 
         await db.grades.create_indexes([
@@ -409,19 +436,31 @@ async def ensure_indexes() -> None:
         ])
 
         # ── knowledge indexing jobs ───────────────────────────────────────────
+        try:
+            await db.indexing_jobs.drop_index("course_id_1_normalized_hash_1_status_1")
+        except Exception:
+            pass
+
         await db.indexing_jobs.create_indexes([
             IndexModel([("job_id", ASCENDING)], unique=True),
             IndexModel([("course_id", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("course_id", ASCENDING), ("filename", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
-            IndexModel([("course_id", ASCENDING), ("normalized_hash", ASCENDING), ("status", ASCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("filename", ASCENDING), ("content_hash", ASCENDING), ("chapter_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("normalized_hash", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             # TTL: auto-delete records older than 180 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_180D),
         ])
 
         # persistent background jobs (bridge toward claim-based worker execution)
+        try:
+            await db.background_jobs.drop_index("job_type_1_status_1_available_at_1")
+        except Exception:
+            pass
+
         await db.background_jobs.create_indexes([
             IndexModel([("job_id", ASCENDING)], unique=True),
-            IndexModel([("job_type", ASCENDING), ("status", ASCENDING), ("available_at", ASCENDING)]),
+            IndexModel([("status", ASCENDING), ("available_at", ASCENDING), ("created_at", ASCENDING)]),
+            IndexModel([("job_type", ASCENDING), ("status", ASCENDING), ("available_at", ASCENDING), ("created_at", ASCENDING)]),
             IndexModel([("status", ASCENDING), ("lease_expires_at", ASCENDING)]),
             # TTL: auto-delete records older than 30 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),

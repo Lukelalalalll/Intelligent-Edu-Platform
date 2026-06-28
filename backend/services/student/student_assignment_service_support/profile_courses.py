@@ -27,7 +27,7 @@ async def load_profile_courses_v2(current_user: dict[str, Any], *, semester_labe
             if not section:
                 continue
 
-            course_section_id = str(section["_id"])
+            course_section_id = str(section["id"])
             course["courseSectionId"] = course_section_id
             assignments = await list_all_assignments(course_section_id)
             total = len(assignments) + await count_extra_legacy_homeworks(course_section_id, assignments)

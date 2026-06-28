@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Sequence
 
 from fastapi import HTTPException
 
 from backend.core.utils import safe_object_id
 from backend.repositories import history_repo
+from backend.repositories._helpers import utcnow
 from backend.services.slides.infra.task_tracker import TaskTracker
 
 TOOL_COLLECTIONS: dict[str, str] = {
@@ -231,7 +232,7 @@ async def soft_delete_history(*, tool: str, history_id: str, user_id: str) -> in
     result = await history_repo.update_one(
         get_collection_name(tool),
         {"_id": oid, "user_id": user_id, "deleted_at": {"$exists": False}},
-        {"$set": {"deleted_at": datetime.now(timezone.utc)}},
+        {"$set": {"deleted_at": utcnow()}},
     )
     return int(result.modified_count or 0)
 
@@ -244,7 +245,7 @@ async def batch_soft_delete_history(*, tool: str, history_ids: Sequence[str], us
     result = await history_repo.update_many(
         get_collection_name(tool),
         {"_id": {"$in": oids}, "user_id": user_id, "deleted_at": {"$exists": False}},
-        {"$set": {"deleted_at": datetime.now(timezone.utc)}},
+        {"$set": {"deleted_at": utcnow()}},
     )
     return int(result.modified_count or 0)
 
@@ -314,7 +315,7 @@ async def save_history_record(
             if isinstance(result_full, (dict, list))
             else str(result_full or "")
         ),
-        "created_at": datetime.now(timezone.utc),
+        "created_at": utcnow(),
     }
     if tool_name:
         document["tool"] = tool_name

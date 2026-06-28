@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.core.database import db
 from backend.services.grading_service import (
     get_assignment,
     get_grade,
@@ -12,6 +11,7 @@ from backend.services.grading_service import (
 
 from .common import resolve_course_section_id, user_id_from_user
 from .legacy_homework import (
+    list_legacy_homeworks_by_course,
     load_legacy_homework_submission_map,
 )
 
@@ -58,8 +58,7 @@ async def list_student_assignments(course_section_id: str, current_user: dict[st
             v2_homework_ids.add(assignment["homeworkId"])
 
     legacy_submissions = await load_legacy_homework_submission_map(user_id)
-    cursor = db["homeworks"].find({"course_id": resolved_section_id}).sort("deadline", 1)
-    async for homework in cursor:
+    for homework in await list_legacy_homeworks_by_course(resolved_section_id):
         homework_id = str(homework["_id"])
         if homework_id in v2_homework_ids:
             continue

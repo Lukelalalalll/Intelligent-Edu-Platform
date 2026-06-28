@@ -2,7 +2,12 @@
 
 import asyncio
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
+
+import pytest
+from bson import ObjectId
+from fastapi import HTTPException
 
 from backend.services import history_service
 
@@ -150,4 +155,103 @@ def test_enrich_slides_history_detail_falls_back_to_persisted_workflow(monkeypat
     assert payload["slides_detail"]["workflow"]["task_type"] == "ppt_generator_generate_v2"
     assert payload["slides_detail"]["workflow"]["steps"][0]["step"] == "outline"
     assert payload["slides_detail"]["result_artifacts"]["pptx_filename"] == "ppt-generator.pptx"
+
+
+def test_get_history_document_rejects_invalid_id_before_repo_lookup(monkeypatch):
+    find_one = AsyncMock(return_value=None)
+    monkeypatch.setattr(history_service.history_repo, "find_one", find_one)
+
+    with pytest.raises(HTTPException) as excinfo:
+        asyncio.run(
+            history_service.get_history_document(
+                tools=["slides"],
+                history_id="not-a-history-object-id",
+                user_id="user-1",
+            )
+        )
+
+    assert excinfo.value.status_code == 400
+    assert excinfo.value.detail == "Invalid history ID format"
+    assert find_one.await_count == 0
+
+
+def test_batch_soft_delete_history_filters_invalid_ids_but_keeps_valid_ones(monkeypatch):
+    valid_id = str(ObjectId())
+    update_many = AsyncMock(return_value=SimpleNamespace(modified_count=1))
+    monkeypatch.setattr(history_service.history_repo, "update_many", update_many)
+
+    result = asyncio.run(
+        history_service.batch_soft_delete_history(
+            tool="slides",
+            history_ids=["bad-id", valid_id],
+            user_id="user-1",
+        )
+    )
+
+    assert result == 1
+    update_args = update_many.await_args.args
+    assert update_args[0] == "sub1_generation_history"
+    assert update_args[1]["_id"] == {"$in": [ObjectId(valid_id)]}
+    assert update_args[2]["$set"]["deleted_at"].tzinfo == timezone.utc
+
+
+def test_batch_hard_delete_history_rejects_when_no_valid_ids(monkeypatch):
+    delete_many = AsyncMock()
+    monkeypatch.setattr(history_service.history_repo, "delete_many", delete_many)
+
+    with pytest.raises(HTTPException) as excinfo:
+        asyncio.run(
+            history_service.batch_hard_delete_history(
+                tool="slides",
+                history_ids=["bad-id-1", "bad-id-2"],
+            )
+        )
+
+    assert excinfo.value.status_code == 400
+    assert excinfo.value.detail == "No valid IDs"
+    assert delete_many.await_count == 0
+
+
+def test_soft_delete_history_writes_aware_utc_deleted_at(monkeypatch):
+    valid_id = str(ObjectId())
+    update_one = AsyncMock(return_value=SimpleNamespace(modified_count=1))
+    monkeypatch.setattr(history_service.history_repo, "update_one", update_one)
+
+    result = asyncio.run(
+        history_service.soft_delete_history(
+            tool="slides",
+            history_id=valid_id,
+            user_id="user-1",
+        )
+    )
+
+    assert result == 1
+    update_args = update_one.await_args.args
+    assert update_args[0] == "sub1_generation_history"
+    assert update_args[1]["_id"] == ObjectId(valid_id)
+    assert update_args[2]["$set"]["deleted_at"].tzinfo == timezone.utc
+
+
+def test_save_history_record_writes_aware_utc_created_at(monkeypatch):
+    insert_one = AsyncMock(return_value=None)
+    monkeypatch.setattr(history_service.history_repo, "insert_one", insert_one)
+
+    asyncio.run(
+        history_service.save_history_record(
+            tool="slides",
+            user_id="user-1",
+            params={"title": "Deck"},
+            result_preview="preview",
+            result_full={"ok": True},
+            source={"source_filename": "deck.md"},
+            tool_name="generate_render",
+        )
+    )
+
+    insert_args = insert_one.await_args.args
+    assert insert_args[0] == "sub1_generation_history"
+    inserted = insert_args[1]
+    assert inserted["created_at"].tzinfo == timezone.utc
+    assert inserted["source"] == {"source_filename": "deck.md"}
+    assert inserted["tool"] == "generate_render"
 

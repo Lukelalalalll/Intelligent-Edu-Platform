@@ -39,6 +39,23 @@ async def get_document(document_id: str, *, session=None) -> dict[str, Any] | No
     return None
 
 
+async def set_document_owner(
+    document_id: str,
+    owner_id: str,
+    *,
+    session=None,
+) -> bool:
+    oid = coerce_object_id(document_id)
+    if oid is None:
+        return False
+    result = await db.documents.update_one(
+        {"_id": oid},
+        {"$set": {"ownerId": owner_id, "updatedAt": utcnow()}},
+        session=session,
+    )
+    return result.matched_count > 0
+
+
 async def list_documents(
     owner_id: str,
     source_type: str | None = None,
