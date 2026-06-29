@@ -3,11 +3,38 @@ from __future__ import annotations
 import json
 import logging
 import os
+from urllib.parse import urlparse
 
 from pydantic import field_validator, model_validator
 
 from .paths import PathSettingsSegment
 from .shared import _BASE_DIR, is_sensitive_env, key_strength_issues
+
+
+def _origin_issues(origins: list[str]) -> list[str]:
+    issues: list[str] = []
+    if not origins:
+        return ["ALLOWED_ORIGINS must not be empty in sensitive environments"]
+
+    for origin in origins:
+        raw = str(origin or "").strip()
+        if not raw:
+            continue
+        if raw == "*":
+            issues.append("ALLOWED_ORIGINS must not include '*' in sensitive environments")
+            continue
+
+        parsed = urlparse(raw)
+        if not parsed.scheme or not parsed.netloc:
+            issues.append(f"ALLOWED_ORIGINS contains an invalid origin: {raw}")
+            continue
+
+        host = str(parsed.hostname or "").lower()
+        if host in {"localhost", "127.0.0.1"}:
+            issues.append(f"ALLOWED_ORIGINS must not include local development hosts in sensitive environments: {raw}")
+        if parsed.scheme.lower() != "https":
+            issues.append(f"ALLOWED_ORIGINS must use https in sensitive environments: {raw}")
+    return issues
 
 
 class ValidationSettingsSegment(PathSettingsSegment):
@@ -119,6 +146,18 @@ class ValidationSettingsSegment(PathSettingsSegment):
             message = "JWT_COOKIE_SECURE must be true in production/staging environments"
             logger.critical(message)
             raise SystemExit(f"Refusing to start: {message}")
+
+        origin_issues = _origin_issues(self.ALLOWED_ORIGINS)
+        for message in origin_issues:
+            if sensitive_env:
+                logger.critical(message)
+            else:
+                logger.warning("DEV SECURITY WARNING: %s", message)
+                warnings.append(message)
+        if sensitive_env and origin_issues:
+            raise SystemExit(
+                "Refusing to start: ALLOWED_ORIGINS must be explicit https origins for the deployed frontend."
+            )
 
         optional_keys = {
             "DEEPSEEK_API_KEY": self.DEEPSEEK_API_KEY,

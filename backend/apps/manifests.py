@@ -81,11 +81,9 @@ CORE_APP_MANIFEST = AppManifest(
     ),
     direct_routers=(homework_router, public_slides_router),
     static_mounts=(
-        ("/data", os.path.abspath(os.path.join(Config.BASE_DIR, os.pardir, "data")), "data"),
         ("/test_pdf", _base_path("test_pdf"), "test_pdf"),
         ("/static", _base_path("static"), "static"),
         ("/grading_annotated", _base_path("static", "grading_annotated"), "grading_annotated"),
-        ("/uploads", _base_path("uploads"), "uploads"),
         ("/generated/sub1", _base_path("generated", "sub1"), "generated_sub1"),
         ("/app_data", str(PPT_GENERATOR_APP_DATA_ROOT), "ppt_generator_app_data"),
     ),
@@ -103,7 +101,6 @@ SLIDES_APP_MANIFEST = AppManifest(
     direct_routers=(public_slides_router,),
     static_mounts=(
         ("/static", _base_path("static"), "static"),
-        ("/uploads", _base_path("uploads"), "uploads"),
         ("/generated/sub1", _base_path("generated", "sub1"), "generated_sub1"),
     ),
 )
@@ -112,7 +109,6 @@ QUESTIONS_APP_MANIFEST = AppManifest(
     title="Intelligent Edu Platform Question Service",
     versioned_routers=(questions_router,),
     static_mounts=(
-        ("/uploads/sub2", _base_path("uploads", "sub2"), "uploads_sub2"),
         ("/generated/sub2", _base_path("generated", "sub2"), "generated_sub2"),
         ("/static/sub2/screenshots", _base_path("static", "sub2", "screenshots"), "screenshots_sub2"),
     ),
@@ -123,8 +119,6 @@ VISUAL_APP_MANIFEST = AppManifest(
     title="Intelligent Edu Platform Visual Service",
     versioned_routers=(diagram_router, image_extractor_router),
     static_mounts=(
-        ("/uploads/sub3", _base_path("uploads", "sub3"), "uploads_sub3"),
-        ("/uploads/sub4", _base_path("uploads", "sub4"), "uploads_sub4"),
         ("/generated/sub3", _base_path("generated", "sub3"), "generated_sub3"),
         ("/generated/sub4", _base_path("generated", "sub4"), "generated_sub4"),
         ("/static/sub4", _base_path("static", "sub4"), "static_sub4"),
@@ -135,7 +129,6 @@ VIDEO_APP_MANIFEST = AppManifest(
     title="Intelligent Edu Platform Video Service",
     versioned_routers=(video_router,),
     static_mounts=(
-        ("/uploads", _base_path("uploads"), "uploads"),
         ("/generated/videos", _base_path("generated", "videos"), "generated_videos"),
     ),
 )
@@ -144,7 +137,6 @@ STUDY_NOTES_APP_MANIFEST = AppManifest(
     title="Intelligent Edu Platform Study Notes Service",
     versioned_routers=(study_notes_router,),
     static_mounts=(
-        ("/uploads/sub5", _base_path("uploads", "sub5"), "uploads_sub5"),
         ("/generated/sub5", _base_path("generated", "sub5"), "generated_sub5"),
     ),
 )
@@ -154,7 +146,6 @@ HIGHLIGHTER_APP_MANIFEST = AppManifest(
     versioned_routers=(highlighter_router,),
     static_mounts=(
         ("/static", _base_path("static"), "static"),
-        ("/uploads", _base_path("uploads"), "uploads"),
         ("/md/sub1", _base_path("md", "sub1"), "md_sub1"),
         ("/highlights/sub1", _base_path("highlights", "sub1"), "highlights_sub1"),
     ),
