@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import asyncio
 import io
 import json
 from pathlib import Path
@@ -120,7 +121,7 @@ def test_pptx_download_route_serves_generated_file(monkeypatch, tmp_path):
     filename = "presentation_test.pptx"
     (tmp_path / filename).write_bytes(b"pptx")
 
-    response = artifacts.download_ppt(filename)
+    response = asyncio.run(artifacts.download_ppt(filename, user={"id": "admin-1", "role": "admin"}))
 
     assert response.media_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
@@ -133,7 +134,7 @@ def test_source_download_route_serves_uploaded_file(monkeypatch, tmp_path):
     target = tmp_path / filename
     target.write_bytes(b"source")
 
-    response = artifacts.download_source(filename, user={"id": "u1"})
+    response = asyncio.run(artifacts.download_source(filename, user={"id": "admin-1", "role": "admin"}))
 
     assert Path(response.path) == target
 
