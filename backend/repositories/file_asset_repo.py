@@ -13,6 +13,10 @@ async def insert_asset(document: dict[str, Any]):
     return await db.file_assets.insert_one(document)
 
 
+def _non_hard_deleted_status(status: str = "") -> str | dict[str, Any]:
+    return status if status else {"$ne": "hard_deleted"}
+
+
 async def find_assets_by_owner(owner_type: str, owner_id: str) -> list[dict[str, Any]]:
     cursor = db.file_assets.find(
         {
@@ -39,6 +43,56 @@ async def find_asset_by_identifier(asset_id: str) -> dict[str, Any] | None:
     asset_oid = coerce_object_id(asset_id)
     query = {"_id": asset_oid} if asset_oid is not None else {"file_id": asset_id}
     return await db.file_assets.find_one(query)
+
+
+async def list_room_assets(
+    *,
+    room_id: str,
+    status: str = "",
+) -> list[dict[str, Any]]:
+    cursor = db.file_assets.find(
+        {
+            "room_id": room_id,
+            "scope": "chat_group",
+            "status": _non_hard_deleted_status(status),
+        }
+    ).sort("created_at", -1)
+    return [item async for item in cursor]
+
+
+async def list_ai_personal_assets_for_user(
+    *,
+    user_id: str,
+    status: str = "",
+) -> list[dict[str, Any]]:
+    cursor = db.file_assets.find(
+        {
+            "scope": "ai_personal",
+            "user_id": user_id,
+            "status": _non_hard_deleted_status(status),
+        }
+    ).sort("created_at", -1)
+    return [item async for item in cursor]
+
+
+async def count_ai_personal_assets_by_user_ids(user_ids: list[str]) -> dict[str, int]:
+    if not user_ids:
+        return {}
+
+    pipeline = [
+        {
+            "$match": {
+                "scope": "ai_personal",
+                "user_id": {"$in": user_ids},
+                "status": {"$ne": "hard_deleted"},
+            }
+        },
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+    ]
+    counts: dict[str, int] = {}
+    async for item in db.file_assets.aggregate(pipeline):
+        counts[str(item["_id"])] = int(item.get("count", 0))
+    return counts
 
 
 async def find_asset_by_file_id(file_id: str) -> dict[str, Any] | None:
@@ -118,6 +172,34 @@ async def mark_asset_hard_deleted(
         },
     )
     return await find_asset_by_file_id(file_id)
+
+
+async def bind_chat_attachment_to_message(
+    *,
+    public_url: str,
+    owner_id: str,
+    room_id: str,
+    user_id: str,
+    now: datetime,
+):
+    return await db.file_assets.update_one(
+        {
+            "file_type": "chat_attachment",
+            "public_url": str(public_url),
+            "status": {"$ne": "hard_deleted"},
+        },
+        {
+            "$set": {
+                "owner_type": "chat_message",
+                "owner_id": owner_id,
+                "scope": "chat_group",
+                "room_id": room_id,
+                "user_id": user_id,
+                "updated_at": now,
+                "status": "active",
+            }
+        },
+    )
 
 
 async def soft_delete_knowledge_source_assets(

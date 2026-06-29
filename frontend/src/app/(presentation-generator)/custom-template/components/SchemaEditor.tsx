@@ -690,15 +690,15 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
     const getConstraintSummary = (field: SchemaField): string | null => {
         if (field.type === 'string') {
             if (field.minLength !== undefined || field.maxLength !== undefined) {
-                return `${field.minLength ?? '鈭?}-${field.maxLength ?? '鈭?} chars`;
+                return `${field.minLength ?? "-"}-${field.maxLength ?? "-"} chars`;
             }
         } else if (field.type === 'number') {
             if (field.minimum !== undefined || field.maximum !== undefined) {
-                return `${field.minimum ?? '鈭?}-${field.maximum ?? '鈭?}`;
+                return `${field.minimum ?? "-"}-${field.maximum ?? "-"}`;
             }
         } else if (field.type === 'array') {
             if (field.minItems !== undefined || field.maxItems !== undefined) {
-                return `${field.minItems ?? '鈭?}-${field.maxItems ?? '鈭?} items`;
+                return `${field.minItems ?? "-"}-${field.maxItems ?? "-"} items`;
             }
         }
         return null;

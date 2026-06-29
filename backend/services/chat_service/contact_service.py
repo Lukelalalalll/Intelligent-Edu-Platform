@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from backend.core.database import db
 from backend.core.utils import safe_object_id
+from backend.repositories import user_repo
 
 from .chat_search_service import sanitize_user_search_query
 from .query_service import get_user_map, utcnow_iso
@@ -46,7 +47,7 @@ async def list_contacts_for_user(user_id: str) -> list[dict[str, Any]]:
 
 
 async def create_friend_request(*, user_id: str, username: str, target_username: str) -> dict[str, Any]:
-    target = await db.users.find_one({"username": target_username}, {"_id": 1})
+    target = await user_repo.find_by_username(target_username, {"_id": 1})
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -149,13 +150,12 @@ async def search_users_for_contacts(*, query: str, user_id: str) -> list[dict[st
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    cursor = db.users.find(
-        {"username": {"$regex": safe_pattern, "$options": "i"}},
-        {"_id": 1, "username": 1, "email": 1, "role": 1},
-    ).limit(20)
-
     users: list[dict[str, Any]] = []
-    async for doc in cursor:
+    for doc in await user_repo.list_users(
+        filt={"username": {"$regex": safe_pattern, "$options": "i"}},
+        projection={"_id": 1, "username": 1, "email": 1, "role": 1},
+        limit=20,
+    ):
         found_user_id = str(doc["_id"])
         if found_user_id == user_id:
             continue

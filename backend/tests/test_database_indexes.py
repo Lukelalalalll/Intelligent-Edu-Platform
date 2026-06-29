@@ -406,6 +406,7 @@ def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypa
     grade_specs = _index_specs("grades")
     indexing_job_specs = _index_specs("indexing_jobs")
     background_job_specs = _index_specs("background_jobs")
+    file_asset_specs = _index_specs("file_assets")
 
     assert _has_index(
         course_specs,
@@ -479,6 +480,10 @@ def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypa
     assert _has_index(
         background_job_specs,
         [("status", 1), ("lease_expires_at", 1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("file_type", 1), ("public_url", 1)],
     )
 
 

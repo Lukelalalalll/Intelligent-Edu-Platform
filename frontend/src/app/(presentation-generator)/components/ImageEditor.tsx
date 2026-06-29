@@ -221,7 +221,7 @@ const ImageEditor = ({
   };
 
   /**
-   * Stock image search (Pexels / Pixabay) 鈥?returns multiple URLs to pick from.
+   * Stock image search (Pexels / Pixabay) - returns multiple URLs to pick from.
    */
   const handleStockImageSearch = async () => {
     if (!prompt.trim()) {
@@ -398,7 +398,7 @@ const ImageEditor = ({
                     <Textarea
                       placeholder={
                         stockImageProvider
-                          ? "e.g. team collaboration, modern office, sunset mountains鈥?
+                          ? "e.g. team collaboration, modern office, sunset mountains..."
                           : "Describe the image you want to generate..."
                       }
                       value={prompt}
@@ -419,7 +419,7 @@ const ImageEditor = ({
                     )}
                     {stockImageProvider
                       ? isSearchingStock
-                        ? "Searching鈥?
+                        ? "Searching..."
                         : "Search stock images"
                       : isGenerating
                         ? "Generating..."
@@ -430,7 +430,7 @@ const ImageEditor = ({
 
                   {stockImageProvider ? (
                     <div className="space-y-3">
-                      <h3 className="text-sm font-medium">Results 鈥?click an image to use it</h3>
+                      <h3 className="text-sm font-medium">Results - click an image to use it</h3>
                       <div className="grid grid-cols-2 gap-3">
                         {isSearchingStock
                           ? Array.from({ length: 8 }).map((_, index) => (

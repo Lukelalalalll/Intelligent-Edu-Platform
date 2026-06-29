@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from pymongo import ReturnDocument
 
 from backend.core.database import db
+from backend.repositories import user_repo
 from backend.repositories._helpers import coerce_object_id, require_object_id
 
 from .query_service import get_room_for_member, get_user_map, hash_color, serialize_doc, utcnow_iso
@@ -76,8 +77,8 @@ async def create_group_room(
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        found_count = await db.users.count_documents({"_id": {"$in": valid_oids}})
-        if found_count != len(valid_oids):
+        found_users = await user_repo.find_many_by_ids(valid_oids, projection={"_id": 1})
+        if len(found_users) != len(valid_oids):
             raise HTTPException(status_code=400, detail="One or more member IDs do not exist")
 
     now = utcnow_iso()

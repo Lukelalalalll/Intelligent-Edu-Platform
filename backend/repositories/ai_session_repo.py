@@ -38,6 +38,22 @@ def find_cursor_for_user(
     return db.ai_chat_sessions.find({"userId": user_oid}, projection)
 
 
+async def count_sessions_by_user_ids(user_ids: list[str | ObjectId]) -> dict[str, int]:
+    oids = [session_oid(user_id) for user_id in user_ids]
+    oids = [oid for oid in oids if oid is not None]
+    if not oids:
+        return {}
+
+    pipeline = [
+        {"$match": {"userId": {"$in": oids}}},
+        {"$group": {"_id": "$userId", "count": {"$sum": 1}}},
+    ]
+    counts: dict[str, int] = {}
+    async for item in db.ai_chat_sessions.aggregate(pipeline):
+        counts[str(item["_id"])] = int(item.get("count", 0))
+    return counts
+
+
 async def list_for_user(
     user_id: str | ObjectId,
     *,

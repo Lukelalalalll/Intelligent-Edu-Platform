@@ -9,9 +9,10 @@ from bson import ObjectId
 
 from backend.repositories import ai_session_repo
 from backend.repositories import file_asset_repo
-from backend.services.chat_service import room_service, session_bucket_service, transfer_dispatch_service
+from backend.services.chat_service import contact_service, message_service, query_service, room_service, session_bucket_service, transfer_dispatch_service
 from backend.services.file_assets import lifecycle
 from backend.services.file_assets import backfill_ai_chat, queries
+from backend.services.files import file_center_service
 
 
 class _FakeBucketCollection:
@@ -32,16 +33,6 @@ class _FakeBucketDb:
         return self.collection
 
 
-class _FakeUsersCollection:
-    def __init__(self, expected_count: int):
-        self.expected_count = expected_count
-        self.count_documents_calls: list[dict] = []
-
-    async def count_documents(self, query: dict) -> int:
-        self.count_documents_calls.append(query)
-        return self.expected_count
-
-
 class _FakeInsertCollection:
     def __init__(self, inserted_id: ObjectId | None = None):
         self.inserted_id = inserted_id or ObjectId()
@@ -50,6 +41,15 @@ class _FakeInsertCollection:
     async def insert_one(self, document: dict):
         self.insert_one_calls.append(document)
         return SimpleNamespace(inserted_id=self.inserted_id)
+
+
+class _FakeUpdateCollection:
+    def __init__(self):
+        self.update_one_calls: list[tuple[dict, dict]] = []
+
+    async def update_one(self, query: dict, update: dict):
+        self.update_one_calls.append((query, update))
+        return SimpleNamespace(modified_count=1)
 
 
 class _FakeTransferCollection:
@@ -140,11 +140,11 @@ async def test_append_messages_bucketed_promotes_messages_with_aware_utc(monkeyp
 async def test_create_group_room_queries_members_as_object_ids(monkeypatch):
     actor_id = str(ObjectId())
     member_ids = [str(ObjectId()), str(ObjectId())]
-    fake_users = _FakeUsersCollection(expected_count=2)
     fake_rooms = _FakeInsertCollection()
     fake_messages = _FakeInsertCollection()
+    find_many_by_ids = AsyncMock(return_value=[{"_id": ObjectId(member_ids[0])}, {"_id": ObjectId(member_ids[1])}])
 
-    monkeypatch.setattr(room_service.db, "users", fake_users, raising=False)
+    monkeypatch.setattr(room_service.user_repo, "find_many_by_ids", find_many_by_ids)
     monkeypatch.setattr(room_service.db, "chat_rooms", fake_rooms, raising=False)
     monkeypatch.setattr(room_service.db, "chat_messages", fake_messages, raising=False)
 
@@ -156,7 +156,10 @@ async def test_create_group_room_queries_members_as_object_ids(monkeypatch):
     )
 
     assert room_id == str(fake_rooms.inserted_id)
-    assert fake_users.count_documents_calls == [{"_id": {"$in": [ObjectId(member_ids[0]), ObjectId(member_ids[1])]}}]
+    assert find_many_by_ids.await_args.kwargs == {
+        "projection": {"_id": 1},
+    }
+    assert find_many_by_ids.await_args.args == ([ObjectId(member_ids[0]), ObjectId(member_ids[1])],)
     assert fake_rooms.insert_one_calls[0]["members"] == sorted([actor_id, *member_ids])
     assert isinstance(fake_messages.insert_one_calls[0]["sentAt"], str)
 
@@ -340,3 +343,187 @@ async def test_delete_ai_session_image_updates_session_via_repo_with_aware_utc(m
     update_args = update_by_id.await_args.args
     assert update_args[1]["$set"]["messages"] == [{"images": ["a", ""]}]
     assert update_args[1]["$set"]["updatedAt"].tzinfo == timezone.utc
+
+
+async def test_get_chat_user_by_id_preserves_id_field_via_user_repo(monkeypatch):
+    user_id = str(ObjectId())
+    user_doc = {"_id": ObjectId(user_id), "username": "alice"}
+    monkeypatch.setattr(query_service.user_repo, "find_by_id", AsyncMock(return_value=user_doc))
+
+    result = await query_service.get_chat_user_by_id(user_id)
+
+    assert result is user_doc
+    assert result["id"] == user_id
+    assert result["_id"] == ObjectId(user_id)
+
+
+async def test_search_users_for_contacts_preserves_shape_and_skips_self(monkeypatch):
+    user_id = str(ObjectId())
+    other_id = str(ObjectId())
+    monkeypatch.setattr(
+        contact_service.user_repo,
+        "list_users",
+        AsyncMock(
+            return_value=[
+                {"_id": ObjectId(user_id), "username": "self", "email": "self@example.com", "role": "student"},
+                {"_id": ObjectId(other_id), "username": "other", "email": "other@example.com", "role": "teacher"},
+            ]
+        ),
+    )
+
+    result = await contact_service.search_users_for_contacts(query="oth", user_id=user_id)
+
+    assert result == [
+        {
+            "id": other_id,
+            "username": "other",
+            "email": "other@example.com",
+            "role": "teacher",
+        }
+    ]
+
+
+async def test_create_message_reuses_existing_chat_attachment_asset(monkeypatch):
+    room = {"_id": ObjectId(), "courseId": "course-1"}
+    fake_messages = _FakeInsertCollection()
+    fake_rooms = _FakeUpdateCollection()
+
+    monkeypatch.setattr(message_service, "get_room_for_member", AsyncMock(return_value=room))
+    monkeypatch.setattr(message_service.db, "chat_messages", fake_messages, raising=False)
+    monkeypatch.setattr(message_service.db, "chat_rooms", fake_rooms, raising=False)
+    bind_asset = AsyncMock(return_value=SimpleNamespace(matched_count=1))
+    register_asset = AsyncMock()
+    monkeypatch.setattr(message_service.file_asset_repo, "bind_chat_attachment_to_message", bind_asset)
+    monkeypatch.setattr(message_service, "register_file_asset", register_asset)
+
+    result = await message_service.create_message(
+        room_id="room-1",
+        user={"id": "user-1", "username": "alice"},
+        content="See attachment",
+        message_type="file",
+        file_url="/static/chat_files/demo.pdf",
+        file_name="demo.pdf",
+        file_size=12,
+        mime_type="application/pdf",
+        storage_path="uploads/chat/demo.pdf",
+    )
+
+    assert result["message"]["id"] == str(fake_messages.inserted_id)
+    assert bind_asset.await_args.kwargs == {
+        "public_url": "/static/chat_files/demo.pdf",
+        "owner_id": str(fake_messages.inserted_id),
+        "room_id": "room-1",
+        "user_id": "user-1",
+        "now": bind_asset.await_args.kwargs["now"],
+    }
+    assert bind_asset.await_args.kwargs["now"].tzinfo == timezone.utc
+    assert register_asset.await_count == 0
+    assert fake_rooms.update_one_calls[0][0] == {"_id": room["_id"]}
+
+
+async def test_recall_message_accepts_legacy_naive_datetime_as_utc(monkeypatch):
+    message_id = str(ObjectId())
+    sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    fake_messages = _FakeUpdateCollection()
+
+    monkeypatch.setattr(
+        message_service,
+        "get_message_by_id",
+        AsyncMock(return_value={"_id": ObjectId(message_id), "senderId": "user-1", "roomId": "room-1", "sentAt": sent_at}),
+    )
+    monkeypatch.setattr(message_service, "get_room_for_member", AsyncMock(return_value={"_id": ObjectId(), "id": "room-1"}))
+    monkeypatch.setattr(message_service.db, "chat_messages", fake_messages, raising=False)
+
+    result = await message_service.recall_message(message_id=message_id, user_id="user-1")
+
+    assert result["roomId"] == "room-1"
+    assert fake_messages.update_one_calls == [
+        ({"_id": ObjectId(message_id)}, {"$set": {"recalled": True, "content": "This message was recalled"}})
+    ]
+
+
+async def test_recall_message_accepts_legacy_naive_iso_string_as_utc(monkeypatch):
+    message_id = str(ObjectId())
+    fake_messages = _FakeUpdateCollection()
+
+    monkeypatch.setattr(
+        message_service,
+        "get_message_by_id",
+        AsyncMock(
+            return_value={
+                "_id": ObjectId(message_id),
+                "senderId": "user-1",
+                "roomId": "room-1",
+                "sentAt": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+            }
+        ),
+    )
+    monkeypatch.setattr(message_service, "get_room_for_member", AsyncMock(return_value={"_id": ObjectId(), "id": "room-1"}))
+    monkeypatch.setattr(message_service.db, "chat_messages", fake_messages, raising=False)
+
+    result = await message_service.recall_message(message_id=message_id, user_id="user-1")
+
+    assert result["roomId"] == "room-1"
+    assert fake_messages.update_one_calls == [
+        ({"_id": ObjectId(message_id)}, {"$set": {"recalled": True, "content": "This message was recalled"}})
+    ]
+
+
+async def test_list_ai_users_preserves_admin_file_center_shape_with_repo_counts(monkeypatch):
+    user_a = ObjectId()
+    user_b = ObjectId()
+    ensured: list[str] = []
+
+    monkeypatch.setattr(
+        file_center_service.user_repo,
+        "list_users",
+        AsyncMock(
+            return_value=[
+                {"_id": user_a, "username": "alice", "email": "alice@example.com", "role": "student"},
+                {"_id": user_b, "username": "bob", "email": "bob@example.com", "role": "student"},
+            ]
+        ),
+    )
+    monkeypatch.setattr(file_center_service.user_repo, "count_users", AsyncMock(return_value=7))
+    monkeypatch.setattr(
+        file_center_service,
+        "ensure_ai_session_image_assets",
+        AsyncMock(side_effect=lambda user_id: ensured.append(user_id)),
+    )
+    monkeypatch.setattr(
+        file_center_service.ai_session_repo,
+        "count_sessions_by_user_ids",
+        AsyncMock(return_value={str(user_a): 3}),
+    )
+    monkeypatch.setattr(
+        file_center_service.file_asset_repo,
+        "count_ai_personal_assets_by_user_ids",
+        AsyncMock(return_value={str(user_a): 5, str(user_b): 1}),
+    )
+
+    result = await file_center_service.list_ai_users(role="student", skip=10, limit=2)
+
+    assert ensured == [str(user_a), str(user_b)]
+    assert result == {
+        "users": [
+            {
+                "user_id": str(user_a),
+                "username": "alice",
+                "email": "alice@example.com",
+                "role": "student",
+                "session_count": 3,
+                "asset_count": 5,
+            },
+            {
+                "user_id": str(user_b),
+                "username": "bob",
+                "email": "bob@example.com",
+                "role": "student",
+                "session_count": 0,
+                "asset_count": 1,
+            },
+        ],
+        "total": 7,
+        "skip": 10,
+        "limit": 2,
+    }

@@ -1,7 +1,9 @@
-﻿import React from "react";
+import React from "react";
+import { ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import shellStyles from "@/features/slides/components/PptGeneratorShell.module.css";
+import { useI18n } from "@/shared/i18n";
 
 import styles from "./PptGeneratorWorkflowStepper.module.css";
 
@@ -9,26 +11,12 @@ const STEP_ORDER = ["prepare", "outline", "templates", "preview"] as const;
 
 type WorkflowStepKey = (typeof STEP_ORDER)[number];
 
-type WorkflowCopy = {
-  workflow: string;
-  steps: Record<WorkflowStepKey, string>;
-};
-
-const WORKFLOW_COPY: WorkflowCopy = {
-  workflow: "PPT Generator Workflow",
-  steps: {
-    prepare: "Prompt & Files",
-    outline: "Outline",
-    templates: "Select Template",
-    preview: "Generate PPT Preview",
-  },
-};
-
 export interface PptGeneratorWorkflowStepperProps {
   activeStep: WorkflowStepKey;
   className?: string;
   onStepSelect?: (step: WorkflowStepKey) => void;
   clickableSteps?: WorkflowStepKey[];
+  onBack?: () => void;
 }
 
 export default function PptGeneratorWorkflowStepper({
@@ -36,11 +24,28 @@ export default function PptGeneratorWorkflowStepper({
   className,
   onStepSelect,
   clickableSteps = [],
+  onBack,
 }: PptGeneratorWorkflowStepperProps) {
+  const { t } = useI18n();
   const activeIndex = STEP_ORDER.indexOf(activeStep);
+  const workflowCopy = React.useMemo(
+    () => ({
+      workflow: t("ppt_generator.workflow.label"),
+      back: t("ppt_generator.workflow.back"),
+      backAriaLabel: t("ppt_generator.workflow.backAriaLabel"),
+      steps: {
+        prepare: t("ppt_generator.workflow.step.prepare"),
+        outline: t("ppt_generator.workflow.step.outline"),
+        templates: t("ppt_generator.workflow.step.templates"),
+        preview: t("ppt_generator.workflow.step.preview"),
+      } satisfies Record<WorkflowStepKey, string>,
+    }),
+    [t]
+  );
 
   return (
     <div
+      data-testid="ppt-generator-workflow-stepper"
       className={cn(
         shellStyles.topRail,
         shellStyles.topRailUnified,
@@ -56,15 +61,26 @@ export default function PptGeneratorWorkflowStepper({
         )}
       >
         <div className={cn(shellStyles.topRailUnifiedLeading, styles.leading)}>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className={styles.backButton}
+              aria-label={workflowCopy.backAriaLabel}
+            >
+              <ChevronLeft className={styles.backIcon} aria-hidden="true" />
+              <span>{workflowCopy.back}</span>
+            </button>
+          )}
           <div className={styles.workflowPill}>
             <i className="fas fa-file-powerpoint" aria-hidden="true" />
-            <span>{WORKFLOW_COPY.workflow}</span>
+            <span>{workflowCopy.workflow}</span>
           </div>
         </div>
 
         <div
-          className={shellStyles.stepperGroup}
-          aria-label={WORKFLOW_COPY.workflow}
+          className={cn(shellStyles.stepperGroup, styles.stepperGroupCustom)}
+          aria-label={workflowCopy.workflow}
         >
           {STEP_ORDER.map((stepKey, index) => {
             const isDone = index < activeIndex;
@@ -82,7 +98,7 @@ export default function PptGeneratorWorkflowStepper({
                   )}
                 </div>
                 <span className={shellStyles.stepperLabel}>
-                  {WORKFLOW_COPY.steps[stepKey]}
+                  {workflowCopy.steps[stepKey]}
                 </span>
               </>
             );
@@ -128,4 +144,3 @@ export default function PptGeneratorWorkflowStepper({
     </div>
   );
 }
-

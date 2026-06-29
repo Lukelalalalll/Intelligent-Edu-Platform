@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "@/ppt_generator/shims/next-navigation";
 import { useSelector } from "react-redux";
 import { ChevronRight, FileText, LayoutTemplate, Sparkles } from "lucide-react";
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import { Button } from "@/components/ui/button";
-import Wrapper from "@/components/Wrapper";
 import { cn } from "@/lib/utils";
 import PptGeneratorWorkflowStepper from "@/ppt_generator/components/PptGeneratorWorkflowStepper";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
@@ -25,9 +25,11 @@ type OutlineStage = "outline" | "templates";
 
 const OutlinePage: React.FC = () => {
   const { t } = useI18n();
+  const router = useRouter();
   const { presentation_id } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
+  const uploadFiles = useSelector((state: RootState) => state.pptGenUpload.files);
 
   const [activeStage, setActiveStage] = useState<OutlineStage>("outline");
   const [selectedTemplate, setSelectedTemplate] = useState<
@@ -57,6 +59,20 @@ const OutlinePage: React.FC = () => {
     return selectedTemplate.name;
   }, [selectedTemplate, t]);
 
+  const handleBack = () => {
+    if (activeStage === "templates") {
+      setActiveStage("outline");
+      return;
+    }
+
+    if (Array.isArray(uploadFiles) && uploadFiles.length > 0) {
+      router.push("/documents-preview");
+      return;
+    }
+
+    router.push("/upload");
+  };
+
   if (!presentation_id) {
     return <EmptyStateView />;
   }
@@ -70,7 +86,7 @@ const OutlinePage: React.FC = () => {
         duration={loadingState.duration}
       />
 
-      <Wrapper className={styles.shell}>
+      <div className={styles.shell}>
         <WelcomeBanner
           title={t("ppt_generator.outline.banner.title")}
           subtitle={t("ppt_generator.outline.banner.subtitle")}
@@ -80,6 +96,8 @@ const OutlinePage: React.FC = () => {
 
         <PptGeneratorWorkflowStepper
           activeStep={activeStage}
+          onBack={handleBack}
+          className={styles.stepper}
           clickableSteps={["outline", "templates"]}
           onStepSelect={(step) => {
             if (step === "outline" || step === "templates") {
@@ -88,7 +106,13 @@ const OutlinePage: React.FC = () => {
           }}
         />
 
-        <div className={styles.stage}>
+        <div
+          className={cn(
+            styles.stage,
+            activeStage === "templates" && styles.stageTemplates
+          )}
+          data-testid="outline-stage-shell"
+        >
           {activeStage === "outline" ? (
             <div className={styles.workspaceGrid}>
               <div className={styles.mainColumn}>
@@ -203,11 +227,13 @@ const OutlinePage: React.FC = () => {
                 styles.surfaceCard,
                 styles.contentCard,
                 styles.fullWidthPanel,
+                styles.templateStageCard,
                 styles.motionCard,
                 styles.motionCardPrimary
               )}
+              data-testid="outline-template-stage"
             >
-              <div className={styles.groupHeader}>
+              <div className={cn(styles.groupHeader, styles.templateStageHeader)}>
                 <div className={styles.controlCopy}>
                   <span className={styles.badge}>
                     <LayoutTemplate className="h-3.5 w-3.5" />
@@ -220,11 +246,27 @@ const OutlinePage: React.FC = () => {
                     {t("ppt_generator.outline.layouts.body")}
                   </p>
                 </div>
+                <div className={styles.templateStageMeta}>
+                  <span className={styles.mutedBadge}>
+                    <LayoutTemplate className="h-3.5 w-3.5" />
+                    {t("ppt_generator.outline.tabs.layouts")}
+                  </span>
+                  <span
+                    className={cn(
+                      selectedTemplate ? styles.badge : styles.mutedBadge,
+                      styles.templateStageSelection
+                    )}
+                  >
+                    {templateLabel}
+                  </span>
+                </div>
               </div>
-              <TemplateSelection
-                selectedTemplate={selectedTemplate}
-                onSelectTemplate={setSelectedTemplate}
-              />
+              <div className={styles.templateStageBody}>
+                <TemplateSelection
+                  selectedTemplate={selectedTemplate}
+                  onSelectTemplate={setSelectedTemplate}
+                />
+              </div>
             </section>
           )}
         </div>
@@ -263,7 +305,7 @@ const OutlinePage: React.FC = () => {
             </div>
           </div>
         ) : null}
-      </Wrapper>
+      </div>
     </div>
   );
 };

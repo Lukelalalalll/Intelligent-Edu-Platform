@@ -274,7 +274,7 @@ export default function CodexConfig({
         return (
             <div className="flex items-center gap-2 py-3 text-gray-400">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-xs">Checking status鈥?/span>
+                <span className="text-xs">Checking status...</span>
             </div>
         );
     }
@@ -284,7 +284,7 @@ export default function CodexConfig({
             <div className="space-y-4">
                 <div className="flex items-center gap-3 py-2">
                     <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-                    <span className="text-sm text-gray-600">Waiting for sign-in鈥?/span>
+                    <span className="text-sm text-gray-600">Waiting for sign-in...</span>
                     <button
                         onClick={handleCancelPolling}
                         className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 ml-auto"
@@ -300,7 +300,7 @@ export default function CodexConfig({
                     <div className="flex gap-2">
                         <input
                             type="text"
-                            placeholder="Paste URL or code鈥?
+                            placeholder="Paste URL or code..."
                             className="flex-1 px-2 py-2 outline-none border border-gray-300 rounded-lg text-xs focus:border-gray-400 transition-colors"
                             value={manualCode}
                             onChange={(e) => setManualCode(e.target.value)}
@@ -398,7 +398,7 @@ export default function CodexConfig({
                             style={{ width: "var(--radix-popover-trigger-width)" }}
                         >
                             <Command>
-                                <CommandInput placeholder="Search models鈥? />
+                                <CommandInput placeholder="Search models..." />
                                 <CommandList>
                                     <CommandEmpty>No model found.</CommandEmpty>
                                     <CommandGroup>

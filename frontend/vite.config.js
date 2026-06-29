@@ -22,11 +22,11 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
-        'next/navigation': path.resolve(__dirname, 'src/presenton/shims/next-navigation.ts'),
-        'next/link': path.resolve(__dirname, 'src/presenton/shims/next-link.tsx'),
-        'next/image': path.resolve(__dirname, 'src/presenton/shims/next-image.tsx'),
-        'next/headers': path.resolve(__dirname, 'src/presenton/shims/next-headers.ts'),
-        'next': path.resolve(__dirname, 'src/presenton/shims/next.ts'),
+        'next/navigation': path.resolve(__dirname, 'src/ppt_generator/shims/next-navigation.ts'),
+        'next/link': path.resolve(__dirname, 'src/ppt_generator/shims/next-link.tsx'),
+        'next/image': path.resolve(__dirname, 'src/ppt_generator/shims/next-image.tsx'),
+        'next/headers': path.resolve(__dirname, 'src/ppt_generator/shims/next-headers.ts'),
+        'next': path.resolve(__dirname, 'src/ppt_generator/shims/next.ts'),
       },
     },
     build: {

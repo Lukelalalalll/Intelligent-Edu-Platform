@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React from "react";
+import { useRouter } from "@/ppt_generator/shims/next-navigation";
 
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import styles from "./UploadPage.module.css";
 
 const UploadPage = () => {
   const isEntranceActive = usePageEntrance();
+  const router = useRouter();
   const { t } = useI18n();
   const { config, files, llmConfig, loadingState, viewState, actions } =
     useUploadPageController();
@@ -34,21 +36,39 @@ const UploadPage = () => {
       />
       <div
         className={cn(
-          styles.container,
-          entranceStyles.pageEntrance,
-          isEntranceActive && entranceStyles.pageEntranceActive
+          styles.container
         )}
       >
         <WelcomeBanner
-          className={styles.banner}
+          className={cn(
+            styles.banner,
+            entranceStyles.pageEntrance,
+            isEntranceActive && entranceStyles.pageEntranceActive,
+            styles.bannerEntrance
+          )}
           title={t("ppt_generator.upload.banner.title")}
           subtitle={t("ppt_generator.upload.banner.subtitle")}
           variant="workspace"
         />
 
-        <PptGeneratorWorkflowStepper activeStep="prepare" />
+        <PptGeneratorWorkflowStepper
+          activeStep="prepare"
+          onBack={() => router.push("/dashboard")}
+          className={cn(
+            entranceStyles.pageEntrance,
+            isEntranceActive && entranceStyles.pageEntranceActive,
+            styles.stepperEntrance
+          )}
+        />
 
-        <div className={styles.workspaceGrid}>
+        <div
+          className={cn(
+            styles.workspaceGrid,
+            entranceStyles.pageEntrance,
+            isEntranceActive && entranceStyles.pageEntranceActive,
+            styles.workspaceEntrance
+          )}
+        >
           <UploadInputSection
             files={files}
             prompt={config.prompt}

@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from bson.objectid import ObjectId
 
 from backend.config import Config
+from backend.repositories._helpers import coerce_object_id
 from backend.services.grading_service import load_courses, normalize_courses_data, save_courses
 
 admin_router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -42,11 +43,14 @@ def _find_assignment(course: dict, assignment_id: str) -> dict | None:
 # ── Generic helpers ──
 
 def _is_object_id(value: str) -> bool:
-    try:
-        ObjectId(value)
-        return True
-    except Exception:
-        return False
+    return coerce_object_id(value) is not None
+
+
+def _parse_document_object_id(value: str) -> ObjectId:
+    oid = coerce_object_id(value)
+    if oid is None:
+        raise HTTPException(status_code=400, detail="Invalid document id")
+    return oid
 
 
 def _serialize_mongo_value(value):

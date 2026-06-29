@@ -102,15 +102,6 @@ class _FakeFindOneCollection:
         return self.document
 
 
-class _RejectingUsersCollection:
-    def __init__(self):
-        self.count_documents_calls: list[dict] = []
-
-    async def count_documents(self, query: dict) -> int:
-        self.count_documents_calls.append(query)
-        raise AssertionError("count_documents should not be reached")
-
-
 class _FakeEnrollmentsCollection:
     def __init__(self, membership_doc: dict | None, docs: list[dict]):
         self.membership_doc = membership_doc
@@ -381,8 +372,8 @@ async def test_create_or_get_direct_room_rejects_self_dm():
 
 @pytest.mark.asyncio
 async def test_create_group_room_rejects_invalid_member_id_before_user_count(monkeypatch):
-    fake_users = _RejectingUsersCollection()
-    monkeypatch.setattr(room_service.db, "users", fake_users, raising=False)
+    find_many_by_ids = AsyncMock(side_effect=AssertionError("find_many_by_ids should not be reached"))
+    monkeypatch.setattr(room_service.user_repo, "find_many_by_ids", find_many_by_ids)
 
     with pytest.raises(HTTPException) as excinfo:
         await room_service.create_group_room(
@@ -394,7 +385,7 @@ async def test_create_group_room_rejects_invalid_member_id_before_user_count(mon
 
     assert excinfo.value.status_code == 400
     assert excinfo.value.detail == "Invalid member ID: not-an-object-id"
-    assert fake_users.count_documents_calls == []
+    assert find_many_by_ids.await_count == 0
 
 
 @pytest.mark.asyncio

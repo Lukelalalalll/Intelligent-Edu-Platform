@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/ppt_generator/shims/next-navigation";
 import { useDispatch, useSelector } from "react-redux";
 import {
   AlertCircle,
@@ -435,7 +435,10 @@ const DocumentsPreviewPage: React.FC = () => {
           className={styles.banner}
         />
 
-        <PptGeneratorWorkflowStepper activeStep="prepare" />
+        <PptGeneratorWorkflowStepper
+          activeStep="prepare"
+          onBack={() => router.push("/upload")}
+        />
 
         {!isSidebarOpen && fileItems.length > 0 ? (
           <div className={styles.revealBar}>

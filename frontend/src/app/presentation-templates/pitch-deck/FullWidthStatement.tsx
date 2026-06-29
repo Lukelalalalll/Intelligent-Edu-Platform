@@ -54,7 +54,8 @@ const FullWidthStatement = ({ data }: { data: Partial<SchemaType> }) => {
               color: "var(--background-text,#dddac7)",
             }}
           >
-            {slideData.statement}鈥?          </p>
+            {slideData.statement}
+          </p>
         </div>
       </div>
     </>

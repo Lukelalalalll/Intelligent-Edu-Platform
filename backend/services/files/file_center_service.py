@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from backend.config import Config
 from backend.core.database import db
+from backend.repositories import ai_session_repo, file_asset_repo, user_repo
 from backend.repositories._helpers import coerce_object_id, require_object_id
 from backend.services.files.file_asset_service import ensure_ai_session_image_assets
 
@@ -76,16 +77,13 @@ async def list_chat_rooms(*, skip: int, limit: int) -> dict[str, Any]:
 
 
 async def list_chat_room_assets(*, room_id: str, status: str) -> dict[str, Any]:
-    query: dict[str, Any] = {"room_id": room_id, "scope": "chat_group"}
-    query["status"] = status if status else {"$ne": "hard_deleted"}
-
     room = None
     room_oid = coerce_object_id(room_id)
     if room_oid is not None:
         room = await db.chat_rooms.find_one({"_id": room_oid}, {"name": 1, "courseId": 1, "type": 1})
 
     assets = []
-    async for doc in db.file_assets.find(query).sort("created_at", -1):
+    for doc in await file_asset_repo.list_room_assets(room_id=room_id, status=status):
         item = _serialize_mongo_value(doc)
         storage_path = str(item.get("storage_path", "") or "").lstrip("/")
         item["exists_on_disk"] = os.path.exists(os.path.join(Config.BASE_DIR, storage_path))
@@ -99,37 +97,21 @@ async def list_chat_room_assets(*, room_id: str, status: str) -> dict[str, Any]:
 
 
 async def list_ai_users(*, role: str, skip: int, limit: int) -> dict[str, Any]:
-    users = await (
-        db.users.find({"role": role}, {"username": 1, "email": 1, "role": 1})
-        .sort("username", 1)
-        .skip(skip)
-        .limit(limit)
-        .to_list(length=limit)
+    users = await user_repo.list_users(
+        filt={"role": role},
+        projection={"username": 1, "email": 1, "role": 1},
+        sort=[("username", 1)],
+        skip=skip,
+        limit=limit,
     )
-    total = await db.users.count_documents({"role": role})
+    total = await user_repo.count_users({"role": role})
 
     user_ids = [str(user.get("_id")) for user in users]
     for user_id in user_ids:
         await ensure_ai_session_image_assets(user_id)
 
-    object_ids = [user_oid for user_id in user_ids if (user_oid := coerce_object_id(user_id)) is not None]
-    session_counts: dict[str, int] = {}
-    if object_ids:
-        pipeline = [
-            {"$match": {"userId": {"$in": object_ids}}},
-            {"$group": {"_id": "$userId", "count": {"$sum": 1}}},
-        ]
-        async for doc in db.ai_chat_sessions.aggregate(pipeline):
-            session_counts[str(doc["_id"])] = int(doc.get("count", 0))
-
-    asset_counts: dict[str, int] = {}
-    if user_ids:
-        pipeline = [
-            {"$match": {"scope": "ai_personal", "user_id": {"$in": user_ids}, "status": {"$ne": "hard_deleted"}}},
-            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
-        ]
-        async for doc in db.file_assets.aggregate(pipeline):
-            asset_counts[str(doc["_id"])] = int(doc.get("count", 0))
+    session_counts = await ai_session_repo.count_sessions_by_user_ids(user_ids)
+    asset_counts = await file_asset_repo.count_ai_personal_assets_by_user_ids(user_ids)
 
     items = [
         {
@@ -153,11 +135,8 @@ async def list_ai_user_assets(*, user_id: str, group_by: str, status: str) -> di
 
     await ensure_ai_session_image_assets(user_id)
 
-    query: dict[str, Any] = {"scope": "ai_personal", "user_id": user_id}
-    query["status"] = status if status else {"$ne": "hard_deleted"}
-
     grouped: dict[str, dict[str, Any]] = {}
-    async for doc in db.file_assets.find(query).sort("created_at", -1):
+    for doc in await file_asset_repo.list_ai_personal_assets_for_user(user_id=user_id, status=status):
         item = _serialize_mongo_value(doc)
         bucket = _date_bucket(doc.get("created_at") or item.get("conversation_date"), group_by)
         group = grouped.setdefault(bucket, {"date": bucket, "count": 0, "total_size": 0, "items": []})

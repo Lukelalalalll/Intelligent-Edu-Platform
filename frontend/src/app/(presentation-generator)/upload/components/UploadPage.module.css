@@ -18,6 +18,18 @@
   margin-bottom: 0.45rem;
 }
 
+.bannerEntrance {
+  animation-delay: 0ms;
+}
+
+.stepperEntrance {
+  animation-delay: 110ms;
+}
+
+.workspaceEntrance {
+  animation-delay: 220ms;
+}
+
 .workspaceGrid {
   display: grid;
   gap: 1rem;
@@ -63,11 +75,11 @@
 }
 
 .promptCard {
-  animation-delay: 0.18s;
+  animation-delay: 0.34s;
 }
 
 .setupCard {
-  animation-delay: 0.24s;
+  animation-delay: 0.42s;
 }
 
 .sectionHeader {

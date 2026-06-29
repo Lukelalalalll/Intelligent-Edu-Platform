@@ -88,7 +88,8 @@ function renderCell(value: string, isFirstColumn: boolean, columnCount: number, 
         className="block w-full text-center text-[26px] leading-none"
         style={{ color: "var(--graph-2,#37f08e)" }}
       >
-        鉁?      </span>
+        {"\u2713"}
+      </span>
     );
   }
 

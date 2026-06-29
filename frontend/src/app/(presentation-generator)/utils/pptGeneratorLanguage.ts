@@ -4,6 +4,7 @@ import { LanguageType } from "../upload/type";
 
 const LEGACY_CHINESE_SIMPLIFIED = "Chinese (Simplified - 娑擃厽鏋? 濮瑰顕?";
 const LEGACY_CHINESE_TRADITIONAL = "Chinese (Traditional - 娑擃厽鏋? 濠曘垼鐛?";
+const LEGACY_CANTONESE_TRADITIONAL = "Cantonese (Traditional - 绮佃獮绻侀珨)";
 
 export const GENERATION_LANGUAGE_FOLLOW_LOCALE: Record<Locale, LanguageType> = {
   en: LanguageType.English,
@@ -35,6 +36,7 @@ export function normalizeGenerationLanguage(
       return LanguageType.ChineseSimplified;
     case "zh-HK":
     case "zh-MO":
+    case LEGACY_CANTONESE_TRADITIONAL:
     case LanguageType.CantoneseTraditional:
       return LanguageType.CantoneseTraditional;
     case "zh-TW":

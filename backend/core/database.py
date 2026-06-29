@@ -469,6 +469,7 @@ async def ensure_indexes() -> None:
         await db.file_assets.create_indexes([
             IndexModel([("file_id", ASCENDING)], unique=True),
             IndexModel([("file_type", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("file_type", ASCENDING), ("public_url", ASCENDING)]),
             IndexModel([("owner_type", ASCENDING), ("owner_id", ASCENDING)]),
             IndexModel([("course_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
