@@ -5,9 +5,9 @@ import asyncio
 from fastapi import HTTPException
 
 
-async def process_ppt_impl(req, request, *, task_tracker_cls, step_status, checkpoint_manager_cls, create_ppt_impl, logger):
+async def process_ppt_impl(req, request, user: dict, *, task_tracker_cls, step_status, checkpoint_manager_cls, create_ppt_impl, logger):
     request_id = request.headers.get("X-Request-ID") or None
-    tracker = task_tracker_cls(request_id=request_id, task_type="ppt_generate")
+    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("id", ""), task_type="ppt_generate")
     try:
         if not req.ppt_schema:
             raise ValueError("ppt_schema is required")
@@ -23,6 +23,7 @@ async def process_ppt_impl(req, request, *, task_tracker_cls, step_status, check
             step="ppt_generate",
             output={"filename": filename, "download_url": f"/api/sub1/download_ppt/{filename}"},
             input_data=req.ppt_schema if isinstance(req.ppt_schema, dict) else None,
+            user_id=user.get("id", ""),
         )
         await tracker.save()
         return {

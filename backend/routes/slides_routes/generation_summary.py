@@ -29,7 +29,7 @@ THEMES_PAYLOAD = {
 
 async def summarize_highlights_impl(req, user: dict, request, *, task_tracker_cls, step_status, save_slides_history, logger):
     request_id = request.headers.get("X-Request-ID") if request else None
-    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("username", ""), task_type="summarize")
+    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("id", ""), task_type="summarize")
 
     try:
         from backend.services.slides.generation.section_summarizer import SectionSummarizer
@@ -81,7 +81,7 @@ async def summarize_highlights_impl(req, user: dict, request, *, task_tracker_cl
             step="summarize",
             output=results,
             input_data=input_for_hash,
-            user_id=user.get("username", ""),
+            user_id=user.get("id", ""),
         )
         await tracker.save()
 
@@ -122,7 +122,7 @@ async def summarize_highlights_impl(req, user: dict, request, *, task_tracker_cl
 
 async def summarize_chapters_impl(req, user: dict, request, *, task_tracker_cls, step_status, logger):
     request_id = request.headers.get("X-Request-ID") if request else None
-    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("username", ""), task_type="summarize_chapters")
+    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("id", ""), task_type="summarize_chapters")
     try:
         from backend.services.slides.generation.section_summarizer import SectionSummarizer
 
@@ -140,7 +140,7 @@ async def summarize_chapters_impl(req, user: dict, request, *, task_tracker_cls,
 
 async def generate_talking_script_impl(req, user: dict, request, *, task_tracker_cls, step_status, resolve_provider, generate_script, logger):
     request_id = request.headers.get("X-Request-ID") if request else None
-    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("username", ""), task_type="script_generate")
+    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("id", ""), task_type="script_generate")
     try:
         resolved_provider = resolve_provider(req.provider, feature="slides.generate_script", user=user)
         with tracker.step("script_generate", slides_count=len(req.slides_results), style=req.script_style):

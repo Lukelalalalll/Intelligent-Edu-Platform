@@ -30,7 +30,7 @@ async def generate_render_impl(
     from backend.services.slides.html_renderer import SlidesHtmlRenderer, ensure_browser_renderer
 
     request_id = request.headers.get("X-Request-ID") if request else None
-    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("username", ""), task_type="generate_render")
+    tracker = task_tracker_cls(request_id=request_id, user_id=user.get("id", ""), task_type="generate_render")
     try:
         md_content = req.md_content.strip()
         if not md_content:

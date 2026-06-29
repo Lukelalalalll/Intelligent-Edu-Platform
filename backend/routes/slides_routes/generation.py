@@ -66,12 +66,17 @@ async def _save_slides_history(
 
 @router.post("/process-ppt")
 @router.post("/generate_ppt")
-async def process_ppt(req: PptProcessSchema, request: Request):
+async def process_ppt(
+    req: PptProcessSchema,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
     from backend.services.slides.infra.checkpoint_manager import CheckpointManager
 
     return await process_ppt_impl(
         req,
         request,
+        user,
         task_tracker_cls=TaskTracker,
         step_status=StepStatus,
         checkpoint_manager_cls=CheckpointManager,

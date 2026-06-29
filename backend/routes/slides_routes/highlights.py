@@ -26,7 +26,7 @@ def save_highlights(req: SaveHighlightsSchema, user: dict = Depends(get_current_
 
 @router.post("/classify-highlights")
 async def classify_highlights(req: ClassifyHighlightsSchema, user: dict = Depends(get_current_user)):
-    tracker = TaskTracker(user_id=user.get("username", ""), task_type="classify_highlights")
+    tracker = TaskTracker(user_id=user.get("id", ""), task_type="classify_highlights")
     try:
         flat_highlights = []
         for section in req.highlights:

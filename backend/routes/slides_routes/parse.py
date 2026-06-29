@@ -35,7 +35,7 @@ async def parse_md(
         raise HTTPException(status_code=400, detail="No selected file")
 	
     request_id = request.headers.get("X-Request-ID") if request else None
-    tracker = TaskTracker(request_id=request_id, user_id=user.get("username", ""), task_type="parse")
+    tracker = TaskTracker(request_id=request_id, user_id=user.get("id", ""), task_type="parse")
     try:
         display_filename = os.path.basename(file.filename).strip()
         if not display_filename:

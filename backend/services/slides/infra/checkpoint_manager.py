@@ -61,6 +61,7 @@ class CheckpointManager:
         doc = {
             "task_id": task_id,
             "user_id": user_id,
+            "created_by": user_id,
             "step": step,
             "status": "success",
             "input_hash": input_hash,
@@ -79,16 +80,19 @@ class CheckpointManager:
         return input_hash
 
     @staticmethod
-    async def load(*, task_id: str, step: str) -> dict[str, Any] | None:
+    async def load(*, task_id: str, step: str, user_id: str | None = None) -> dict[str, Any] | None:
         """Load a checkpoint by task_id and step. Returns None if not found or expired."""
         from backend.core.database import db
 
+        query: dict[str, Any] = {
+            "task_id": task_id,
+            "step": step,
+            "expires_at": {"$gt": datetime.now(timezone.utc)},
+        }
+        if user_id:
+            query["user_id"] = user_id
         doc = await db[COLLECTION].find_one(
-            {
-                "task_id": task_id,
-                "step": step,
-                "expires_at": {"$gt": datetime.now(timezone.utc)},
-            },
+            query,
             {"_id": 0},
         )
         if doc:
@@ -115,37 +119,46 @@ class CheckpointManager:
         return doc
 
     @staticmethod
-    async def get_task_checkpoints(task_id: str) -> list[dict[str, Any]]:
+    async def get_task_checkpoints(task_id: str, user_id: str | None = None) -> list[dict[str, Any]]:
         """List all checkpoints for a given task, ordered by creation time."""
         from backend.core.database import db
 
+        query: dict[str, Any] = {"task_id": task_id}
+        if user_id:
+            query["user_id"] = user_id
         cursor = db[COLLECTION].find(
-            {"task_id": task_id},
+            query,
             {"_id": 0, "output": 0},  # Exclude large output for listing
         ).sort("created_at", 1)
 
         return await cursor.to_list(50)
 
     @staticmethod
-    async def get_resumable_step(task_id: str) -> str | None:
+    async def get_resumable_step(task_id: str, user_id: str | None = None) -> str | None:
         """
         Determine the next step to resume from.
         Returns the name of the last successful step, or None if no checkpoints exist.
         """
         from backend.core.database import db
 
+        query: dict[str, Any] = {"task_id": task_id, "status": "success"}
+        if user_id:
+            query["user_id"] = user_id
         doc = await db[COLLECTION].find_one(
-            {"task_id": task_id, "status": "success"},
+            query,
             {"_id": 0, "step": 1},
             sort=[("created_at", -1)],
         )
         return doc["step"] if doc else None
 
     @staticmethod
-    async def delete_task(task_id: str) -> int:
+    async def delete_task(task_id: str, user_id: str | None = None) -> int:
         """Delete all checkpoints for a task. Returns count of deleted docs."""
         from backend.core.database import db
-        result = await db[COLLECTION].delete_many({"task_id": task_id})
+        query: dict[str, Any] = {"task_id": task_id}
+        if user_id:
+            query["user_id"] = user_id
+        result = await db[COLLECTION].delete_many(query)
         return result.deleted_count
 
     @staticmethod
