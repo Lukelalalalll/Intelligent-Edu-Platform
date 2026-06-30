@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -12,10 +12,6 @@ import { PAGE_ENTRANCE_SETTLE_MS } from "@/shared/page-entrance/usePageEntrance"
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 
 import {
-    BUILT_IN_PREVIEW_BATCH_STEP,
-    BUILT_IN_PREVIEW_CADENCE_MS,
-    CUSTOM_PREVIEW_BATCH_STEP,
-    CUSTOM_PREVIEW_CADENCE_MS,
     INITIAL_BUILT_IN_PREVIEW_BATCH,
     INITIAL_CUSTOM_PREVIEW_BATCH,
     buildBuiltInGroupItems,
@@ -38,15 +34,17 @@ function useBuiltInTemplateCatalog(enabled: boolean) {
 
     useEffect(() => {
         if (!enabled) {
-            setLoading(false);
-            return;
+            return scheduleAfterPaint(() => {
+                setLoading(false);
+            });
         }
 
         const cachedCatalog = getCachedBuiltInTemplateCatalog();
         if (cachedCatalog) {
-            setCatalog(cachedCatalog);
-            setLoading(false);
-            return;
+            return scheduleAfterPaint(() => {
+                setCatalog(cachedCatalog);
+                setLoading(false);
+            });
         }
 
         let cancelled = false;
@@ -75,56 +73,6 @@ function useBuiltInTemplateCatalog(enabled: boolean) {
     }, [enabled]);
 
     return { catalog, loading };
-}
-
-function useProgressivePreviewBudget(
-    totalCount: number,
-    enabled: boolean,
-    initialCount: number,
-    step: number,
-    cadenceMs: number,
-) {
-    const [budget, setBudget] = useState(0);
-
-    useEffect(() => {
-        if (!enabled || totalCount === 0) {
-            return scheduleAfterPaint(() => {
-                setBudget(0);
-            });
-        }
-
-        let cancelled = false;
-        let current = 0;
-        let cleanup: () => void = () => {};
-
-        const advance = () => {
-            if (cancelled) {
-                return;
-            }
-
-            current = current === 0
-                ? Math.min(initialCount, totalCount)
-                : Math.min(current + step, totalCount);
-
-            setBudget(current);
-
-            if (current < totalCount) {
-                cleanup = scheduleAfterPaint(advance, cadenceMs);
-            }
-        };
-
-        cleanup = scheduleAfterPaint(() => {
-            setBudget(0);
-            advance();
-        });
-
-        return () => {
-            cancelled = true;
-            cleanup();
-        };
-    }, [cadenceMs, enabled, initialCount, step, totalCount]);
-
-    return budget;
 }
 
 export function useTemplatePanelController() {
@@ -178,35 +126,19 @@ export function useTemplatePanelController() {
         });
     }, []);
 
-    const builtInPreviewBudget = useProgressivePreviewBudget(
-        builtInCatalog?.count ?? 0,
-        tab === "default" && builtInCatalog !== null && !builtInLoading,
-        INITIAL_BUILT_IN_PREVIEW_BATCH,
-        BUILT_IN_PREVIEW_BATCH_STEP,
-        BUILT_IN_PREVIEW_CADENCE_MS,
-    );
-
-    const customPreviewBudget = useProgressivePreviewBudget(
-        customTemplates.length,
-        tab === "custom" && !customLoading,
-        INITIAL_CUSTOM_PREVIEW_BATCH,
-        CUSTOM_PREVIEW_BATCH_STEP,
-        CUSTOM_PREVIEW_CADENCE_MS,
-    );
-
     const builtInCount = builtInCatalog?.count ?? 0;
     const customCount = customTemplates.length;
     const hasBuiltInCatalog = builtInCatalog !== null;
     const isBuiltInCatalogLoading = builtInLoading || !hasBuiltInCatalog;
 
     const builtInGroups = useMemo(
-        () => buildBuiltInGroupItems(builtInCatalog, builtInPreviewBudget),
-        [builtInCatalog, builtInPreviewBudget],
+        () => buildBuiltInGroupItems(builtInCatalog, INITIAL_BUILT_IN_PREVIEW_BATCH),
+        [builtInCatalog],
     );
 
     const customTemplateItems = useMemo(
-        () => buildPreviewItems(customTemplates, customPreviewBudget),
-        [customPreviewBudget, customTemplates],
+        () => buildPreviewItems(customTemplates, INITIAL_CUSTOM_PREVIEW_BATCH),
+        [customTemplates],
     );
 
     const activeTabDescription = useMemo(() => getActiveTabDescription(tab, t), [tab, t]);
@@ -249,4 +181,3 @@ export function useTemplatePanelController() {
         },
     };
 }
-

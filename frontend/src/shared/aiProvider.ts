@@ -1,4 +1,4 @@
-export type AIProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai';
+export type AIProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'bigmodel';
 
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider';
 
@@ -9,6 +9,7 @@ export function getStoredAIProvider(): AIProvider {
     if (raw === 'coze') return 'coze';
     if (raw === 'deepseek') return 'deepseek';
     if (raw === 'openai') return 'openai';
+    if (raw === 'bigmodel') return 'bigmodel';
     return 'local_ollama';
 }
 

@@ -21,7 +21,9 @@ from backend.schemas.auth import (  # noqa: F401
     SessionRevokeSchema,
     StepUpVerifySchema,
     TeacherPreferencesSchema,
+    BigModelConfigSchema,
     DeepSeekConfigSchema,
+    MultimodalOpenAIConfigSchema,
     OpenAIConfigSchema,
 )
 

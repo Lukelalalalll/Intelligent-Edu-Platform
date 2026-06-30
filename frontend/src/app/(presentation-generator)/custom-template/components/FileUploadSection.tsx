@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
   ChevronRight,
   FileText,
@@ -7,6 +7,8 @@ import {
   Upload,
   X,
 } from "lucide-react";
+
+import { useI18n } from "@/shared/i18n";
 
 import styles from "../customTemplateWorkbench.module.css";
 import type { ProcessedSlide } from "../types";
@@ -23,6 +25,9 @@ interface FileUploadSectionProps {
   handleDragOver: (event: React.DragEvent<HTMLElement>) => void;
   handleDragLeave: (event: React.DragEvent<HTMLElement>) => void;
   handleDrop: (event: React.DragEvent<HTMLElement>) => void;
+  multimodalConfigured: boolean;
+  multimodalModel: string;
+  multimodalProviderLabel: string;
 }
 
 export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
@@ -37,22 +42,23 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
   handleDragOver,
   handleDragLeave,
   handleDrop,
+  multimodalConfigured,
+  multimodalModel,
+  multimodalProviderLabel,
 }) => {
+  const { t } = useI18n();
   const isProcessing = isProcessingPptx || slides.some((slide) => slide.processing);
   const selectedFileSize = selectedFile
     ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
-    : "No file selected";
+    : t("ppt_generator.customTemplate.fileUpload.noFile");
 
   return (
     <div className={styles.grid}>
       <div className={styles.stack}>
         <section className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2>Upload Source Deck</h2>
-            <p>
-              Drop a `.pptx` file to extract slides, audit font availability, and
-              move into PPT Generator&apos;s template reconstruction workflow.
-            </p>
+            <h2>{t("ppt_generator.customTemplate.fileUpload.title")}</h2>
+            <p>{t("ppt_generator.customTemplate.fileUpload.body")}</p>
           </div>
 
           <label
@@ -74,10 +80,11 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 <div className={styles.uploadIconWrap}>
                   <Upload className="h-6 w-6" />
                 </div>
-                <div className={styles.uploadHeadline}>Click to upload or drag and drop</div>
+                <div className={styles.uploadHeadline}>
+                  {t("ppt_generator.customTemplate.fileUpload.prompt")}
+                </div>
                 <p className={styles.supportText}>
-                  Import the original presentation file so PPT Generator can map slide
-                  images, font dependencies, and reusable layout code.
+                  {t("ppt_generator.customTemplate.fileUpload.support")}
                 </p>
               </>
             ) : (
@@ -87,7 +94,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 </div>
                 <div className={styles.uploadHeadline}>{selectedFile.name}</div>
                 <p className={styles.supportText}>
-                  Presentation deck ready for font validation.
+                  {t("ppt_generator.customTemplate.fileUpload.ready")}
                 </p>
               </>
             )}
@@ -100,7 +107,11 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                   <FileText className="h-4 w-4" />
                   {selectedFile.name}
                 </span>
-                <p className={styles.metaText}>Deck size: {selectedFileSize}</p>
+                <p className={styles.metaText}>
+                  {t("ppt_generator.customTemplate.fileUpload.deckSize", {
+                    size: selectedFileSize,
+                  })}
+                </p>
               </div>
               <div className={styles.toolbarActions}>
                 <button
@@ -110,7 +121,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                   disabled={isProcessing}
                 >
                   <X className="h-4 w-4" />
-                  Remove file
+                  {t("ppt_generator.customTemplate.fileUpload.remove")}
                 </button>
                 <button
                   type="button"
@@ -123,7 +134,9 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                   ) : (
                     <ChevronRight className="h-4 w-4" />
                   )}
-                  {isProcessingPptx ? "Checking Fonts..." : "Check Fonts"}
+                  {isProcessingPptx
+                    ? t("ppt_generator.customTemplate.fileUpload.checking")
+                    : t("ppt_generator.customTemplate.fileUpload.check")}
                 </button>
               </div>
             </div>
@@ -132,24 +145,34 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
 
         <section className={styles.card}>
           <div className={styles.cardHeader}>
-            <h3>File Rules & Model Guidance</h3>
-            <p>
-              Keep the upload predictable before extraction begins.
-            </p>
+            <h3>{t("ppt_generator.customTemplate.fileUpload.rules.title")}</h3>
+            <p>{t("ppt_generator.customTemplate.fileUpload.rules.body")}</p>
           </div>
 
           <ul className={styles.ruleList}>
             <li className={styles.ruleItem}>
-              <span className={styles.ruleLabel}>Accepted input</span>
-              <span className={styles.metaValue}>PPTX only</span>
+              <span className={styles.ruleLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.accepted")}
+              </span>
+              <span className={styles.metaValue}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.acceptedValue")}
+              </span>
             </li>
             <li className={styles.ruleItem}>
-              <span className={styles.ruleLabel}>Max file size</span>
-              <span className={styles.metaValue}>100 MB</span>
+              <span className={styles.ruleLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.maxSize")}
+              </span>
+              <span className={styles.metaValue}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.maxSizeValue")}
+              </span>
             </li>
             <li className={styles.ruleItem}>
-              <span className={styles.ruleLabel}>Typical processing time</span>
-              <span className={styles.metaValue}>About 5 minutes</span>
+              <span className={styles.ruleLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.time")}
+              </span>
+              <span className={styles.metaValue}>
+                {t("ppt_generator.customTemplate.fileUpload.rules.timeValue")}
+              </span>
             </li>
           </ul>
 
@@ -157,8 +180,9 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             <div className="flex items-start gap-2">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Each slide is analyzed as a screenshot plus HTML reference. Use a
-                vision-capable text model in Settings for faithful layout recovery.
+                {multimodalConfigured
+                  ? `${multimodalProviderLabel || "OpenAI"} (${multimodalModel || "model unset"}) | ${t("ppt_generator.customTemplate.fileUpload.info")}`
+                  : t("ppt_generator.customTemplate.fileUpload.info")}
               </span>
             </div>
           </div>
@@ -167,49 +191,67 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
 
       <aside className={styles.summaryCard}>
         <div className={styles.summaryHeader}>
-          <h3>Processing Summary</h3>
-          <p>
-            The right rail stays focused on readiness, effort, and the next action.
-          </p>
+          <h3>{t("ppt_generator.customTemplate.fileUpload.summary.title")}</h3>
+          <p>{t("ppt_generator.customTemplate.fileUpload.summary.body")}</p>
         </div>
 
         <div className={styles.summaryGrid}>
           <strong>
-            Current file
-            <span>{selectedFile?.name || "Waiting for upload"}</span>
-          </strong>
-          <strong>
-            Deck size
-            <span>{selectedFileSize}</span>
-          </strong>
-          <strong>
-            Stage progress
+            {t("ppt_generator.customTemplate.fileUpload.summary.currentFile")}
             <span>
-              {slides.length > 0 ? `${completedSlides}/${slides.length} slides` : "Not started"}
+              {selectedFile?.name || t("ppt_generator.customTemplate.fileUpload.summary.waiting")}
             </span>
           </strong>
           <strong>
-            Next step
-            <span>{selectedFile ? "Check fonts" : "Upload a PPTX"}</span>
+            {t("ppt_generator.customTemplate.fileUpload.summary.deckSize")}
+            <span>{selectedFileSize}</span>
+          </strong>
+          <strong>
+            {t("ppt_generator.customTemplate.fileUpload.summary.progress")}
+            <span>
+              {slides.length > 0
+                ? `${completedSlides}/${slides.length}`
+                : t("ppt_generator.customTemplate.fileUpload.summary.notStarted")}
+            </span>
+          </strong>
+          <strong>
+            {t("ppt_generator.customTemplate.fileUpload.summary.next")}
+            <span>
+              {selectedFile
+                ? t("ppt_generator.customTemplate.fileUpload.summary.nextCheck")
+                : t("ppt_generator.customTemplate.fileUpload.summary.nextUpload")}
+            </span>
           </strong>
         </div>
 
         <div className={styles.statusCard}>
           <div className={styles.statusHeader}>
-            <h3>What happens next</h3>
+            <h3>{t("ppt_generator.customTemplate.fileUpload.next.title")}</h3>
           </div>
           <ul className={styles.statusList}>
             <li className={styles.statusItem}>
-              <span className={styles.statusLabel}>1. Font scan</span>
-              <span className={styles.statusValue}>Audit missing typefaces</span>
+              <span className={styles.statusLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step1.label")}
+              </span>
+              <span className={styles.statusValue}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step1.value")}
+              </span>
             </li>
             <li className={styles.statusItem}>
-              <span className={styles.statusLabel}>2. Slide preview</span>
-              <span className={styles.statusValue}>Verify extracted images</span>
+              <span className={styles.statusLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step2.label")}
+              </span>
+              <span className={styles.statusValue}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step2.value")}
+              </span>
             </li>
             <li className={styles.statusItem}>
-              <span className={styles.statusLabel}>3. Template generation</span>
-              <span className={styles.statusValue}>Convert slides to editable layouts</span>
+              <span className={styles.statusLabel}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step3.label")}
+              </span>
+              <span className={styles.statusValue}>
+                {t("ppt_generator.customTemplate.fileUpload.next.step3.value")}
+              </span>
             </li>
           </ul>
         </div>
@@ -226,11 +268,12 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             ) : (
               <ChevronRight className="h-4 w-4" />
             )}
-            {isProcessingPptx ? "Checking Fonts..." : "Check Fonts"}
+            {isProcessingPptx
+              ? t("ppt_generator.customTemplate.fileUpload.checking")
+              : t("ppt_generator.customTemplate.fileUpload.check")}
           </button>
         </div>
       </aside>
     </div>
   );
 };
-

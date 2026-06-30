@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { aiConfigApi } from '@/features/ai-config/api/aiConfigApi';
+
 import {
     type AIProviderHealth,
     type AIProvider,
@@ -14,6 +16,10 @@ import {
     ENABLE_THINKING_STORAGE_KEY,
 } from './utils/sessionHelpers';
 import { usePersistAiPreferences, useProviderHealthCheck } from './utils/sessionLifecycle';
+import {
+    buildConfiguredChatModelOptions,
+    type ChatModelOption,
+} from '../../utils/chatModelOptions';
 
 const VALID_SEARCH_ENGINES: AISearchEngine[] = ['auto', 'google', 'bing', 'duckduckgo', 'wikipedia', 'arxiv', 'google_scholar'];
 
@@ -22,8 +28,12 @@ export function useAIChatPreferences() {
         const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
         if (stored === 'coze') return 'coze';
         if (stored === 'deepseek') return 'deepseek';
+        if (stored === 'openai') return 'openai';
+        if (stored === 'bigmodel') return 'bigmodel';
         return 'local_ollama';
     });
+    const [configuredChatModels, setConfiguredChatModels] = useState<ChatModelOption[]>([]);
+    const [chatModelsLoading, setChatModelsLoading] = useState(true);
     const [tutorMode, setTutorMode] = useState<AITutorMode>(() => {
         const stored = localStorage.getItem(TUTOR_MODE_STORAGE_KEY);
         if (stored === 'tutor' || stored === 'hint_only') return stored;
@@ -63,12 +73,53 @@ export function useAIChatPreferences() {
         enableThinkingRef.current = enableThinking;
     }, [enableThinking]);
 
+    useEffect(() => {
+        let cancelled = false;
+        setChatModelsLoading(true);
+        void aiConfigApi.get()
+            .then((config) => {
+                if (cancelled) return;
+                setConfiguredChatModels(buildConfiguredChatModelOptions(config));
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setConfiguredChatModels([]);
+            })
+            .finally(() => {
+                if (cancelled) return;
+                setChatModelsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (chatModelsLoading) {
+            return;
+        }
+
+        if (configuredChatModels.length > 0) {
+            const providerStillUsable = configuredChatModels.some((option) => option.provider === selectedProvider);
+            if (!providerStillUsable) {
+                setSelectedProvider(configuredChatModels[0].provider);
+            }
+            return;
+        }
+
+        if (selectedProvider !== 'local_ollama') {
+            setSelectedProvider('local_ollama');
+        }
+    }, [chatModelsLoading, configuredChatModels, selectedProvider]);
+
     usePersistAiPreferences(selectedProvider, tutorMode, webSearch, searchEngine, enableThinking);
     useProviderHealthCheck(selectedProvider, setProviderHealth, shouldCheckHealth);
 
     return {
         selectedProvider,
         setSelectedProvider,
+        configuredChatModels,
+        chatModelsLoading,
         tutorMode,
         setTutorMode,
         webSearch,

@@ -52,6 +52,7 @@ vi.mock("./useUploadPageController", () => ({
       primaryActionLabel: "",
       selectedProvider: null,
       statusCards: [],
+      multimodalSummary: "Not configured",
     },
     actions: {
       handleFilesChange: vi.fn(),

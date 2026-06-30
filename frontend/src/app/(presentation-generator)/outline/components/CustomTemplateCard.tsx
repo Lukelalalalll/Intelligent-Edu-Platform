@@ -13,6 +13,7 @@ import {
   LayoutsBadge,
   CustomTemplatePreview,
 } from "../../components/TemplatePreviewComponents";
+import { getCustomTemplateDisplayName } from "../../(workspace)/templates/components/templatePanelHelpers";
 
 const outlineBodyFontStyle = {
   fontFamily: "var(--outline-body-font, var(--body-font-family, inherit))",
@@ -30,6 +31,7 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
   const { t } = useI18n();
   const { previewLayouts, loading } = useCustomTemplatePreview(template.id);
   const isSelected = selectedTemplate === template.id;
+  const displayName = getCustomTemplateDisplayName(template.name, t);
 
   return (
     <Card
@@ -57,7 +59,7 @@ export const CustomTemplateCard = memo(function CustomTemplateCard({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold text-[#101828]">
-              {template.name}
+              {displayName}
             </h3>
             <p className="mt-1 text-xs text-[#667085]">
               {t("ppt_generator.outline.templates.custom.cardDescription")}

@@ -123,6 +123,13 @@ export function useUploadPageController() {
         model: aiConfig?.openai?.model || llmConfig.OPENAI_MODEL || "gpt-5.5",
       },
       {
+        id: "bigmodel" as const,
+        label: "BigModel / GLM",
+        configured: Boolean(aiConfig?.bigmodel?.api_key_set),
+        model:
+          aiConfig?.bigmodel?.text_model || llmConfig.BIGMODEL_MODEL || "glm-4.5-flash",
+      },
+      {
         id: "deepseek" as const,
         label: "DeepSeek",
         configured: Boolean(aiConfig?.deepseek?.api_key_set),
@@ -130,7 +137,7 @@ export function useUploadPageController() {
           aiConfig?.deepseek?.model || llmConfig.DEEPSEEK_MODEL || "deepseek-v4-pro",
       },
     ],
-    [aiConfig, llmConfig.DEEPSEEK_MODEL, llmConfig.OPENAI_MODEL]
+    [aiConfig, llmConfig.BIGMODEL_MODEL, llmConfig.DEEPSEEK_MODEL, llmConfig.OPENAI_MODEL]
   );
   const generationDisabledReason = useMemo(() => {
     if (aiConfig && configuredProviders.length === 0) {
@@ -138,6 +145,20 @@ export function useUploadPageController() {
     }
     return null;
   }, [aiConfig, configuredProviders.length, t]);
+  const multimodalSummary = useMemo(() => {
+    const multimodalOptions = [
+      aiConfig?.multimodal?.openai?.api_key_set
+        ? `OpenAI (${aiConfig.multimodal.openai.model || "gpt-4o"})`
+        : null,
+      aiConfig?.multimodal?.bigmodel?.api_key_set
+        ? `BigModel (${aiConfig.multimodal.bigmodel.model || "glm-5v-flash"})`
+        : null,
+    ].filter(Boolean);
+    if (multimodalOptions.length === 0) {
+      return "Not configured";
+    }
+    return multimodalOptions.join(" / ");
+  }, [aiConfig]);
 
   const uploadSnapshotProps = useMemo(
     () =>
@@ -454,6 +475,7 @@ export function useUploadPageController() {
       primaryActionLabel,
       selectedProvider,
       statusCards,
+      multimodalSummary,
     },
     actions: {
       handleConfigChange,

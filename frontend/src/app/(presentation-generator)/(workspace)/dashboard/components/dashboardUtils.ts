@@ -1,4 +1,4 @@
-﻿import { PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
+﻿import { DashboardPresentationSummary } from "@/app/(presentation-generator)/services/api/dashboard";
 import { type Locale } from "@/shared/i18n";
 export type DeckSortDirection = "desc" | "asc";
 
@@ -6,7 +6,7 @@ export type PresentationHistoryGroup = {
   key: "recent" | "earlier";
   title: string;
   description: string;
-  items: PresentationResponse[];
+  items: DashboardPresentationSummary[];
 };
 
 type DashboardTranslator = (
@@ -59,17 +59,17 @@ function getDateFormatter(
 }
 
 export function getPresentationTimestamp(
-  presentation: Pick<PresentationResponse, "updated_at" | "created_at">
+  presentation: Pick<DashboardPresentationSummary, "updatedAt" | "createdAt">
 ): number {
-  const rawValue = presentation.updated_at || presentation.created_at || "";
+  const rawValue = presentation.updatedAt || presentation.createdAt || "";
   const timestamp = rawValue ? new Date(rawValue).getTime() : Number.NaN;
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 export function sortPresentations(
-  presentations: PresentationResponse[],
+  presentations: DashboardPresentationSummary[],
   direction: DeckSortDirection
-): PresentationResponse[] {
+): DashboardPresentationSummary[] {
   return [...presentations].sort((first, second) => {
     const firstTimestamp = getPresentationTimestamp(first);
     const secondTimestamp = getPresentationTimestamp(second);
@@ -80,8 +80,8 @@ export function sortPresentations(
 }
 
 export function getLatestPresentation(
-  presentations: PresentationResponse[]
-): PresentationResponse | null {
+  presentations: DashboardPresentationSummary[]
+): DashboardPresentationSummary | null {
   if (!presentations.length) return null;
 
   return presentations.reduce((latest, current) => {
@@ -92,25 +92,21 @@ export function getLatestPresentation(
 }
 
 export function getPresentationSlideCount(
-  presentation: Pick<PresentationResponse, "slides" | "n_slides">
+  presentation: Pick<DashboardPresentationSummary, "slideCount">
 ): number {
-  if (Array.isArray(presentation.slides) && presentation.slides.length > 0) {
-    return presentation.slides.length;
-  }
-
   if (
-    typeof presentation.n_slides === "number" &&
-    Number.isFinite(presentation.n_slides) &&
-    presentation.n_slides > 0
+    typeof presentation.slideCount === "number" &&
+    Number.isFinite(presentation.slideCount) &&
+    presentation.slideCount > 0
   ) {
-    return presentation.n_slides;
+    return presentation.slideCount;
   }
 
   return 0;
 }
 
 export function isPresentationRecentlyUpdated(
-  presentation: Pick<PresentationResponse, "updated_at" | "created_at">,
+  presentation: Pick<DashboardPresentationSummary, "updatedAt" | "createdAt">,
   now = Date.now()
 ): boolean {
   const timestamp = getPresentationTimestamp(presentation);
@@ -119,7 +115,7 @@ export function isPresentationRecentlyUpdated(
 }
 
 export function buildPresentationHistoryGroups(
-  presentations: PresentationResponse[],
+  presentations: DashboardPresentationSummary[],
   t: DashboardTranslator,
   now = Date.now()
 ): PresentationHistoryGroup[] {

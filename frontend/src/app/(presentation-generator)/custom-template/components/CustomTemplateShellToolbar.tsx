@@ -1,4 +1,6 @@
-﻿import React from "react";
+import React from "react";
+
+import { useI18n } from "@/shared/i18n";
 
 import type { CustomTemplateToolbarConfig } from "../customTemplatePageConfig";
 import styles from "../customTemplateWorkbench.module.css";
@@ -10,6 +12,8 @@ type CustomTemplateShellToolbarProps = {
 export function CustomTemplateShellToolbar({
   toolbar,
 }: CustomTemplateShellToolbarProps) {
+  const { t } = useI18n();
+
   return (
     <div className={styles.toolbar}>
       <div className={styles.toolbarTitle}>
@@ -27,11 +31,12 @@ export function CustomTemplateShellToolbar({
             disabled={toolbar.actionDisabled || toolbar.actionLoading}
           >
             {toolbar.actionIcon}
-            {toolbar.actionLoading ? "Working..." : toolbar.actionLabel}
+            {toolbar.actionLoading
+              ? t("ppt_generator.customTemplate.font.processing")
+              : toolbar.actionLabel}
           </button>
         ) : null}
       </div>
     </div>
   );
 }
-

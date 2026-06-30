@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 import WelcomeBanner from "@/shared/components/WelcomeBanner";
 import { useI18n } from "@/shared/i18n";
-import { DashboardApi, PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
+import {
+  DashboardApi,
+  DashboardPresentationSummary,
+} from "@/app/(presentation-generator)/services/api/dashboard";
 import {
   buildPresentationHistoryGroups,
   DeckSortDirection,
@@ -91,19 +94,19 @@ const DashboardPage: React.FC = () => {
   const { locale, t } = useI18n();
   const pathname = usePathname();
   const isEntranceActive = usePageEntrance();
-  const [presentations, setPresentations] = useState<PresentationResponse[]>([]);
+  const [presentations, setPresentations] = useState<DashboardPresentationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deckSortDirection, setDeckSortDirection] = useState<DeckSortDirection>("desc");
 
-  const fetchPresentations = useCallback(async () => {
+  const fetchPresentations = useCallback(async (options?: { force?: boolean }) => {
     let fetchedCount = 0;
     let hasError = false;
 
     try {
       setIsLoading(true);
       setError(null);
-      const data = await DashboardApi.getPresentations();
+      const data = await DashboardApi.getPresentations(options);
       fetchedCount = data.length;
       setPresentations(data);
     } catch (err) {
@@ -415,7 +418,7 @@ const DashboardPage: React.FC = () => {
                   groups={historyGroups}
                   isLoading={isLoading}
                   error={error}
-                  onRetry={fetchPresentations}
+                  onRetry={() => void fetchPresentations({ force: true })}
                   onCreatePresentationClick={() => handleCreatePresentationClick("dashboard_history_empty")}
                   onPresentationDeleted={removePresentation}
                 />

@@ -1,4 +1,4 @@
-﻿import type { CustomTemplates } from "@/app/hooks/useCustomTemplates";
+import type { CustomTemplates } from "@/app/hooks/useCustomTemplates";
 import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 
 export type TemplateTab = "custom" | "default";
@@ -49,4 +49,3 @@ export type CustomLibraryState = {
     items: PreviewTemplateItem<CustomTemplates>[];
     isLoading: boolean;
 };
-

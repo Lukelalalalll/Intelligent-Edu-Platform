@@ -1,16 +1,26 @@
 ﻿import type { AIConfigResponse } from "@/features/ai-config/api/aiConfigApi";
 import type { LLMConfig } from "@/types/llm_config";
 
-export type PptGeneratorSelectableProvider = "openai" | "deepseek";
+export type PptGeneratorSelectableProvider = "openai" | "deepseek" | "bigmodel";
+export type PptGeneratorSelectableMultimodalProvider = "openai" | "bigmodel";
+type ProviderAvailabilityConfig = Pick<AIConfigResponse, "openai" | "deepseek" | "bigmodel">;
+type MultimodalAvailabilityConfig = Pick<AIConfigResponse, "multimodal">;
 
 const STORAGE_KEY = "ppt_generator_provider_override";
+const MULTIMODAL_STORAGE_KEY = "ppt_generator_multimodal_provider_override";
 
 function isProvider(value: unknown): value is PptGeneratorSelectableProvider {
-  return value === "openai" || value === "deepseek";
+  return value === "openai" || value === "deepseek" || value === "bigmodel";
+}
+
+function isMultimodalProvider(
+  value: unknown
+): value is PptGeneratorSelectableMultimodalProvider {
+  return value === "openai" || value === "bigmodel";
 }
 
 export function getConfiguredPptGeneratorProviders(
-  aiConfig: AIConfigResponse | null | undefined
+  aiConfig: ProviderAvailabilityConfig | null | undefined
 ): PptGeneratorSelectableProvider[] {
   const providers: PptGeneratorSelectableProvider[] = [];
   if (aiConfig?.openai?.api_key_set) {
@@ -18,6 +28,9 @@ export function getConfiguredPptGeneratorProviders(
   }
   if (aiConfig?.deepseek?.api_key_set) {
     providers.push("deepseek");
+  }
+  if (aiConfig?.bigmodel?.api_key_set) {
+    providers.push("bigmodel");
   }
   return providers;
 }
@@ -50,7 +63,7 @@ export function clearStoredPptGeneratorProviderOverride(): void {
 }
 
 export function resolvePptGeneratorProviderOverride(
-  aiConfig: AIConfigResponse | null | undefined
+  aiConfig: ProviderAvailabilityConfig | null | undefined
 ): PptGeneratorSelectableProvider | null {
   const configured = getConfiguredPptGeneratorProviders(aiConfig);
   if (configured.length === 0) {
@@ -101,5 +114,77 @@ export function appendPptGeneratorProviderParam(url: string): string {
   );
   resolved.searchParams.set("ppt_generator_provider", provider);
   return resolved.toString();
+}
+
+export function getConfiguredPptGeneratorMultimodalProviders(
+  aiConfig: MultimodalAvailabilityConfig | null | undefined
+): PptGeneratorSelectableMultimodalProvider[] {
+  const providers: PptGeneratorSelectableMultimodalProvider[] = [];
+  if (aiConfig?.multimodal?.openai?.api_key_set) {
+    providers.push("openai");
+  }
+  if (aiConfig?.multimodal?.bigmodel?.api_key_set) {
+    providers.push("bigmodel");
+  }
+  return providers;
+}
+
+export function readStoredPptGeneratorMultimodalProviderOverride():
+  | PptGeneratorSelectableMultimodalProvider
+  | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.sessionStorage.getItem(MULTIMODAL_STORAGE_KEY);
+  return isMultimodalProvider(value) ? value : null;
+}
+
+export function writeStoredPptGeneratorMultimodalProviderOverride(
+  provider: PptGeneratorSelectableMultimodalProvider
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(MULTIMODAL_STORAGE_KEY, provider);
+}
+
+export function clearStoredPptGeneratorMultimodalProviderOverride(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.removeItem(MULTIMODAL_STORAGE_KEY);
+}
+
+export function resolvePptGeneratorMultimodalProviderOverride(
+  aiConfig: MultimodalAvailabilityConfig | null | undefined
+): PptGeneratorSelectableMultimodalProvider | null {
+  const configured = getConfiguredPptGeneratorMultimodalProviders(aiConfig);
+  if (configured.length === 0) {
+    clearStoredPptGeneratorMultimodalProviderOverride();
+    return null;
+  }
+
+  const stored = readStoredPptGeneratorMultimodalProviderOverride();
+  if (stored && configured.includes(stored)) {
+    return stored;
+  }
+
+  const fallback = configured[0];
+  writeStoredPptGeneratorMultimodalProviderOverride(fallback);
+  return fallback;
+}
+
+export function getPptGeneratorMultimodalHeaders(
+  provider: PptGeneratorSelectableMultimodalProvider | null
+): Record<string, string> {
+  if (!provider) {
+    return {};
+  }
+
+  return {
+    "X-Ppt-Generator-Capability": "multimodal",
+    "X-Ppt-Generator-Multimodal-Provider": provider,
+  };
 }
 

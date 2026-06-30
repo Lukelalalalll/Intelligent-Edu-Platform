@@ -9,7 +9,7 @@ import { FontUploadPreviewResponse } from "../../types";
 
 interface Step3SlidePreviewProps {
     previewData: FontUploadPreviewResponse | null;
-    onInitTemplate: () => void;
+    onInitTemplate: () => void | Promise<unknown>;
     isLoading: boolean;
 }
 

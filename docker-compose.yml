@@ -45,6 +45,13 @@ services:
       GUNICORN_WORKERS: ${CORE_GUNICORN_WORKERS:-2}
       GUNICORN_TIMEOUT: ${CORE_GUNICORN_TIMEOUT:-180}
       GUNICORN_BIND: 0.0.0.0:5009
+      PDF_OCR_PROVIDER: ${PDF_OCR_PROVIDER:-auto}
+      UNLIMITED_OCR_ENABLED: ${UNLIMITED_OCR_ENABLED:-false}
+      UNLIMITED_OCR_BASE_URL: ${UNLIMITED_OCR_BASE_URL:-http://unlimited-ocr-service:10000}
+      UNLIMITED_OCR_MODEL: ${UNLIMITED_OCR_MODEL:-Unlimited-OCR}
+      UNLIMITED_OCR_DPI: ${UNLIMITED_OCR_DPI:-300}
+      UNLIMITED_OCR_MAX_PAGES: ${UNLIMITED_OCR_MAX_PAGES:-32}
+      UNLIMITED_OCR_TIMEOUT_SECONDS: ${UNLIMITED_OCR_TIMEOUT_SECONDS:-1200}
     volumes:
       - core_uploads:/app/backend/uploads
       - core_static:/app/backend/static
@@ -70,6 +77,35 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+  unlimited-ocr-service:
+    profiles: ["ocr"]
+    build:
+      context: ./Unlimited-OCR-main
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    gpus: all
+    environment:
+      HF_HOME: /srv/unlimited-ocr/.cache/huggingface
+      UNLIMITED_OCR_PORT: 10000
+      UNLIMITED_OCR_MODEL: ${UNLIMITED_OCR_MODEL:-Unlimited-OCR}
+      UNLIMITED_OCR_SERVER_MODEL: ${UNLIMITED_OCR_SERVER_MODEL:-baidu/Unlimited-OCR}
+      UNLIMITED_OCR_ATTENTION_BACKEND: ${UNLIMITED_OCR_ATTENTION_BACKEND:-fa3}
+      UNLIMITED_OCR_PAGE_SIZE: ${UNLIMITED_OCR_PAGE_SIZE:-1}
+      UNLIMITED_OCR_MEM_FRACTION_STATIC: ${UNLIMITED_OCR_MEM_FRACTION_STATIC:-0.8}
+      UNLIMITED_OCR_CONTEXT_LENGTH: ${UNLIMITED_OCR_CONTEXT_LENGTH:-32768}
+    ports:
+      - "${UNLIMITED_OCR_SERVICE_PORT:-10000}:10000"
+    volumes:
+      - unlimited_ocr_cache:/srv/unlimited-ocr/.cache/huggingface
+    networks:
+      - ingress
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:10000/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
   slides-service:
     build:
@@ -449,6 +485,7 @@ networks:
 
 volumes:
   mongo_data:
+  unlimited_ocr_cache:
   core_uploads:
   core_static:
   core_generated:

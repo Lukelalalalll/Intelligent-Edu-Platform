@@ -1,7 +1,9 @@
 from .code_normalization import (
     _normalize_asset_fields,
     _normalize_layout_code_for_create,
+    _sanitize_slide_html,
     _strip_code_fences,
+    _sanitize_source_literals_in_code,
     _update_layout_id_in_code,
 )
 from .image_io import _download_image_bytes, _read_image_bytes_and_media_type
@@ -74,6 +76,8 @@ __all__ = [
     "_download_image_bytes",
     "_normalize_asset_fields",
     "_normalize_layout_code_for_create",
+    "_sanitize_slide_html",
+    "_sanitize_source_literals_in_code",
     "_read_image_bytes_and_media_type",
     "_strip_code_fences",
     "_update_layout_id_in_code",

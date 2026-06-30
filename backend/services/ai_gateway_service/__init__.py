@@ -43,13 +43,13 @@ class AIGatewayService:
             return True, "ok"
         if p == "deepseek":
             return await self.deepseek.health_check()
-        if p == "openai":
+        if p in {"openai", "bigmodel"}:
             return await OpenAIService().health_check()
         return False, "Unknown provider"
 
     async def check_runtime_health(self, runtime) -> tuple[bool, str]:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p == "openai":
+        if p in {"openai", "bigmodel"}:
             return await OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
@@ -128,17 +128,18 @@ class AIGatewayService:
                 context["fallback_from"] = "deepseek"
                 p = "coze"
 
-        if p == "openai":
-            logger.info("Using openai provider")
+        if p in {"openai", "bigmodel"}:
+            logger.info("Using %s provider", p)
             try:
-                return await OpenAIService().chat(message=message, context=context)
+                service = OpenAIService()
+                return await service.chat(message=message, context=context)
             except OpenAIUnavailableError as e:
                 if not allow_fallback:
                     raise
-                logger.error("OpenAI unavailable: %s. Falling back to Coze.", e)
+                logger.error("%s unavailable: %s. Falling back to Coze.", p, e)
                 if context is None:
                     context = {}
-                context["fallback_from"] = "openai"
+                context["fallback_from"] = p
                 p = "coze"
 
         if p != "coze":
@@ -180,7 +181,7 @@ class AIGatewayService:
         allow_fallback: bool = False,
     ) -> str:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p == "openai":
+        if p in {"openai", "bigmodel"}:
             return await OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
@@ -214,7 +215,7 @@ class AIGatewayService:
                 yield chunk
             return
 
-        if p == "openai":
+        if p in {"openai", "bigmodel"}:
             async for chunk in OpenAIService().chat_stream(message=message, context=context):
                 yield chunk
             return
@@ -248,7 +249,7 @@ class AIGatewayService:
         runtime,
     ) -> AsyncGenerator[str, None]:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p == "openai":
+        if p in {"openai", "bigmodel"}:
             async for chunk in OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),

@@ -36,13 +36,214 @@
 
 .page {
     width: 100%;
+    min-height: calc(100dvh - var(--nav-height, 60px));
+}
+
+.container {
+    width: 100%;
     max-width: var(--page-max-width);
     margin: 0 auto;
-    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+    padding: 0 0 1.4rem;
 }
 
 .aiConfigBanner {
+    margin-bottom: 0;
+    animation: tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.aiConfigBanner :global(h1) {
+    animation: slideUpFade 0.8s forwards 0.2s;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.aiConfigBanner :global(.subtitle) {
+    animation: slideUpFade 0.8s forwards 0.4s;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.entrySection {
+    opacity: 0;
+    animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.entrySectionSummary {
+    animation-delay: 0.22s;
+}
+
+.entrySectionTabs {
+    animation-delay: 0.34s;
+}
+
+.entrySectionMain {
+    animation-delay: 0.46s;
+}
+
+.capabilitySummaryGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
     margin-bottom: 0.9rem;
+}
+
+.capabilitySummaryCard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.28);
+}
+
+.capabilitySummaryCard span {
+    color: var(--text-sub, #637381);
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.capabilitySummaryCard strong {
+    color: var(--text-main, #212b36);
+    font-size: 0.96rem;
+    line-height: 1.35;
+}
+
+.capabilityTabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    margin-bottom: 0.9rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 26px -24px rgba(15, 23, 42, 0.35);
+}
+
+.capabilityTab {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 0 16px;
+    background: transparent;
+    color: var(--text-sub, #637381);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.capabilityTab:hover:not(:disabled) {
+    background: rgba(0, 123, 85, 0.06);
+    color: var(--text-main, #212b36);
+}
+
+.capabilityTabActive {
+    background: rgba(0, 123, 85, 0.08);
+    border-color: rgba(0, 123, 85, 0.18);
+    color: var(--primary-color, #007b55);
+    box-shadow: 0 12px 24px -24px rgba(0, 123, 85, 0.45);
+}
+
+.configSplit {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.providerRail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 18px 30px -28px rgba(15, 23, 42, 0.32);
+}
+
+.providerRailItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 14px;
+    border-radius: 16px;
+    border: 1px solid transparent;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.providerRailItem:hover:not(:disabled) {
+    background: rgba(0, 123, 85, 0.04);
+    border-color: rgba(0, 123, 85, 0.12);
+}
+
+.providerRailItemActive {
+    background: rgba(0, 123, 85, 0.08);
+    border-color: rgba(0, 123, 85, 0.18);
+    box-shadow: 0 12px 24px -24px rgba(0, 123, 85, 0.5);
+}
+
+.providerRailItem:disabled,
+.capabilityTab:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.providerRailIcon {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(0, 123, 85, 0.08);
+    color: var(--primary-color, #007b55);
+    flex-shrink: 0;
+}
+
+.providerRailText {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.providerRailText strong {
+    color: var(--text-main, #212b36);
+    font-size: 0.92rem;
+}
+
+.providerRailText small {
+    color: var(--text-sub, #637381);
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+
+.providerContent {
+    min-width: 0;
+}
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .providerStepperWrap {
@@ -621,6 +822,32 @@
 }
 
 @media (max-width: 900px) {
+    .container {
+        padding-bottom: 1.2rem;
+    }
+
+    .capabilitySummaryGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .configSplit {
+        grid-template-columns: 1fr;
+    }
+
+    .providerRail {
+        flex-direction: row;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .providerRail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .providerRailItem {
+        min-width: 220px;
+    }
+
     .providerStepperWrap {
         justify-content: flex-start;
         gap: 28px;
@@ -686,6 +913,24 @@
 }
 
 @media (max-width: 560px) {
+    .capabilityTabs {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .capabilityTab {
+        justify-content: center;
+    }
+
+    .providerRail {
+        flex-direction: column;
+    }
+
+    .providerRailItem {
+        min-width: 0;
+    }
+
     .providerStepperWrap {
         flex-direction: column;
         align-items: flex-start;
@@ -715,12 +960,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .aiConfigBanner,
+    .aiConfigBanner :global(h1),
+    .aiConfigBanner :global(.subtitle),
+    .entrySection,
     .providerStepperWrap,
     .configArea,
     .slideFromRight,
     .slideFromLeft {
         animation: none !important;
         opacity: 1;
+        transform: none;
     }
 
     .providerPanel,

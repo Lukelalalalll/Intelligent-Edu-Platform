@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import type { PptGeneratorStep } from "@/features/slides/components/PptGeneratorShell";
+import type { TranslationKey } from "@/shared/i18n";
 
 import type { TemplateCreationStep } from "./types";
 
@@ -32,6 +33,7 @@ type StepLabelConfig = {
 };
 
 type ToolbarConfigArgs = {
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
   step: TemplateCreationStep;
   hasFile: boolean;
   fontCount: number;
@@ -53,35 +55,47 @@ type ToolbarConfigArgs = {
 const icon = (Icon: React.ComponentType<{ className?: string }>) =>
   React.createElement(Icon, { className: "h-4 w-4" });
 
-export const CUSTOM_TEMPLATE_STEP_LABELS: StepLabelConfig[] = [
-  { key: "file-upload", label: "Upload", icon: icon(Upload) },
-  { key: "font-check-group", label: "Fonts", icon: icon(Type) },
-  { key: "slides-preview", label: "Preview", icon: icon(Images) },
-  { key: "template-creation", label: "Generate", icon: icon(Sparkles) },
-  { key: "completed", label: "Done", icon: icon(CheckCircle2) },
-];
+export function getCustomTemplateStepLabels(
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string
+): StepLabelConfig[] {
+  return [
+    { key: "file-upload", label: t("ppt_generator.customTemplate.step.upload"), icon: icon(Upload) },
+    { key: "font-check-group", label: t("ppt_generator.customTemplate.step.fonts"), icon: icon(Type) },
+    { key: "slides-preview", label: t("ppt_generator.customTemplate.step.preview"), icon: icon(Images) },
+    { key: "template-creation", label: t("ppt_generator.customTemplate.step.generate"), icon: icon(Sparkles) },
+    { key: "completed", label: t("ppt_generator.customTemplate.step.done"), icon: icon(CheckCircle2) },
+  ];
+}
 
-export const CUSTOM_TEMPLATE_SHELL_STEPS: PptGeneratorStep[] = CUSTOM_TEMPLATE_STEP_LABELS.map(
-  (step) => ({
+export function getCustomTemplateShellSteps(
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string
+): PptGeneratorStep[] {
+  return getCustomTemplateStepLabels(t).map((step) => ({
     key: String(step.key),
     label: step.label,
     icon: step.icon,
     isClickable: false,
-  })
-);
+  }));
+}
 
 export function mapTemplateStateToShellStep(step: TemplateCreationStep): number {
+  const stepKeys: Array<TemplateCreationStep | "font-check-group"> = [
+    "file-upload",
+    "font-check-group",
+    "slides-preview",
+    "template-creation",
+    "completed",
+  ];
+
   if (step === "font-check" || step === "font-upload") {
     return 1;
   }
 
-  return Math.max(
-    CUSTOM_TEMPLATE_STEP_LABELS.findIndex((item) => item.key === step),
-    0
-  );
+  return Math.max(stepKeys.findIndex((item) => item === step), 0);
 }
 
 export function buildCustomTemplateToolbarConfig({
+  t,
   step,
   hasFile,
   fontCount,
@@ -101,29 +115,29 @@ export function buildCustomTemplateToolbarConfig({
 }: ToolbarConfigArgs): CustomTemplateToolbarConfig {
   if (step === "file-upload") {
     return {
-      eyebrow: "Template Studio",
-      title: "Upload a PPTX to build a reusable template family",
-      description:
-        "Start from an existing slide deck, check font coverage, preview extracted slides, and convert the deck into editable PPT Generator template layouts.",
-      actionLabel: hasFile ? "Check Fonts" : "Select a PPTX file",
+      eyebrow: t("ppt_generator.customTemplate.toolbar.file.eyebrow"),
+      title: t("ppt_generator.customTemplate.toolbar.file.title"),
+      description: t("ppt_generator.customTemplate.toolbar.file.body"),
+      actionLabel: hasFile
+        ? t("ppt_generator.customTemplate.toolbar.file.actionReady")
+        : t("ppt_generator.customTemplate.toolbar.file.actionSelect"),
       actionIcon: icon(FileCog),
       actionDisabled: !hasFile,
       onAction: onCheckFonts,
       meta: fileName
-        ? `Current file: ${fileName}`
-        : "PPTX only | Max 100MB | Approx. 5 minutes",
+        ? t("ppt_generator.customTemplate.toolbar.file.metaFile", { name: fileName })
+        : t("ppt_generator.customTemplate.toolbar.file.metaDefault"),
     };
   }
 
   if (step === "font-check" || step === "font-upload") {
     return {
-      eyebrow: "Font Validation",
-      title: "Verify typefaces before generating slide previews",
-      description:
-        "PPT Generator compares the uploaded deck against matched fonts so your reconstructed slides stay faithful to the original typography. Resolve every missing entry with either a matched font selection or an uploaded font file before continuing.",
+      eyebrow: t("ppt_generator.customTemplate.toolbar.font.eyebrow"),
+      title: t("ppt_generator.customTemplate.toolbar.font.title"),
+      description: t("ppt_generator.customTemplate.toolbar.font.body"),
       actionLabel: allFontsResolved
-        ? "Continue to Preview"
-        : "Resolve All Missing Fonts First",
+        ? t("ppt_generator.customTemplate.toolbar.font.actionReady")
+        : t("ppt_generator.customTemplate.toolbar.font.actionContinue"),
       actionIcon: icon(Type),
       actionDisabled: !allFontsResolved,
       actionLoading: step === "font-upload",
@@ -132,54 +146,57 @@ export function buildCustomTemplateToolbarConfig({
       },
       meta:
         missingFontCount > 0
-          ? `${missingFontCount} missing font${missingFontCount === 1 ? "" : "s"} still unresolved`
-          : `${fontCount} font source${fontCount === 1 ? "" : "s"} ready for preview`,
+          ? t("ppt_generator.customTemplate.toolbar.font.metaMissing", { count: missingFontCount })
+          : t("ppt_generator.customTemplate.toolbar.font.metaReady", { count: fontCount }),
     };
   }
 
   if (step === "slides-preview") {
     return {
-      eyebrow: "Preview Slides",
-      title: "Review extracted slides before layout reconstruction",
-      description:
-        "Check image fidelity, confirm fonts loaded correctly, and then convert each slide into a reusable React template.",
-      actionLabel: "Generate Template",
+      eyebrow: t("ppt_generator.customTemplate.toolbar.preview.eyebrow"),
+      title: t("ppt_generator.customTemplate.toolbar.preview.title"),
+      description: t("ppt_generator.customTemplate.toolbar.preview.body"),
+      actionLabel: t("ppt_generator.customTemplate.toolbar.preview.action"),
       actionIcon: icon(Sparkles),
       actionDisabled: previewCount === 0,
       onAction: () => {
         void onGenerateTemplate();
       },
-      meta: `${previewCount} slide preview${previewCount === 1 ? "" : "s"} ready`,
+      meta: t("ppt_generator.customTemplate.toolbar.preview.meta", { count: previewCount }),
     };
   }
 
   if (step === "template-creation") {
     return {
-      eyebrow: "Generation Workspace",
-      title: "Reconstruct each slide into editable template code",
-      description:
-        "Monitor generation, inspect individual slide layouts, and open schema editing on the right when you need to tighten structure or content slots.",
+      eyebrow: t("ppt_generator.customTemplate.toolbar.generation.eyebrow"),
+      title: t("ppt_generator.customTemplate.toolbar.generation.title"),
+      description: t("ppt_generator.customTemplate.toolbar.generation.body"),
       meta:
         totalSlides > 0
-          ? `${completedSlides}/${totalSlides} slides completed`
-          : "Preparing slide generation",
+          ? t("ppt_generator.customTemplate.toolbar.generation.metaReady", {
+              done: completedSlides,
+              total: totalSlides,
+            })
+          : t("ppt_generator.customTemplate.toolbar.generation.metaPreparing"),
     };
   }
 
   return {
-    eyebrow: "Save Template",
-    title: "Template reconstruction complete",
-    description:
-      "Review the finished layouts, make any last schema adjustments, and save the result as a reusable custom PPT Generator template.",
-    actionLabel: "Save Template",
+    eyebrow: t("ppt_generator.customTemplate.toolbar.save.eyebrow"),
+    title: t("ppt_generator.customTemplate.toolbar.save.title"),
+    description: t("ppt_generator.customTemplate.toolbar.save.body"),
+    actionLabel: t("ppt_generator.customTemplate.toolbar.save.action"),
     actionIcon: icon(Save),
     actionDisabled: !hasProcessedSlides || isProcessingSlides,
     actionLoading: isSavingLayout,
     onAction: onOpenSaveModal,
     meta:
       totalSlides > 0
-        ? `${completedSlides}/${totalSlides} slides ready to package`
-        : "Layouts ready",
+        ? t("ppt_generator.customTemplate.toolbar.save.metaReady", {
+            done: completedSlides,
+            total: totalSlides,
+          })
+        : t("ppt_generator.customTemplate.toolbar.save.metaLayouts"),
   };
 }
 

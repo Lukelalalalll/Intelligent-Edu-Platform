@@ -20,6 +20,7 @@ from backend.presenton_runtime.templates.fonts_and_slides_preview_support.models
 )
 from backend.presenton_runtime.templates.fonts_and_slides_preview_support import workflow as preview_workflow
 from backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering import (
+    SlidePreviewRenderResult,
     render_pptx_slides_to_images,
 )
 from backend.presenton_runtime.templates.fonts_and_slides_preview_support.workflow import (
@@ -96,7 +97,9 @@ def test_render_pptx_slides_to_images_orchestrates_export_task_service(monkeypat
         )
     )
 
-    assert result == ["slide-1.png", "slide-2.png"]
+    assert result.screenshot_paths == ["slide-1.png", "slide-2.png"]
+    assert result.render_mode == "pptx_to_html"
+    assert result.preview_warning is None
     assert calls["convert"] == ("deck.pptx", True)
     rendered_htmls, width, height = calls["render"]
     assert len(rendered_htmls) == 2
@@ -138,7 +141,8 @@ def test_render_pptx_slides_to_images_retries_without_runtime_font_extraction(mo
         )
     )
 
-    assert result == ["slide-1.png"]
+    assert result.screenshot_paths == ["slide-1.png"]
+    assert result.render_mode == "pptx_to_html"
     assert calls == [("deck.pptx", True), ("deck.pptx", False)]
 
 
@@ -150,7 +154,11 @@ def test_render_pptx_slides_to_images_falls_back_to_python_renderer(monkeypatch)
         raise HTTPException(status_code=500, detail=f"failed get_fonts={get_fonts}")
 
     async def fake_render_pptx_slides_with_python_fallback(**kwargs):
-        return ["fallback-slide-1.png", "fallback-slide-2.png"]
+        return SlidePreviewRenderResult(
+            screenshot_paths=["fallback-slide-1.png", "fallback-slide-2.png"],
+            render_mode="degraded",
+            preview_warning="Preview degraded to simplified fallback rendering.",
+        )
 
     monkeypatch.setattr(
         "backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering.EXPORT_TASK_SERVICE",
@@ -170,10 +178,12 @@ def test_render_pptx_slides_to_images_falls_back_to_python_renderer(monkeypatch)
             font_paths_for_install=[],
             max_slides=2,
             logger=types.SimpleNamespace(info=lambda _message: None, warning=lambda _message: None),
+            allow_degraded_fallback=True,
         )
     )
 
-    assert result == ["fallback-slide-1.png", "fallback-slide-2.png"]
+    assert result.screenshot_paths == ["fallback-slide-1.png", "fallback-slide-2.png"]
+    assert result.render_mode == "degraded"
     assert calls == [("deck.pptx", True), ("deck.pptx", False)]
 
 
@@ -213,11 +223,81 @@ def test_render_pptx_slides_to_images_prefers_html_fallback_before_pillow(monkey
             font_paths_for_install=[],
             max_slides=1,
             logger=types.SimpleNamespace(info=lambda *_args, **_kwargs: None, warning=lambda *_args, **_kwargs: None),
+            allow_degraded_fallback=True,
         )
     )
 
-    assert result == ["html-fallback-slide-1.png"]
+    assert result.screenshot_paths == ["html-fallback-slide-1.png"]
+    assert result.render_mode == "degraded"
     assert calls == [("deck.pptx", True), ("deck.pptx", False)]
+
+
+def test_render_pptx_slides_to_images_uses_libreoffice_when_html_conversion_fails(monkeypatch):
+    calls: list[tuple[str, bool]] = []
+
+    async def fake_convert_pptx_to_html(path: str, get_fonts: bool):
+        calls.append((path, get_fonts))
+        raise HTTPException(status_code=500, detail=f"failed get_fonts={get_fonts}")
+
+    monkeypatch.setattr(
+        "backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering.EXPORT_TASK_SERVICE",
+        types.SimpleNamespace(
+            convert_pptx_to_html=fake_convert_pptx_to_html,
+            render_htmls_to_images=None,
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering._render_pptx_slides_via_libreoffice_blocking",
+        lambda **_kwargs: ["libreoffice-slide-1.png", "libreoffice-slide-2.png"],
+    )
+
+    result = asyncio.run(
+        render_pptx_slides_to_images(
+            modified_pptx_path="deck.pptx",
+            font_paths_for_install=[],
+            max_slides=2,
+            logger=types.SimpleNamespace(info=lambda *_args, **_kwargs: None, warning=lambda *_args, **_kwargs: None),
+        )
+    )
+
+    assert result.screenshot_paths == ["libreoffice-slide-1.png", "libreoffice-slide-2.png"]
+    assert result.render_mode == "libreoffice_png"
+    assert "LibreOffice" in (result.preview_warning or "")
+    assert calls == [("deck.pptx", True), ("deck.pptx", False)]
+
+
+def test_render_pptx_slides_to_images_raises_when_no_faithful_renderer_is_available(monkeypatch):
+    async def fake_convert_pptx_to_html(_path: str, get_fonts: bool):
+        raise HTTPException(status_code=500, detail="html conversion unavailable")
+
+    monkeypatch.setattr(
+        "backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering.EXPORT_TASK_SERVICE",
+        types.SimpleNamespace(
+            convert_pptx_to_html=fake_convert_pptx_to_html,
+            render_htmls_to_images=None,
+        ),
+    )
+
+    def fake_render_pptx_slides_via_libreoffice_blocking(**_kwargs):
+        raise RuntimeError("LibreOffice not found")
+
+    monkeypatch.setattr(
+        "backend.presenton_runtime.templates.fonts_and_slides_preview_support.rendering._render_pptx_slides_via_libreoffice_blocking",
+        fake_render_pptx_slides_via_libreoffice_blocking,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        asyncio.run(
+            render_pptx_slides_to_images(
+                modified_pptx_path="deck.pptx",
+                font_paths_for_install=[],
+                max_slides=2,
+                logger=types.SimpleNamespace(info=lambda *_args, **_kwargs: None, warning=lambda *_args, **_kwargs: None),
+            )
+        )
+
+    assert excinfo.value.status_code == 503
+    assert "faithful slide preview" in excinfo.value.detail
 
 
 def test_preview_wrapper_defaults_max_slides_to_25(monkeypatch):
@@ -230,6 +310,7 @@ def test_preview_wrapper_defaults_max_slides_to_25(monkeypatch):
             pptx_url="/app_data/deck.pptx",
             modified_pptx_url="/app_data/deck.pptx",
             fonts={},
+            render_mode="pptx_to_html",
         )
 
     monkeypatch.setattr(
@@ -296,7 +377,10 @@ def test_upload_fonts_and_slides_preview_requires_missing_font_files(monkeypatch
     async def fake_create_slide_previews(**_kwargs):
         nonlocal create_slide_previews_called
         create_slide_previews_called = True
-        return []
+        return SlidePreviewRenderResult(
+            screenshot_paths=["slide-1.png"],
+            render_mode="pptx_to_html",
+        )
 
     monkeypatch.setattr(
         preview_workflow.asyncio,
@@ -425,7 +509,10 @@ def test_upload_fonts_and_slides_preview_accepts_valid_font_replacement(monkeypa
     async def fake_create_slide_previews(*_args, **_kwargs):
         nonlocal create_slide_previews_called
         create_slide_previews_called = True
-        return ["slide-1.png"]
+        return SlidePreviewRenderResult(
+            screenshot_paths=["slide-1.png"],
+            render_mode="pptx_to_html",
+        )
 
     async def fake_upload_presentations(*_args, **_kwargs):
         return "deck-modified.pptx"
@@ -747,3 +834,28 @@ def test_create_slide_previews_sanitizes_runtime_errors(monkeypatch):
     assert excinfo.value.status_code == 500
     assert excinfo.value.detail["code"] == preview_workflow.SLIDE_PREVIEW_GENERATION_FAILED_CODE
     assert "convert.py exited" not in excinfo.value.detail["message"]
+
+
+def test_create_slide_previews_preserves_faithful_preview_unavailable_signal(monkeypatch):
+    async def fake_render_pptx_slides_to_images(**_kwargs):
+        raise HTTPException(status_code=503, detail="Unable to generate a faithful slide preview")
+
+    monkeypatch.setattr(
+        preview_workflow,
+        "render_pptx_slides_to_images",
+        fake_render_pptx_slides_to_images,
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        asyncio.run(
+            preview_workflow.create_slide_previews(
+                modified_pptx_path="deck.pptx",
+                font_paths_for_install=[],
+                max_slides=3,
+                logger=types.SimpleNamespace(info=lambda _message: None, error=lambda _message: None),
+                session_dir="session-dir",
+            )
+        )
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.detail["code"] == preview_workflow.FAITHFUL_SLIDE_PREVIEW_UNAVAILABLE_CODE

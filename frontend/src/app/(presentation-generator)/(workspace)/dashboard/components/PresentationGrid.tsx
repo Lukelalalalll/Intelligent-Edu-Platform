@@ -15,6 +15,7 @@ interface PresentationGridProps {
   onPresentationDeleted?: (presentationId: string) => void;
 }
 
+const CARD_BATCH_SIZE = 24;
 const shimmerCardClassName =
   "overflow-hidden rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(249,252,250,0.98)_0%,rgba(255,255,255,0.98)_100%)] shadow-[0_20px_40px_-26px_rgba(15,23,42,0.24)]";
 
@@ -79,6 +80,11 @@ export const PresentationGrid = ({
   onPresentationDeleted,
 }: PresentationGridProps) => {
   const { t } = useI18n();
+  const [visibleCounts, setVisibleCounts] = React.useState<Record<string, number>>({});
+
+  React.useEffect(() => {
+    setVisibleCounts({});
+  }, [groups]);
 
   if (isLoading) {
     return (
@@ -110,33 +116,63 @@ export const PresentationGrid = ({
 
   return (
     <div className="space-y-9">
-      {groups.map((group) => (
-        <section key={group.key} className="space-y-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-[#101828]">{group.title}</h3>
-              <p className="text-sm leading-6 text-slate-600">{group.description}</p>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-              <span>
-                {group.items.length === 1
-                  ? t("ppt_generator.dashboard.grid.count.single", { count: group.items.length })
-                  : t("ppt_generator.dashboard.grid.count.other", { count: group.items.length })}
-              </span>
-            </div>
-          </div>
+      {groups.map((group) => {
+        const visibleCount =
+          visibleCounts[group.key] ??
+          Math.min(group.items.length, CARD_BATCH_SIZE);
+        const visibleItems = group.items.slice(0, visibleCount);
+        const remainingCount = Math.max(0, group.items.length - visibleItems.length);
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {group.items.map((presentation) => (
-              <PresentationCard
-                key={presentation.id}
-                presentation={presentation}
-                onDeleted={onPresentationDeleted}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+        return (
+          <section key={group.key} className="space-y-5">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-[#101828]">{group.title}</h3>
+                <p className="text-sm leading-6 text-slate-600">{group.description}</p>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                <span>
+                  {group.items.length === 1
+                    ? t("ppt_generator.dashboard.grid.count.single", { count: group.items.length })
+                    : t("ppt_generator.dashboard.grid.count.other", { count: group.items.length })}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {visibleItems.map((presentation) => (
+                <PresentationCard
+                  key={presentation.id}
+                  presentation={presentation}
+                  onDeleted={onPresentationDeleted}
+                />
+              ))}
+            </div>
+
+            {remainingCount > 0 ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleCounts((current) => ({
+                      ...current,
+                      [group.key]: Math.min(
+                        group.items.length,
+                        visibleCount + CARD_BATCH_SIZE
+                      ),
+                    }))
+                  }
+                  className="inline-flex min-w-20 items-center justify-center rounded-full border border-[rgba(15,23,42,0.1)] bg-white px-4 py-2 text-sm font-semibold text-[#007b55] transition hover:border-[rgba(0,123,85,0.22)] hover:text-[#0b6b4b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,123,85,0.24)]"
+                  aria-label={`${remainingCount} more`}
+                  title={`+${remainingCount}`}
+                >
+                  +{remainingCount}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
 
       <div className="flex flex-col gap-3 rounded-[24px] border border-dashed border-[rgba(15,23,42,0.12)] bg-[rgba(247,251,249,0.86)] px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
         <span>{t("ppt_generator.dashboard.grid.prompt")}</span>

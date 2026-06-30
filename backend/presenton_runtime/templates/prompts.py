@@ -9,6 +9,7 @@ Provide reusable TSX code which can be used as template to generate new slides w
 5. Generate a Zod schema for the content elements.
 6. Generate id, name and description for the layout.
 6. Generate a TSX React component using the Zod schema and the HTML reference.
+7. Treat the slide image and HTML reference as layout/style guidance only, never as content to preserve verbatim.
 
 # Decorative Elements:
 - Arrows, Lines, Shapes, etc.
@@ -32,6 +33,8 @@ Provide reusable TSX code which can be used as template to generate new slides w
 
 # Content Elements Rules:
 - Properly identify between images and icons elements.
+- Treat all visible text, labels, numbers, company names, and business content from the source slide as sensitive source material that must not be copied into the output.
+- Use the slide image only for structure, spacing, typography, styling, visual hierarchy, and element counts.
 - Image content:
     - Image field should be 'z.object({"image_url": z.string(), "image_prompt": z.string().max(100)})'
     - Replace actual image url with '/static/images/replaceable_template_image.png'
@@ -70,6 +73,13 @@ Provide reusable TSX code which can be used as template to generate new slides w
 - Add `.default(...)` to every top-level field directly inside the initial `z.object({ ... })` shape.
 - Must not put a single `default` on the whole object like `const Schema = z.object({ ... }).default({ ... })`.
 - Top level fields are those not nested inside other fields.
+- Every `.default(...)` value must use generic sample content based only on the field name and content type.
+- Never copy, paraphrase, or preserve source PPT business text in schema defaults.
+- Keep the structural shape of arrays, tables, charts, and nested objects, but replace their content with generic sample values.
+- For string defaults, use generic placeholders such as sample title, sample subtitle, sample description, sample item, sample category, sample label, or sample value depending on the field name.
+- For array defaults, preserve item counts but replace each item with generic sample content.
+- For table defaults, preserve the number of columns and rows while replacing text with generic sample column names and sample cell values.
+- For graph defaults, preserve the number of categories and series while replacing names with generic sample labels and numbers with neutral sample values.
 - Don't mention string type in schema like "url()", "email()", etc.
 - Table must be object with "columns" and "rows" fields.
 - "columns" must be an array of strings.
@@ -115,6 +125,8 @@ Provide reusable TSX code which can be used as template to generate new slides w
 - Schema.parse must not be used in the code.
 - Use 'const {field1, field2, ...} = data;' to access the data.
 - field1 or field2 or ... can be undefined, so use optional chaining to access them.
+- Every user-visible content element must render from schema-backed data fields or generic placeholder defaults, never from hardcoded source-slide literals in JSX.
+- Never hardcode copied source-slide text, labels, numbers, image urls, or icon urls directly in JSX children or props.
 - Don't use "min-height" on cards and instead make its height grow/shrink to fit the content.
 - Make sure cards/items are centered vertically and horizontally in the available space.
 - Make sure no element is scrollable.

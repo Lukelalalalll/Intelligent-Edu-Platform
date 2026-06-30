@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useMemo, useRef } from 'react';
 import workspaceStyles from '../styles/AIWorkspace.module.css';
 import type { AIRoleInfo, AIProvider, AIProviderHealth, AITutorMode, AISearchEngine } from '../api/aiApi';
+import type { ChatModelOption } from '../utils/chatModelOptions';
 import {
     useResizableSidebar,
     SIDEBAR_MIN_WIDTH,
@@ -68,6 +69,8 @@ interface ModalProps {
 interface ProviderProps {
     selectedProvider?: AIProvider;
     setSelectedProvider?: (provider: AIProvider) => void;
+    configuredChatModels?: ChatModelOption[];
+    chatModelsLoading?: boolean;
     providerHealth?: AIProviderHealth;
     tutorMode?: AITutorMode;
     setTutorMode?: (mode: AITutorMode) => void;
@@ -96,7 +99,7 @@ export default function AIInteractPage({
     // Modal
     modalConfig, setModalConfig,
     // Provider / role
-    selectedProvider, setSelectedProvider, providerHealth, tutorMode, setTutorMode, roleInfo,
+    selectedProvider, setSelectedProvider, configuredChatModels, chatModelsLoading, providerHealth, tutorMode, setTutorMode, roleInfo,
     webSearch, setWebSearch, searchEngine, setSearchEngine,
     enableThinking, setEnableThinking,
 }: AIInteractPageProps) {
@@ -134,6 +137,8 @@ export default function AIInteractPage({
                             deleteSession={deleteSession}
                             selectedProvider={selectedProvider}
                             setSelectedProvider={setSelectedProvider}
+                            configuredChatModels={configuredChatModels}
+                            chatModelsLoading={chatModelsLoading}
                             providerHealth={providerHealth}
                         />
                     </div>

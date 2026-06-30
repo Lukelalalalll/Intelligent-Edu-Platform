@@ -1,4 +1,4 @@
-﻿import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
+import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 
 import { buildBuiltInTemplateGroups } from "./templatePanelHelpers";
 import type { BuiltInTemplateCatalog } from "./templatePanelTypes";
@@ -36,4 +36,3 @@ export async function loadBuiltInTemplateCatalog(): Promise<BuiltInTemplateCatal
 
   return builtInTemplateCatalogRequest;
 }
-

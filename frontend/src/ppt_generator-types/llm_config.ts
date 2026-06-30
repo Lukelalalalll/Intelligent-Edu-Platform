@@ -10,6 +10,11 @@ export interface LLMConfig {
   DEEPSEEK_MODEL?: string;
   DEEPSEEK_BASE_URL?: string;
 
+  // BigModel / GLM
+  BIGMODEL_API_KEY?: string;
+  BIGMODEL_MODEL?: string;
+  BIGMODEL_BASE_URL?: string;
+
   // Google
   GOOGLE_API_KEY?: string;
   GOOGLE_MODEL?: string;

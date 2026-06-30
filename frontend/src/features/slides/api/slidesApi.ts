@@ -61,7 +61,7 @@ export interface SlidesArtifactResponse<T = unknown> {
 
 // ── Generation Types ──
 
-export type SlidesRuntimeProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai';
+export type SlidesRuntimeProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'bigmodel';
 
 export interface SlidesProviderStatus {
     id: SlidesRuntimeProvider;

@@ -98,7 +98,7 @@ function mapCustomTemplateSummaries(data: TemplateSummary[]): CustomTemplates[] 
         .filter((item) => item.total_layouts && item.total_layouts > 0)
         .map((item) => ({
             id: item.id,
-            name: item.name || "Custom Template",
+            name: typeof item.name === "string" ? item.name : "",
             layoutCount: item.total_layouts,
             isCustom: true as const,
         }));

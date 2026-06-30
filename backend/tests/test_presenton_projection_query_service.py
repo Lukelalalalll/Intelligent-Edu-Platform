@@ -236,6 +236,17 @@ def test_list_presentations_filters_by_owner_and_sorts_latest_first(monkeypatch,
     assert total == 2
     assert [item["presentonPresentationId"] for item in items] == [ids["pres_a"], ids["pres_b"]]
     assert all(item["ownerUserId"] == "user-1" for item in items)
+    assert items[0]["id"] == ids["pres_a"]
+    assert items[0]["slideCount"] == 2
+    assert items[0]["thumbnailUrl"] is None
+    assert items[0]["firstSlidePreview"] == {
+        "eyebrow": None,
+        "heading": "Intro",
+        "summary": "chlorophyll and leaves",
+        "imageUrl": None,
+        "layout": "layout-a",
+        "layoutGroup": "demo",
+    }
 
 
 def test_get_presentation_detail_returns_sorted_slides_and_owner_scoped_chats(monkeypatch, tmp_path):
@@ -310,6 +321,8 @@ def test_search_presentations_matches_title_and_slide_text_without_cross_owner_l
     assert slide_match_items[0]["presentonPresentationId"] == ids["pres_b"]
     assert slide_match_items[0]["matchedSlidesCount"] == 1
     assert "thermodynamics" in slide_match_items[0]["matchedSlides"][0]["contentText"].lower()
+    assert slide_match_items[0]["firstSlidePreview"]["heading"] == "Conduction"
+    assert slide_match_items[0]["firstSlidePreview"]["summary"] == "metal rod thermodynamics contact"
 
     assert title_match_total == 1
     assert title_match_items[0]["presentonPresentationId"] == ids["pres_a"]

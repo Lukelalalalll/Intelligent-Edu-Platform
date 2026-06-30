@@ -21,6 +21,8 @@ export default function AIInteractPage() {
         editUserMsg,
         selectedProvider,
         setSelectedProvider,
+        configuredChatModels,
+        chatModelsLoading,
         providerHealth,
         setShouldCheckHealth,
         tutorMode,
@@ -191,6 +193,8 @@ export default function AIInteractPage() {
             roleInfo={roleInfo}
             selectedProvider={selectedProvider}
             setSelectedProvider={setSelectedProvider}
+            configuredChatModels={configuredChatModels}
+            chatModelsLoading={chatModelsLoading}
             providerHealth={providerHealth}
             tutorMode={tutorMode}
             setTutorMode={setTutorMode}

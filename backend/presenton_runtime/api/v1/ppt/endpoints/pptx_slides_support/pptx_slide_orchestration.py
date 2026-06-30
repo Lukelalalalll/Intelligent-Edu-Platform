@@ -34,13 +34,14 @@ async def process_pptx_slides_request(
         pptx_path = await save_upload_to_temp(pptx_file, temp_dir)
         font_paths = await save_fonts(fonts or [], temp_dir)
         slide_xmls = extract_slide_xmls(pptx_path, temp_dir)
-        screenshot_paths = await render_pptx_slides_to_images(
+        preview_result = await render_pptx_slides_to_images(
             modified_pptx_path=pptx_path,
             font_paths_for_install=font_paths,
             max_slides=None,
             logger=_PreviewLogger(),
+            allow_degraded_fallback=True,
         )
-        print(f"Screenshot paths: {screenshot_paths}")
+        print(f"Screenshot paths: {preview_result.screenshot_paths}")
 
         font_analysis = await analyze_fonts_in_all_slides(slide_xmls)
         print(
@@ -49,7 +50,7 @@ async def process_pptx_slides_request(
             f"{len(font_analysis.not_supported_fonts)} not supported"
         )
 
-        slides_data = persist_slide_screenshots(slide_xmls, screenshot_paths)
+        slides_data = persist_slide_screenshots(slide_xmls, preview_result.screenshot_paths)
         return PptxSlidesResponse(
             success=True,
             slides=slides_data,

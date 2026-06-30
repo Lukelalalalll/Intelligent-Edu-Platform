@@ -175,6 +175,199 @@ export default Slide;
     assert 'layoutId="hero-4321"' in normalized
 
 
+def test_handler_normalizes_schema_defaults_to_generic_sample_content(monkeypatch):
+    monkeypatch.setattr("templates.handler_support.code_normalization.random.randint", lambda _a, _b: 4321)
+
+    raw_code = """
+import { z } from "zod";
+
+const Schema = z.object({
+  title: z.string().max(18).default("FY25 Revenue Plan"),
+  subtitle: z.string().max(20).default("North America"),
+  description: z.string().max(48).default("Quarterly pipeline conversion is improving steadily."),
+  bulletPoints: z.array(z.string().max(24)).max(3).default([
+    "Expand enterprise pipeline",
+    "Improve outbound conversion",
+    "Reduce churn in strategic accounts",
+  ]),
+  stats: z.object({
+    label: z.string().max(16).default("Growth"),
+    value: z.string().max(8).default("42%"),
+  }).default({
+    label: "Growth",
+    value: "42%",
+  }),
+  table: z.object({
+    columns: z.array(z.string().max(12)).max(2).default(["Region", "Target"]),
+    rows: z.array(z.array(z.string().max(12)).max(2)).max(2).default([
+      ["North", "$2.3M"],
+      ["South", "$1.1M"],
+    ]),
+  }).default({
+    columns: ["Region", "Target"],
+    rows: [
+      ["North", "$2.3M"],
+      ["South", "$1.1M"],
+    ],
+  }),
+  chart: z.object({
+    categories: z.array(z.string().max(12)).max(2).default(["Q1", "Q2"]),
+    series: z.array(z.object({
+      name: z.string().max(12).default("Revenue"),
+      data: z.array(z.number()).max(2).default([12, 18]),
+    })).max(1).default([
+      {
+        name: "Revenue",
+        data: [12, 18],
+      },
+    ]),
+  }).default({
+    categories: ["Q1", "Q2"],
+    series: [
+      {
+        name: "Revenue",
+        data: [12, 18],
+      },
+    ],
+  }),
+  image: z.object({
+    image_url: z.string().default("https://example.com/ceo.png"),
+    image_prompt: z.string().max(40).default("CEO headshot on stage"),
+  }).default({
+    image_url: "https://example.com/ceo.png",
+    image_prompt: "CEO headshot on stage",
+  }),
+});
+
+const layoutId = "title-image-right";
+"""
+
+    normalized = handler._normalize_layout_code_for_create(raw_code)
+
+    assert "FY25 Revenue Plan" not in normalized
+    assert "North America" not in normalized
+    assert "Quarterly pipeline conversion" not in normalized
+    assert "Expand enterprise pipeline" not in normalized
+    assert "Revenue" not in normalized
+    assert 'default("Sample Title")' in normalized
+    assert 'subtitle: z.string().max(20).default("Sample' in normalized
+    assert 'default("Sample description text")' in normalized
+    assert 'default(["Sample item 1", "Sample item 2", "Sample item 3"])' in normalized
+    assert 'columns: ["Column", "Column"]' in normalized
+    assert 'rows: [["Sampl", "Sampl"], ["Sampl", "Sampl"]]' in normalized
+    assert 'categories: ["Ca", "Ca"]' in normalized
+    assert 'name: "Series"' in normalized
+    assert 'data: [10, 20]' in normalized
+
+
+def test_handler_sanitizes_slide_html_reference_content_and_assets():
+    raw_html = """
+<div class="slide">
+  <img src="/app_data/backgrounds/hero-bg.png" style="width:100%;height:100%" alt="Revenue background" />
+  <h1 style="font-size: 36px;">FY25 Revenue Plan</h1>
+  <p>North America pipeline conversion is improving.</p>
+  <img src="/app_data/images/hero-photo.jpg" alt="Executive team on stage" />
+  <img src="/static/icons/bold/chart-pie-bold.png" alt="growth icon" data-editable-id="metric-icon-1" />
+</div>
+"""
+
+    sanitized = handler._sanitize_slide_html(raw_html)
+
+    assert "FY25 Revenue Plan" not in sanitized
+    assert "North America pipeline conversion is improving." not in sanitized
+    assert "Executive team on stage" not in sanitized
+    assert "growth icon" not in sanitized
+    assert "Sample Title" in sanitized
+    assert "/app_data/backgrounds/hero-bg.png" in sanitized
+    assert "/static/images/replaceable_template_image.png" in sanitized
+    assert "/static/icons/placeholder.svg" in sanitized
+
+
+def test_create_slide_layout_impl_sanitizes_source_reference_and_generated_code(monkeypatch):
+    session = _FakeTemplateSession()
+    session.template_infos[session.template_info_id].slide_htmls = [
+        """
+<div>
+  <h1 style="font-size: 40px;">FY25 Revenue Plan</h1>
+  <p>North America pipeline conversion is improving.</p>
+  <img src="/app_data/images/hero-photo.jpg" alt="Executive team on stage" />
+</div>
+"""
+    ]
+
+    captured: dict[str, str] = {}
+
+    async def fake_generate_slide_layout_code(*, system_prompt: str, user_text: str, image_bytes: bytes, media_type: str):
+        captured["system_prompt"] = system_prompt
+        captured["user_text"] = user_text
+        assert image_bytes == b"image-bytes"
+        assert media_type == "image/png"
+        return """
+import { z } from "zod";
+
+const Schema = z.object({
+  title: z.string().max(18).default("FY25 Revenue Plan"),
+  image: z.object({
+    image_url: z.string().default("/app_data/images/hero-photo.jpg"),
+    image_prompt: z.string().max(30).default("Executive team on stage"),
+  }).default({
+    image_url: "/app_data/images/hero-photo.jpg",
+    image_prompt: "Executive team on stage",
+  }),
+});
+
+const layoutId = "hero-layout";
+const layoutName = "Hero Layout";
+const layoutDescription = "Template";
+
+const dynamicSlideLayout = ({ data }: { data: Partial<z.infer<typeof Schema>> }) => (
+  <div>
+    <h1>FY25 Revenue Plan</h1>
+    <p>North America pipeline conversion is improving.</p>
+    <img src="/app_data/images/hero-photo.jpg" alt="Executive team on stage" />
+  </div>
+);
+
+export {Schema, layoutId, layoutName, layoutDescription, dynamicSlideLayout};
+"""
+
+    monkeypatch.setattr(
+        "templates.handler_support.layout_generation._read_image_bytes_and_media_type",
+        lambda _image_url: asyncio.sleep(0, result=(b"image-bytes", "image/png")),
+    )
+    monkeypatch.setattr(
+        "templates.handler_support.layout_generation.generate_slide_layout_code",
+        fake_generate_slide_layout_code,
+    )
+    monkeypatch.setattr(
+        "templates.handler_support.code_normalization.random.randint",
+        lambda _a, _b: 4321,
+    )
+
+    response = asyncio.run(
+        handler._create_slide_layout_impl(
+            session,
+            handler.CreateSlideLayoutRequest(
+                id=session.template_info_id,
+                index=0,
+            ),
+        )
+    )
+
+    assert "FY25 Revenue Plan" not in captured["user_text"]
+    assert "North America pipeline conversion is improving." not in captured["user_text"]
+    assert "/app_data/images/hero-photo.jpg" not in captured["user_text"]
+    assert "Sample Title" in captured["user_text"]
+    assert "/static/images/replaceable_template_image.png" in captured["user_text"]
+
+    assert "FY25 Revenue Plan" not in response.react_component
+    assert "North America pipeline conversion is improving." not in response.react_component
+    assert "/app_data/images/hero-photo.jpg" not in response.react_component
+    assert 'default("Sample Titl")' in response.react_component
+    assert "/static/images/replaceable_template_image.png" in response.react_component
+    assert "Executive team on stage" not in response.react_component
+
+
 def test_get_template_by_id_rejects_invalid_custom_template_id():
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(
@@ -288,6 +481,7 @@ def test_handler_preview_wrapper_defaults_max_slides_to_25(monkeypatch):
             pptx_url="/app_data/deck.pptx",
             modified_pptx_url="/app_data/deck.pptx",
             fonts={},
+            render_mode="pptx_to_html",
         )
 
     monkeypatch.setattr(

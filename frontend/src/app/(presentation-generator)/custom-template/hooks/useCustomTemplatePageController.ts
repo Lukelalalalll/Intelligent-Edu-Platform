@@ -1,14 +1,24 @@
-﻿"use client";
+"use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  aiConfigApi,
+  type AIConfigResponse,
+} from "@/features/ai-config/api/aiConfigApi";
+import {
+  resolvePptGeneratorMultimodalProviderOverride,
+  writeStoredPptGeneratorMultimodalProviderOverride,
+  type PptGeneratorSelectableMultimodalProvider,
+} from "@/ppt_generator/providerOverride";
 import { mapPptGeneratorHrefToAppRoute } from "@/ppt_generator/routing";
+import { useI18n } from "@/shared/i18n";
 
 import { useFontLoader as loadFonts } from "../../hooks/useFontLoad";
 import {
   buildCustomTemplateToolbarConfig,
-  CUSTOM_TEMPLATE_SHELL_STEPS,
+  getCustomTemplateShellSteps,
   mapTemplateStateToShellStep,
 } from "../customTemplatePageConfig";
 import { useFileUpload } from "./useFileUpload";
@@ -16,9 +26,11 @@ import { useLayoutSaving } from "./useLayoutSaving";
 import { useTemplateCreation } from "./useTemplateCreation";
 
 export function useCustomTemplatePageController() {
+  const { t } = useI18n();
   const router = useRouter();
   const fileUpload = useFileUpload();
   const templateCreation = useTemplateCreation();
+  const [aiConfig, setAiConfig] = useState<AIConfigResponse | null>(null);
   const {
     state,
     uploadedFonts,
@@ -44,7 +56,31 @@ export function useCustomTemplatePageController() {
     saveLayout,
   } = useLayoutSaving(slides);
 
+  useEffect(() => {
+    let active = true;
+    aiConfigApi.get().then((config) => {
+      if (active) {
+        setAiConfig(config);
+      }
+    }).catch(() => {
+      if (active) {
+        setAiConfig(null);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const unresolvedFonts = useMemo(() => getUnresolvedFonts(), [getUnresolvedFonts]);
+  const multimodalProvider = useMemo(
+    () => resolvePptGeneratorMultimodalProviderOverride(aiConfig),
+    [aiConfig],
+  );
+  const multimodalConfig = multimodalProvider === "bigmodel"
+    ? aiConfig?.multimodal?.bigmodel ?? null
+    : aiConfig?.multimodal?.openai ?? null;
+  const multimodalConfigured = Boolean(multimodalConfig?.api_key_set && multimodalProvider);
 
   const isProcessingSlides = useMemo(
     () => slides.some((slide) => slide.processing),
@@ -91,9 +127,30 @@ export function useCustomTemplatePageController() {
     router.push(mapPptGeneratorHrefToAppRoute("/templates"));
   }, [router]);
 
+  const handleOpenAIConfig = useCallback(() => {
+    router.push("/ai-config");
+  }, [router]);
+
+  const handleSelectMultimodalProvider = useCallback(
+    (provider: PptGeneratorSelectableMultimodalProvider) => {
+      writeStoredPptGeneratorMultimodalProviderOverride(provider);
+      setAiConfig((current) => (current ? { ...current } : current));
+    },
+    [],
+  );
+
+  const handleInitTemplateCreation = useCallback(async () => {
+    return initTemplateCreation(multimodalProvider);
+  }, [initTemplateCreation, multimodalProvider]);
+
+  const handleRetrySlide = useCallback((slideIndex: number) => {
+    retrySlide(slideIndex, multimodalProvider);
+  }, [multimodalProvider, retrySlide]);
+
   const toolbar = useMemo(
     () =>
       buildCustomTemplateToolbarConfig({
+        t,
         step: state.step,
         hasFile: Boolean(fileUpload.selectedFile),
         fontCount: Object.keys(state.previewData?.fonts ?? {}).length,
@@ -109,7 +166,7 @@ export function useCustomTemplatePageController() {
           void handleCheckFonts();
         },
         onContinueFonts: handleFontUploadAndPreview,
-        onGenerateTemplate: initTemplateCreation,
+        onGenerateTemplate: handleInitTemplateCreation,
         onOpenSaveModal: openSaveModal,
         fileName: fileUpload.selectedFile?.name,
       }),
@@ -119,8 +176,8 @@ export function useCustomTemplatePageController() {
       fileUpload.selectedFile,
       handleCheckFonts,
       handleFontUploadAndPreview,
+      handleInitTemplateCreation,
       hasProcessedSlides,
-      initTemplateCreation,
       isProcessingSlides,
       isSavingLayout,
       unresolvedFonts.length,
@@ -128,6 +185,7 @@ export function useCustomTemplatePageController() {
       state.previewData,
       state.step,
       state.totalSlides,
+      t,
     ]
   );
 
@@ -145,7 +203,7 @@ export function useCustomTemplatePageController() {
   return {
     shell: {
       currentStep: flow.currentShellStep,
-      steps: CUSTOM_TEMPLATE_SHELL_STEPS,
+      steps: getCustomTemplateShellSteps(t),
       toolbar,
       onBackToTemplates: handleBackToTemplates,
     },
@@ -162,6 +220,14 @@ export function useCustomTemplatePageController() {
       handleDragOver: fileUpload.handleDragOver,
       handleDragLeave: fileUpload.handleDragLeave,
       handleDrop: fileUpload.handleDrop,
+      multimodalConfigured,
+      multimodalModel: multimodalConfig?.model || "",
+      multimodalProviderLabel:
+        multimodalProvider === "bigmodel"
+          ? "BigModel / GLM"
+          : multimodalProvider === "openai"
+            ? "OpenAI"
+            : "",
     },
     fontManagementStepProps: {
       fontsData: state.fontsData,
@@ -176,19 +242,25 @@ export function useCustomTemplatePageController() {
     },
     slidePreviewStepProps: {
       previewData: state.previewData,
-      onInitTemplate: initTemplateCreation,
+      onInitTemplate: handleInitTemplateCreation,
       isLoading: state.isLoading,
     },
     templateCreationStepProps: {
       slides,
       setSlides,
-      retrySlide,
+      retrySlide: handleRetrySlide,
       isCompleted: flow.isCompleted,
       isSavingLayout,
       isProcessingSlides,
       completedSlides,
       totalSlides: state.totalSlides,
       onOpenSaveModal: openSaveModal,
+      multimodalProvider: multimodalProvider || "openai",
+      multimodalConfigured,
+      multimodalModel: multimodalConfig?.model || "",
+      multimodalUpdatedAt: multimodalConfig?.updated_at || null,
+      onSelectMultimodalProvider: handleSelectMultimodalProvider,
+      onOpenAIConfig: handleOpenAIConfig,
     },
     saveLayoutModalProps: {
       isOpen: isModalOpen,
@@ -199,4 +271,3 @@ export function useCustomTemplatePageController() {
     },
   };
 }
-

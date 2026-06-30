@@ -4,9 +4,14 @@ import {
   appendPptGeneratorProviderParam,
   applyPptGeneratorProviderOverride,
   clearStoredPptGeneratorProviderOverride,
+  clearStoredPptGeneratorMultimodalProviderOverride,
   getConfiguredPptGeneratorProviders,
+  getConfiguredPptGeneratorMultimodalProviders,
+  readStoredPptGeneratorMultimodalProviderOverride,
   readStoredPptGeneratorProviderOverride,
+  resolvePptGeneratorMultimodalProviderOverride,
   resolvePptGeneratorProviderOverride,
+  writeStoredPptGeneratorMultimodalProviderOverride,
   writeStoredPptGeneratorProviderOverride,
 } from "./providerOverride";
 
@@ -16,13 +21,25 @@ describe("providerOverride", () => {
     window.history.replaceState({}, "", "/slides/ppt_generator");
   });
 
+  it("returns configured multimodal providers from AI config", () => {
+    expect(
+      getConfiguredPptGeneratorMultimodalProviders({
+        multimodal: {
+          openai: { api_key_set: true } as never,
+          bigmodel: { api_key_set: true } as never,
+        },
+      })
+    ).toEqual(["openai", "bigmodel"]);
+  });
+
   it("returns configured providers from AI config", () => {
     expect(
       getConfiguredPptGeneratorProviders({
         openai: { api_key_set: true } as never,
         deepseek: { api_key_set: false } as never,
+        bigmodel: { api_key_set: true } as never,
       })
-    ).toEqual(["openai"]);
+    ).toEqual(["openai", "bigmodel"]);
   });
 
   it("stores and reads a valid provider override", () => {
@@ -35,6 +52,7 @@ describe("providerOverride", () => {
     const provider = resolvePptGeneratorProviderOverride({
       openai: { api_key_set: true } as never,
       deepseek: { api_key_set: true } as never,
+      bigmodel: { api_key_set: true } as never,
     });
     expect(provider).toBe("openai");
     expect(readStoredPptGeneratorProviderOverride()).toBe("openai");
@@ -45,6 +63,7 @@ describe("providerOverride", () => {
     const provider = resolvePptGeneratorProviderOverride({
       openai: { api_key_set: false } as never,
       deepseek: { api_key_set: false } as never,
+      bigmodel: { api_key_set: false } as never,
     });
     expect(provider).toBeNull();
     expect(readStoredPptGeneratorProviderOverride()).toBeNull();
@@ -74,6 +93,33 @@ describe("providerOverride", () => {
     expect(
       appendPptGeneratorProviderParam("/api/v1/ppt/outlines/stream/123")
     ).toBe("/api/v1/ppt/outlines/stream/123");
+  });
+
+  it("stores and resolves multimodal override", () => {
+    writeStoredPptGeneratorMultimodalProviderOverride("bigmodel");
+    expect(readStoredPptGeneratorMultimodalProviderOverride()).toBe("bigmodel");
+    expect(
+      resolvePptGeneratorMultimodalProviderOverride({
+        multimodal: {
+          openai: { api_key_set: true } as never,
+          bigmodel: { api_key_set: true } as never,
+        },
+      })
+    ).toBe("bigmodel");
+  });
+
+  it("clears multimodal override when no multimodal provider is configured", () => {
+    writeStoredPptGeneratorMultimodalProviderOverride("openai");
+    expect(
+      resolvePptGeneratorMultimodalProviderOverride({
+        multimodal: {
+          openai: { api_key_set: false } as never,
+          bigmodel: { api_key_set: false } as never,
+        },
+      })
+    ).toBeNull();
+    expect(readStoredPptGeneratorMultimodalProviderOverride()).toBeNull();
+    clearStoredPptGeneratorMultimodalProviderOverride();
   });
 });
 

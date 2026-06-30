@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -18,6 +19,16 @@ def _make_pdf(path: Path, text: str) -> None:
     doc = fitz.open()
     page = doc.new_page()
     page.insert_text((72, 72), text)
+    doc.save(path)
+    doc.close()
+
+
+def _make_multi_page_pdf(path: Path, page_texts: list[str]) -> None:
+    doc = fitz.open()
+    for text in page_texts:
+        page = doc.new_page()
+        if text:
+            page.insert_text((72, 72), text)
     doc.save(path)
     doc.close()
 
@@ -44,3 +55,119 @@ def test_documents_loader_falls_back_to_native_pdf_text_when_liteparse_unavailab
     extracted = loader._parse_with_liteparse(str(pdf_path))
 
     assert "HTML4 notes fallback text" in extracted
+
+
+def test_documents_loader_uses_liteparse_for_non_scanned_pdf(monkeypatch):
+    temp_dir = Path(TEMP_FILE_SERVICE.create_temp_dir())
+    pdf_path = temp_dir / "lecture.pdf"
+    _make_pdf(pdf_path, "Native digital PDF text")
+
+    monkeypatch.setenv("PDF_OCR_PROVIDER", "auto")
+    monkeypatch.setenv("UNLIMITED_OCR_ENABLED", "true")
+
+    loader = DocumentsLoader([str(pdf_path)], presentation_language="en")
+
+    monkeypatch.setattr(loader, "_is_scanned_pdf", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(
+        loader.unlimited_ocr_service,
+        "parse_pdf_to_markdown",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Unlimited-OCR should not be used for non-scanned PDFs in auto mode")
+        ),
+    )
+    monkeypatch.setattr(
+        loader.liteparse_service,
+        "parse_to_markdown",
+        lambda *_args, **_kwargs: "liteparse result",
+    )
+
+    document, _ = asyncio.run(loader.load_pdf(str(pdf_path), True, False))
+
+    assert document == "liteparse result"
+
+
+def test_documents_loader_uses_unlimited_ocr_for_scanned_pdf(monkeypatch):
+    temp_dir = Path(TEMP_FILE_SERVICE.create_temp_dir())
+    pdf_path = temp_dir / "scan.pdf"
+    _make_pdf(pdf_path, "Scanned fallback text")
+
+    monkeypatch.setenv("PDF_OCR_PROVIDER", "auto")
+    monkeypatch.setenv("UNLIMITED_OCR_ENABLED", "true")
+    monkeypatch.setenv("UNLIMITED_OCR_MAX_PAGES", "32")
+
+    loader = DocumentsLoader([str(pdf_path)], presentation_language="en")
+
+    monkeypatch.setattr(loader, "_is_scanned_pdf", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        loader.unlimited_ocr_service,
+        "parse_pdf_to_markdown",
+        lambda *_args, **_kwargs: "unlimited ocr result",
+    )
+    monkeypatch.setattr(
+        loader.liteparse_service,
+        "parse_to_markdown",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("LiteParse should not be called when Unlimited-OCR succeeds")
+        ),
+    )
+
+    document, _ = asyncio.run(loader.load_pdf(str(pdf_path), True, False))
+
+    assert document == "unlimited ocr result"
+
+
+def test_documents_loader_falls_back_when_unlimited_ocr_fails(monkeypatch):
+    temp_dir = Path(TEMP_FILE_SERVICE.create_temp_dir())
+    pdf_path = temp_dir / "scan-fallback.pdf"
+    _make_pdf(pdf_path, "Scanned fallback text")
+
+    monkeypatch.setenv("PDF_OCR_PROVIDER", "auto")
+    monkeypatch.setenv("UNLIMITED_OCR_ENABLED", "true")
+
+    loader = DocumentsLoader([str(pdf_path)], presentation_language="en")
+
+    monkeypatch.setattr(loader, "_is_scanned_pdf", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        loader.unlimited_ocr_service,
+        "parse_pdf_to_markdown",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("server down")),
+    )
+    monkeypatch.setattr(
+        loader.liteparse_service,
+        "parse_to_markdown",
+        lambda *_args, **_kwargs: "liteparse fallback result",
+    )
+
+    document, _ = asyncio.run(loader.load_pdf(str(pdf_path), True, False))
+
+    assert document == "liteparse fallback result"
+
+
+def test_documents_loader_skips_unlimited_ocr_for_large_pdf(monkeypatch):
+    temp_dir = Path(TEMP_FILE_SERVICE.create_temp_dir())
+    pdf_path = temp_dir / "large-scan.pdf"
+    _make_multi_page_pdf(pdf_path, ["page 1", "page 2"])
+
+    monkeypatch.setenv("PDF_OCR_PROVIDER", "auto")
+    monkeypatch.setenv("UNLIMITED_OCR_ENABLED", "true")
+    monkeypatch.setenv("UNLIMITED_OCR_MAX_PAGES", "1")
+
+    loader = DocumentsLoader([str(pdf_path)], presentation_language="en")
+
+    monkeypatch.setattr(loader, "_is_scanned_pdf", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        loader.unlimited_ocr_service,
+        "parse_pdf_to_markdown",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Unlimited-OCR should be skipped when page count exceeds the limit")
+        ),
+    )
+    monkeypatch.setattr(
+        loader.liteparse_service,
+        "parse_to_markdown",
+        lambda *_args, **_kwargs: "liteparse oversized fallback",
+    )
+
+    document, _ = asyncio.run(loader.load_pdf(str(pdf_path), True, False))
+
+    assert document == "liteparse oversized fallback"

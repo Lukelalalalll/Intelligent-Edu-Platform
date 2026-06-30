@@ -41,6 +41,7 @@ type UploadSetupSectionProps = {
   primaryActionLabel: string;
   selectedProvider: PptGeneratorSelectableProvider | null;
   statusCards: UploadStatusItem[];
+  multimodalSummary: string;
   onConfigChange: (key: keyof PresentationConfig, value: unknown) => void;
   onGeneratePresentation: () => void;
   onProviderSelect: (provider: PptGeneratorSelectableProvider) => void;
@@ -86,6 +87,7 @@ export function UploadSetupSection({
   primaryActionLabel,
   selectedProvider,
   statusCards,
+  multimodalSummary,
   onConfigChange,
   onGeneratePresentation,
   onProviderSelect,
@@ -113,6 +115,7 @@ export function UploadSetupSection({
           providerCards={providerCards}
           selectedProvider={selectedProvider}
           webSearchEnabled={config.webSearch}
+          multimodalSummary={multimodalSummary}
           onProviderSelect={onProviderSelect}
         />
 

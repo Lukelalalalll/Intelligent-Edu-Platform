@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Loader2 } from "lucide-react";
@@ -23,6 +23,7 @@ import {
     PREVIEW_ROOT_MARGIN,
     PREVIEW_STAGGER_MS,
     getBuiltInTemplateCopy,
+    getCustomTemplateDisplayName,
     scheduleAfterPaint,
 } from "./templatePanelHelpers";
 import styles from "./TemplatePanel.module.css";
@@ -155,10 +156,11 @@ export const CustomTemplateCard = React.memo(function CustomTemplateCard({
         limit: 2,
     });
     const handleOpen = useCallback(() => onOpen(template), [onOpen, template]);
+    const displayName = getCustomTemplateDisplayName(template.name, t);
 
     return (
         <TemplateWorkspaceCard
-            title={template.name}
+            title={displayName}
             description={t("ppt_generator.templates.cards.customDescription")}
             badgeLabel={t("ppt_generator.templates.cards.customBadge")}
             onOpen={handleOpen}
@@ -247,4 +249,3 @@ export function CustomTemplatesLoadingCard() {
         </div>
     );
 }
-

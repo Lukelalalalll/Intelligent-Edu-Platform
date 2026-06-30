@@ -1,4 +1,4 @@
-﻿import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
+import type { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import type { TranslationKey } from "@/shared/i18n";
 
 import type {
@@ -82,12 +82,8 @@ const BUILT_IN_TEMPLATE_TRANSLATION_KEYS = {
     },
 } as const;
 
-export const INITIAL_BUILT_IN_PREVIEW_BATCH = 2;
-export const INITIAL_CUSTOM_PREVIEW_BATCH = 1;
-export const BUILT_IN_PREVIEW_BATCH_STEP = 2;
-export const CUSTOM_PREVIEW_BATCH_STEP = 1;
-export const BUILT_IN_PREVIEW_CADENCE_MS = 128;
-export const CUSTOM_PREVIEW_CADENCE_MS = 168;
+export const INITIAL_BUILT_IN_PREVIEW_BATCH = 4;
+export const INITIAL_CUSTOM_PREVIEW_BATCH = 3;
 export const PREVIEW_ROOT_MARGIN = "160px";
 export const PREVIEW_STAGGER_MS = 64;
 
@@ -257,6 +253,14 @@ export function getTemplateSectionCopy(tab: TemplateTab, t: TemplateTranslator):
         };
 }
 
+export function getCustomTemplateDisplayName(
+    name: string | null | undefined,
+    t: TemplateTranslator,
+) {
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+    return trimmedName || t("ppt_generator.templates.custom.fallbackName");
+}
+
 export function getCustomTemplatePreviewSlug(templateId: string) {
     return templateId.startsWith("custom-") ? templateId : `custom-${templateId}`;
 }
@@ -300,4 +304,3 @@ export function getBuiltInTemplateCopy(
         description: t(translationKeys.description),
     };
 }
-

@@ -136,7 +136,7 @@ export function TemplatePanelNavigation({ pathname }: TemplatePanelNavigationPro
     );
 }
 
-export function TemplatePanelControls({
+export const TemplatePanelControls = React.memo(function TemplatePanelControls({
     tab,
     activeTabDescription,
     stats,
@@ -214,9 +214,9 @@ export function TemplatePanelControls({
             </div>
         </WorkspaceCard>
     );
-}
+});
 
-export function TemplatePanelLibrary({
+export const TemplatePanelLibrary = React.memo(function TemplatePanelLibrary({
     tab,
     sectionCopy,
     builtIn,
@@ -252,9 +252,9 @@ export function TemplatePanelLibrary({
             </div>
         </WorkspaceCard>
     );
-}
+});
 
-function BuiltInTemplateLibrary({
+const BuiltInTemplateLibrary = React.memo(function BuiltInTemplateLibrary({
     builtIn,
     onOpenBuiltInPreview,
 }: {
@@ -317,9 +317,9 @@ function BuiltInTemplateLibrary({
             })}
         </div>
     );
-}
+});
 
-function CustomTemplateLibrary({
+const CustomTemplateLibrary = React.memo(function CustomTemplateLibrary({
     custom,
     onOpenCustomTemplate,
 }: {
@@ -361,5 +361,5 @@ function CustomTemplateLibrary({
             </div>
         </section>
     );
-}
+});
 

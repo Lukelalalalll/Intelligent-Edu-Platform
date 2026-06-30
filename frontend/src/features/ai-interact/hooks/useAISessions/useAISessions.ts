@@ -17,6 +17,8 @@ export function useAISessions() {
         ...manager,
         selectedProvider: preferences.selectedProvider,
         setSelectedProvider: preferences.setSelectedProvider,
+        configuredChatModels: preferences.configuredChatModels,
+        chatModelsLoading: preferences.chatModelsLoading,
         providerHealth: preferences.providerHealth,
         shouldCheckHealth: preferences.shouldCheckHealth,
         setShouldCheckHealth: preferences.setShouldCheckHealth,

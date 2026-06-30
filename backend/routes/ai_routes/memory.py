@@ -45,6 +45,28 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
         set_provider_health_cache(user, selected, result)
         return result
 
+    if selected == "openai":
+        from backend.services.auth.user_profile_service import load_openai_runtime_config
+        from backend.services.llm_service.openai_service import OpenAIService
+
+        ok, detail = await OpenAIService.from_config(
+            await load_openai_runtime_config(user)
+        ).health_check()
+        result = {"provider": selected, "ok": ok, "detail": detail}
+        set_provider_health_cache(user, selected, result)
+        return result
+
+    if selected == "bigmodel":
+        from backend.services.auth.user_profile_service import load_bigmodel_runtime_config
+        from backend.services.llm_service.openai_service import OpenAIService
+
+        ok, detail = await OpenAIService.from_config(
+            await load_bigmodel_runtime_config(user)
+        ).health_check()
+        result = {"provider": selected, "ok": ok, "detail": detail}
+        set_provider_health_cache(user, selected, result)
+        return result
+
     ai_gateway_service = get_ai_gateway_service()
     ok, detail = await ai_gateway_service.check_provider_health(selected)
     result = {"provider": selected, "ok": ok, "detail": detail}

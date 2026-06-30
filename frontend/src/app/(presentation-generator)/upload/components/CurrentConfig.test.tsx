@@ -15,9 +15,9 @@ vi.mock("@/shared/i18n", () => ({
         "ppt_generator.upload.currentConfig.noImageProvider": "No image provider",
         "ppt_generator.upload.currentConfig.webState.on": "On",
         "ppt_generator.upload.currentConfig.webState.off": "Off",
-        "ppt_generator.upload.currentConfig.configured": "宸查厤缃?,
-        "ppt_generator.upload.currentConfig.unconfigured": "鏈厤缃?,
-        "ppt_generator.upload.currentConfig.selected": "褰撳墠浣跨敤",
+        "ppt_generator.upload.currentConfig.configured": "Configured",
+        "ppt_generator.upload.currentConfig.unconfigured": "Not configured",
+        "ppt_generator.upload.currentConfig.selected": "Selected",
         "ppt_generator.upload.currentConfig.defaultModel": "Default model",
       }[key] ?? key),
   }),
@@ -51,13 +51,14 @@ describe("CurrentConfig", () => {
         ]}
         selectedProvider="openai"
         webSearchEnabled={false}
+        multimodalSummary="OpenAI (gpt-4o)"
         onProviderSelect={onProviderSelect}
       />
     );
 
-    expect(screen.getByText("宸查厤缃?)).toBeInTheDocument();
-    expect(screen.getByText("鏈厤缃?)).toBeInTheDocument();
-    expect(screen.getByText("褰撳墠浣跨敤")).toBeInTheDocument();
+    expect(screen.getByText("Configured")).toBeInTheDocument();
+    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(screen.getByText("Selected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /OpenAI/i }));
     expect(onProviderSelect).toHaveBeenCalledWith("openai");

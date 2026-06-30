@@ -85,6 +85,7 @@ const UploadPage = () => {
             primaryActionLabel={viewState.primaryActionLabel}
             selectedProvider={viewState.selectedProvider}
             statusCards={viewState.statusCards}
+            multimodalSummary={viewState.multimodalSummary}
             onConfigChange={actions.handleConfigChange}
             onGeneratePresentation={actions.handleGeneratePresentation}
             onProviderSelect={actions.handleProviderSelect}

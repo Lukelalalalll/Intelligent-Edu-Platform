@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel
 
@@ -24,6 +24,8 @@ class FontsUploadAndSlidesPreviewResponse(BaseModel):
     pptx_url: str
     modified_pptx_url: str
     fonts: dict
+    render_mode: Literal["pptx_to_html", "libreoffice_png", "degraded"]
+    preview_warning: str | None = None
 
 
 class FontReplacementSelection(BaseModel):
@@ -35,11 +37,20 @@ class FontReplacementSelection(BaseModel):
 
 
 class _PreviewLogger:
-    def info(self, message: str):
-        print(f"[fonts-preview] {message}")
+    @staticmethod
+    def _format(message: str, *args) -> str:
+        if args:
+            try:
+                return message % args
+            except Exception:
+                return " ".join([message, *[str(arg) for arg in args]])
+        return message
 
-    def warning(self, message: str):
-        print(f"[fonts-preview] WARNING: {message}")
+    def info(self, message: str, *args):
+        print(f"[fonts-preview] {self._format(message, *args)}")
 
-    def error(self, message: str):
-        print(f"[fonts-preview] ERROR: {message}")
+    def warning(self, message: str, *args):
+        print(f"[fonts-preview] WARNING: {self._format(message, *args)}")
+
+    def error(self, message: str, *args):
+        print(f"[fonts-preview] ERROR: {self._format(message, *args)}")

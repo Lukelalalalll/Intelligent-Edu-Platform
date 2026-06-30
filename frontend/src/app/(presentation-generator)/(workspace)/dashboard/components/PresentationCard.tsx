@@ -1,7 +1,7 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect, useMemo } from "react";
-import { DashboardApi, PresentationResponse } from "@/app/(presentation-generator)/services/api/dashboard";
+import { DashboardApi, DashboardPresentationSummary } from "@/app/(presentation-generator)/services/api/dashboard";
 import { AlertTriangle, ArrowUpRight, CalendarDays, EllipsisVertical, Layers3, Loader2, Trash2 } from "lucide-react";
 import {
   Popover,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { usePathname, useRouter } from "@/ppt_generator/shims/next-navigation";
 import { notify } from "@/components/ui/sonner";
-import { useFontLoader } from "@/app/(presentation-generator)/hooks/useFontLoad";
+import { useFontLoader as loadFontFaces } from "@/app/(presentation-generator)/hooks/useFontLoad";
 import SlideScale from "@/app/(presentation-generator)/components/PresentationRender";
 import MarkdownRenderer from "@/components/MarkDownRender";
 import { useI18n } from "@/shared/i18n";
@@ -22,11 +22,13 @@ import {
 } from "./dashboardUtils";
 
 type PresentationCardProps = {
-  presentation: PresentationResponse;
+  presentation: DashboardPresentationSummary;
   onDeleted?: (presentationId: string) => void;
 };
 
 type ThemeFont = {
+  logo_url?: string;
+  company_name?: string;
   data?: {
     colors?: Record<string, string>;
     fonts?: {
@@ -38,33 +40,74 @@ type ThemeFont = {
   };
 };
 
-export const PresentationCard = ({
+function buildPreviewThemeStyle(theme: ThemeFont | null, fontName: string): React.CSSProperties {
+  const colors = theme?.data?.colors ?? {};
+  const style: React.CSSProperties & Record<string, string> = {};
+
+  const variableEntries: Array<[string, string | undefined]> = [
+    ["--primary-color", colors.primary],
+    ["--background-color", colors.background],
+    ["--card-color", colors.card],
+    ["--stroke", colors.stroke],
+    ["--primary-text", colors.primary_text],
+    ["--background-text", colors.background_text],
+    ["--graph-0", colors.graph_0],
+    ["--graph-1", colors.graph_1],
+    ["--graph-2", colors.graph_2],
+    ["--graph-3", colors.graph_3],
+    ["--graph-4", colors.graph_4],
+    ["--graph-5", colors.graph_5],
+    ["--graph-6", colors.graph_6],
+    ["--graph-7", colors.graph_7],
+    ["--graph-8", colors.graph_8],
+    ["--graph-9", colors.graph_9],
+  ];
+
+  for (const [key, value] of variableEntries) {
+    if (typeof value === "string" && value.trim()) {
+      style[key] = value;
+    }
+  }
+
+  if (fontName) {
+    style.fontFamily = `"${fontName}"`;
+    style["--heading-font-family"] = `"${fontName}"`;
+    style["--body-font-family"] = `"${fontName}"`;
+  }
+
+  return style;
+}
+
+export const PresentationCard = React.memo(function PresentationCard({
   presentation,
   onDeleted,
-}: PresentationCardProps) => {
+}: PresentationCardProps) {
   const { locale, t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isNearViewport, setIsNearViewport] = React.useState(false);
+  const [shouldRenderPreview, setShouldRenderPreview] = React.useState(false);
+  const previewHostRef = React.useRef<HTMLDivElement | null>(null);
 
   const {
     id,
     title,
-    created_at,
-    updated_at,
+    createdAt,
+    updatedAt,
     theme,
     slides,
-    n_slides,
+    slideCount,
   } = presentation;
 
-  const cardTimestamp = getPresentationTimestamp({ created_at, updated_at } as PresentationResponse);
-  const slideCount = getPresentationSlideCount({ slides, n_slides } as PresentationResponse);
-  const firstSlide = slides?.[0];
+  const cardTimestamp = getPresentationTimestamp({ createdAt, updatedAt });
+  const normalizedSlideCount = getPresentationSlideCount({ slideCount });
+  const previewSlide = slides?.[0] || null;
   const unknownDateLabel = t("ppt_generator.dashboard.card.unknownDate");
   const dateLabel = formatPresentationDate(cardTimestamp, locale, "long", unknownDateLabel);
   const detailedDateLabel = formatPresentationDate(cardTimestamp, locale, "dateTime", unknownDateLabel);
-  const createdTimestamp = created_at ? new Date(created_at).getTime() : 0;
+  const createdTimestamp = createdAt ? new Date(createdAt).getTime() : 0;
   const createdDateLabel = formatPresentationDate(
     createdTimestamp || cardTimestamp,
     locale,
@@ -72,48 +115,69 @@ export const PresentationCard = ({
     unknownDateLabel
   );
 
-  const cardTheme = useMemo(() => theme as ThemeFont | null, [theme]);
-  const fontName = cardTheme?.data?.fonts?.textFont?.name?.trim() || "";
-  const fontUrl = cardTheme?.data?.fonts?.textFont?.url?.trim() || "";
+  useEffect(() => {
+    const element = previewHostRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "240px 0px" }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
-    const element = document.getElementById(`dashboard-presentation-card-${id}`);
-    if (!element) return;
-
-    const colors = cardTheme?.data?.colors;
-    if (!colors?.graph_0) return;
-
-    Object.entries({
-      "--primary-color": colors.primary,
-      "--background-color": colors.background,
-      "--card-color": colors.card,
-      "--stroke": colors.stroke,
-      "--primary-text": colors.primary_text,
-      "--background-text": colors.background_text,
-      "--graph-0": colors.graph_0,
-      "--graph-1": colors.graph_1,
-      "--graph-2": colors.graph_2,
-      "--graph-3": colors.graph_3,
-      "--graph-4": colors.graph_4,
-      "--graph-5": colors.graph_5,
-      "--graph-6": colors.graph_6,
-      "--graph-7": colors.graph_7,
-      "--graph-8": colors.graph_8,
-      "--graph-9": colors.graph_9,
-    }).forEach(([key, value]) => {
-      if (typeof value === "string" && value) {
-        element.style.setProperty(key, value);
-      }
-    });
-
-    if (fontName) {
-      element.style.setProperty("font-family", `"${fontName}"`);
-      element.style.setProperty("--heading-font-family", `"${fontName}"`);
-      element.style.setProperty("--body-font-family", `"${fontName}"`);
+    if (!isNearViewport || shouldRenderPreview) {
+      return;
     }
-  }, [cardTheme, fontName, id]);
 
-  useFontLoader(fontName && fontUrl ? { [fontName]: fontUrl } : {});
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+
+    const activate = () => setShouldRenderPreview(true);
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(activate, { timeout: 180 });
+    } else if (typeof window !== "undefined") {
+      timeoutId = window.setTimeout(activate, 80);
+    } else {
+      activate();
+    }
+
+    return () => {
+      if (typeof window !== "undefined" && idleId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (typeof window !== "undefined" && timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [isNearViewport, shouldRenderPreview]);
+
+  const previewTheme = useMemo(() => theme as ThemeFont | null, [theme]);
+  const fontName = previewTheme?.data?.fonts?.textFont?.name?.trim() || "";
+  const fontUrl = previewTheme?.data?.fonts?.textFont?.url?.trim() || "";
+
+  useEffect(() => {
+    if (fontName && fontUrl) {
+      loadFontFaces({ [fontName]: fontUrl });
+    }
+  }, [fontName, fontUrl]);
+
+  const previewThemeStyle = useMemo(
+    () => buildPreviewThemeStyle(previewTheme, fontName),
+    [fontName, previewTheme]
+  );
 
   const handlePreview = (e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.preventDefault();
@@ -121,7 +185,7 @@ export const PresentationCard = ({
       pathname,
       presentation_id: id,
       title_length: (title || "").length,
-      slide_count: slideCount,
+      slide_count: normalizedSlideCount,
     });
     router.push(`/presentation?id=${id}&type=standard`);
   };
@@ -135,7 +199,7 @@ export const PresentationCard = ({
       trackEvent(MixpanelEvent.Dashboard_Presentation_Deleted, {
         pathname,
         presentation_id: id,
-        slide_count: slideCount,
+        slide_count: normalizedSlideCount,
       });
       notify.success(
         t("ppt_generator.dashboard.notify.deleteSuccess.title"),
@@ -177,9 +241,10 @@ export const PresentationCard = ({
           <div className="relative overflow-hidden border-b border-[rgba(15,23,42,0.08)] bg-[linear-gradient(135deg,rgba(232,245,238,0.95)_0%,rgba(248,250,252,0.98)_80%)] p-[1.05rem] sm:p-[1.15rem]">
             <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.78),transparent_70%)]" />
             <div
-              id={`dashboard-presentation-card-${id}`}
+              ref={previewHostRef}
               suppressHydrationWarning
               className="relative overflow-hidden rounded-[22px] border border-white/75 bg-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_34px_-20px_rgba(15,23,42,0.22)]"
+              style={previewThemeStyle}
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 py-3 opacity-0 transition duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                 <div className="rounded-full bg-[linear-gradient(135deg,#007b55_0%,#0b6b4b_100%)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
@@ -189,13 +254,20 @@ export const PresentationCard = ({
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
               </div>
-              {firstSlide ? (
-                <div className="aspect-[16/9] overflow-hidden">
-                  <SlideScale slide={firstSlide} isClickable={false} />
-                </div>
+              {shouldRenderPreview ? (
+                previewSlide ? (
+                  <div className="aspect-[16/9] overflow-hidden">
+                    <SlideScale slide={previewSlide} theme={previewTheme || null} isClickable={false} />
+                  </div>
+                ) : (
+                  <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,rgba(248,250,252,1)_0%,rgba(232,245,238,0.92)_100%)] text-sm font-medium text-slate-500">
+                    {t("ppt_generator.dashboard.card.noPreview")}
+                  </div>
+                )
               ) : (
-                <div className="flex aspect-[16/9] items-center justify-center bg-[linear-gradient(135deg,rgba(248,250,252,1)_0%,rgba(232,245,238,0.92)_100%)] text-sm font-medium text-slate-500">
-                  {t("ppt_generator.dashboard.card.noPreview")}
+                <div className="relative aspect-[16/9] overflow-hidden bg-[linear-gradient(135deg,rgba(248,250,252,1)_0%,rgba(232,245,238,0.92)_100%)]">
+                  <div className="absolute inset-x-6 top-6 h-5 rounded-full bg-white/70" />
+                  <div className="absolute inset-x-6 bottom-6 top-16 rounded-[22px] border border-white/75 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]" />
                 </div>
               )}
             </div>
@@ -254,10 +326,10 @@ export const PresentationCard = ({
               <div className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[rgba(248,250,252,0.92)] px-4 py-2.5">
                 <Layers3 className="h-4 w-4 text-[#0b6b4b]" />
                 <span>
-                  {slideCount > 0
-                    ? slideCount === 1
-                      ? t("ppt_generator.dashboard.card.slideSingle", { count: slideCount })
-                      : t("ppt_generator.dashboard.card.slideOther", { count: slideCount })
+                  {normalizedSlideCount > 0
+                    ? normalizedSlideCount === 1
+                      ? t("ppt_generator.dashboard.card.slideSingle", { count: normalizedSlideCount })
+                      : t("ppt_generator.dashboard.card.slideOther", { count: normalizedSlideCount })
                     : t("ppt_generator.dashboard.card.slideAuto")}
                 </span>
               </div>
@@ -331,5 +403,4 @@ export const PresentationCard = ({
       )}
     </>
   );
-};
-
+});

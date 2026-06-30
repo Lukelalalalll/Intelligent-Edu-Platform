@@ -23,7 +23,7 @@ export interface GenerateRenderPayload {
   md_content: string;
   base_style: BaseTheme;
   custom_style_prompt: string;
-  provider: 'auto' | 'local_ollama' | 'coze' | 'deepseek' | 'openai';
+  provider: 'auto' | 'local_ollama' | 'coze' | 'deepseek' | 'openai' | 'bigmodel';
   title?: string;
   source_kind?: 'upload' | 'text';
   source_filename?: string;

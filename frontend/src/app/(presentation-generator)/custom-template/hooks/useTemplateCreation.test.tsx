@@ -150,6 +150,7 @@ describe("useTemplateCreation", () => {
           slide_image_urls: [],
           pptx_url: "/app_data/deck.pptx",
           modified_pptx_url: "/app_data/deck.pptx",
+          render_mode: "pptx_to_html",
           fonts: {
             Inter:
               "https://fonts.googleapis.com/css2?family=Inter&display=swap",

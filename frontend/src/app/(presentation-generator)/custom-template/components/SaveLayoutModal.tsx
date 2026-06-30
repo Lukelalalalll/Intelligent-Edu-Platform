@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from "react";
 import { Loader2, Save } from "lucide-react";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/shared/i18n";
 import { Textarea } from "@/components/ui/textarea";
 
 interface SaveLayoutModalProps {
@@ -35,6 +36,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
   isSaving,
   template_info_id,
 }) => {
+  const { t } = useI18n();
   const [layoutName, setLayoutName] = useState("");
   const [description, setDescription] = useState("");
 
@@ -66,24 +68,25 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
           <DialogTitle className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <Save className="h-5 w-5 text-primary" />
-              Save Template
+              {t("ppt_generator.customTemplate.saveModal.title")}
             </span>
           </DialogTitle>
           <DialogDescription>
-            Give your template a clear name and an optional description to find it later.
+            {t("ppt_generator.customTemplate.saveModal.body")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5 py-4">
           <div className="grid gap-2">
             <Label htmlFor="layout-name" className="text-sm font-medium">
-              Template Name <span className="text-red-500">*</span>
+              {t("ppt_generator.customTemplate.saveModal.name")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Input
               id="layout-name"
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value)}
-              placeholder="e.g., Modern Tech Pitch"
+              placeholder={t("ppt_generator.customTemplate.saveModal.namePlaceholder")}
               disabled={isSaving}
               className="w-full"
               aria-required
@@ -92,13 +95,16 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
 
           <div className="grid gap-2">
             <Label htmlFor="description" className="text-sm font-medium">
-              Description <span className="text-gray-400">(optional)</span>
+              {t("ppt_generator.customTemplate.saveModal.description")}{" "}
+              <span className="text-gray-400">
+                {t("ppt_generator.customTemplate.saveModal.optional")}
+              </span>
             </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a short summary of what this template is best for..."
+              placeholder={t("ppt_generator.customTemplate.saveModal.descriptionPlaceholder")}
               disabled={isSaving}
               className="w-full resize-none"
               rows={3}
@@ -131,7 +137,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
                 </path>
                 <circle cx="12" cy="12" r="10" />
               </svg>
-              <span>Saving your template. This may take a moment...</span>
+              <span>{t("ppt_generator.customTemplate.saveModal.saving")}</span>
             </div>
           )}
         </div>
@@ -142,7 +148,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
             onClick={handleClose}
             disabled={isSaving}
           >
-            Cancel
+            {t("ppt_generator.customTemplate.saveModal.cancel")}
           </Button>
           <Button
             onClick={handleSave}
@@ -153,12 +159,12 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                {t("ppt_generator.customTemplate.saveModal.savingButton")}
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Template
+                {t("ppt_generator.customTemplate.saveModal.save")}
               </>
             )}
           </Button>
@@ -167,4 +173,3 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
     </Dialog>
   );
 };
-

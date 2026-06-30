@@ -36,6 +36,59 @@ export const LayoutsBadge = memo(function LayoutsBadge({
     );
 });
 
+export const LightweightTemplatePreview = memo(function LightweightTemplatePreview({
+    accent,
+    title,
+}: {
+    accent: {
+        from: string;
+        to: string;
+        soft: string;
+    };
+    title: string;
+}) {
+    return (
+        <div className="relative z-10 flex h-full flex-col gap-3 overflow-hidden" aria-hidden="true">
+            {[0, 1].map((index) => (
+                <div
+                    key={`${title}-light-preview-${index}`}
+                    className="relative overflow-hidden rounded-[14px] border border-white/80"
+                    style={{
+                        height: `${720 * 0.24}px`,
+                        contain: "layout paint style",
+                        background: `linear-gradient(135deg, ${accent.soft}, rgba(255, 255, 255, 0.96))`,
+                        boxShadow: "0 14px 28px -24px rgba(15, 23, 42, 0.24)",
+                    }}
+                >
+                    <div
+                        className="absolute inset-0 opacity-90"
+                        style={{
+                            background: `radial-gradient(circle at top right, ${accent.to} 0%, transparent 44%), linear-gradient(135deg, rgba(255,255,255,0.88), rgba(248,250,252,0.96))`,
+                        }}
+                    />
+                    <div
+                        className="absolute left-4 right-12 top-4 h-3 rounded-full"
+                        style={{ backgroundColor: accent.from, opacity: index === 0 ? 0.32 : 0.22 }}
+                    />
+                    <div
+                        className="absolute left-4 right-20 top-10 h-3 rounded-full"
+                        style={{ backgroundColor: accent.to, opacity: index === 0 ? 0.22 : 0.16 }}
+                    />
+                    <div className="absolute left-4 right-4 top-[4.25rem] flex gap-3">
+                        <span className="h-16 flex-1 rounded-[12px]" style={{ backgroundColor: accent.soft }} />
+                        <span className="h-16 w-[28%] rounded-[12px]" style={{ backgroundColor: "rgba(255, 255, 255, 0.92)" }} />
+                    </div>
+                    <div className="absolute bottom-4 left-4 right-4 grid grid-cols-3 gap-3">
+                        <span className="h-16 rounded-[12px]" style={{ backgroundColor: accent.soft }} />
+                        <span className="h-16 rounded-[12px]" style={{ backgroundColor: "rgba(255, 255, 255, 0.82)" }} />
+                        <span className="h-16 rounded-[12px]" style={{ backgroundColor: accent.soft }} />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+});
+
 export const ScaledSlidePreview = memo(function ScaledSlidePreview({
     children,
     id,

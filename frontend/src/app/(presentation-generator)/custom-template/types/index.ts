@@ -95,6 +95,8 @@ export interface FontUploadPreviewResponse {
   slide_image_urls: string[];
   pptx_url: string;
   modified_pptx_url: string;
+  render_mode: "pptx_to_html" | "libreoffice_png" | "degraded";
+  preview_warning?: string | null;
   fonts: {
     [key: string]: string;
   };
@@ -182,7 +184,7 @@ export interface FontManagerProps {
 
 export interface SlidePreviewSectionProps {
   previewData: FontUploadPreviewResponse;
-  onInitTemplate: () => void;
+  onInitTemplate: () => void | Promise<unknown>;
   isLoading: boolean;
 }
 

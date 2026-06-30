@@ -198,3 +198,46 @@ class OpenAIConfigSchema(BaseModel):
     @classmethod
     def validate_model(cls, value: str) -> str:
         return value.strip()
+
+
+class MultimodalOpenAIConfigSchema(BaseModel):
+    base_url: str = Field(default="https://api.openai.com/v1", max_length=240)
+    api_key: Optional[str] = Field(default=None, max_length=4096)
+    clear_api_key: bool = False
+    model: str = Field(default="gpt-4o", min_length=1, max_length=80)
+    stream: bool = False
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return cleaned
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value: str) -> str:
+        return value.strip()
+
+
+class BigModelConfigSchema(BaseModel):
+    base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", max_length=240)
+    api_key: Optional[str] = Field(default=None, max_length=4096)
+    clear_api_key: bool = False
+    text_model: str = Field(default="glm-4.5-flash", min_length=1, max_length=120)
+    image_model: str = Field(default="glm-5v-flash", min_length=1, max_length=120)
+    stream: bool = False
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return cleaned
+
+    @field_validator("text_model", "image_model")
+    @classmethod
+    def validate_model(cls, value: str) -> str:
+        return value.strip()

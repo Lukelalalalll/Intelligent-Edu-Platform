@@ -21,6 +21,7 @@ type CurrentConfigProps = {
   providerCards: ProviderCard[];
   selectedProvider: PptGeneratorSelectableProvider | null;
   webSearchEnabled: boolean;
+  multimodalSummary: string;
   onProviderSelect: (provider: PptGeneratorSelectableProvider) => void;
 };
 
@@ -71,6 +72,7 @@ const CurrentConfig = ({
   providerCards,
   selectedProvider,
   webSearchEnabled,
+  multimodalSummary,
   onProviderSelect,
 }: CurrentConfigProps) => {
   const { t } = useI18n();
@@ -93,6 +95,7 @@ const CurrentConfig = ({
 
   const items = [
     { label: t("ppt_generator.upload.currentConfig.text"), value: textSummary },
+    { label: "Multimodal", value: multimodalSummary },
     { label: t("ppt_generator.upload.currentConfig.images"), value: imageSummary },
     { label: t("ppt_generator.upload.currentConfig.web"), value: webSearchSummary },
   ];

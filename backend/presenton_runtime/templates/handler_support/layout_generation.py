@@ -14,6 +14,7 @@ from services.export_task_service import EXPORT_TASK_SERVICE
 from templates.handler_support.code_normalization import (
     _normalize_asset_fields,
     _normalize_layout_code_for_create,
+    _sanitize_slide_html,
     _strip_code_fences,
 )
 from templates.handler_support.image_io import _read_image_bytes_and_media_type
@@ -130,6 +131,7 @@ async def _create_slide_layout_impl(
         raise HTTPException(status_code=400, detail="Invalid slide index")
 
     slide_html = template_info.slide_htmls[request.index]
+    sanitized_slide_html = _sanitize_slide_html(slide_html)
     slide_image_url = template_info.slide_image_urls[request.index]
     image_bytes, media_type = await _read_image_bytes_and_media_type(slide_image_url)
 
@@ -140,12 +142,15 @@ async def _create_slide_layout_impl(
 
     react_component = await generate_slide_layout_code(
         system_prompt=SLIDE_LAYOUT_CREATION_SYSTEM_PROMPT,
-        user_text=f"{fonts_text}\n\n#SLIDE HTML REFERENCE\n{slide_html}",
+        user_text=f"{fonts_text}\n\n#SLIDE HTML REFERENCE\n{sanitized_slide_html}",
         image_bytes=image_bytes,
         media_type=media_type,
     )
     return CreateSlideLayoutResponse(
-        react_component=_normalize_layout_code_for_create(react_component)
+        react_component=_normalize_layout_code_for_create(
+            react_component,
+            source_html=slide_html,
+        )
     )
 
 

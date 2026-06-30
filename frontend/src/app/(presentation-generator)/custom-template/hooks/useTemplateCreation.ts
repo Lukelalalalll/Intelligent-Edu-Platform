@@ -22,6 +22,10 @@ import {
 import { getApiUrl } from "@/utils/api";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 import { compileCustomLayout } from "@/app/hooks/compileLayout";
+import {
+    getPptGeneratorMultimodalHeaders,
+    type PptGeneratorSelectableMultimodalProvider,
+} from "@/ppt_generator/providerOverride";
 
 /** Must match `VISION_LAYOUT_ERROR_MARKER` in FastAPI `utils/template_vision_errors.py`. */
 const TEMPLATE_VISION_MODEL_MARKER = "TEMPLATE_VISION_MODEL_REQUIRED";
@@ -277,9 +281,19 @@ export const useTemplateCreation = () => {
     }, [buildSelectedReplacementPayload, getUnresolvedFonts, uploadedFonts, updateState]);
 
     // Step 3: Initialize template creation
-    const initTemplateCreation = useCallback(async (): Promise<string | null> => {
+    const initTemplateCreation = useCallback(async (
+        multimodalProvider: PptGeneratorSelectableMultimodalProvider | null = null,
+    ): Promise<string | null> => {
         if (!state.previewData) {
             notify.error("No preview data", "Generate a preview before continuing.");
+            return null;
+        }
+
+        if (!multimodalProvider) {
+            notify.error(
+                "Multimodal model required",
+                "Configure and select a multimodal model before starting template reconstruction."
+            );
             return null;
         }
 
@@ -328,9 +342,9 @@ export const useTemplateCreation = () => {
 
             // Automatically start processing the first slide
             if (typeof data === 'string') {
-                createSlideLayout(data, 0);
+                createSlideLayout(data, 0, true, false, multimodalProvider);
             } else if (data.id) {
-                createSlideLayout(data.id, 0);
+                createSlideLayout(data.id, 0, true, false, multimodalProvider);
             }
 
             return typeof data === 'string' ? data : data.id;
@@ -349,8 +363,17 @@ export const useTemplateCreation = () => {
         templateId: string,
         slideIndex: number,
         autoAdvance: boolean = true,
-        _isAutoRetry: boolean = false
+        _isAutoRetry: boolean = false,
+        multimodalProvider: PptGeneratorSelectableMultimodalProvider | null = null,
     ): Promise<SlideLayoutResponse | null> => {
+        if (!multimodalProvider) {
+            notify.error(
+                "Multimodal model required",
+                "Choose a configured multimodal model before generating slide layouts."
+            );
+            return null;
+        }
+
         // Mark slide as processing
         setSlides(prev => prev.map((s, i) =>
             i === slideIndex ? { ...s, processing: true, error: undefined } : s
@@ -363,7 +386,10 @@ export const useTemplateCreation = () => {
                 getApiUrl(`/api/v1/ppt/template/slide-layout/create/start`),
                 {
                     method: "POST",
-                    headers: getHeader(),
+                    headers: {
+                        ...getHeader(),
+                        ...getPptGeneratorMultimodalHeaders(multimodalProvider),
+                    },
                     body: JSON.stringify({
                         id: templateId,
                         index: slideIndex,
@@ -441,7 +467,7 @@ export const useTemplateCreation = () => {
                     const nextIndex = slideIndex + 1;
                     if (nextIndex < newSlides.length && !newSlides[nextIndex].processed) {
                         setTimeout(() => {
-                            createSlideLayout(templateId, nextIndex, true);
+                            createSlideLayout(templateId, nextIndex, true, false, multimodalProvider);
                         }, 500);
                     } else {
                         // Check if all slides are processed
@@ -486,7 +512,7 @@ export const useTemplateCreation = () => {
             // Auto-retry once on transient failures; vision/model capability errors won't recover.
             if (!_isAutoRetry && !isVisionModelError) {
                 console.log(`Auto-retrying slide ${slideIndex + 1} after API failure...`);
-                return createSlideLayout(templateId, slideIndex, autoAdvance, true);
+                return createSlideLayout(templateId, slideIndex, autoAdvance, true, multimodalProvider);
             }
 
             // Mark slide with error
@@ -500,7 +526,7 @@ export const useTemplateCreation = () => {
                     const nextIndex = slideIndex + 1;
                     if (nextIndex < newSlides.length && !newSlides[nextIndex].processed) {
                         setTimeout(() => {
-                            createSlideLayout(templateId, nextIndex, true);
+                            createSlideLayout(templateId, nextIndex, true, false, multimodalProvider);
                         }, 500);
                     } else {
                         const allProcessed = newSlides.every(s => s.processed || s.error);
@@ -532,10 +558,13 @@ export const useTemplateCreation = () => {
     }, [updateState]);
 
     // Reconstruct a single slide (no auto-advance)
-    const retrySlide = useCallback((slideIndex: number) => {
+    const retrySlide = useCallback((
+        slideIndex: number,
+        multimodalProvider: PptGeneratorSelectableMultimodalProvider | null = null,
+    ) => {
         if (state.templateId) {
             // Pass false for autoAdvance to only reconstruct this specific slide
-            createSlideLayout(state.templateId, slideIndex, false, true);
+            createSlideLayout(state.templateId, slideIndex, false, true, multimodalProvider);
         }
     }, [state.templateId, createSlideLayout]);
 

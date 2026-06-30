@@ -4,6 +4,7 @@ import React from "react";
 import { ArrowLeft, Palette } from "lucide-react";
 
 import PptGeneratorShell from "@/features/slides/components/PptGeneratorShell";
+import { useI18n } from "@/shared/i18n";
 import { CustomTemplateShellToolbar } from "./components/CustomTemplateShellToolbar";
 import { SaveLayoutModal } from "./components/SaveLayoutModal";
 import { FileUploadSection } from "./components/FileUploadSection";
@@ -14,6 +15,7 @@ import { useCustomTemplatePageController } from "./hooks/useCustomTemplatePageCo
 import styles from "./customTemplateWorkbench.module.css";
 
 const CustomTemplatePage = () => {
+  const { t } = useI18n();
   const controller = useCustomTemplatePageController();
 
   return (
@@ -28,17 +30,17 @@ const CustomTemplatePage = () => {
           onClick={controller.shell.onBackToTemplates}
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to Templates
+          {t("ppt_generator.customTemplate.page.back")}
         </button>
       }
       className={styles.shell}
       contentClassName={styles.page}
       bannerTitle={
         <>
-          <Palette className="h-6 w-6" aria-hidden="true" /> Template Studio
+          <Palette className="h-6 w-6" aria-hidden="true" /> {t("ppt_generator.customTemplate.page.title")}
         </>
       }
-      bannerSubtitle="Convert an existing PPTX into a reusable PPT Generator template workflow with branded controls, slide previews, schema editing, and template packaging."
+      bannerSubtitle={t("ppt_generator.customTemplate.page.subtitle")}
       toolbar={<CustomTemplateShellToolbar toolbar={controller.shell.toolbar} />}
     >
       {controller.flow.showFileUpload ? (

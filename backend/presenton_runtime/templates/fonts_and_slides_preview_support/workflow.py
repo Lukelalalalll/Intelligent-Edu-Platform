@@ -39,11 +39,12 @@ from .models import (
     FontsUploadAndSlidesPreviewResponse,
     _PreviewLogger,
 )
-from .rendering import render_pptx_slides_to_images
+from .rendering import SlidePreviewRenderResult, render_pptx_slides_to_images
 from .session_store import get_fonts_directory, get_template_preview_session_dir, persist_files_to_session, public_urls_for_local_paths, write_bytes_to_path
 
 MISSING_FONTS_REQUIRED_CODE = "missing_font_files_required"
 SLIDE_PREVIEW_GENERATION_FAILED_CODE = "slide_preview_generation_failed"
+FAITHFUL_SLIDE_PREVIEW_UNAVAILABLE_CODE = "faithful_slide_preview_unavailable"
 
 
 async def check_fonts_in_pptx_handler(pptx_file: UploadFile) -> FontCheckResponse:
@@ -152,14 +153,16 @@ async def upload_fonts_and_preview_handler(
                     "missing_fonts": [font.model_dump() for font in unresolved_fonts],
                 },
             )
-        slide_image_paths = await create_slide_previews(
-            modified_pptx_path,
-            font_paths_for_install,
-            max_slides,
-            logger,
-            session_dir,
-            replacement_font_css,
-        ) if get_slide_images else []
+        preview_result: SlidePreviewRenderResult | None = None
+        if get_slide_images:
+            preview_result = await create_slide_previews(
+                modified_pptx_path,
+                font_paths_for_install,
+                max_slides,
+                logger,
+                session_dir,
+                replacement_font_css,
+            )
         modified_pptx_path_out = await upload_presentations(modified_pptx_path, logger, session_dir) if upload_presentation else ""
         fonts = await _collect_result_fonts(
             raw_fonts=raw_fonts,
@@ -175,10 +178,21 @@ async def upload_fonts_and_preview_handler(
             variants_by_name=variants_by_name,
             logger=logger,
         )
-        slide_image_urls = public_urls_for_local_paths(slide_image_paths) if get_slide_images else []
+        slide_image_urls = (
+            public_urls_for_local_paths(preview_result.screenshot_paths)
+            if preview_result is not None
+            else []
+        )
         modified_pptx_url = public_urls_for_local_paths([modified_pptx_path_out])[0] if upload_presentation else modified_pptx_path
         logger.info(f"Upload and preview completed successfully with {len(fonts)} total fonts")
-        return FontsUploadAndSlidesPreviewResponse(slide_image_urls=slide_image_urls, pptx_url=modified_pptx_url, modified_pptx_url=modified_pptx_url, fonts=fonts)
+        return FontsUploadAndSlidesPreviewResponse(
+            slide_image_urls=slide_image_urls,
+            pptx_url=modified_pptx_url,
+            modified_pptx_url=modified_pptx_url,
+            fonts=fonts,
+            render_mode=preview_result.render_mode if preview_result is not None else "pptx_to_html",
+            preview_warning=preview_result.preview_warning if preview_result is not None else None,
+        )
 
 
 async def upload_fonts_and_fix_fonts_in_pptx(
@@ -222,9 +236,9 @@ async def create_slide_previews(
     logger,
     session_dir: str,
     replacement_font_css: str = "",
-) -> List[str]:
+) -> SlidePreviewRenderResult:
     try:
-        screenshot_paths = await render_pptx_slides_to_images(
+        preview_result = await render_pptx_slides_to_images(
             modified_pptx_path=modified_pptx_path,
             font_paths_for_install=font_paths_for_install,
             max_slides=max_slides,
@@ -233,6 +247,18 @@ async def create_slide_previews(
         )
     except HTTPException as exc:
         logger.error(f"Slide preview generation failed: {exc.detail}")
+        if exc.status_code == 503:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": FAITHFUL_SLIDE_PREVIEW_UNAVAILABLE_CODE,
+                    "message": (
+                        "Unable to generate a faithful slide preview for this PPTX on this machine. "
+                        "PPTX-to-HTML conversion was unavailable, and LibreOffice preview rendering "
+                        "could not be used."
+                    ),
+                },
+            ) from exc
         raise HTTPException(
             status_code=500,
             detail={
@@ -255,18 +281,19 @@ async def create_slide_previews(
                 ),
             },
         ) from exc
-    if not screenshot_paths:
+    if not preview_result.screenshot_paths:
         raise HTTPException(status_code=500, detail="Failed to generate slide images")
     persisted_paths = await persist_files_to_session(
         [
             (os.path.join(session_dir, f"slide_{idx}.png"), path)
-            for idx, path in enumerate(screenshot_paths, start=1)
+            for idx, path in enumerate(preview_result.screenshot_paths, start=1)
         ]
     )
-    for path in screenshot_paths:
+    for path in preview_result.screenshot_paths:
         with contextlib.suppress(OSError):
             os.remove(path)
-    return persisted_paths
+    preview_result.screenshot_paths = persisted_paths
+    return preview_result
 
 
 async def upload_presentations(modified_pptx_path: str, logger, session_dir: str) -> str:

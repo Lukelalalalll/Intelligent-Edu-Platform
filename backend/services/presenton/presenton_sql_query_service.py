@@ -15,6 +15,12 @@ from .presenton_projection.runtime_bootstrap import (
 
 from services.search_indexing import build_slide_content_text
 
+_PREVIEW_EYEBROW_KEYS = ("label", "companyName", "category", "tag", "section")
+_PREVIEW_HEADING_KEYS = ("title", "heading", "headline")
+_PREVIEW_SUMMARY_KEYS = ("subtitle", "description", "summary", "body", "text")
+_PREVIEW_IMAGE_KEYS = ("__image_url__", "imageUrl", "thumbnailUrl", "src", "url")
+_PREVIEW_MAX_SUMMARY_LENGTH = 220
+
 
 def _serialize_value(value: Any) -> Any:
     if isinstance(value, datetime):
@@ -38,10 +44,146 @@ def _slide_content_text(slide: SlideModel) -> str:
     return build_slide_content_text(slide.content or {})
 
 
-def _serialize_presentation_summary(presentation: PresentationModel) -> dict[str, Any]:
+def _clean_preview_text(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.replace("\r", " ").replace("\n", " ").split()).strip()
+
+
+def _truncate_preview_text(value: str, limit: int = _PREVIEW_MAX_SUMMARY_LENGTH) -> str:
+    if len(value) <= limit:
+        return value
+    truncated = value[: limit - 1].rstrip()
+    if " " in truncated:
+        truncated = truncated.rsplit(" ", 1)[0]
+    return truncated.rstrip(" ,;:-") + "..."
+
+
+def _extract_named_preview_value(content: dict[str, Any], keys: tuple[str, ...]) -> str:
+    for key in keys:
+        cleaned = _clean_preview_text(content.get(key))
+        if cleaned:
+            return cleaned
+    return ""
+
+
+def _collect_preview_strings(node: Any, values: list[str], *, limit: int = 12) -> None:
+    if len(values) >= limit:
+        return
+    if isinstance(node, str):
+        cleaned = _clean_preview_text(node)
+        if cleaned:
+            values.append(cleaned)
+        return
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if str(key).startswith("__"):
+                continue
+            _collect_preview_strings(value, values, limit=limit)
+            if len(values) >= limit:
+                return
+        return
+    if isinstance(node, list):
+        for item in node:
+            _collect_preview_strings(item, values, limit=limit)
+            if len(values) >= limit:
+                return
+
+
+def _looks_like_preview_image_url(value: str) -> bool:
+    normalized = value.strip().lower()
+    return (
+        normalized.startswith("/")
+        or normalized.startswith("http://")
+        or normalized.startswith("https://")
+        or normalized.startswith("data:image/")
+        or normalized.startswith("blob:")
+        or normalized.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif"))
+    )
+
+
+def _extract_preview_image_url(node: Any) -> str | None:
+    if isinstance(node, dict):
+        for key in _PREVIEW_IMAGE_KEYS:
+            raw_value = node.get(key)
+            if isinstance(raw_value, str):
+                cleaned = raw_value.strip()
+                if cleaned and _looks_like_preview_image_url(cleaned):
+                    return cleaned
+        for value in node.values():
+            image_url = _extract_preview_image_url(value)
+            if image_url:
+                return image_url
+        return None
+    if isinstance(node, list):
+        for item in node:
+            image_url = _extract_preview_image_url(item)
+            if image_url:
+                return image_url
+    return None
+
+
+def _build_first_slide_preview(slide: SlideModel | None) -> dict[str, Any] | None:
+    if not slide:
+        return None
+
+    content = slide.content or {}
+    if not isinstance(content, dict):
+        content = {}
+
+    eyebrow = _extract_named_preview_value(content, _PREVIEW_EYEBROW_KEYS)
+    heading = _extract_named_preview_value(content, _PREVIEW_HEADING_KEYS)
+    if not heading:
+        title_line_1 = _clean_preview_text(content.get("titleLine1"))
+        title_line_2 = _clean_preview_text(content.get("titleLine2"))
+        heading = " ".join(part for part in (title_line_1, title_line_2) if part).strip()
+
+    summary = _extract_named_preview_value(content, _PREVIEW_SUMMARY_KEYS)
+    content_text = _clean_preview_text(_slide_content_text(slide))
+    if not summary and content_text:
+        exclude_values = {value for value in (eyebrow, heading) if value}
+        for candidate in [part.strip() for part in content_text.split(". ") if part.strip()]:
+            if candidate not in exclude_values:
+                summary = candidate
+                break
+        if not summary and content_text not in exclude_values:
+            summary = content_text
+
+    fallback_strings: list[str] = []
+    _collect_preview_strings(content, fallback_strings)
+    if not heading:
+        for candidate in fallback_strings:
+            if candidate != eyebrow:
+                heading = candidate
+                break
+    if not summary:
+        for candidate in fallback_strings:
+            if candidate not in {eyebrow, heading}:
+                summary = candidate
+                break
+
+    preview = {
+        "eyebrow": eyebrow or None,
+        "heading": heading or None,
+        "summary": _truncate_preview_text(summary) if summary else None,
+        "imageUrl": _extract_preview_image_url(content),
+        "layout": str(slide.layout or "").strip() or None,
+        "layoutGroup": str(slide.layout_group or "").strip() or None,
+    }
+    if not any(preview.values()):
+        return None
+    return preview
+
+
+def _serialize_presentation_summary(
+    presentation: PresentationModel,
+    first_slide: SlideModel | None = None,
+) -> dict[str, Any]:
     created_at = _serialize_value(presentation.created_at)
     updated_at = _serialize_value(presentation.updated_at)
+    preview = _build_first_slide_preview(first_slide)
     return {
+        "id": str(presentation.id),
         "presentonPresentationId": str(presentation.id),
         "ownerUserId": str(presentation.owner_user_id or ""),
         "title": str(presentation.title or ""),
@@ -54,6 +196,8 @@ def _serialize_presentation_summary(presentation: PresentationModel) -> dict[str
         "updatedAt": updated_at,
         "syncedAt": updated_at,
         "syncSource": "presenton_sql",
+        "thumbnailUrl": preview.get("imageUrl") if preview else None,
+        "firstSlidePreview": preview,
     }
 
 
@@ -160,7 +304,30 @@ class PresentonSqlQueryService:
                     )
                 ).all()
             )
-            return [_serialize_presentation_summary(item) for item in presentations], total
+            presentation_ids = [item.id for item in presentations]
+            first_slides = list(
+                (
+                    await session.scalars(
+                        select(SlideModel)
+                        .where(
+                            SlideModel.presentation.in_(presentation_ids or [uuid.uuid4()]),
+                            SlideModel.index == 0,
+                        )
+                        .order_by(SlideModel.presentation.asc())
+                    )
+                ).all()
+            )
+
+        first_slide_by_presentation = {
+            str(slide.presentation): slide for slide in first_slides
+        }
+        return [
+            _serialize_presentation_summary(
+                item,
+                first_slide_by_presentation.get(str(item.id)),
+            )
+            for item in presentations
+        ], total
 
     async def get_presentation_detail(
         self,
@@ -322,15 +489,33 @@ class PresentonSqlQueryService:
                     )
                 ).all()
             )
+            first_slides = list(
+                (
+                    await session.scalars(
+                        select(SlideModel)
+                        .where(
+                            SlideModel.presentation.in_([item.id for item in page_presentations] or [uuid.uuid4()]),
+                            SlideModel.index == 0,
+                        )
+                        .order_by(SlideModel.presentation.asc())
+                    )
+                ).all()
+            )
 
         slide_matches_by_presentation: dict[str, list[SlideModel]] = {}
         for slide in slide_matches:
             slide_matches_by_presentation.setdefault(str(slide.presentation), []).append(slide)
+        first_slide_by_presentation = {
+            str(slide.presentation): slide for slide in first_slides
+        }
 
         items: list[dict[str, Any]] = []
         for presentation in page_presentations:
             presentation_id = str(presentation.id)
-            summary = _serialize_presentation_summary(presentation)
+            summary = _serialize_presentation_summary(
+                presentation,
+                first_slide_by_presentation.get(presentation_id),
+            )
             matched_slides = _build_slide_match_preview(
                 slide_matches_by_presentation.get(presentation_id, [])
             )

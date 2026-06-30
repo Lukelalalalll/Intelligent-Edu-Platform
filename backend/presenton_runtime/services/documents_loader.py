@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
@@ -26,6 +27,7 @@ from services.office_document_service import (
     extract_office_document_text,
 )
 from services.temp_file_service import TEMP_FILE_SERVICE
+from services.unlimited_ocr_service import UnlimitedOCRService
 from utils.ocr_language import presentation_language_to_ocr_code
 
 # Optional fallback converter (primarily useful on Windows)
@@ -35,6 +37,8 @@ except Exception:
     DocumentServiceCls = None
 
 LOGGER = logging.getLogger(__name__)
+
+_PDF_OCR_PROVIDERS = {"auto", "liteparse", "unlimited"}
 
 
 def _unwrap_liteparse_json_line_if_stored(text: str) -> str:
@@ -173,6 +177,7 @@ class DocumentsLoader:
         self.liteparse_service = LiteParseService(
             timeout_seconds=self.DECOMPOSE_TIMEOUT_SECONDS
         )
+        self.unlimited_ocr_service = UnlimitedOCRService()
         self.document_conversion_service = DocumentConversionService()
         self.document_service: Any = (
             DocumentServiceCls() if DocumentServiceCls is not None else None
@@ -255,8 +260,7 @@ class DocumentsLoader:
 
         if load_text:
             is_scanned = await asyncio.to_thread(self._is_scanned_pdf, file_path)
-            dpi = 300 if is_scanned else None
-            document = await asyncio.to_thread(self._parse_with_liteparse, file_path, dpi)
+            document = await asyncio.to_thread(self._parse_pdf_text, file_path, is_scanned)
 
         if load_images:
             if temp_dir is None:
@@ -327,6 +331,85 @@ class DocumentsLoader:
         except Exception:
             return False
 
+    def _get_pdf_ocr_provider(self) -> str:
+        provider = (os.getenv("PDF_OCR_PROVIDER") or "auto").strip().lower()
+        if provider in _PDF_OCR_PROVIDERS:
+            return provider
+        return "auto"
+
+    def _should_try_unlimited_ocr(self, file_path: str, is_scanned: bool) -> bool:
+        provider = self._get_pdf_ocr_provider()
+        if provider == "liteparse":
+            return False
+        if provider == "auto" and not is_scanned:
+            return False
+
+        try:
+            supported, reason = self.unlimited_ocr_service.supports_pdf(file_path)
+        except Exception as exc:
+            LOGGER.warning(
+                "[DocumentsLoader] Unlimited-OCR eligibility check failed file=%s error=%s",
+                file_path,
+                exc,
+            )
+            return False
+
+        if supported:
+            return True
+
+        LOGGER.info(
+            "[DocumentsLoader] Skipping Unlimited-OCR file=%s provider=%s reason=%s",
+            file_path,
+            provider,
+            reason,
+        )
+        return False
+
+    def _log_pdf_parser_choice(
+        self,
+        file_path: str,
+        parser_name: str,
+        elapsed_seconds: float,
+        is_scanned: bool,
+    ) -> None:
+        LOGGER.info(
+            "[DocumentsLoader] PDF parser selected file=%s parser=%s is_scanned=%s elapsed=%.2fs",
+            file_path,
+            parser_name,
+            is_scanned,
+            elapsed_seconds,
+        )
+
+    def _parse_pdf_text(self, file_path: str, is_scanned: bool) -> str:
+        started_at = time.monotonic()
+        dpi = 300 if is_scanned else None
+
+        if self._should_try_unlimited_ocr(file_path, is_scanned):
+            try:
+                text = self.unlimited_ocr_service.parse_pdf_to_markdown(file_path)
+                self._log_pdf_parser_choice(
+                    file_path,
+                    "unlimited_ocr",
+                    time.monotonic() - started_at,
+                    is_scanned,
+                )
+                return text
+            except Exception as exc:
+                LOGGER.warning(
+                    "[DocumentsLoader] Unlimited-OCR failed file=%s error=%s",
+                    file_path,
+                    exc,
+                )
+
+        text, parser_name = self._parse_with_liteparse_pipeline(file_path, dpi=dpi)
+        self._log_pdf_parser_choice(
+            file_path,
+            parser_name,
+            time.monotonic() - started_at,
+            is_scanned,
+        )
+        return text
+
     async def load_text(self, file_path: str) -> str:
         with open(file_path, "r", encoding="utf-8") as file:
             return await asyncio.to_thread(file.read)
@@ -355,14 +438,21 @@ class DocumentsLoader:
             )
             return self._parse_with_liteparse(converted_path, dpi=300)
 
-    def _parse_with_liteparse(self, file_path: str, dpi: int = None) -> str:
+    def _parse_with_liteparse_pipeline(
+        self,
+        file_path: str,
+        dpi: int = None,
+    ) -> Tuple[str, str]:
         try:
             LOGGER.info("[DocumentsLoader] LiteParse start file=%s", file_path)
-            return self.liteparse_service.parse_to_markdown(
-                file_path,
-                ocr_enabled=True,
-                ocr_language=self._ocr_language,
-                dpi=dpi,
+            return (
+                self.liteparse_service.parse_to_markdown(
+                    file_path,
+                    ocr_enabled=True,
+                    ocr_language=self._ocr_language,
+                    dpi=dpi,
+                ),
+                "liteparse",
             )
         except (LiteParseError, DocumentConversionError, OfficeDocumentError) as exc:
             LOGGER.warning(
@@ -376,7 +466,7 @@ class DocumentsLoader:
                         "[DocumentsLoader] Trying native PDF fallback file=%s",
                         file_path,
                     )
-                    return self._parse_pdf_with_native_fallback(file_path)
+                    return self._parse_pdf_with_native_fallback(file_path), "native_fallback"
                 except Exception:
                     LOGGER.exception(
                         "[DocumentsLoader] Native PDF fallback failed file=%s",
@@ -385,17 +475,22 @@ class DocumentsLoader:
             if self.document_service is not None:
                 try:
                     LOGGER.info("[DocumentsLoader] Trying fallback parser file=%s", file_path)
-                    return self.document_service.parse_to_markdown(file_path)
+                    return (
+                        self.document_service.parse_to_markdown(file_path),
+                        "document_service_fallback",
+                    )
                 except Exception:
                     LOGGER.exception(
                         "[DocumentsLoader] Fallback parser failed file=%s",
                         file_path,
                     )
-                    pass
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to parse document {os.path.basename(file_path)}: {exc}",
             ) from exc
+
+    def _parse_with_liteparse(self, file_path: str, dpi: int = None) -> str:
+        return self._parse_with_liteparse_pipeline(file_path, dpi=dpi)[0]
 
     @classmethod
     def get_page_images_from_pdf(cls, file_path: str, temp_dir: str) -> List[str]:

@@ -353,6 +353,11 @@ const PresentationHeaderActions = ({
     [canRedo, canUndo, handlePresent, isStreaming, onRedo, onUndo, presentationData]
   );
 
+  const firstSlideLayout = presentationData?.slides?.[0]?.layout ?? "";
+  const shouldShowThemeSelector =
+    Boolean(presentationData?.slides?.length) &&
+    !firstSlideLayout.includes("custom");
+
   return (
     <>
       <div className="flex items-center gap-2.5">
@@ -362,14 +367,12 @@ const PresentationHeaderActions = ({
           </div>
         )}
 
-        {presentationData &&
-          presentationData.slides &&
-          !presentationData.slides[0].layout.includes("custom") && (
-            <ThemeSelector
-              current_theme={presentationData?.theme || {}}
-              themes={themes}
-            />
-          )}
+        {shouldShowThemeSelector ? (
+          <ThemeSelector
+            current_theme={presentationData?.theme || {}}
+            themes={themes}
+          />
+        ) : null}
 
         <div className="flex h-[38px] items-center gap-2 rounded-[80px] border border-[#EDECEC] bg-[#F6F6F9] px-3.5">
           {toolbarActions.map((action, index) => (

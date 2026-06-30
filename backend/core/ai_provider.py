@@ -7,11 +7,11 @@ from fastapi import HTTPException
 
 from backend.config import Config
 
-AIProvider = Literal["auto", "coze", "local_ollama", "deepseek", "openai"]
-ConcreteAIProvider = Literal["coze", "local_ollama", "deepseek", "openai"]
+AIProvider = Literal["auto", "coze", "local_ollama", "deepseek", "openai", "bigmodel"]
+ConcreteAIProvider = Literal["coze", "local_ollama", "deepseek", "openai", "bigmodel"]
 ProviderConfigSource = Literal["user_ai_config", "env_default", "global_service", "auto_fallback"]
-_SUPPORTED_PROVIDERS = {"auto", "coze", "local_ollama", "deepseek", "openai"}
-_CONCRETE_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai"}
+_SUPPORTED_PROVIDERS = {"auto", "coze", "local_ollama", "deepseek", "openai", "bigmodel"}
+_CONCRETE_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai", "bigmodel"}
 
 
 @dataclass(slots=True)
@@ -70,8 +70,8 @@ def _capabilities(provider: str) -> dict[str, bool]:
     return {
         "json": True,
         "reasoning": provider == "deepseek",
-        "streaming": provider in {"local_ollama", "coze", "deepseek", "openai"},
-        "vision": provider == "local_ollama",
+        "streaming": provider in {"local_ollama", "coze", "deepseek", "openai", "bigmodel"},
+        "vision": provider in {"local_ollama", "bigmodel"},
     }
 
 
@@ -107,6 +107,30 @@ async def _runtime_for_provider(
             base_url=str(config.get("base_url") or getattr(Config, "OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip("/"),
             stream=bool(config.get("stream", False)),
             capabilities=_capabilities("openai"),
+            health_status={"configured": bool(api_key)},
+            api_key=api_key,
+        )
+
+    if provider == "bigmodel":
+        config = {}
+        if user:
+            from backend.services.auth.user_profile_service import load_bigmodel_runtime_config
+            config = await load_bigmodel_runtime_config(user)
+        user_key = str(config.get("api_key") or "").strip()
+        if config_source == "user_ai_config":
+            api_key = user_key
+            source: ProviderConfigSource = "user_ai_config"
+        else:
+            api_key = user_key
+            source = "user_ai_config"
+        return ResolvedProviderRuntime(
+            provider_id="bigmodel",
+            requested_provider=requested,
+            config_source=source,
+            model=str(config.get("model") or "glm-4.5-flash"),
+            base_url=str(config.get("base_url") or "https://open.bigmodel.cn/api/paas/v4").rstrip("/"),
+            stream=bool(config.get("stream", False)),
+            capabilities=_capabilities("bigmodel"),
             health_status={"configured": bool(api_key)},
             api_key=api_key,
         )
@@ -179,7 +203,7 @@ async def resolve_provider_runtime(
     provider = resolve_provider(raw_provider, feature=feature, user=user) if raw_provider != "auto" else "auto"
     if provider != "auto":
         config_source: ProviderConfigSource | None = None
-        if provider in {"openai", "deepseek"}:
+        if provider in {"openai", "deepseek", "bigmodel"}:
             config_source = "user_ai_config" if user else "env_default"
         runtime = await _runtime_for_provider(provider, requested=provider, user=user, config_source=config_source)
         if require_healthy:
@@ -190,6 +214,7 @@ async def resolve_provider_runtime(
     if user:
         candidates.extend([
             ("openai", user, "user_ai_config"),
+            ("bigmodel", user, "user_ai_config"),
             ("deepseek", user, "user_ai_config"),
         ])
     candidates.extend([
@@ -231,7 +256,7 @@ async def list_provider_statuses(user: dict | None = None) -> list[ProviderStatu
     statuses: list[ProviderStatus] = []
     for provider in requested:
         config_source: ProviderConfigSource | None = None
-        if provider in {"openai", "deepseek"}:
+        if provider in {"openai", "deepseek", "bigmodel"}:
             config_source = "user_ai_config" if user else "env_default"
         runtime = await _runtime_for_provider(
             provider,
@@ -246,6 +271,7 @@ async def list_provider_statuses(user: dict | None = None) -> list[ProviderStatu
                 id=provider,  # type: ignore[arg-type]
                 label={
                     "openai": "OpenAI",
+                    "bigmodel": "BigModel / GLM",
                     "deepseek": "DeepSeek",
                     "local_ollama": "Local Ollama",
                     "coze": "Coze",

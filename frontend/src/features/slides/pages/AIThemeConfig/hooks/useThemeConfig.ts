@@ -12,7 +12,7 @@ import type {
 } from '../types';
 
 export type ThemeConfigProviderOption = {
-  id: 'openai' | 'deepseek' | 'local_ollama' | 'coze' | 'auto';
+  id: 'openai' | 'deepseek' | 'bigmodel' | 'local_ollama' | 'coze' | 'auto';
   label: string;
   disabled: boolean;
   reason?: string;
@@ -51,10 +51,12 @@ function buildProviderOptions(
 
   const openaiConfigured = Boolean(aiConfig?.openai?.api_key_set);
   const deepseekConfigured = Boolean(aiConfig?.deepseek?.api_key_set);
+  const bigmodelConfigured = Boolean(aiConfig?.bigmodel?.api_key_set);
 
-  const orderedIds: Array<'openai' | 'deepseek' | 'local_ollama' | 'coze' | 'auto'> = [
+  const orderedIds: Array<'openai' | 'deepseek' | 'bigmodel' | 'local_ollama' | 'coze' | 'auto'> = [
     'openai',
     'deepseek',
+    'bigmodel',
     'local_ollama',
     'coze',
     'auto',
@@ -88,6 +90,21 @@ function buildProviderOptions(
         available: status.available,
         source: status.source,
         model: aiConfig?.deepseek?.model || status.model,
+      });
+      continue;
+    }
+
+    if (id === 'bigmodel') {
+      const status = providerMap.get(id);
+      options.push({
+        id,
+        label: 'BigModel / GLM',
+        disabled: !bigmodelConfigured,
+        reason: bigmodelConfigured ? undefined : 'Configure BigModel / GLM in AI Config first',
+        configured: bigmodelConfigured,
+        available: status?.available ?? bigmodelConfigured,
+        source: status?.source ?? 'user_ai_config',
+        model: aiConfig?.text?.bigmodel?.model || aiConfig?.bigmodel?.text_model || status?.model,
       });
       continue;
     }
@@ -140,7 +157,7 @@ function getApiErrorMessage(error: unknown, fallbackPrefix: string): string {
     return detail;
   }
   if (detail && typeof detail === 'object') {
-    const structured = [detail.details, detail.renderer?.message, detail.suggestion, detail.message].find(
+    const structured = [detail.details, detail.renderer?.message, detail.message].find(
       (value) => typeof value === 'string' && value.trim(),
     );
     if (structured) {
@@ -171,7 +188,7 @@ export function useThemeConfig() {
   const [aiConfig, setAiConfig] = useState<AIConfigResponse | null>(null);
   const [providers, setProviders] = useState<SlidesProviderStatus[]>([]);
   const [providerLoading, setProviderLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'deepseek' | 'local_ollama' | 'coze' | 'auto'>('auto');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'deepseek' | 'bigmodel' | 'local_ollama' | 'coze' | 'auto'>('auto');
 
   useEffect(() => {
     const stored = readStoredDraft();
@@ -195,7 +212,7 @@ export function useThemeConfig() {
         setAiConfig(config);
         setProviders(providerRes.providers);
         const options = buildProviderOptions(providerRes.providers, config);
-        const preferred = options.find((item) => !item.disabled && (item.id === 'openai' || item.id === 'deepseek'));
+        const preferred = options.find((item) => !item.disabled && (item.id === 'openai' || item.id === 'deepseek' || item.id === 'bigmodel'));
         setSelectedProvider(preferred?.id || options.find((item) => !item.disabled)?.id || 'auto');
       })
       .catch(() => {

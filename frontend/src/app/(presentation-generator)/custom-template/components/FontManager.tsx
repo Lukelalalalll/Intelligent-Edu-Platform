@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { useI18n } from "@/shared/i18n";
 
 import {
   FontItem,
@@ -47,6 +48,7 @@ const FontManager: React.FC<FontManagerProps> = ({
   onContinue,
   isUploading = false,
 }) => {
+  const { t } = useI18n();
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const hasAvailableFonts = fontsData.available_fonts.length > 0;
@@ -117,12 +119,12 @@ const FontManager: React.FC<FontManagerProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-[#15342d]">
-                Font Management
+                {t("ppt_generator.customTemplate.font.title")}
               </h2>
               <p className="mt-0.5 text-sm text-[#527267]">
                 {allFontsResolved
-                  ? "Every missing font entry is resolved. You can proceed to preview."
-                  : "Resolve each missing font with either a matched font selection or an uploaded font file before preview generation."}
+                  ? t("ppt_generator.customTemplate.font.readyBody")
+                  : t("ppt_generator.customTemplate.font.readiness.body")}
               </p>
             </div>
           </div>
@@ -133,7 +135,9 @@ const FontManager: React.FC<FontManagerProps> = ({
                 <div className="mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-[#0f6b3f]" />
                   <h4 className="text-sm font-semibold text-[#0f6b3f]">
-                    Matched Fonts ({fontsData.available_fonts.length})
+                    {t("ppt_generator.customTemplate.font.available", {
+                      count: fontsData.available_fonts.length,
+                    })}
                   </h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -154,7 +158,9 @@ const FontManager: React.FC<FontManagerProps> = ({
                 <div className="mb-4 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-[#8a5a13]" />
                   <h4 className="text-sm font-semibold text-[#8a5a13]">
-                    Missing Fonts ({fontsData.unavailable_fonts.length})
+                    {t("ppt_generator.customTemplate.font.missing", {
+                      count: fontsData.unavailable_fonts.length,
+                    })}
                   </h4>
                 </div>
 
@@ -186,7 +192,9 @@ const FontManager: React.FC<FontManagerProps> = ({
                               <div className="flex flex-wrap gap-2 text-xs">
                                 {font.family_name && font.family_name !== font.name ? (
                                   <span className="rounded-full bg-[#f7faf8] px-2 py-1 text-[#527267]">
-                                    Family: {font.family_name}
+                                    {t("ppt_generator.customTemplate.font.family", {
+                                      name: font.family_name,
+                                    })}
                                   </span>
                                 ) : null}
                                 <span className="rounded-full bg-[#f7faf8] px-2 py-1 text-[#527267]">
@@ -194,23 +202,22 @@ const FontManager: React.FC<FontManagerProps> = ({
                                 </span>
                                 {resolution?.type === "upload" ? (
                                   <span className="rounded-full bg-[#dcf7e8] px-2 py-1 font-medium text-[#0f6b3f]">
-                                    Resolved by upload
+                                    {t("ppt_generator.customTemplate.font.stats.uploaded")}
                                   </span>
                                 ) : null}
                                 {resolution?.type === "replacement" ? (
                                   <span className="rounded-full bg-[#e8f1ff] px-2 py-1 font-medium text-[#2456a6]">
-                                    Matched to {selectedReplacement?.replacement_label}
+                                    {selectedReplacement?.replacement_label}
                                   </span>
                                 ) : null}
                                 {!resolution ? (
                                   <span className="rounded-full bg-[#fff2cf] px-2 py-1 font-medium text-[#8a5a13]">
-                                    Unresolved
+                                    {t("ppt_generator.customTemplate.font.stats.missing")}
                                   </span>
                                 ) : null}
                               </div>
                               <span className="block text-xs text-[#6b7f77]">
-                                Choose a matched font or upload a font file for this
-                                exact entry.
+                                {t("ppt_generator.customTemplate.font.uploadHint")}
                               </span>
                             </div>
                           </div>
@@ -218,7 +225,7 @@ const FontManager: React.FC<FontManagerProps> = ({
                           <div className="flex w-full flex-col gap-3 lg:max-w-[360px]">
                             <div className="space-y-2">
                               <span className="text-xs font-medium uppercase tracking-[0.08em] text-[#6b7f77]">
-                                Matched font
+                                {t("ppt_generator.customTemplate.font.title")}
                               </span>
                               <Select
                                 value={
@@ -233,7 +240,7 @@ const FontManager: React.FC<FontManagerProps> = ({
                                 }}
                               >
                                 <SelectTrigger className="h-10 rounded-lg border-[#d9e6df] bg-white text-left">
-                                  <SelectValue placeholder="Choose a matched font" />
+                                  <SelectValue placeholder={t("ppt_generator.customTemplate.font.available", { count: 1 })} />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {matchedOptions.map((option) => (
@@ -268,7 +275,7 @@ const FontManager: React.FC<FontManagerProps> = ({
                                 className="h-9 rounded-lg border-[#b7d9cc] px-4 text-sm font-medium text-[var(--primary-color,#007B55)] transition-all hover:border-[var(--primary-color,#007B55)] hover:bg-[rgba(0,123,85,0.06)]"
                               >
                                 <Upload className="mr-1 h-4 w-4" />
-                                Upload font file
+                                {t("ppt_generator.customTemplate.font.upload")}
                               </Button>
                               {selectedReplacement ? (
                                 <Button
@@ -278,14 +285,14 @@ const FontManager: React.FC<FontManagerProps> = ({
                                   className="h-9 rounded-lg px-3 text-sm text-[#6b7f77] hover:bg-[#f3f6f4] hover:text-[#15342d]"
                                 >
                                   <RefreshCcw className="mr-1 h-4 w-4" />
-                                  Clear match
+                                  Clear
                                 </Button>
                               ) : null}
                             </div>
 
                             {currentUpload ? (
                               <div className="rounded-lg border border-[#d8ebdf] bg-[#f6fbf8] px-3 py-2 text-xs text-[#0f6b3f]">
-                                Uploaded file: {currentUpload.file.name}
+                                {currentUpload.file.name}
                               </div>
                             ) : null}
                           </div>
@@ -302,7 +309,9 @@ const FontManager: React.FC<FontManagerProps> = ({
                 <div className="mb-4 flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-[#0f6b3f]" />
                   <h4 className="text-sm font-semibold text-[#0f6b3f]">
-                    Uploaded Fonts ({uploadedFonts.length})
+                    {t("ppt_generator.customTemplate.font.uploaded", {
+                      count: uploadedFonts.length,
+                    })}
                   </h4>
                 </div>
                 <div className="space-y-2">
@@ -341,50 +350,42 @@ const FontManager: React.FC<FontManagerProps> = ({
 
       <aside className={styles.summaryCard}>
         <div className={styles.summaryHeader}>
-          <h3>Font Readiness</h3>
-          <p>
-            Resolve missing typefaces before slide previews so the reconstructed
-            slides stay close to the original deck.
-          </p>
+          <h3>{t("ppt_generator.customTemplate.font.readiness.title")}</h3>
+          <p>{t("ppt_generator.customTemplate.font.readiness.body")}</p>
         </div>
 
         <div className={styles.summaryGrid}>
           <strong>
-            Matched fonts
+            {t("ppt_generator.customTemplate.font.stats.available")}
             <span>{fontsData.available_fonts.length}</span>
           </strong>
           <strong>
-            Resolved by upload
+            {t("ppt_generator.customTemplate.font.stats.uploaded")}
             <span>{uploadCount}</span>
           </strong>
           <strong>
-            Resolved by replacement
+            {t("ppt_generator.customTemplate.font.stats.ready")}
             <span>{replacementCount}</span>
           </strong>
           <strong>
-            Unresolved
+            {t("ppt_generator.customTemplate.font.stats.missing")}
             <span>{unresolvedCount}</span>
           </strong>
         </div>
 
         {allFontsResolved ? (
           <div className={styles.successNote}>
-            All missing font entries are resolved and ready for preview
-            generation.
+            {t("ppt_generator.customTemplate.font.success")}
           </div>
         ) : (
           <div className={styles.warningNote}>
-            Resolve every missing entry with either an uploaded font file or a
-            matched font selection before previews can be generated.
+            {t("ppt_generator.customTemplate.font.warning")}
           </div>
         )}
 
         <div className="mt-4 flex items-start gap-2 rounded-lg border border-[#D8E4DE] bg-white/70 px-3 py-3 text-xs text-[#527267]">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#0f6b3f]" />
-          <p>
-            Uploads and matched selections only affect this reconstruction
-            session. They do not change the saved PPTX source outside this flow.
-          </p>
+          <p>{t("ppt_generator.customTemplate.font.info")}</p>
         </div>
 
         <div className={styles.toolbarActions}>
@@ -397,13 +398,13 @@ const FontManager: React.FC<FontManagerProps> = ({
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                {t("ppt_generator.customTemplate.font.processing")}
               </>
             ) : (
               <>
                 {allFontsResolved
-                  ? "Continue to Preview"
-                  : "Resolve All Missing Fonts First"}
+                  ? t("ppt_generator.customTemplate.font.continuePreview")
+                  : t("ppt_generator.customTemplate.font.warning")}
                 <ChevronRight className="ml-1 h-4 w-4" />
               </>
             )}
@@ -413,11 +414,7 @@ const FontManager: React.FC<FontManagerProps> = ({
         <div className={styles.infoNote}>
           <div className="flex items-start gap-2">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              Replacement selections reuse matched fonts already available to
-              PPT Generator. Uploads remain the highest-fidelity option when you
-              have the real font file.
-            </span>
+            <span>{t("ppt_generator.customTemplate.font.missingBody")}</span>
           </div>
         </div>
       </aside>
@@ -426,4 +423,3 @@ const FontManager: React.FC<FontManagerProps> = ({
 };
 
 export default FontManager;
-
