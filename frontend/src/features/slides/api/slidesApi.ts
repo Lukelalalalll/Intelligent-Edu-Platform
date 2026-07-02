@@ -5,14 +5,6 @@
 import client from '@/shared/api/client';
 import type { AIProvider } from '../../../shared/aiProvider';
 import type { GenerationHistoryItem } from '../../../types/api';
-import type {
-    ExportRenderDraftPayload,
-    ExportRenderDraftResponse,
-    GenerateRenderPayload,
-    GenerateRenderResponse,
-    RenderDraftPreviewPayload,
-    RenderDraftPreviewResponse,
-} from '../pages/AIThemeConfig/types';
 
 // ── Delivery Types ──
 
@@ -301,18 +293,6 @@ export const slidesGenerationApi = {
     },
     async getDesignSpec(deckId: string): Promise<string> {
         const res = await client.get(`/slides/decks/${deckId}/design-spec`, { responseType: 'text' });
-        return res.data;
-    },
-    async generateRender(payload: GenerateRenderPayload): Promise<GenerateRenderResponse> {
-        const res = await client.post('/slides/generate-render', payload);
-        return res.data;
-    },
-    async exportRenderDraft(payload: ExportRenderDraftPayload): Promise<ExportRenderDraftResponse> {
-        const res = await client.post('/slides/export-render-draft', payload);
-        return res.data;
-    },
-    async renderDraftPreview(payload: RenderDraftPreviewPayload): Promise<RenderDraftPreviewResponse> {
-        const res = await client.post('/slides/render-draft-preview', payload);
         return res.data;
     },
 };

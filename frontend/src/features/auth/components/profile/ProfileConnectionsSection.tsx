@@ -20,7 +20,8 @@ function formatLinkedAt(linkedAt: string | null) {
         return '';
     }
     const date = new Date(linkedAt);
-    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+    const locale = typeof document !== 'undefined' ? document.documentElement.lang || undefined : undefined;
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString(locale);
 }
 
 export function ProfileConnectionsSection({

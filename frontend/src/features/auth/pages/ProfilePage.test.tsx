@@ -42,6 +42,8 @@ const {
                 username: 'alice',
                 email: 'alice@example.com',
                 role: 'teacher' as const,
+                googleLinked: false,
+                avatarUrl: null,
             },
             updateProfile: vi.fn(),
             logout: vi.fn(),

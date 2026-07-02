@@ -104,6 +104,12 @@ export interface Scene {
   /** code layout fields */
   codeSnippet?: string;
   codeLanguage?: string;
+  /** AI-planned shot metadata kept with the project scene */
+  bullets?: string[];
+  visualPrompt?: string;
+  negativePrompt?: string;
+  shotType?: 'broll' | 'diagram' | 'talking-head' | 'screen' | 'title-card';
+  durationSeconds?: number;
 }
 
 export function createScene(script: string = '', idx: number = 0): Scene {

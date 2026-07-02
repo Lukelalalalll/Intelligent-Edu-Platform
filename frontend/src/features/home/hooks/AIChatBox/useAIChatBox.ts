@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { usePretextMeasure } from '@/shared/hooks/usePretextMeasure';
 import type { ChatMsg, StreamMessage } from './types';
-import { WELCOME_MESSAGE } from './types';
+import { useI18n } from '@/shared/i18n';
+import { createWelcomeMessage } from './types';
 import { replaceMessageText, toApiMessages } from './messageUtils';
 import { streamChatCompletion } from './chatStream';
 import { resolveApiRoot } from '@/shared/api/root';
@@ -11,7 +12,8 @@ function getApiRoot(): string {
 }
 
 export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElement>) {
-    const [messages, setMessages] = useState<ChatMsg[]>([WELCOME_MESSAGE]);
+    const { t } = useI18n();
+    const [messages, setMessages] = useState<ChatMsg[]>(() => [createWelcomeMessage(t('aiChat.welcome'))]);
     const [input, setInput] = useState('');
     const [provider, setProvider] = useState<'coze' | 'local_ollama' | 'deepseek'>('local_ollama');
     const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +33,21 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
     useEffect(() => {
         scrollToBottom(!isLoading);
     }, [messages, isLoading, scrollToBottom]);
+
+    useEffect(() => {
+        const welcomeText = t('aiChat.welcome');
+        setMessages((prev) => {
+            const welcomeIndex = prev.findIndex((message) => message.id === 'welcome');
+            if (welcomeIndex === -1) return prev;
+
+            const welcomeMessage = prev[welcomeIndex];
+            if (welcomeMessage.text === welcomeText) return prev;
+
+            const next = [...prev];
+            next[welcomeIndex] = { ...welcomeMessage, text: welcomeText };
+            return next;
+        });
+    }, [t]);
 
     const flushRafUpdate = useCallback((targetId: string, text: string, uiElements?: any[]) => {
         streamRafRef.current = null;
@@ -73,12 +90,12 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
         }
         if (buttonEl instanceof HTMLElement) {
             const original = buttonEl.innerHTML;
-            buttonEl.innerHTML = '<i class="fas fa-check" style="color:#27c93f;"></i> Copied!';
+            buttonEl.innerHTML = `<i class="fas fa-check" style="color:#27c93f;"></i> ${t('aiChat.copied')}`;
             setTimeout(() => {
                 buttonEl.innerHTML = original;
             }, 1800);
         }
-    }, []);
+    }, [t]);
 
     const handleChatAreaClick = useCallback((e: MouseEvent) => {
         const copyBtn = (e.target as Element).closest('.js-code-copy-btn');
@@ -120,7 +137,7 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
                 scheduleRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
             },
             onErrorText: (errorText) => {
-                fullText += `\n\n**[Error]**: ${errorText}`;
+                fullText += `\n\n**[${t('aiChat.errorLabel')}]**: ${errorText}`;
                 scheduleRafUpdate(targetAssistantId, fullText, uiElementsAccumulator);
             },
             parseErrorLogLabel: parseErrorLabel,
@@ -147,12 +164,18 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
             await streamAssistantReply(toApiMessages(history), targetAssistantId, 'Skipping partial history chunk');
         } catch (error) {
             if ((error as Error).name === 'AbortError') return;
-            setMessages((prev) => replaceMessageText(prev, targetAssistantId, `Network Error: ${(error as Error).message}`));
+            setMessages((prev) =>
+                replaceMessageText(
+                    prev,
+                    targetAssistantId,
+                    t('aiChat.networkError', { message: (error as Error).message }),
+                ),
+            );
         } finally {
             setIsLoading(false);
             abortControllerRef.current = null;
         }
-    }, [cancelStreaming, streamAssistantReply]);
+    }, [cancelStreaming, streamAssistantReply, t]);
 
     const handleSend = useCallback(async () => {
         if (!input.trim() || isLoading) return;
@@ -176,12 +199,14 @@ export function useAIChatBox(messagesContainerRef: React.RefObject<HTMLDivElemen
             await streamAssistantReply(historyForAPI, aiPlaceholderId, 'Skipping partial stream chunk');
         } catch (error) {
             if ((error as Error).name === 'AbortError') return;
-            setMessages((prev) => replaceMessageText(prev, aiPlaceholderId, 'Sorry, I encountered an error connecting to the AI server.'));
+            setMessages((prev) =>
+                replaceMessageText(prev, aiPlaceholderId, t('aiChat.serverConnectionError')),
+            );
         } finally {
             setIsLoading(false);
             abortControllerRef.current = null;
         }
-    }, [cancelStreaming, input, isLoading, messages, streamAssistantReply]);
+    }, [cancelStreaming, input, isLoading, messages, streamAssistantReply, t]);
 
     const handleRegenerate = useCallback((idx: number) => {
         if (isLoading) return;

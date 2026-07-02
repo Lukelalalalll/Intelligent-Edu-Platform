@@ -6,7 +6,6 @@ import ModeSidebar from './ModeSidebar';
 import UserManagementPanel from './UserManagementPanel';
 import RelationManagementPanel from './RelationManagementPanel';
 import LLMMonitorPanel from './LLMMonitorPanel';
-import ApiKeyPanel from './ApiKeyPanel';
 import StaffCodesPanel from './StaffCodesPanel';
 import RAGEvalPanel from './RAGEvalPanel';
 import ConfirmModal from './ConfirmModal';
@@ -101,7 +100,6 @@ export default function AdminBoardPage(props: AdminDashboardProps) {
                         {activeMode === 'users' && <UserManagementPanel {...interceptedProps} />}
                         {activeMode === 'relations' && <RelationManagementPanel {...interceptedProps} />}
                         {activeMode === 'llm-monitor' && <LLMMonitorPanel />}
-                        {activeMode === 'api-keys' && <ApiKeyPanel />}
                         {activeMode === 'staff-codes' && <StaffCodesPanel openConfirm={openConfirm} />}
                         {activeMode === 'rag-eval' && <RAGEvalPanel />}
                     </div>

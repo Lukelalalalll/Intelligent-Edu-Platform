@@ -6,6 +6,7 @@ from .script_support.json_parsing import parse_json_object as _parse_json_object
 from .script_support.extract_orchestration import smart_extract
 from .script_support.script_generation import generate_scripts
 from .script_support.segmentation import optimize_full_script
+from .script_support.scene_visual_generation import generate_scene_visuals
 from .script_support.slide_content_generation import generate_slide_contents
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "optimize_full_script",
     "smart_extract",
     "generate_slide_contents",
+    "generate_scene_visuals",
     "plan_narrative_arc",
     "weave_narrative_arc",
 ]

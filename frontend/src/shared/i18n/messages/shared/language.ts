@@ -8,20 +8,18 @@ export const enSharedLanguageMessages = {
   "language.zhHK": "Cantonese Traditional",
 } as const satisfies MessageDictionary;
 
-
 export const zhCNSharedLanguageMessages = {
-  "language.en": "英文",
-  "language.switcher.label": "切换语言",
-  "language.switcher.title": "语言",
-  "language.zhCN": "简体中文",
-  "language.zhHK": "粤语繁体",
+  "language.en": "\u82f1\u6587",
+  "language.switcher.label": "\u5207\u6362\u8bed\u8a00",
+  "language.switcher.title": "\u8bed\u8a00",
+  "language.zhCN": "\u7b80\u4f53\u4e2d\u6587",
+  "language.zhHK": "\u7ca4\u8bed\u7e41\u4f53",
 } as const satisfies MessageDictionary;
 
-
 export const zhHKSharedLanguageMessages = {
-  "language.en": "英文",
-  "language.switcher.label": "切換語言",
-  "language.switcher.title": "語言",
-  "language.zhCN": "簡體中文",
-  "language.zhHK": "粵語繁體",
+  "language.en": "\u82f1\u6587",
+  "language.switcher.label": "\u5207\u63db\u8a9e\u8a00",
+  "language.switcher.title": "\u8a9e\u8a00",
+  "language.zhCN": "\u7c21\u9ad4\u4e2d\u6587",
+  "language.zhHK": "\u7cb5\u8a9e\u7e41\u9ad4",
 } as const satisfies MessageDictionary;

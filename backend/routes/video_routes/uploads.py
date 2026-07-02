@@ -51,4 +51,4 @@ async def upload_scene_image(
         len(content),
         content_type or "unknown",
     )
-    return {"filename": name}
+    return {"filename": name, "path": name}

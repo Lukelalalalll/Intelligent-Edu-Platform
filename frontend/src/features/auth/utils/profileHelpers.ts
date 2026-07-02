@@ -70,7 +70,8 @@ export function formatSessionTime(value: string | null, t: ProfileTranslator) {
         return t('profile.notAvailable');
     }
 
-    return date.toLocaleString();
+    const locale = typeof document !== 'undefined' ? document.documentElement.lang || undefined : undefined;
+    return date.toLocaleString(locale);
 }
 
 export function formatSessionOs(value: string | null | undefined, t: ProfileTranslator) {

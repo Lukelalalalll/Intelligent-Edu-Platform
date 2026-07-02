@@ -24,6 +24,7 @@ async def generate_slide_contents(
     lang: str = "zh",
     provider: str = "local_ollama",
     audience: str = "student",
+    user: dict | None = None,
 ) -> list[dict]:
     audience_hint = resolve_audience_hint(audience, lang)
     template = SLIDE_PROMPT_ZH if lang == "zh" else SLIDE_PROMPT_EN
@@ -40,6 +41,8 @@ async def generate_slide_contents(
                     rag_context=rag_context_str or empty_context,
                 ),
                 provider,
+                user=user,
+                system_override="You are a teaching video slide planner. Return concise valid JSON only.",
             )
             parsed = parse_json_object(raw)
             if parsed and "title" in parsed and "bullets" in parsed:

@@ -19,6 +19,12 @@ from .question_ops_service import (
     get_question_ops_run,
     resolve_question_ops_source,
 )
+from .structured_generation import (
+    build_questions_markdown,
+    build_questions_txt,
+    normalize_question_drafts,
+    parse_question_markdown,
+)
 
 
 def get_proxies():
@@ -30,6 +36,8 @@ __all__ = [
     "call_provider_generate",
     "cleanup_old_files",
     "create_question_ops_run",
+    "build_questions_markdown",
+    "build_questions_txt",
     "extract_pdf_text_with_loader",
     "extract_text_from_image",
     "format_extracted_text",
@@ -37,6 +45,8 @@ __all__ = [
     "get_question_ops_items",
     "get_question_ops_run",
     "get_proxies",
+    "normalize_question_drafts",
+    "parse_question_markdown",
     "apply_question_ops_dedupe",
     "resolve_question_ops_source",
     "save_upload",

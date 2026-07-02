@@ -11,8 +11,5 @@ from .generation import (  # noqa: F401
     summarize_chapters,
     generate_talking_script,
     list_themes,
-    generate_render,
-    export_render_draft,
-    render_draft_preview,
 )
 from .legacy import legacy_download_script, legacy_download_ppt  # noqa: F401

@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 from pathlib import Path
+import uuid
 
-from fastapi import BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import Depends, File, Form, HTTPException, UploadFile
 
-from backend.core.database import compute_history_expires_at
 from backend.core.security import get_current_user
 from backend.schemas.slide_schema import RenderOptions, SceneAssets, SceneModel, parse_scene_body
-from backend.services.history_service import save_history_record
-from backend.services.video_service import get_task, new_task, run_video_pipeline
+from backend.services.video_service.project_service import VideoProjectService
 
 from fastapi import APIRouter
 router = APIRouter()
@@ -84,7 +82,6 @@ def _normalize_scene_payloads(
 
 @router.post("/generate")
 async def generate_video(
-    background_tasks: BackgroundTasks,
     text: str = Form(None),
     file: UploadFile = File(None),
     scripts: str = Form(None),
@@ -108,15 +105,12 @@ async def generate_video(
     if lang not in ("zh", "en"):
         lang = "zh"
 
-    task_id = uuid.uuid4().hex
-    new_task(task_id)
-
     file_path, file_type = None, None
     if file:
         suffix = Path(file.filename or "").suffix.lower()
         if suffix not in ALLOWED_EXT:
             raise HTTPException(400, f"Unsupported file type: {suffix}")
-        file_path = str(UPLOAD_TMP / f"{task_id}{suffix}")
+        file_path = str(UPLOAD_TMP / f"compat_{uuid.uuid4().hex}{suffix}")
         Path(file_path).write_bytes(await file.read())
         file_type = suffix.lstrip(".")
 
@@ -150,58 +144,66 @@ async def generate_video(
         tts_engine = "edge_tts"
     if avatar_mode not in {"none", "wav2lip", "latentsync"}:
         avatar_mode = "none"
+    project = await VideoProjectService.create_project(
+        user_id=user_id,
+        title="",
+        source_text=text or "",
+        source_filename=str(file.filename or "") if file else "",
+        uploaded_file_path=file_path or "",
+        file_type=file_type or "",
+        provider_config={
+            "lang": lang,
+            "provider": provider,
+            "subtitles": subtitles,
+            "subtitle_mode": subtitle_mode,
+            "max_segments": max_segments,
+            "audience": audience,
+            "brand_kit": brand_kit,
+            "animation_level": animation_level,
+            "tts_engine": tts_engine,
+            "avatar_mode": avatar_mode,
+            "avatar_img_path": Path(avatar_image_full_path).name if avatar_image_full_path else "",
+            "quiz_enabled": quiz_enabled,
+            "broll_provider": "comfyui",
+        },
+    )
+    project_id = str(project["id"])
 
-    async def _run():
-        await run_video_pipeline(
-            task_id,
-            lang=lang,
-            provider=provider,
-            source_text=text,
-            uploaded_file_path=file_path,
-            file_type=file_type,
-            scripts_override=scripts_list,
+    if validated_scenes:
+        updated = await VideoProjectService.update_project(
+            project_id,
+            user_id=user_id,
             scenes=validated_scenes,
-            subtitles=subtitles,
-            subtitle_mode=subtitle_mode,
-            max_segments=max_segments,
-            audience=audience,
-            brand_kit=brand_kit,
-            animation_level=animation_level,
-            tts_engine=tts_engine,
-            avatar_mode=avatar_mode,
-            avatar_img_path=avatar_image_full_path,
-            quiz_enabled=quiz_enabled,
         )
-        task = get_task(task_id)
-        if task and task.get("status") == "done":
-            try:
-                await save_history_record(
-                    tool="video",
-                    user_id=user_id,
-                    tool_name="video_generate",
-                    params={
-                        "lang": lang,
-                        "provider": provider,
-                        "subtitles": subtitles,
-                        "max_segments": max_segments,
-                        "audience": audience,
-                        "has_scenes": bool(scenes_list),
-                        "scene_count": len(scenes_list) if scenes_list else 0,
-                    },
-                    result_preview=task.get("message", "Video ready!"),
-                    result_full={"task_id": task_id, "videoPath": task.get("videoPath", "")},
-                    expires_at=await compute_history_expires_at(user_id),
-                )
-            except Exception:
-                logger.warning("Failed to save video generation history", exc_info=True)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Project not found after creation")
+    elif scripts_list:
+        derived_scenes = [
+            {
+                "id": Path(file_path or "").stem + f"_{idx}",
+                "script": script,
+                "slideMode": "theme",
+                "themeId": "dark-ocean",
+                "slideTitle": f"Section {idx + 1}",
+                "slideBody": "",
+                "layoutType": "title-bullets",
+                "toneMode": "lecture",
+            }
+            for idx, script in enumerate(scripts_list)
+        ]
+        await VideoProjectService.update_project(project_id, user_id=user_id, scenes=derived_scenes)
+    else:
+        await VideoProjectService.plan_project(project_id, user_id=user_id)
 
-    background_tasks.add_task(_run)
-    return {"taskId": task_id}
+    project = await VideoProjectService.enqueue_render(project_id, user_id=user_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Failed to enqueue project render")
+    return {"taskId": project_id, "projectId": project_id}
 
 
 @router.get("/status/{task_id}")
 async def video_status(task_id: str, current_user: dict = Depends(get_current_user)):
-    task = get_task(task_id)
+    task = await VideoProjectService.get_compat_status(task_id, user_id=str(current_user.get("id") or ""))
     if not task:
         raise HTTPException(404, "Task not found")
     return task

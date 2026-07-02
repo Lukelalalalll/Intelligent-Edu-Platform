@@ -323,5 +323,43 @@ async def save_history_record(
         document["source"] = source
     if expires_at is not None:
         document["expires_at"] = expires_at
-    await history_repo.insert_one(get_collection_name(tool), document)
+    result = await history_repo.insert_one(get_collection_name(tool), document)
+    inserted_id = getattr(result, "inserted_id", None)
+    return str(inserted_id) if inserted_id is not None else ""
+
+
+async def update_history_record(
+    *,
+    tool: str,
+    history_id: str,
+    user_id: str,
+    params: dict[str, Any] | None = None,
+    result_preview: str | None = None,
+    result_full: str | dict[str, Any] | list[Any] | None = None,
+) -> int:
+    oid = history_repo.safe_object_id(history_id)
+    if oid is None:
+        raise HTTPException(status_code=400, detail="Invalid history ID")
+
+    update_fields: dict[str, Any] = {}
+    if params is not None:
+        update_fields["params"] = params
+    if result_preview is not None:
+        update_fields["result_preview"] = result_preview
+    if result_full is not None:
+        update_fields["result_full"] = (
+            json.dumps(result_full, ensure_ascii=False)
+            if isinstance(result_full, (dict, list))
+            else str(result_full or "")
+        )
+
+    if not update_fields:
+        return 0
+
+    result = await history_repo.update_one(
+        get_collection_name(tool),
+        {"_id": oid, "user_id": user_id, "deleted_at": {"$exists": False}},
+        {"$set": update_fields},
+    )
+    return int(result.modified_count or 0)
 

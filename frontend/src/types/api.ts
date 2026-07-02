@@ -217,7 +217,21 @@ export interface Sub2GeneratePayload {
 export interface Sub2GenerateResponse {
   success: boolean;
   questions?: unknown;
+  markdown?: string;
+  question_drafts?: QuestionDraft[];
+  history_id?: string;
+  task_id?: string;
+  source_kind?: string;
   error?: string;
+}
+
+export interface QuestionDraft {
+  id: string;
+  stem: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+  raw_markdown: string;
 }
 
 export interface GenerationHistoryItem {
@@ -236,6 +250,18 @@ export interface GenerationHistoryItem {
     result_artifacts?: Record<string, unknown>;
     result_data?: unknown;
   };
+}
+
+export interface QuestionHistoryDetail extends GenerationHistoryItem {
+  result_data?: {
+    markdown?: string;
+    questions?: QuestionDraft[];
+    selected_question_ids?: string[];
+    finalized?: boolean;
+  };
+  result_markdown?: string;
+  question_drafts?: QuestionDraft[];
+  selected_question_ids?: string[];
 }
 
 /* ── Sub4 / Diagram Tool ───────────────────────────────── */

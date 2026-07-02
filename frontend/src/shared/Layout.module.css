@@ -73,6 +73,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    height: 100%;
+    min-width: 0;
 }
 
 /* ─── Sidebar Toggle Button ─── */
@@ -102,12 +104,23 @@
 .navLogo {
     display: flex;
     align-items: center;
+    height: 100%;
+    min-width: 0;
+    margin-left: 25px;
+}
+
+.navLogo > a {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
 }
 
 .logoImg {
-    height: 140px;
+    height: 81%;
+    max-height: 100%;
     width: auto;
-    max-width: 220px;
+    max-width: min(378px, calc(100vw - 82px));
     object-fit: contain;
     display: block;
 }

@@ -1,4 +1,6 @@
-export type ProfileTranslator = (key: string, vars?: Record<string, string | number>) => string;
+import type { TranslationKey } from '@/shared/i18n';
+
+export type ProfileTranslator = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
 export interface ProfileFormData {
     username: string;

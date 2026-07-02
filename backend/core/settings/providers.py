@@ -44,6 +44,19 @@ class ProviderSettingsSegment(SecuritySettingsSegment):
     OPENAI_TEMPERATURE: float = 0.4
     OPENAI_MAX_TOKENS: int = 4096
 
+    VIDEO_BROLL_PROVIDER: str = "comfyui"
+    COMFYUI_BASE_URL: str = "http://127.0.0.1:8188"
+    COMFYUI_WORKFLOW_PATH: str = f"{SecuritySettingsSegment.BASE_DIR}/workflows/text_to_video_wan.json"
+    COMFYUI_DEFAULT_NEGATIVE_PROMPT: str = (
+        "blurry, low quality, watermark, text, subtitles, deformed hands, "
+        "extra fingers, distorted face, flicker, jitter, duplicate person, bad anatomy"
+    )
+    COMFYUI_TIMEOUT_SECONDS: int = 1800
+    COMFYUI_POLL_INTERVAL_SECONDS: float = 5.0
+    VIDEO_DEFAULT_WIDTH: int = 832
+    VIDEO_DEFAULT_HEIGHT: int = 480
+    VIDEO_DEFAULT_FPS: int = 16
+
     @field_validator("COZE_REQUEST_TIMEOUT_SECONDS", mode="before")
     @classmethod
     def clamp_coze_timeout(cls, value) -> float:
@@ -59,7 +72,17 @@ class ProviderSettingsSegment(SecuritySettingsSegment):
     def normalize_provider(cls, value: str) -> str:
         return str(value or "local_ollama").strip().lower()
 
+    @field_validator("VIDEO_BROLL_PROVIDER", mode="before")
+    @classmethod
+    def normalize_broll_provider(cls, value: str) -> str:
+        return str(value or "comfyui").strip().lower()
+
     @field_validator("OLLAMA_BASE_URL", mode="before")
     @classmethod
     def strip_ollama_url(cls, value: str) -> str:
         return (str(value or "http://localhost:11434") or "").strip().rstrip("/")
+
+    @field_validator("COMFYUI_BASE_URL", mode="before")
+    @classmethod
+    def strip_comfy_url(cls, value: str) -> str:
+        return (str(value or "http://127.0.0.1:8188") or "").strip().rstrip("/")

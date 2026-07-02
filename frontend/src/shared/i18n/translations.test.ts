@@ -43,6 +43,16 @@ describe('translation assembly', () => {
     expect(TRANSLATIONS['zh-CN']['ppt_generator.customTemplate.page.title']).toBe(
       '\u6a21\u677f\u5de5\u4f5c\u5ba4',
     );
+    expect(TRANSLATIONS['zh-CN']['home.tool.ppt_generator.title']).toBe(
+      'PPT \u751f\u6210\u5668',
+    );
+    expect(TRANSLATIONS['zh-CN']['aiChat.workspace']).toBe('AI \u5de5\u4f5c\u533a');
+    expect(TRANSLATIONS['zh-CN']['sidebar.section.aiTools']).toBe('AI \u5de5\u5177');
+    expect(TRANSLATIONS['zh-CN']['sidebar.teacherView']).toBe('\u6559\u5e08\u89c6\u56fe');
+    expect(TRANSLATIONS['zh-CN']['profile.editTitle']).toBe(
+      '\u7f16\u8f91\u4e2a\u4eba\u8d44\u6599',
+    );
+    expect(TRANSLATIONS['zh-CN']['auth.username']).toBe('\u7528\u6237\u540d');
     expect(TRANSLATIONS['zh-HK']['ppt_generator.workflow.step.preview']).toBe(
       '\u751f\u6210 PPT \u9810\u89bd',
     );
@@ -52,6 +62,16 @@ describe('translation assembly', () => {
     expect(TRANSLATIONS['zh-HK']['ppt_generator.customTemplate.page.title']).toBe(
       '\u6a21\u677f\u5de5\u4f5c\u5ba4',
     );
+    expect(TRANSLATIONS['zh-HK']['home.tool.video.title']).toBe(
+      'AI \u5f71\u7247\u7522\u751f\u5668',
+    );
+    expect(TRANSLATIONS['zh-HK']['aiChat.workspace']).toBe('AI \u5de5\u4f5c\u5340');
+    expect(TRANSLATIONS['zh-HK']['sidebar.section.workflow']).toBe('\u5de5\u4f5c\u6d41\u7a0b');
+    expect(TRANSLATIONS['zh-HK']['sidebar.studentView']).toBe('\u5b78\u751f\u8996\u5716');
+    expect(TRANSLATIONS['zh-HK']['profile.sessionsTitle']).toBe(
+      '\u767b\u5165\u88dd\u7f6e\u7ba1\u7406',
+    );
+    expect(TRANSLATIONS['zh-HK']['auth.newPassword']).toBe('\u65b0\u5bc6\u78bc');
     expect(TRANSLATIONS['zh-CN']['language.switcher.title']).toBe('\u8bed\u8a00');
     expect(TRANSLATIONS['zh-HK']['language.switcher.title']).toBe('\u8a9e\u8a00');
   });

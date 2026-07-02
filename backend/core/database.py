@@ -465,6 +465,17 @@ async def ensure_indexes() -> None:
             # TTL: auto-delete records older than 30 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
         ])
+        await db.video_projects.create_indexes([
+            IndexModel([("user_id", ASCENDING), ("updated_at", DESCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("user_id", ASCENDING), ("status", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("status", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
+        await db.video_script_jobs.create_indexes([
+            IndexModel([("job_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_7D),
+        ])
         # ── file assets registry ──────────────────────────────────────────────
         await db.file_assets.create_indexes([
             IndexModel([("file_id", ASCENDING)], unique=True),

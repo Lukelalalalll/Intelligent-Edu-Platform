@@ -13,6 +13,7 @@ async def generate_scripts(
     lang: str = "zh",
     provider: str = "local_ollama",
     audience: str = "student",
+    user: dict | None = None,
 ) -> list[str]:
     template = SCRIPT_PROMPT_ZH if lang == "zh" else SCRIPT_PROMPT_EN
     audience_hint = resolve_audience_hint(audience, lang)
@@ -26,6 +27,8 @@ async def generate_scripts(
                     rag_context="",
                 ),
                 provider,
+                user=user,
+                system_override="You are a professor writing natural teaching-video narration for TTS.",
             )
             return result.strip() or chunk[:200]
         except Exception as exc:

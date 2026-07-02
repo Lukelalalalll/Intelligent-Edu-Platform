@@ -16,6 +16,7 @@ async def smart_extract(
     provider: str = "local_ollama",
     audience: str = "student",
     apply_arc: bool = True,
+    user: dict | None = None,
 ) -> list[str]:
     if file_path:
         raw_chunks = (
@@ -35,9 +36,10 @@ async def smart_extract(
         provider,
         max_segments,
         audience,
+        user,
     )
     if apply_arc and len(segments) > 1:
-        arc = await plan_narrative_arc(segments, lang, provider)
+        arc = await plan_narrative_arc(segments, lang, provider, user=user)
         if arc:
             segments = weave_narrative_arc(segments, arc, lang)
     return segments

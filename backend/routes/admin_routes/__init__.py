@@ -1,6 +1,5 @@
 """admin_routes package with explicit router aggregation."""
 
-from .api_keys import router as api_keys_router
 from .courses import router as courses_router
 from .courses_v2 import router as courses_v2_router
 from .db_console import router as db_console_router
@@ -19,7 +18,6 @@ for router in (
     db_console_router,
     telemetry_router,
     rag_eval_router,
-    api_keys_router,
     file_assets_router,
     file_center_router,
     courses_v2_router,

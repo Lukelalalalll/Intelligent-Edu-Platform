@@ -62,7 +62,7 @@ export function useQuickProcess(navigate: NavigateFunction, options: QuickProces
         const fetchContent = async () => {
             const filename = localStorage.getItem('combinedFilename');
             if (!filename) {
-                navigate(options.missingContentRedirect || '/slides/ai-theme-config');
+                navigate(options.missingContentRedirect || '/slides/ppt_generator/dashboard');
                 return;
             }
             setCurrentFilename(filename);

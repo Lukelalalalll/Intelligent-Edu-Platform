@@ -4,16 +4,12 @@ import logging
 
 from fastapi import APIRouter, Depends, Request
 
-from backend.config import Config
-from backend.core.ai_provider import resolve_provider, resolve_provider_runtime
+from backend.core.ai_provider import resolve_provider
 from backend.core.database import compute_history_expires_at
 from backend.core.security import get_current_user
 from backend.schemas import (
-    ExportRenderDraftRequest,
-    GenerateRenderRequest,
     GenerateScriptSchema,
     PptProcessSchema,
-    RenderDraftPreviewRequest,
     SummarizeChaptersSchema,
     SummarizeRequestSchema,
 )
@@ -24,24 +20,12 @@ from backend.services.slides.pipeline_service import generate_outline as _svc_ge
 from backend.services.slides.pipeline_service import generate_script as _svc_generate_script
 from backend.services.slides.pipeline_service import process_text_to_md as _svc_process_text
 
-from .generation_history import build_generate_render_result_metadata, build_generate_render_source
 from .generation_processing import coze_generate_outline_impl, process_ppt_impl, process_text_impl
-from .generation_rendering import (
-    export_render_draft_impl,
-    generate_render_impl,
-    render_draft_preview_impl,
-    serialize_theme_draft_slides,
-)
 from .generation_summary import THEMES_PAYLOAD, generate_talking_script_impl, summarize_chapters_impl, summarize_highlights_impl
-from .shared import CozeOutlineRequest, ProcessTextRequest, THEME_NAMES
+from .shared import CozeOutlineRequest, ProcessTextRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-_build_generate_render_source = build_generate_render_source
-_build_generate_render_result_metadata = build_generate_render_result_metadata
-_serialize_theme_draft_slides = serialize_theme_draft_slides
-
 
 async def _save_slides_history(
     *,
@@ -162,41 +146,3 @@ async def generate_talking_script(
 @router.get("/themes")
 async def list_themes():
     return THEMES_PAYLOAD
-
-
-@router.post("/generate-render")
-async def generate_render(
-    req: GenerateRenderRequest,
-    user: dict = Depends(get_current_user),
-    request: Request = None,
-):
-    return await generate_render_impl(
-        req,
-        user,
-        request,
-        config=Config,
-        logger=logger,
-        theme_names=THEME_NAMES,
-        resolve_provider_runtime=resolve_provider_runtime,
-        build_generate_render_source=_build_generate_render_source,
-        build_generate_render_result_metadata=_build_generate_render_result_metadata,
-        save_slides_history=_save_slides_history,
-        task_tracker_cls=TaskTracker,
-        step_status=StepStatus,
-    )
-
-
-@router.post("/export-render-draft")
-async def export_render_draft(
-    req: ExportRenderDraftRequest,
-    user: dict = Depends(get_current_user),
-):
-    return await export_render_draft_impl(req, output_dir=Config.PPT_RESULTS_FOLDER)
-
-
-@router.post("/render-draft-preview")
-async def render_draft_preview(
-    req: RenderDraftPreviewRequest,
-    user: dict = Depends(get_current_user),
-):
-    return await render_draft_preview_impl(req)

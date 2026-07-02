@@ -23,10 +23,44 @@ export const enSharedSidebarMessages = {
 
 
 export const zhCNSharedSidebarMessages = {
-
+  "sidebar.aiConfig": "AI 配置",
+  "sidebar.aiWorkspace": "AI 工作区",
+  "sidebar.chat": "聊天",
+  "sidebar.dashboard": "仪表盘",
+  "sidebar.database": "数据库",
+  "sidebar.fileCenter": "文件中心",
+  "sidebar.home": "首页",
+  "sidebar.knowledgeBase": "知识库",
+  "sidebar.mailbox": "邮箱",
+  "sidebar.ragEvaluator": "RAG 评估器",
+  "sidebar.section.admin": "管理",
+  "sidebar.section.aiTools": "AI 工具",
+  "sidebar.section.main": "主要",
+  "sidebar.section.workflow": "工作流",
+  "sidebar.security": "安全",
+  "sidebar.studentView": "学生视图",
+  "sidebar.teacherView": "教师视图",
+  "sidebar.tools": "工具",
 } as const satisfies MessageDictionary;
 
 
 export const zhHKSharedSidebarMessages = {
-
+  "sidebar.aiConfig": "AI 設定",
+  "sidebar.aiWorkspace": "AI 工作區",
+  "sidebar.chat": "聊天",
+  "sidebar.dashboard": "儀表板",
+  "sidebar.database": "資料庫",
+  "sidebar.fileCenter": "文件中心",
+  "sidebar.home": "主頁",
+  "sidebar.knowledgeBase": "知識庫",
+  "sidebar.mailbox": "郵箱",
+  "sidebar.ragEvaluator": "RAG 評估器",
+  "sidebar.section.admin": "管理",
+  "sidebar.section.aiTools": "AI 工具",
+  "sidebar.section.main": "主要",
+  "sidebar.section.workflow": "工作流程",
+  "sidebar.security": "安全",
+  "sidebar.studentView": "學生視圖",
+  "sidebar.teacherView": "教師視圖",
+  "sidebar.tools": "工具",
 } as const satisfies MessageDictionary;

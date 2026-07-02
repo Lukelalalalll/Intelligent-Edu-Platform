@@ -21,7 +21,7 @@ export type MdProcessorPageProps = {
 };
 
 export default function MdProcessor({
-    nextRoute = '/slides/ai-theme-config',
+    nextRoute = '/slides/ppt_generator/dashboard',
     bannerTitle,
     bannerSubtitle,
     continueLabel,

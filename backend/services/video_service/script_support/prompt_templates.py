@@ -24,15 +24,39 @@ SPLIT_PROMPT_ZH = """You are an instructional designer. {audience_hint}
 Below is some course content:
 {text}
 
-Split it into {n} teaching segments, each 60-100 characters of spoken Chinese suitable for TTS.
+Plan this as a teaching video with between {min_n} and {max_n} narration segments.
+Choose the scene count intelligently based on the material complexity, but never output fewer than {min_n} segments.
+Each segment should be 60-100 characters of spoken Chinese suitable for TTS.
 Output as a JSON array of strings. Output ONLY the JSON, nothing else."""
 
 SPLIT_PROMPT_EN = """You are an instructional designer. {audience_hint}
 Below is some course content:
 {text}
 
-Split it into {n} teaching segments, each 40-80 words of spoken English suitable for TTS.
+Plan this as a teaching video with between {min_n} and {max_n} narration segments.
+Choose the scene count intelligently based on the material complexity, but never output fewer than {min_n} segments.
+Each segment should be 40-80 words of spoken English suitable for TTS.
 Output as a JSON array of strings. Output ONLY the JSON, nothing else."""
+
+SEED_EXPANSION_PROMPT_ZH = """You are an instructional designer turning a short idea into a multi-scene teaching video. {audience_hint}
+The user only gave a brief seed prompt:
+{text}
+
+Expand it into a short teaching video plan with between {min_n} and {max_n} narration segments.
+Decide the best scene count yourself, but never output fewer than {min_n} segments.
+Make the segments feel like a coherent progression: opening setup, development, and closing payoff.
+Each segment should be 60-100 characters of spoken Chinese suitable for TTS.
+Output ONLY a JSON array of strings."""
+
+SEED_EXPANSION_PROMPT_EN = """You are an instructional designer turning a short idea into a multi-scene teaching video. {audience_hint}
+The user only gave a brief seed prompt:
+{text}
+
+Expand it into a short teaching video plan with between {min_n} and {max_n} narration segments.
+Decide the best scene count yourself, but never output fewer than {min_n} segments.
+Make the segments feel like a coherent progression: opening setup, development, and closing payoff.
+Each segment should be 40-80 words of spoken English suitable for TTS.
+Output ONLY a JSON array of strings."""
 
 SLIDE_PROMPT_ZH = """You are a teaching video director. {audience_hint}
 Background reference material (from RAG retrieval):

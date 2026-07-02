@@ -73,15 +73,15 @@ from backend.schemas.slides import (  # noqa: F401
     PptGeneratorAssistantMessageSchema,
     SlidesTaskResponseSchema,
     SlidesTaskStatusSchema,
-    GenerateRenderRequest,
-    ExportRenderDraftRequest,
-    RenderDraftPreviewRequest,
     ThemeListResponse,
 )
 
 from backend.schemas.questions import (  # noqa: F401
     ExtractQuestionsSchema,
     GenerateQuestionsSchema,
+    QuestionDraftSchema,
+    QuestionExportSelectionSchema,
+    QuestionHistoryFinalizeSchema,
     SuggestConstraintsSchema,
     UploadScreenshotSchema,
     QuestionOpsRunCreateSchema,

@@ -68,4 +68,4 @@ export interface ConfirmConfig {
   onConfirm: (() => void) | null;
 }
 
-export type AdminMode = 'users' | 'relations' | 'llm-monitor' | 'api-keys' | 'staff-codes' | 'rag-eval';
+export type AdminMode = 'users' | 'relations' | 'llm-monitor' | 'staff-codes' | 'rag-eval';

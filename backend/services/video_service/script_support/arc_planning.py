@@ -10,6 +10,7 @@ async def plan_narrative_arc(
     segments: list[str],
     lang: str = "zh",
     provider: str = "local_ollama",
+    user: dict | None = None,
 ) -> dict | None:
     if not segments:
         return None
@@ -21,7 +22,14 @@ async def plan_narrative_arc(
     )
 
     try:
-        arc = parse_json_object(await call_ai(prompt, provider))
+        arc = parse_json_object(
+            await call_ai(
+                prompt,
+                provider,
+                user=user,
+                system_override="You are a teaching video director planning narrative flow. Return valid JSON only.",
+            )
+        )
         if not arc:
             logger.warning(
                 "plan_narrative_arc: LLM returned non-parsable JSON, skipping arc"

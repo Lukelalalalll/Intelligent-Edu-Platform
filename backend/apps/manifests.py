@@ -78,6 +78,7 @@ CORE_APP_MANIFEST = AppManifest(
         file_center_router,
         slides_router,
         legacy_sub1_router,
+        video_router,
     ),
     direct_routers=(homework_router, public_slides_router),
     static_mounts=(
@@ -85,6 +86,7 @@ CORE_APP_MANIFEST = AppManifest(
         ("/static", _base_path("static"), "static"),
         ("/grading_annotated", _base_path("static", "grading_annotated"), "grading_annotated"),
         ("/generated/sub1", _base_path("generated", "sub1"), "generated_sub1"),
+        ("/generated/videos", _base_path("generated", "videos"), "generated_videos"),
         ("/app_data", str(PPT_GENERATOR_APP_DATA_ROOT), "ppt_generator_app_data"),
     ),
     require_gateway_token=True,
