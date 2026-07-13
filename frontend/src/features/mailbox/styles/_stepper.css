@@ -1,0 +1,91 @@
+/* =========================================
+   2. Wizard Stepper
+   ========================================= */
+
+.stepperWrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px auto 30px;
+    padding: 16px 40px;
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+    z-index: 10;
+    max-width: 900px;
+}
+
+.stepItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    color: var(--text-sub);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.stepIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.stepText {
+    font-size: 0.95rem;
+}
+
+/* Connector line between steps */
+.stepItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -100px;
+    width: 80px;
+    height: 2px;
+    background: #e2e8f0;
+    transform: translateY(-50%);
+    z-index: -1;
+    transition: var(--transition);
+}
+
+/* States: completed & active */
+.stepCompleted .stepIcon {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.stepCompleted:not(:last-child)::after {
+    background: var(--primary-color);
+}
+
+.stepCompleted {
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.stepCompleted:hover {
+    transform: translateY(-2px);
+}
+
+.stepActive .stepIcon {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.2);
+}
+
+.stepActive {
+    color: var(--primary-color);
+}

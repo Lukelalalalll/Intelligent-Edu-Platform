@@ -1,0 +1,5 @@
+/* mailbox.module.css — barrel that composes all partials */
+@import './_layout.css';
+@import './_stepper.css';
+@import './_cards.css';
+@import './_submissions.css';

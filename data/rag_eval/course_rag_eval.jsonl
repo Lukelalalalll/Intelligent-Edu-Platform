@@ -1,0 +1,3 @@
+{"id":"sample-1","query":"What is polymorphism in object oriented programming?","course_ids":["CS101"],"expected_doc_names":["oop_intro.pdf"],"expected_keywords":["polymorphism","inheritance","method overriding"]}
+{"id":"sample-2","query":"How to compute derivative of sin(x)?","course_ids":["MATH201"],"expected_doc_names":["calculus_notes.pdf"],"expected_keywords":["derivative","sin(x)","cos(x)"]}
+{"id":"sample-3","query":"Explain TCP/IP four-layer model","course_ids":["COMP202"],"expected_doc_names":["network_basics.pdf"],"expected_keywords":["application layer","transport layer","internet layer","link layer"]}

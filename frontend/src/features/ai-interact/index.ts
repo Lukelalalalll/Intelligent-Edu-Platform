@@ -1,0 +1,1 @@
+export { default as AIInteractPage } from './pages/AIInteractPage';

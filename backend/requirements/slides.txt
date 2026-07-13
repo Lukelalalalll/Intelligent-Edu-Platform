@@ -1,0 +1,24 @@
+-r base.txt
+aiosqlite==0.22.1
+dirtyjson==1.0.8
+fastembed-vectorstore==0.5.3
+llmai==0.2.7
+nltk==3.9.4
+pathvalidate==3.3.1
+python-pptx==1.0.2
+lxml==6.0.2
+pdf2image==1.17.0
+pdfplumber==0.11.10
+PyPDF2==3.0.1
+pypdfium2==5.10.1
+pytesseract==0.3.10
+opencv-python-headless==4.13.0.92
+opendataloader-pdf==2.1.1
+markdown_analysis==0.1.5
+matplotlib==3.10.8
+seaborn==0.13.2
+scipy==1.17.1
+RapidFuzz==3.14.3
+playwright==1.52.0
+filetype==1.2.0
+sqlmodel==0.0.38

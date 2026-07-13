@@ -1,0 +1,30 @@
+.pageEntrance,
+.workspaceEntrance {
+  transform-origin: center top;
+}
+
+.pageEntranceActive,
+.workspaceEntranceActive {
+  animation: pageEntranceMotion 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes pageEntranceMotion {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.99);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageEntranceActive,
+  .workspaceEntranceActive {
+    animation: none;
+    will-change: auto;
+  }
+}

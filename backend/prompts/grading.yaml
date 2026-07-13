@@ -1,0 +1,196 @@
+# =============================================================================
+# Grading Prompts — Used by AI Gateway for submission analysis and feedback
+# =============================================================================
+
+analyze_submission:
+  description: "Full submission analysis with rubric scoring"
+  version: "1.0"
+  template: |
+    You are a strict teaching assistant grading a student's submission.
+    Use only the provided submission content as evidence.
+    If evidence is missing, state "Not evidenced in submission".
+
+    Assignment: {assignment}
+    Rubric (JSON): {rubric_json}
+
+    Student submission:
+    {text}
+
+    Task:
+    1) Evaluate each rubric category with a numeric score and one short evidence sentence.
+    2) Provide total score (0-100).
+    3) Provide concise overall feedback.
+    4) Provide 3-5 actionable improvement suggestions.
+
+    Output format requirements:
+    - Return valid JSON only (no markdown, no code fence).
+    - Use this schema exactly:
+    {{
+        "overall_score": number,
+        "rubric_scores": [
+            {{"criterion": string, "score": number, "evidence": string}}
+        ],
+        "overall_feedback": string,
+        "improvement_suggestions": [string]
+    }}
+
+extract_qa_pairs:
+  description: "Extract question-answer pairs from a submission"
+  version: "1.1"
+  template: |
+    You are an exam parser. Extract ALL question-answer pairs from the student submission — do not stop early.
+
+    Assignment context:
+    {assignment}
+
+    Student submission text:
+    {text}
+
+    Rules:
+    1) Extract EVERY question found. Do NOT skip any question, even if the answer is short or incomplete.
+    2) Detect question boundaries: numbered questions (1. 2. 3.), lettered (a) b) c)), Chinese (第1题 一、), Q1/Q2, etc.
+    3) Each question must have its own entry — never merge multiple questions into one.
+    4) If the question text is not explicit, infer a short title from the answer context.
+    5) Keep answer text faithful but cap at 1500 chars per answer.
+    6) Assign sequential IDs: Q1, Q2, Q3 ... QN for all N questions found.
+    7) Set confidence 0.0–1.0 based on how clearly the boundary was detected.
+    8) Return valid JSON only (no markdown, no code fence).
+
+    Output schema:
+    {{
+      "question_pairs": [
+        {{
+          "question_id": "Q1",
+          "question_text": string,
+          "student_answer": string,
+          "confidence": number
+        }}
+      ],
+      "unmatched_text": [string]
+    }}
+
+generate_answer_key:
+  description: "Generate reference answers and scoring points for each question"
+  version: "1.0"
+  template: |
+    You are a strict teaching assistant creating grading references.
+
+    Assignment:
+    {assignment}
+
+    Rubric (JSON):
+    {rubric_json}
+
+    Question pairs (JSON):
+    {question_pairs_json}
+
+    Task:
+    1) For each question_id, generate a concise reference answer.
+    2) Provide 2-5 key points for scoring.
+    3) Suggest max_score for each question (sum should be close to 100).
+
+    Return valid JSON only:
+    {{
+      "answer_key": [
+        {{
+          "question_id": string,
+          "reference_answer": string,
+          "key_points": [string],
+          "max_score": number
+        }}
+      ]
+    }}
+
+grade_questions:
+  description: "Grade student answers question-by-question against answer key"
+  version: "1.0"
+  template: |
+    You are a strict grader.
+
+    Rubric (JSON):
+    {rubric_json}
+
+    Question-answer pairs (JSON):
+    {question_pairs_json}
+
+    Answer key (JSON):
+    {answer_key_json}
+
+    Requirements:
+    1) Grade each question independently.
+    2) For each question, provide score, max_score, concise rationale, and evidence quote from student answer.
+    3) Provide overall feedback and 3-5 improvement suggestions.
+    4) Return JSON only.
+
+    Output schema:
+    {{
+      "question_grades": [
+        {{
+          "question_id": string,
+          "score": number,
+          "max_score": number,
+          "rationale": string,
+          "evidence": string,
+          "confidence": number
+        }}
+      ],
+      "overall_feedback": string,
+      "improvement_suggestions": [string]
+    }}
+
+feedback:
+  description: "Actionable feedback for selected student text"
+  version: "1.0"
+  template: |
+    You are a concise grading assistant.
+
+    Assignment:
+    {assignment_desc}
+
+    Rubric:
+    {rubric_json}
+
+    Selected student text:
+    {selected_text}
+
+    Retrieved context from submission:
+    {rag_snippets}
+
+    Task:
+    Provide actionable feedback focused on clarity, correctness, and rubric alignment.
+    Keep it short and specific.
+
+annotation:
+  description: "Short constructive feedback comment for a specific section"
+  version: "1.0"
+  template: |
+    The student wrote this section:
+    "{selected_text}"
+
+    Assignment: {assignment_desc}
+    Rubric: {rubric_json}
+
+    Retrieved context from submission:
+    {rag_snippets}
+
+    Provide a short, constructive feedback comment for this specific section.
+    Be specific and actionable.
+    Keep it under 100 words.
+
+suggest_annotation:
+  description: "Quick annotation suggestion without RAG context"
+  version: "1.0"
+  template: |
+    The student wrote this section:
+    "{selected_text}"
+
+    Assignment: {assignment}
+    Rubric: {rubric}
+
+    Provide a short, constructive feedback comment for this specific section. Be specific and actionable.
+    Keep it under 100 words.
+
+deepseek_system:
+  description: "System prompt for DeepSeek fallback"
+  version: "1.0"
+  template: "You are a concise grading assistant."

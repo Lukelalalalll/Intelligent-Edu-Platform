@@ -1,0 +1,1 @@
+export { default as DiagramPage } from './pages/DiagramPage';

@@ -1,0 +1,13 @@
+-r base.txt
+edge-tts>=7.0.0
+moviepy==2.2.1
+imageio==2.37.3
+imageio-ffmpeg==0.6.0
+opencv-python-headless==4.13.0.92
+pydub==0.25.1
+playwright==1.52.0
+pdfplumber==0.11.5
+PyPDF2==3.0.1
+pypdfium2==4.30.0
+opendataloader-pdf==2.1.1
+filetype==1.2.0

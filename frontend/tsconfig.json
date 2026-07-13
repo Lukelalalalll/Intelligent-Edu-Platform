@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting — relaxed for migration, will tighten later */
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": false,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["jest", "vitest/globals"],
+
+    /* Allow JS/TS coexistence during migration */
+    "allowJs": true,
+    "checkJs": false,
+
+    /* JSON imports (shared data/slide_themes.json) */
+    "resolveJsonModule": true,
+
+    /* Path resolution */
+    "paths": {
+      "@/*": ["./src/*"],
+      "next": ["./src/ppt_generator/shims/next.ts"],
+      "next/navigation": ["./src/ppt_generator/shims/next-navigation.ts"],
+      "next/link": ["./src/ppt_generator/shims/next-link.tsx"],
+      "next/image": ["./src/ppt_generator/shims/next-image.tsx"],
+      "next/headers": ["./src/ppt_generator/shims/next-headers.ts"]
+    }
+  },
+  "include": ["src"]
+}

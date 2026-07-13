@@ -1,0 +1,2 @@
+-r base.txt
+opendataloader-pdf==2.1.1

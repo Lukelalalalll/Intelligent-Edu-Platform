@@ -1,0 +1,45 @@
+﻿/* Global app layout */
+main {
+    flex: 1;
+    max-width: var(--page-max-width);
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--page-padding-block) var(--page-padding-inline);
+    position: relative;
+}
+
+.footer {
+    background-color: var(--bg-card);
+    padding: 2rem 0;
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+}
+
+.footer-content {
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+main:has(.auth-page-root),
+main:has(.global-ai-wrapper),
+main:has(.global-chat-wrapper),
+main:has(.study-room-workspace),
+main:has([class*="ai-workspace-wrapper"]),
+main:has(.ppt-generator-screen) {
+    padding: 0;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-workspace-wrapper,
+.chat-workspace-wrapper {
+    flex: 1;
+    overflow: hidden;
+}
+
+.auth-wrapper {
+    min-height: calc(100vh - var(--nav-height));
+}
+

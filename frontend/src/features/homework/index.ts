@@ -1,0 +1,1 @@
+export { default as PublishHomeworkPage } from './pages/PublishHomeworkPage';

@@ -1,0 +1,155 @@
+/* =============================================
+   AI Modal — extracted from AIInteract.module.css
+   Delete confirmation modal + Memory modal form
+   ============================================= */
+
+/* =========================================
+   Custom Modal (Delete Confirmation)
+   ========================================= */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-modal-box {
+    background: #ffffff;
+    width: 340px;
+    border-radius: var(--radius-lg);
+    padding: 32px 32px 28px;
+    text-align: center;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+}
+
+.modal-icon {
+    width: 52px;
+    height: 52px;
+    background: rgba(255, 77, 79, 0.2);
+    color: #b91c1c; /* NOSONAR */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 16px;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.modal-desc {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn {
+    background: #f0f2f5;
+    color: #4B5563;
+}
+
+.cancel-btn:hover {
+    background: #e4e6eb;
+}
+
+.confirm-btn {
+    background: #ff4d4f;
+    color: white; /* NOSONAR */
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.2);
+}
+
+.confirm-btn:hover {
+    background: #ff7875;
+    box-shadow: 0 6px 16px rgba(255, 77, 79, 0.3);
+    transform: translateY(-2px);
+}
+
+.confirm-btn:active {
+    transform: translateY(0);
+}
+
+/* ========== Memory Modal Form ========== */
+
+.memory-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.memory-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4B5563;
+}
+
+.memory-label span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.memory-label span i {
+    font-size: 0.78rem;
+    color: var(--primary-color);
+    opacity: 0.7;
+}
+
+.memory-input,
+.memory-textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e4e6eb;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fafafa;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.memory-input:focus,
+.memory-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 85, 0.08);
+    background: #fff;
+}
+
+.memory-textarea {
+    resize: vertical;
+    min-height: 48px;
+}

@@ -1,0 +1,458 @@
+/* History panel styles — extracted from sub2.module.css */
+
+/* Re-export shared buttons */
+.btn { composes: btn from './shared/btn.module.css'; }
+.btnPrimary { composes: btnPrimary from './shared/btn.module.css'; }
+.btnSecondary { composes: btnSecondary from './shared/btn.module.css'; }
+
+.historyViewCard {
+    margin-bottom: 2.5rem;
+    animation: tabPopIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes tabPopIn {
+    0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes historyPanelFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes historyCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes historyDetailIn {
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.historyLoadingState,
+.historyEmptyState {
+    padding: 1rem;
+    font-size: 0.92rem;
+    border-radius: 14px;
+}
+
+.historyLoadingState {
+    opacity: 0.68;
+}
+
+.historyEmptyState {
+    opacity: 0.56;
+}
+
+.historyListView {
+    margin-top: 1.5rem;
+    animation: historyPanelFadeIn 0.32s ease-out;
+}
+
+.historyTitleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.historyTitle {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.historyTitleHint {
+    color: var(--text-sub);
+    font-size: 0.84rem;
+    letter-spacing: 0.01em;
+    opacity: 0.85;
+}
+
+.historyGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.historyItemCard {
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 22px;
+    padding: 1.15rem;
+    background:
+        radial-gradient(circle at 98% 0%, rgba(0, 123, 85, 0.11), rgba(0, 123, 85, 0) 40%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 251, 250, 0.96));
+    box-shadow: 0 10px 22px rgba(16, 24, 40, 0.07);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    min-height: 214px;
+    overflow: hidden;
+    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s ease, border-color 0.26s ease;
+    opacity: 0;
+    animation: historyCardIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.historyItemCard::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5px;
+    background: linear-gradient(90deg, rgba(0, 123, 85, 0.9), rgba(0, 164, 116, 0.8));
+}
+
+.historyItemCard:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 123, 85, 0.32);
+    box-shadow: 0 18px 34px rgba(0, 123, 85, 0.15);
+}
+
+.historyItemTopRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 9px;
+}
+
+.historyItemSubject {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.35;
+}
+
+.historyItemDate {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    padding: 3px 10px;
+    white-space: nowrap;
+    backdrop-filter: blur(3px);
+}
+
+.historyItemChips {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.historyChip,
+.historyChipPrimary {
+    border-radius: 999px;
+    font-size: 0.76rem;
+    padding: 4px 10px;
+    font-weight: 600;
+}
+
+.historyChip {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-sub);
+}
+
+.historyChipPrimary {
+    background: rgba(0, 123, 85, 0.12);
+    color: var(--primary-color);
+}
+
+.historyPreview {
+    font-size: 0.87rem;
+    color: var(--text-sub);
+    line-height: 1.62;
+    flex: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    margin-bottom: 1rem;
+}
+
+.historyActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.historyActionBtn {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+}
+
+.historyPagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.historyPageBtn {
+    padding: 6px 16px;
+    border-radius: 999px;
+}
+
+.historyPageText {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.historyDetailView {
+    margin-top: 1.5rem;
+    animation: historyDetailIn 0.34s ease-out;
+}
+
+.historyDetailHeader {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.historyDetailHeadingBlock {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.historyDetailBadge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    background: rgba(0, 123, 85, 0.12);
+    border: 1px solid rgba(0, 123, 85, 0.18);
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.historyBackBtn {
+    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+}
+
+.historyDetailTitle {
+    margin: 0;
+    font-size: 1.12rem;
+}
+
+.historyDetailMetaCard {
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.08), rgba(0, 123, 85, 0.02));
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.historyDetailMetaTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.historyDetailMetaPrimary {
+    font-size: 0.92rem;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+
+.historyDetailMetaTime {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.historyReplayBtn {
+    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+}
+
+.historyDetailActionGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.historyExportBtn {
+    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+}
+
+.historyParamsPanel {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 0.95rem 1rem;
+    background: rgba(255, 255, 255, 0.86);
+    margin-bottom: 1rem;
+}
+
+.historyParamsTitle {
+    margin: 0 0 0.8rem;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.historyParamsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.historyParamItem {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 0.6rem 0.72rem;
+    background: rgba(249, 251, 250, 0.86);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.historyParamItem span {
+    font-size: 0.74rem;
+    color: var(--text-sub);
+    letter-spacing: 0.01em;
+}
+
+.historyParamItem strong {
+    font-size: 0.88rem;
+    color: var(--text-main);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.historyParamItemFull {
+    grid-column: 1 / -1;
+}
+
+.historyDetailMarkdown {
+    background: var(--surface-color, #ffffff);
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
+}
+
+.historyDetailLoading {
+    font-size: 0.95rem;
+    color: var(--text-sub);
+    opacity: 0.75;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+}
+
+.historyIconGap {
+    margin-right: 6px;
+}
+
+.historyPageBtn .historyIconGap:last-child {
+    margin-right: 0;
+    margin-left: 6px;
+}
+
+/* Markdown container (shared with GeneratedQuestionsPanel via sub2) */
+.markdownContainer {
+    composes: markdownContainer from './questionBank.module.css';
+}
+
+@media (max-width: 768px) {
+    .historyViewCard {
+        padding: 1.1rem;
+    }
+
+    .historyGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .historyTitleRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+
+    .historyItemCard {
+        border-radius: 18px;
+        min-height: 200px;
+    }
+
+    .historyPagination {
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .historyDetailHeader {
+        gap: 0.7rem;
+        flex-wrap: wrap;
+    }
+
+    .historyDetailHeadingBlock {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .historyDetailActionGroup {
+        width: 100%;
+    }
+
+    .historyExportBtn,
+    .historyReplayBtn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .historyParamsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .historyDetailMarkdown {
+        border-radius: 14px;
+        padding: 1.1rem;
+    }
+}

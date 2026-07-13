@@ -1,0 +1,53 @@
+# SearXNG settings for Intelligent Edu Platform
+# Docs: https://docs.searxng.org/admin/settings/index.html
+
+use_default_settings: true
+
+server:
+  # REQUIRED: random secret key (change in production!)
+  secret_key: "change-this-secret-key-in-production"
+  base_url: false           # let SearXNG detect from Host header
+  image_proxy: false        # not needed for text search
+
+search:
+  safe_search: 1            # 0=off, 1=moderate, 2=strict
+  autocomplete: ""
+  default_lang: "auto"
+  # Allow JSON format so the backend can parse results
+  formats:
+    - html
+    - json
+
+engines:
+  # Keep only the engines we expose in the UI
+  - name: google
+    engine: google
+    use_mobile_ui: false
+    shortcut: g
+  - name: bing
+    engine: bing
+    shortcut: bi
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+  - name: arxiv
+    engine: arxiv
+    shortcut: arx
+  - name: google scholar
+    engine: google_scholar
+    shortcut: gs
+
+ui:
+  static_use_hash: true
+  default_locale: "en"
+  query_in_title: false
+  results_on_new_tab: false
+
+# Disable outgoing request logging to stay lightweight
+outgoing:
+  max_request_timeout: 5.0
+  pool_connections: 20
+  pool_maxsize: 20

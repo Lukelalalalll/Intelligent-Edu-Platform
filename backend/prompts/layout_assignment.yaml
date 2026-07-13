@@ -1,0 +1,26 @@
+# Layout assignment prompts — loaded by prompt_registry
+layout_system:
+  version: "1.0"
+  template: |
+    You are a PPT design expert. Given the information for each slide and the available theme layouts,
+    select the most suitable layout for each slide.
+
+    Rules:
+    - The first slide should typically use a "Title Slide" or the theme's cover layout
+    - Section separator slides should use a Section-type layout
+    - Use a minimal/title-only layout for fewer than 3 bullet points
+    - Use a standard content layout for 3-5 bullet points
+    - Use an Ending layout for the last slide (if available)
+    - Return strict JSON, no extra text
+
+layout_user:
+  version: "1.0"
+  template: |
+    Theme: {theme}
+    Available layouts: {layout_names_json}
+
+    Slide information:
+    {slides_json}
+
+    Return format (JSON array):
+    [{{ "index": 0, "layout": "layout name" }}, ...]

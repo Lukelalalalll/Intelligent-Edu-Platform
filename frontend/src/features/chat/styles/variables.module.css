@@ -1,0 +1,12 @@
+/* Chat feature design tokens scoped for CSS Modules composition. */
+:root {
+  --chat-space-1: 4px;
+  --chat-space-2: 8px;
+  --chat-space-3: 12px;
+  --chat-space-4: 16px;
+  --chat-radius-sm: 8px;
+  --chat-radius-md: 12px;
+  --chat-radius-lg: 16px;
+  --chat-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --chat-shadow-card: 0 4px 12px rgba(0, 123, 85, 0.08);
+}

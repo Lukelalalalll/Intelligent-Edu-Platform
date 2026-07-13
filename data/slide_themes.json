@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "themes": [
+    { "id": "dark-ocean",    "label": "Deep Ocean Blue",  "colors": { "bg": "#0f2744", "title": "#60a5fa", "body": "#e2e8f0", "accent": "#1e40af" } },
+    { "id": "forest",        "label": "Forest Green",      "colors": { "bg": "#0d2b1e", "title": "#4ade80", "body": "#d1fae5", "accent": "#166534" } },
+    { "id": "midnight",      "label": "Midnight Purple",   "colors": { "bg": "#1a0533", "title": "#c084fc", "body": "#f3e8ff", "accent": "#7c3aed" } },
+    { "id": "sunset",        "label": "Sunset Orange",     "colors": { "bg": "#4a1515", "title": "#fb923c", "body": "#fde8d8", "accent": "#c2410c" } },
+    { "id": "minimal-white", "label": "Minimal White",     "colors": { "bg": "#ffffff", "title": "#1e293b", "body": "#475569", "accent": "#e2e8f0" } },
+    { "id": "corp-blue",     "label": "Corporate Blue",    "colors": { "bg": "#1e3a5f", "title": "#ffffff", "body": "#bfdbfe", "accent": "#1d4ed8" } },
+    { "id": "chalkboard",    "label": "Chalkboard Green",  "colors": { "bg": "#1a3028", "title": "#fef08a", "body": "#f0fdf4", "accent": "#15803d" } },
+    { "id": "tech-noir",     "label": "Tech Noir",         "colors": { "bg": "#111827", "title": "#22d3ee", "body": "#94a3b8", "accent": "#0e7490" } },
+    { "id": "rose-gold",     "label": "Rose Gold",         "colors": { "bg": "#3d1525", "title": "#fda4af", "body": "#fce7f3", "accent": "#be185d" } },
+    { "id": "lunar",         "label": "Lunar Gray",        "colors": { "bg": "#1c1c2e", "title": "#e2e8f0", "body": "#94a3b8", "accent": "#334155" } }
+  ],
+  "layouts": [
+    "title-bullets", "image-left", "image-right", "image-top",
+    "big-quote", "two-column", "bar-chart", "flowchart", "code"
+  ]
+}

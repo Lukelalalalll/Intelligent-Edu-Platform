@@ -1,0 +1,40 @@
+{
+  "total": 3,
+  "top_k": 4,
+  "use_hybrid": true,
+  "hit_rate": 0.0,
+  "citation_correct_rate": 0.0,
+  "empty_retrieval_rate": 1.0,
+  "counts": {
+    "hit": 0,
+    "empty": 3,
+    "correct_citations": 0,
+    "total_citations": 0
+  },
+  "details": [
+    {
+      "id": "sample-1",
+      "query": "What is polymorphism in object oriented programming?",
+      "retrieved_count": 0,
+      "sample_hit": false,
+      "correct_citations": 0,
+      "retrieved": []
+    },
+    {
+      "id": "sample-2",
+      "query": "How to compute derivative of sin(x)?",
+      "retrieved_count": 0,
+      "sample_hit": false,
+      "correct_citations": 0,
+      "retrieved": []
+    },
+    {
+      "id": "sample-3",
+      "query": "Explain TCP/IP four-layer model",
+      "retrieved_count": 0,
+      "sample_hit": false,
+      "correct_citations": 0,
+      "retrieved": []
+    }
+  ]
+}

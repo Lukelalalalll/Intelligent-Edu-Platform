@@ -1,0 +1,137 @@
+.root {
+  margin: 0;
+  width: 100%;
+}
+
+.workflowRail {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 24px;
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.leading {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 18px;
+  margin-right: 0;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.28);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.backButton:hover {
+  background: #fff;
+  border-color: rgba(0, 123, 85, 0.24);
+  box-shadow: 0 18px 30px -24px rgba(0, 123, 85, 0.26);
+  transform: translateY(-1px);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid rgba(0, 123, 85, 0.28);
+  outline-offset: 2px;
+}
+
+.backIcon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.workflowPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 19px;
+  border-radius: 999px;
+  background: var(--primary-color, #007b55);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow-primary, 0 14px 28px -18px rgba(0, 123, 85, 0.45));
+}
+
+.workflowPill :global(i) {
+  font-size: 0.9em;
+}
+
+.stepperButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stepperGroupCustom {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  margin-left: 0;
+}
+
+@media (max-width: 1024px) {
+  .workflowRail {
+    padding: 14px 22px;
+  }
+
+  .leading {
+    width: 100%;
+    gap: 10px;
+    margin-right: 0;
+  }
+
+  .stepperGroupCustom {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .workflowRail {
+    padding: 16px 18px;
+  }
+
+  .leading {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .backButton,
+  .workflowPill {
+    width: 100%;
+  }
+
+  .workflowPill {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+}

@@ -1,0 +1,40 @@
+# VCS
+.git
+.gitignore
+
+# Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+backend/venv
+**/.venv
+
+# Node
+**/node_modules
+frontend/dist
+
+# Build artifacts and temp
+**/build
+**/dist
+tmp
+*.log
+*.tmp
+*.swp
+
+# IDE
+.vscode
+.idea
+
+# Test caches and outputs
+**/.coverage
+**/htmlcov
+
+# Sensitive local secrets and credentials
+**/.env
+**/.env.*
+backend/client_secret_*.json
+**/*token*.json
+**/*credentials*.json

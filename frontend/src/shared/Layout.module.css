@@ -1,0 +1,624 @@
+/* Sidebar variables now in base.css :root */
+
+.appShell {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* When sidebar is present, use grid layout for body area */
+.withSidebar {
+    display: grid;
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+    grid-template-rows: var(--nav-height) 1fr auto;
+    grid-template-areas:
+        "navbar navbar"
+        "sidebar main"
+        "sidebar footer";
+    min-height: 100dvh;
+}
+
+.withSidebar.sidebarExpanded {
+    grid-template-columns: var(--sidebar-width) 1fr;
+}
+
+.mainContent {
+    flex: 1 0 auto;
+    width: 100%;
+    grid-area: main;
+    overflow-x: hidden;
+    background: transparent;
+    container-type: inline-size;
+}
+
+.mainContentEdgeToEdge {
+    max-width: 100%;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mainContentNoScroll {
+    overflow: hidden;
+    height: calc(100dvh - var(--nav-height, 60px));
+    display: flex;
+    flex-direction: column;
+}
+
+/* ─── Top Navbar ─── */
+.navbar {
+    background-color: var(--bg-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    height: var(--nav-height);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--line-soft);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    grid-area: navbar;
+}
+
+.navContainer {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 100%;
+    min-width: 0;
+}
+
+/* ─── Sidebar Toggle Button ─── */
+.sidebarToggle {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    background: var(--surface-overlay);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    color: var(--text-main);
+    font-size: 15px;
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebarToggle:hover {
+    border-color: rgba(0, 123, 85, 0.45);
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0, 123, 85, 0.16);
+}
+
+.navLogo {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+    margin-left: 25px;
+}
+
+.navLogo > a {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
+}
+
+.logoImg {
+    height: 81%;
+    max-height: 100%;
+    width: auto;
+    max-width: min(378px, calc(100vw - 82px));
+    object-fit: contain;
+    display: block;
+}
+
+.navMenu {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.navBtn {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 7px 18px;
+    border-radius: var(--radius-pill);
+    transition: background-color 0.3s ease, color 0.25s ease, transform 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.btnLogin {
+    color: var(--primary-color);
+    background: transparent;
+}
+
+.btnLogin:hover {
+    background: var(--surface-subtle);
+}
+
+.btnRegister {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btnRegister:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.userProfile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-overlay);
+    padding: 5px 7px 5px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line-soft);
+}
+
+.btnAdmin {
+    background: var(--info-bg);
+    color: var(--admin-color);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.btnDatabase {
+    background: var(--bg-input);
+    color: var(--text-main);
+    border: 1px solid var(--line-soft);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.btnStudentView {
+    background: var(--surface-subtle);
+    color: var(--primary-color);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.btnTeachView {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.welcomeText {
+    font-size: 14px;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.welcomeText strong {
+    color: var(--primary-color);
+}
+
+.btnProfile {
+    background: var(--surface-subtle);
+    color: var(--primary-color);
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.btnLogout {
+    font-size: 0.82rem;
+    padding: 5px 14px;
+    background: var(--bg-input);
+    color: var(--text-sub);
+    border-radius: var(--radius-pill);
+    border: none;
+    cursor: pointer;
+}
+
+.btnLogout:hover {
+    background: var(--danger-bg);
+    color: var(--error-color);
+}
+
+.footer {
+    background-color: var(--bg-card);
+    padding: 2rem 0;
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+    grid-area: footer;
+}
+
+.footerContent {
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+/* ─── Persistent Sidebar ─── */
+.sidebar {
+    grid-area: sidebar;
+    position: sticky;
+    top: var(--nav-height);
+    height: calc(100dvh - var(--nav-height));
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-right: 1px solid var(--line-soft);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 100;
+}
+
+.appShell[data-sidebar-animating="true"] .sidebar,
+.sidebar[data-sidebar-animating="true"] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 10px 0 24px rgba(15, 23, 42, 0.1);
+}
+
+.sidebarOpen {
+    width: var(--sidebar-width);
+    opacity: 1;
+    transform: translateX(0);
+    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
+}
+
+.sidebarCollapsed {
+    width: var(--sidebar-collapsed-width);
+    opacity: 1;
+    transform: translateX(0);
+    box-shadow: none;
+}
+
+.sidebarNav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 10px;
+    transition: padding 0.2s ease, gap 0.2s ease;
+}
+
+.sidebarInner {
+    min-height: 100%;
+    transform-origin: left top;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+    will-change: transform, opacity;
+}
+
+.sidebarOpen .sidebarInner {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.sidebarCollapsed .sidebarInner {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.sidebarSection {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 4px;
+    padding: 6px;
+    border-radius: 14px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--line-soft);
+    transition: background-color 0.2s ease, border-color 0.2s ease, padding 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sectionTitle {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-sub);
+    padding: 8px 10px 2px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sectionTitleClip {
+    display: inline-block;
+    max-width: 180px;
+    overflow: hidden;
+    transition: max-width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sectionTitleText {
+    display: inline-block;
+    transform-origin: left center;
+    will-change: transform, opacity;
+    transition: opacity 0.2s ease, transform 0.24s ease;
+}
+
+.sidebarLink {
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), background 0.24s ease, color 0.2s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.linkText {
+    display: inline-block;
+    transform-origin: left center;
+    will-change: transform, opacity;
+    transition: opacity 0.2s ease, transform 0.24s ease;
+}
+
+.linkTextClip {
+    flex: 0 1 180px;
+    max-width: 180px;
+    min-width: 0;
+    overflow: hidden;
+    transition: max-width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sidebarLink i {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--text-sub);
+    transition: color 0.2s ease;
+}
+
+.sidebarLink:hover {
+    background: linear-gradient(180deg, rgba(0, 123, 85, 0.08) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(0, 123, 85, 0.2);
+    color: var(--primary-dark);
+    transform: translateX(2px);
+    box-shadow: 0 10px 24px rgba(0, 123, 85, 0.12);
+}
+
+.sidebarLink:hover i {
+    color: var(--primary-dark);
+}
+
+.sidebarLinkActive {
+    background: linear-gradient(180deg, rgba(0, 123, 85, 0.16) 0%, rgba(16, 185, 129, 0.16) 100%);
+    color: var(--primary-dark);
+    border-left: 3px solid var(--primary-color);
+    border-color: rgba(0, 123, 85, 0.24);
+    box-shadow: inset 0 0 0 1px rgba(0, 123, 85, 0.1), 0 10px 24px rgba(0, 123, 85, 0.1);
+}
+
+.sidebarLinkActive i {
+    color: var(--primary-color);
+}
+
+.sidebarLinkToneAdmin {
+    background: var(--info-bg);
+    color: var(--info-text);
+}
+
+.sidebarLinkToneAdmin i {
+    color: var(--info-text);
+}
+
+.sidebarLinkToneDatabase {
+    background: var(--bg-input);
+    color: var(--text-main);
+}
+
+.sidebarLinkToneDatabase i {
+    color: var(--text-sub);
+}
+
+.sidebarLinkToneTeacher {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+}
+
+.sidebarLinkToneTeacher i {
+    color: var(--warning-text);
+}
+
+.sidebarLinkToneStudent {
+    background: var(--surface-subtle);
+    color: var(--primary-dark);
+}
+
+.sidebarLinkToneStudent i {
+    color: var(--primary-dark);
+}
+
+.sidebarCollapsed .sidebarLink {
+    justify-content: center;
+    gap: 0;
+    padding: 11px 8px;
+    border-left: none;
+    border-radius: 14px;
+}
+
+.sidebarCollapsed .sidebarNav {
+    gap: 10px;
+    padding: 14px 6px;
+}
+
+.sidebarCollapsed .sidebarSection {
+    padding: 4px 0;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.sidebarCollapsed .sectionTitle {
+    padding: 0;
+    height: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebarCollapsed .sectionTitleClip,
+.sidebarCollapsed .linkTextClip {
+    max-width: 0;
+    transition-delay: 0ms;
+}
+
+.sidebarCollapsed .sectionTitleText,
+.sidebarCollapsed .linkText {
+    opacity: 0;
+    transform: translateX(-6px);
+    pointer-events: none;
+    transition-delay: 0ms;
+}
+
+.sidebarOpen .sectionTitleClip,
+.sidebarOpen .linkTextClip {
+    max-width: 180px;
+    transition-delay: 40ms;
+}
+
+.sidebarOpen .sectionTitleText,
+.sidebarOpen .linkText {
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 82ms;
+}
+
+.sidebarCollapsed .sidebarLinkActive {
+    background: rgba(0, 123, 85, 0.18);
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 123, 85, 0.12);
+}
+
+/* Scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+    .navContainer {
+        padding: 0 12px;
+    }
+
+    .withSidebar {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "navbar"
+            "main"
+            "footer";
+    }
+
+    .sidebar {
+        position: fixed;
+        top: var(--nav-height);
+        left: 0;
+        height: calc(100dvh - var(--nav-height));
+        z-index: 1100;
+        box-shadow: 8px 0 30px rgba(0, 0, 0, 0.24);
+        transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), width 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+    }
+
+    .sidebarInner {
+        opacity: 1;
+        transform: none;
+        transition: none;
+        will-change: auto;
+    }
+
+    .sidebarOpen {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .sidebarCollapsed {
+        width: 0;
+        padding: 0;
+        border: none;
+        transform: translateX(-14px);
+        opacity: 0;
+    }
+}
+/* ── Nav icon wrapper + realtime badge ── */
+.navIconWrapper {
+    position: relative;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navBadge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: var(--error-color);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 999px;
+    min-width: 16px;
+    text-align: center;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+    .navbar,
+    .sidebar {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .withSidebar,
+    .sidebar,
+    .sidebarInner,
+    .sidebarLink,
+    .sectionTitleText,
+    .linkText,
+    .sidebarOpen .sidebarLink {
+        transition: none !important;
+        animation: none !important;
+    }
+}

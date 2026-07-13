@@ -1,0 +1,177 @@
+/* =========================================
+   3. Selection Cards, Badges & Progress
+   ========================================= */
+
+.selectionGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.selectionCard {
+    background: var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    animation: fadeInUp 0.4s var(--ease-out-back) both;
+}
+
+.selectionCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.selectionCard:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover);
+    border-color: rgba(0, 123, 85, 0.3);
+}
+
+.selectionCard:hover::before {
+    opacity: 1;
+}
+
+.cardIconLarge {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, rgba(0, 123, 85, 0.1), rgba(0, 123, 85, 0.02));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--primary-color);
+    transition: var(--transition);
+}
+
+.selectionCard:hover .cardIconLarge {
+    background: var(--primary-gradient);
+    color: white;
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 8px 16px rgba(0, 123, 85, 0.2);
+}
+
+.selectionCard h3 {
+    font-size: 1.25rem;
+    color: var(--text-main);
+    margin-bottom: 6px;
+}
+
+.selectionCard p {
+    color: var(--text-sub);
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+}
+
+/* ── Badges ── */
+.badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.badgePending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.badgeSuccess {
+    background: rgba(34, 197, 94, 0.15);
+    color: #15803d;
+}
+
+/* ── Course & Homework card variants ── */
+.courseCard {
+    text-align: left;
+    border-left: 6px solid var(--primary-color);
+}
+
+.courseCard .cardIconLarge {
+    display: none;
+}
+
+.courseCode {
+    display: inline-block;
+    background: var(--primary-light);
+    color: var(--primary-color);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.hwCard {
+    text-align: left;
+}
+
+.hwHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.hwDesc {
+    color: var(--text-sub);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+/* ── Progress bar ── */
+.progressContainer {
+    margin-top: 20px;
+}
+
+.progressInfo {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.progressBar {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: 4px;
+    transition: width 1.5s var(--ease-out-back);
+    position: relative;
+    overflow: hidden;
+}
+
+.progressFill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+.progressFillSuccess {
+    background: #22c55e;
+}

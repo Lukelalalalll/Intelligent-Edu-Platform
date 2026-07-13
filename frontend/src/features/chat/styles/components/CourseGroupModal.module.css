@@ -1,0 +1,81 @@
+/* --- From CourseGroupModal.module.css --- */
+/* ── Course Group Modal ── */
+
+.courseRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.courseRow:hover {
+  background: rgba(0,123,85,0.04);
+}
+
+.courseInfo {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.courseName {
+  font-size: 0.96rem;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.courseEnterBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.courseEnterBtn:hover {
+  background: rgba(0,123,85,0.08);
+}
+
+.courseCreateBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.courseCreateBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalEmpty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 32px 16px;
+  font-size: 0.95rem;
+}
+
+

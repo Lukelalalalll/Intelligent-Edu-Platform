@@ -1,0 +1,116 @@
+/* --- From ContextMenu.module.css --- */
+/* ── Context Menu ── */
+
+.contextMenuOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 901;
+  min-width: 170px;
+  background: var(--surface-raised);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid var(--line-soft);
+  padding: 6px 0;
+  animation: contextMenuIn 0.15s ease-out;
+}
+
+@keyframes contextMenuIn {
+  from { opacity: 0; transform: scale(0.92) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+  text-align: left;
+}
+
+.contextMenuItem:hover {
+  background: rgba(0,123,85,0.06);
+}
+
+.contextMenuItem i:first-child {
+  width: 18px;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 0.88rem;
+}
+
+.contextMenuItemDanger {
+  color: #ef4444;
+}
+
+.contextMenuItemDanger i:first-child {
+  color: #ef4444;
+}
+
+.contextSubMenu {
+  position: absolute;
+  left: 100%;
+  top: -6px;
+  min-width: 130px;
+  background: var(--surface-raised);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+  border: 1px solid var(--line-soft);
+  padding: 4px 0;
+  z-index: 902;
+}
+
+.contextSubMenuItem {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.contextSubMenuItem:hover {
+  background: rgba(0,123,85,0.08);
+}
+
+.contextMenuTranslation {
+  padding: 8px 16px 6px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 4px;
+}
+
+.contextMenuTranslationLabel {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.contextMenuTranslationText {
+  font-size: 0.88rem;
+  color: var(--text-main);
+  line-height: 1.45;
+  max-height: 80px;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+

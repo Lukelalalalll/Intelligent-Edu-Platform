@@ -1,0 +1,301 @@
+/* frontend/src/styles/HomeStudent.module.css */
+
+/* ========================================= */
+/* 1. Layout & Core Containers */
+/* ========================================= */
+.pageContainer {
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    padding: 0 var(--page-padding-inline) var(--page-padding-block);
+    transition: max-width 0.3s ease, padding 0.3s ease;
+}
+
+.pageContainerFull {
+    max-width: 100% !important;
+    padding: 0 0 40px 0 !important;
+}
+
+.studySection {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 0 clamp(10px, 1.2vw, 18px);
+    opacity: 0;
+    animation: tabPopIn 0.4s ease-out forwards 0.15s;
+}
+
+.studyFullscreen {
+    margin-top: 20px !important;
+    margin-bottom: 0 !important;
+    height: calc(100vh - 140px);
+    max-width: 100% !important;
+}
+
+.geminiWrapper {
+    max-width: min(100%, 1200px);
+    margin: 64px auto 0;
+    padding: 0;
+    opacity: 0;
+    animation: tabPopIn 0.4s ease-out forwards 0.15s;
+}
+
+/* ========================================= */
+/* 2. Welcome Banner */
+/* ========================================= */
+.welcomeBanner {
+    position: relative;
+    max-height: 300px;
+    margin-bottom: 3rem;
+    padding: 3.3rem 1.75rem;
+    overflow: hidden;
+    text-align: center;
+    color: white;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
+    animation: gradientFlow 8s ease infinite, bannerEnter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.welcomeBannerExiting {
+    pointer-events: none;
+    animation: bannerExit 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+.welcomeBanner h1 {
+    margin-bottom: 1rem;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(12px);
+    animation: slideUpFade 0.8s forwards 0.2s;
+}
+
+.welcomeBanner p {
+    font-size: 1.08rem;
+    color: rgba(255, 255, 255, 0.95);
+    opacity: 0;
+    transform: translateY(12px);
+    animation: slideUpFade 0.8s forwards 0.4s;
+}
+
+/* ========================================= */
+/* 3. Tab Switcher */
+/* ========================================= */
+.tabSwitcher {
+    position: relative;
+    z-index: 30;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    width: fit-content;
+    margin: -26px auto 32px auto;
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 999px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    animation: tabPopIn 0.4s ease-out forwards 0.2s;
+}
+
+.tabSwitcherTop {
+    margin-top: 76px;
+    animation: tabSlideUp 0.3s ease-out forwards;
+}
+
+.tabSwitcher button.tabBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    font-weight: 700;
+    color: var(--text-sub) !important;
+    background: transparent !important;
+    border: none;
+    border-radius: 999px;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: var(--transition);
+    transform: none !important;
+}
+
+.tabSwitcher button.tabBtn:hover:not(.tabActive) {
+    color: var(--text-main) !important;
+    background: rgba(0, 0, 0, 0.04) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.tabSwitcher button.tabBtn.tabActive {
+    color: #fff !important;
+    background: var(--primary-color) !important;
+    box-shadow: 0 12px 28px rgba(0, 123, 85, 0.25) !important;
+    transform: none !important;
+}
+
+/* ========================================= */
+/* 4. Animations (Keyframes) */
+/* ========================================= */
+@keyframes bannerEnter {
+    0% {
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        transform: translateY(-16px) scale(0.97);
+    }
+    40% {
+        max-height: 300px;
+        margin-bottom: 3.5rem;
+        padding-top: 4rem;
+        padding-bottom: 4rem;
+    }
+    100% {
+        max-height: 300px;
+        margin-bottom: 3.5rem;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes bannerExit {
+    0% {
+        max-height: 300px;
+        margin-bottom: 3.5rem;
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        opacity: 0;
+        transform: translateY(-5px) scale(0.97);
+    }
+    100% {
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        transform: translateY(-5px) scale(0.97);
+    }
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes tabPopIn {
+    0% { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tabSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUpFade {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================= */
+/* 5. Media Queries */
+/* ========================================= */
+@media (max-width: 1024px) {
+    .pageContainer {
+        padding: 0 16px 32px;
+    }
+
+    .welcomeBanner {
+        margin-bottom: 4rem;
+        padding: 3.5rem 1.5rem;
+    }
+
+    .welcomeBanner h1 {
+        font-size: 2.3rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .pageContainer {
+        padding: 0 12px 24px;
+    }
+
+    .welcomeBanner {
+        margin-bottom: 3.4rem;
+        padding: 2.8rem 1rem;
+        border-radius: 18px;
+    }
+
+    .welcomeBanner h1 {
+        font-size: 1.9rem;
+        letter-spacing: -0.02em;
+    }
+
+    .welcomeBanner p {
+        font-size: 1rem;
+    }
+
+    .tabSwitcher {
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        margin: -22px auto 26px;
+        padding: 8px;
+    }
+
+    .tabSwitcher button.tabBtn {
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .geminiWrapper {
+        width: 100%;
+        margin: 48px auto 40px;
+        padding: 0;
+    }
+
+    .studySection {
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcomeBanner h1 {
+        font-size: 1.62rem;
+    }
+
+    .welcomeBanner p {
+        font-size: 0.95rem;
+    }
+
+    .tabSwitcher button.tabBtn {
+        gap: 6px;
+        padding: 9px 8px;
+        font-size: 0.84rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .welcomeBanner h1 {
+        font-size: 1.4rem;
+    }
+
+    .welcomeBanner p {
+        font-size: 0.86rem;
+    }
+
+    .tabSwitcher button.tabBtn {
+        font-size: 0.78rem;
+    }
+}

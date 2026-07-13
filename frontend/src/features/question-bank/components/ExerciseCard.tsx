@@ -1,0 +1,107 @@
+import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import styles from '../styles/questionBank.module.css';
+
+interface Exercise {
+    title?: string;
+    text?: string;
+    chapter_number?: string;
+    sub_chapter_number?: string;
+    page_number?: string;
+    question_number?: string;
+    images?: string[];
+}
+
+interface ExerciseCardProps {
+    ex: Exercise;
+    index: number;
+    editingIndex: number | null;
+    editBuffer: string;
+    selectedExercises: number[];
+    startEdit: (index: number) => void;
+    saveEdit: () => void;
+    cancelEdit: () => void;
+    setEditBuffer: (value: string) => void;
+    takeSingleScreenshot: (index: number) => void;
+    deleteExercise: (index: number) => void;
+    toggleExercise: (index: number) => void;
+    updateExerciseText: (index: number, text: string) => void;
+}
+
+export default function ExerciseCard({
+    ex, index, editingIndex, editBuffer, selectedExercises,
+    startEdit, saveEdit, cancelEdit, setEditBuffer,
+    takeSingleScreenshot, deleteExercise, toggleExercise,
+}: ExerciseCardProps) {
+    return (
+        <div
+            id={`exercise-card-${index}`}
+            className={styles.exerciseItem}
+            data-chapter={ex.chapter_number || `ch${index + 1}`}
+            data-sub={ex.sub_chapter_number || `s${index + 1}`}
+            data-q={ex.question_number || `q${index + 1}`}
+        >
+            <div className={styles.exerciseHeader}>
+                <div className={styles.exerciseHeaderMain}>
+                    <input
+                        type="checkbox"
+                        className={styles.exerciseCheckbox}
+                        checked={selectedExercises.includes(index)}
+                        onChange={() => toggleExercise(index)}
+                    />
+                    <div className={styles.exerciseHeaderBody}>
+                        <h5 className={styles.exerciseTitle}>
+                            {ex.title || `Exercise ${index + 1}`}
+                        </h5>
+                        <div className={styles.exerciseMeta}>
+                            <span className={styles.metaItem}><i className="fas fa-book"></i> Ch: {ex.chapter_number || '-'}</span>
+                            <span className={styles.metaItem}><i className="fas fa-bookmark"></i> Sub: {ex.sub_chapter_number || '-'}</span>
+                            <span className={styles.metaItem}><i className="fas fa-file-alt"></i> Pg: {ex.page_number || '-'}</span>
+                            <span className={styles.metaItem}><i className="fas fa-list-ol"></i> Q: {ex.question_number || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className={styles.exerciseActions}>
+                    <button className={`${styles.btn} ${styles.btnScreenshot}`} onClick={() => takeSingleScreenshot(index)} title="Screenshot">
+                        <i className="fas fa-camera"></i>
+                    </button>
+                    <button
+                        className={`${styles.btn} ${styles.btnSecondary}`}
+                        style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                        onClick={() => editingIndex === index ? cancelEdit() : startEdit(index)}
+                        title={editingIndex === index ? 'Cancel' : 'Edit'}
+                    >
+                        <i className={`fas ${editingIndex === index ? 'fa-times' : 'fa-edit'}`}></i>
+                    </button>
+                    <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => deleteExercise(index)} title="Delete">
+                        <i className="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div className={styles.exerciseContent}>
+                {editingIndex === index ? (
+                    <div>
+                        <textarea
+                            className={`${styles.formControl} ${styles.exerciseEditor}`}
+                            rows={8}
+                            value={editBuffer}
+                            onChange={e => setEditBuffer(e.target.value)}
+                        />
+                        <button className={`${styles.btn} ${styles.btnPrimary}`} style={{ marginTop: '8px', fontSize: '0.85rem' }} onClick={saveEdit}>
+                            <i className="fas fa-check"></i> Save
+                        </button>
+                    </div>
+                ) : (
+                    <ReactMarkdown>{ex.text || 'No content'}</ReactMarkdown>
+                )}
+            </div>
+            {ex.images && ex.images.length > 0 && (
+                <div className={styles.exerciseImages}>
+                    {ex.images.map((url, i) => (
+                        <img key={i} src={url} alt="exercise" className={styles.exerciseImage} crossOrigin="anonymous" />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}

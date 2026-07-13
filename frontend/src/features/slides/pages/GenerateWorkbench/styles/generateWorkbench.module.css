@@ -1,0 +1,372 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    color: #111827;
+}
+
+.header,
+.runtimeBar,
+.detailsPanel,
+.previewPanel,
+.sidePanel {
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.header,
+.runtimeBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+}
+
+.header h1,
+.panelHeader h2 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.eyebrow,
+.panelKicker {
+    margin: 0 0 6px;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.headerActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.primaryButton,
+.secondaryButton,
+.tabs button,
+.thumbnail,
+.providerSelectWrap select {
+    border-radius: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f8fafc;
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.primaryButton {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.primaryButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.runtimeBar {
+    flex-wrap: wrap;
+}
+
+.providerSelectWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 260px;
+}
+
+.providerSelectWrap span,
+.runtimeStat span,
+.configGrid span,
+.qualitySummary span {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.providerSelectWrap select {
+    min-height: 42px;
+    border: 1px solid #cbd5e1;
+    padding: 0 12px;
+    background: #ffffff;
+}
+
+.runtimeStat,
+.progressBox {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 120px;
+}
+
+.runtimeStat strong,
+.configGrid strong,
+.qualitySummary strong {
+    font-size: 0.95rem;
+}
+
+.progressBox {
+    flex: 1;
+    min-width: 220px;
+}
+
+.progressTrack {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: 999px;
+    background: #2563eb;
+}
+
+.alert {
+    padding: 12px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #991b1b;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.9fr);
+    gap: 20px;
+}
+
+.previewPanel,
+.sidePanel,
+.detailsPanel {
+    padding: 20px;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.statusPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 68px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.good {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.warn {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.bad {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.slideStage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 480px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.slideStage img {
+    width: 100%;
+    max-width: 1080px;
+    border-radius: 6px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.thumbnailRail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.thumbnail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px solid #dbe3ef;
+    padding: 10px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.thumbnail img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #f8fafc;
+}
+
+.thumbnail span {
+    color: #475569;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.thumbnailActive {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+.providerList,
+.configGrid,
+.qualityList,
+.eventList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.providerRow,
+.issueRow,
+.eventRow,
+.configGrid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.providerRow > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.providerRow > div span,
+.configGrid small,
+.muted {
+    color: #64748b;
+}
+
+.detailsPanel {
+    min-height: 260px;
+}
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.tabActive {
+    border-color: #2563eb !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+
+.codeBlock {
+    margin: 0;
+    min-height: 220px;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.qualitySummary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.issueRow span,
+.eventRow span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #475569;
+}
+
+.issueRow p,
+.eventRow p {
+    margin: 0;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 320px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+}
+
+@media (max-width: 1100px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .page {
+        padding: 16px;
+    }
+
+    .header,
+    .runtimeBar {
+        padding: 16px;
+    }
+
+    .slideStage {
+        min-height: 260px;
+        padding: 10px;
+    }
+}

@@ -1,0 +1,741 @@
+/* frontend/src/styles/sub2/sub2.module.css */
+
+@keyframes tabPopIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ================= Step card core area ================= */
+.stepContainer {
+    background-color: var(--bg-card);
+    backdrop-filter: blur(12px);
+    border-radius: var(--radius-lg, 16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: var(--shadow-sm);
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+    opacity: 0;
+
+    /* [Fix 1] Hide overflow: clamps the gradient top bar inside the border-radius */
+    overflow: hidden;
+
+    /* [Fix 2] Transition: restores the smooth animation from the previous version */
+    transition: all 0.3s ease;
+
+    /* Entrance animation */
+    animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.5s;
+}
+
+/* Step 2: fixed max-height with internal scroll for overflow content */
+.extractScrollableContainer {
+    max-height: 78vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+.extractScrollableContainer::-webkit-scrollbar {
+    width: 8px;
+}
+
+.extractScrollableContainer::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.35);
+    border-radius: 8px;
+}
+
+.extractScrollableContainer::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+}
+
+/* [Fix 3] Hover effect: restores the lift + shadow-deepening from the previous version */
+.stepContainer:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stepContainer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-yellow));
+    z-index: 1;
+    /* Keeps the accent bar on top */
+}
+
+.viewSwitch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px auto 16px;
+    padding: 12px 20px;
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 10;
+    width: fit-content;
+    max-width: 900px;
+    opacity: 0;
+    animation: tabPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.35s;
+}
+
+.sub2Banner {
+    margin-bottom: 1rem;
+}
+
+/* ── Stepper (shared with video-gen) ── */
+.stepperWrap {
+    composes: stepperWrap from '../../../shared/styles/stepper.module.css';
+    max-width: 900px;
+}
+.stepperItem { composes: stepperItem from '../../../shared/styles/stepper.module.css'; }
+.stepperCircle { composes: stepperCircle from '../../../shared/styles/stepper.module.css'; }
+.stepperLabel { composes: stepperLabel from '../../../shared/styles/stepper.module.css'; }
+.stepperItemDone { composes: stepperItemDone from '../../../shared/styles/stepper.module.css'; }
+.stepperItemActive { composes: stepperItemActive from '../../../shared/styles/stepper.module.css'; }
+
+.stepView {
+    animation: scaleIn 0.4s var(--ease-out-back) forwards;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98) translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .viewSwitch {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .stepperWrap {
+        padding: 12px;
+        gap: 10px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .stepperItem:not(:last-child)::after {
+        display: none;
+    }
+
+    .extractScrollableContainer {
+        max-height: 70vh;
+    }
+}
+
+/* ================= Inner element typography ================= */
+.stepTitle {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 16px;
+    font-size: 1.4rem;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.stepNumber {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.stepContainer:hover .stepNumber {
+    background: var(--primary-color);
+    /* Background turns dark green */
+    color: white;
+    /* Text turns white */
+    transform: scale(1.1);
+    /* Slight scale increase for breathing room */
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.3);
+    /* Subtle green glow shadow */
+}
+
+.uploadArea {
+    border: 2px dashed rgba(0, 123, 85, 0.2);
+    border-radius: var(--radius-md);
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.uploadAreaActive {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 85, 0.05);
+}
+
+.uploadIcon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+    opacity: 0.8;
+}
+
+.fileInput {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pageSelectorButtons {
+    display: flex;
+    gap: 12px;
+    margin: 1.5rem 0;
+}
+
+.pagesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 10px;
+    margin-top: 1.5rem;
+    padding: 4px;
+}
+
+.pageItem {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 44px;
+    background-color: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    font-weight: 600;
+    color: var(--text-sub);
+    font-size: 0.95rem;
+}
+
+.pageItem:hover {
+    background-color: #fff;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.pageItemSelected {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.3);
+    transform: translateY(-2px);
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.configGrid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.configGrid2 .formGroup {
+    margin-bottom: 0;
+}
+
+.suggestRequirementsRow {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.modeCards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.modeCard {
+    border: 2px solid rgba(0, 0, 0, 0.05) !important;
+    border-radius: 16px !important;
+    padding: 1.2rem !important;
+    background: #ffffff !important;
+    color: var(--text-main) !important;
+    text-align: left !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+}
+
+.modeCard:hover {
+    border-color: rgba(0, 123, 85, 0.3) !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.08) !important;
+    transform: translateY(-2px) !important;
+}
+
+.modeCard i {
+    color: var(--primary-color) !important;
+    font-size: 1.5rem !important;
+    margin-bottom: 4px !important;
+    display: block !important;
+}
+
+.modeCard span {
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    color: var(--text-main) !important;
+    display: block !important;
+}
+
+.modeCard small {
+    color: var(--text-sub) !important;
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+    font-weight: normal !important;
+}
+
+.modeCardActive {
+    border: 2px solid var(--primary-color) !important;
+    background: rgba(0, 123, 85, 0.04) !important;
+    box-shadow: 0 6px 16px rgba(0, 123, 85, 0.15) !important;
+    transform: translateY(-2px) !important;
+}
+
+.directSourceSummary {
+    margin-top: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    background: #fff;
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.formControl {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-input);
+    font-size: 1rem;
+    color: var(--text-main);
+    transition: all 0.3s;
+}
+
+.formControl:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
+
+.infoBox {
+    background: rgba(0, 123, 85, 0.04);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.5rem;
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1.5rem;
+    color: var(--text-sub);
+    font-size: 0.95rem;
+}
+
+.exerciseItem {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s;
+}
+
+.exerciseItem:hover {
+    border-color: rgba(0, 123, 85, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 123, 85, 0.1);
+}
+
+.exerciseHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.exerciseHeaderMain {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    min-width: 0;
+    flex: 1;
+}
+
+.exerciseHeaderBody {
+    min-width: 0;
+    width: 100%;
+}
+
+.exerciseCheckbox {
+    width: 18px;
+    height: 18px;
+    margin-top: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--primary-color);
+}
+
+.exerciseTitle {
+    margin: 0 0 8px;
+    font-size: 1.06rem;
+    line-height: 1.35;
+    color: var(--text-main);
+    word-break: break-word;
+}
+
+.exerciseMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.85rem;
+    margin-top: 8px;
+}
+
+.metaItem {
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-sub);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.exerciseContent {
+    background: var(--bg-body);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    white-space: pre-wrap;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    line-height: 1.6;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.exerciseContent :where(p, li, blockquote, code, span) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.exerciseContent :where(ol, ul) {
+    margin: 0.45rem 0 0.7rem;
+    padding-inline-start: 1.2rem;
+    list-style-position: inside;
+}
+
+.exerciseContent li {
+    margin: 0.15rem 0;
+    text-indent: 0;
+}
+
+.exerciseEditor {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9rem;
+}
+
+.sourceCardGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.sourceCard {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-sm, 8px);
+    padding: 0.85rem;
+    background: #fff;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--text-main);
+    transition: all 0.2s;
+}
+
+.sourceCard:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sourceCard small {
+    color: var(--text-sub);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.sourceTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+}
+
+.sourceCardActive {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0, 123, 85, 0.12);
+}
+
+.sourceCardActive small {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.exerciseImages {
+    margin-top: 15px;
+}
+
+.exerciseImage {
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: 10px;
+}
+
+.loadingWrapper {
+    text-align: center;
+    padding: 3rem;
+    color: var(--primary-color);
+}
+
+.exportOptions {
+    display: flex;
+    gap: 16px;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.btn {
+    composes: btn from './shared/btn.module.css';
+}
+
+.btnPrimary {
+    composes: btnPrimary from './shared/btn.module.css';
+}
+
+.btnSuccess {
+    composes: btnSuccess from './shared/btn.module.css';
+}
+
+.btnWarning {
+    composes: btnWarning from './shared/btn.module.css';
+}
+
+.btnSecondary {
+    composes: btnSecondary from './shared/btn.module.css';
+}
+
+
+/* Markdown content container */
+.markdownContainer {
+    background-color: #fcfcfc;
+    padding: 2rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid #eee;
+    color: #333;
+    line-height: 1.7;
+    font-size: 1.05rem;
+}
+
+/* Question-level heading (### Question 1) */
+.markdownContainer h3 {
+    color: var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+    padding-left: 12px;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+/* Bold option text */
+.markdownContainer strong {
+    color: #2c3e50;
+    font-weight: 700;
+}
+
+/* Explanation block-quote (> Explanation: ...) */
+.markdownContainer blockquote {
+    margin: 1rem 0;
+    padding: 0.8rem 1.2rem;
+    background-color: #f0f7f4;
+    border-left: 4px solid #28a745;
+    color: #555;
+    font-style: italic;
+}
+
+/* Paragraph spacing for formulas */
+.markdownContainer p {
+    margin-bottom: 1rem;
+}
+
+/* Divider */
+.markdownContainer hr {
+    border: 0;
+    border-top: 1px dashed #ccc;
+    margin: 2rem 0;
+}
+
+/* ========== Exercise card action buttons ========== */
+.exerciseActions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .exerciseItem {
+        padding: 1rem;
+    }
+
+    .modeCards,
+    .configGrid2,
+    .sourceCardGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .exerciseHeader {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .exerciseActions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .exerciseMeta {
+        gap: 8px;
+    }
+
+    .metaItem {
+        font-size: 0.78rem;
+        padding: 4px 8px;
+    }
+
+    .exerciseContent {
+        padding: 0.85rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+}
+
+/* ========== Screenshot button ========== */
+.btnScreenshot {
+    background: linear-gradient(135deg, var(--primary-color), #00a36c);
+    color: #fff;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    border: none;
+}
+
+.btnScreenshot:hover:not(:disabled) {
+    background: linear-gradient(135deg, #005c43, #008a5a);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.35);
+}
+
+/* ========== Gallery badge button ========== */
+.btnGallery {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    border: none;
+}
+
+.btnGallery:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* ========== Danger (delete) button ========== */
+.btnDanger {
+    background: transparent;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+.btnDanger:hover:not(:disabled) {
+    background: var(--error-color);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+

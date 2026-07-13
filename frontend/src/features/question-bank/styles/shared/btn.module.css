@@ -1,0 +1,61 @@
+/* Shared button system for question-bank feature */
+.btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.btnPrimary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btnPrimary:hover:not(:disabled) {
+    background: var(--primary-dark, #005c43);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 123, 85, 0.3);
+}
+
+.btnPrimary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnSuccess {
+    background: #28a745;
+    color: white;
+}
+
+.btnSuccess:hover:not(:disabled) {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+.btnWarning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btnWarning:hover:not(:disabled) {
+    background: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+}
+
+.btnSecondary {
+    background: #f1f3f5;
+    color: #495057;
+    border: 1px solid #ced4da;
+}
+
+.btnSecondary:hover:not(:disabled) {
+    background: #e2e6ea;
+    transform: translateY(-2px);
+}

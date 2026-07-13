@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+.venv/
+outputs/
+log/
+assets/
+Unlimited-OCR.pdf
+README.md
+CONTRIBUTING.md
+infer.py

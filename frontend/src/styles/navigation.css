@@ -1,0 +1,232 @@
+/* Global navigation */
+.navbar {
+    background-color: var(--bg-card);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    height: var(--nav-height);
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--line-soft);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: var(--page-max-width);
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--page-padding-inline);
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    gap: 12px;
+    color: var(--primary-color);
+}
+
+.nav-logo a:hover {
+    opacity: 0.9;
+}
+
+.logo-img {
+    height: 140px;
+    width: auto;
+    max-width: 220px;
+}
+
+.logo-text {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-btn {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 7px 18px;
+    border-radius: var(--radius-pill);
+    transition: var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.btn-login {
+    color: var(--primary-color);
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.btn-login:hover {
+    background: rgba(0, 123, 85, 0.08);
+}
+
+.btn-register {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 10px rgba(0, 123, 85, 0.2);
+}
+
+.btn-register:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 123, 85, 0.3);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-overlay);
+    padding: 5px 7px 5px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line-soft);
+}
+
+.btn-admin,
+.btn-student-view,
+.btn-teach-view,
+.btn-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.3s ease, color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+@media (max-width: 768px), (pointer: coarse), (prefers-reduced-motion: reduce) {
+    .navbar {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+.btn-admin {
+    background: rgba(0, 122, 255, 0.1);
+    color: var(--admin-color);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+}
+
+.btn-admin:hover {
+    background: var(--admin-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+}
+
+.welcome-text {
+    font-size: 14px;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.welcome-text strong {
+    color: var(--primary-color);
+}
+
+.btn-student-view,
+.btn-profile {
+    background: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(0, 123, 85, 0.2);
+}
+
+.btn-student-view:hover,
+.btn-profile:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 85, 0.25);
+}
+
+.btn-teach-view {
+    background: rgba(255, 171, 0, 0.1);
+    color: #e67e22;
+    border: 1px solid rgba(255, 171, 0, 0.2);
+}
+
+.btn-teach-view:hover {
+    background: #e67e22;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(230, 126, 34, 0.25);
+}
+
+.btn-logout {
+    font-size: 0.82rem;
+    padding: 5px 14px;
+    background: var(--bg-input);
+    color: var(--text-sub);
+    border-radius: var(--radius-pill);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.btn-logout:hover {
+    background: var(--danger-bg);
+    color: var(--error-color);
+}
+
+.btn-logout i {
+    font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .nav-container {
+        padding: 0 12px;
+    }
+
+    .logo-text {
+        font-size: 1.1rem;
+    }
+
+    .welcome-text {
+        display: none;
+    }
+
+    .user-profile {
+        padding: 6px;
+        border: none;
+        background: transparent;
+        gap: 8px;
+    }
+
+    .btn-admin span,
+    .btn-profile span,
+    .btn-logout span,
+    .btn-teach-view span,
+    .btn-student-view span {
+        display: none;
+    }
+
+    .btn-admin,
+    .btn-profile,
+    .btn-logout,
+    .btn-teach-view {
+        padding: 8px 10px;
+        border-radius: 50%;
+    }
+
+    .btn-student-view {
+        padding: 8px 12px;
+    }
+}

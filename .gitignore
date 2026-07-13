@@ -1,0 +1,114 @@
+# ==========================================
+# Intelligent-Edu-Platform .gitignore
+# ==========================================
+.idea
+# 1. Python & 虚拟环境
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.venv/
+
+# 2. Node.js & 前端
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 3. 环境变量与私密配置
+.env
+.flaskenv
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+backend/.env.shared
+backend/.env.core
+backend/.env.slides
+backend/.env.video
+frontend/.env
+
+# 3.1 OAuth / API 密钥文件
+backend/client_secret_*.json
+
+# 4. 数据库文件 (不要把本地用户数据传到Git)
+*.sqlite3
+*.db
+backend/instance/
+
+# 5. 运行时生成的文件和目录 (极其重要)
+# 忽略所有上传的PDF、生成的MD、PPT、录音和切片截图
+backend/uploads/
+backend/generated/
+backend/md/
+backend/highlights/
+backend/ppt_results/
+backend/script_results/
+backend/static/downloads/
+backend/static/uploads/
+backend/static/video_covers/
+backend/static/grading_annotated/
+backend/static/grading_pristine/
+backend/static/ppt_results/
+backend/static/script_results/
+backend/static/sub2/
+backend/static/sub4/
+backend/static/chat_files/
+backend/sub3/screenshots/
+backend/sub4/results/
+thirdprojectreference/
+presenton-main/
+presentation-export/
+ai-video-production-system-master/
+# 如果你不需要提交评测数据，也可以取消下面这行的注释
+# evaluations/
+
+# 5.1 文档与图片导出文件
+*.docx
+*.pdf
+*.png
+*.pptx
+
+# 6. IDE 与系统文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 7. Local infra runtime state
+infra/opensearch/runtime/
+infra/opensearch/opensearch-*/
+.codegraph/
+.codex-logs/
+.codex-tmp/
+backend/app_data/
+backend-start*.log
+frontend-*.log
+frontend-dev-*.log
+frontend-start*.log
+frontend-theme-*.log

@@ -1,0 +1,6 @@
+-r base.txt
+pdf2image==1.17.0
+opencv-python-headless==4.13.0.92
+opendataloader-pdf==2.1.1
+reportlab==4.4.10
+filetype==1.2.0

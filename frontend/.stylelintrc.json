@@ -1,0 +1,17 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-idiomatic-order"
+  ],
+  "rules": {
+    "selector-disallowed-list": [
+      "/^\\.(container|wrapper|layout|page|section|content)[A-Za-z0-9_-]*\\s+(button|input|select|textarea|table|tr|td|th|a|p|ul|ol|li|div|span)\\b/"
+    ],
+    "declaration-no-important": [
+      true,
+      {
+        "severity": "warning"
+      }
+    ]
+  }
+}

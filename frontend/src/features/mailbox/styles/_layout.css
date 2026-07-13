@@ -1,0 +1,76 @@
+/* =========================================
+   1. Page Shell, Banner & Section Titles
+   ========================================= */
+
+.mailboxContainer {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 0 var(--page-padding-block);
+}
+
+.mailboxBanner {
+    margin-bottom: 1rem;
+}
+
+.mailboxBanner h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.mailboxBanner p {
+    max-width: 640px;
+}
+
+.loadingLine,
+.emptyLine {
+    color: var(--text-sub);
+    font-size: 0.84rem;
+    margin: 0;
+}
+
+/* ── Step view transition ── */
+.stepView {
+    /* outer wrapper stays mounted; animation is on inner .stepContent */
+}
+
+.stepContent {
+    animation: scaleIn 0.35s var(--ease-out-back) both;
+}
+
+.sectionTitle {
+    font-size: 1.4rem;
+    color: var(--text-main);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sectionTitle i {
+    color: var(--primary-color);
+}
+
+/* ── Shared Keyframes ── */
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.98) translateY(15px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%);  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .mailboxContainer {
+        padding-bottom: 28px;
+    }
+}

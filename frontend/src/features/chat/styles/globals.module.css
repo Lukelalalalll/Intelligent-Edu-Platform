@@ -1,0 +1,60 @@
+/* --- From Globals.module.css --- */
+/* frontend/src/styles/Chat.module.css */
+
+
+/* --- From PremiumFullheightworkspacemirrorsAIInteractadvancedpattern.module.css --- */
+/* ── Premium Full-height workspace (mirrors AIInteract advanced pattern) ── */
+
+@keyframes premiumEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.98);
+        filter: blur(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+.enterAnimation {
+    animation: premiumEntrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: center bottom;
+}
+
+.chatWorkspace {
+    position: relative;
+    width: calc(100% - 40px);
+    max-width: 1800px;
+    margin: 20px auto; 
+    height: calc(100dvh - var(--nav-height, 72px) - 40px);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    
+    /* Premium aesthetics */
+    background: var(--bg-card);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow:
+        var(--shadow-lg),
+        inset 0 1px 1px var(--card-border),
+        inset 0 0 0 1px var(--card-border);
+    border: 1px solid var(--line-soft);
+    overflow: hidden;
+}
+
+/* Background glow removed — pure white */
+
+.chatContainer {
+    flex: 1;
+    display: flex;
+    background: transparent;
+    overflow: hidden;
+    border-radius: inherit;
+    min-height: 0;
+}
+
+

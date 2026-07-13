@@ -1,0 +1,468 @@
+/* frontend/src/styles/sub1/quickProcess.module.css */
+
+.container {
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    padding: 0 var(--page-padding-inline) max(4rem, var(--page-padding-block));
+    flex: 1;
+}
+
+.layoutGrid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    /* Left content column is slightly wider for comfortable reading */
+    gap: 2rem;
+    align-items: stretch;
+    margin-top: 1rem;
+}
+
+/* --- Shared card base styles --- */
+.cardTitle {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cardTitle i {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-pill);
+    background: rgba(0, 123, 85, 0.1);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+/* --- 1. Original Content reader — layout refinements (primary focus) --- */
+.contentCard {
+    height: 100%;
+    position: relative;
+    /* Allow the settings card on the right to drive the overall height */
+}
+
+.contentCardBody {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    padding: var(--card-padding);
+}
+
+.markdownContent {
+    flex: 1;
+    min-height: 0; /* Required for inner scroll to work */
+    overflow-y: auto;
+    padding: 10px 20px 10px 0;
+}
+
+/* Section container */
+.sectionItem {
+    background: #fff;
+    border-radius: var(--radius-md);
+    padding: var(--card-padding);
+    margin-bottom: var(--card-stack-gap);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    transition: var(--transition);
+}
+
+.sectionItem:hover {
+    transform: translateX(5px);
+    border-color: rgba(0, 123, 85, 0.2);
+    box-shadow: var(--shadow-md);
+}
+
+.sectionItem h4 {
+    color: var(--primary-dark);
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed rgba(0, 123, 85, 0.1);
+}
+
+/* Refine the typography of rendered inner HTML */
+.sectionItem :global(p) {
+    line-height: 1.8;
+    color: var(--text-sub);
+    margin-bottom: 1.2rem;
+    font-size: 1.05rem;
+}
+
+.sectionItem :global(ul),
+.sectionItem :global(ol) {
+    padding-left: 1.5rem;
+    margin-bottom: 1.2rem;
+    color: var(--text-sub);
+}
+
+/* --- 2. Settings panel refinements --- */
+.settingsCard {
+    padding: 2.5rem !important;
+}
+
+.formGroup {
+    margin-bottom: 2rem;
+}
+
+.formLabel {
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.8rem;
+    display: block;
+    font-size: 1rem;
+}
+
+.formControl {
+    width: 100%;
+    min-width: 0;
+    padding: 14px 20px;
+    background-color: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: var(--radius-pill);
+    font-size: 1.05rem;
+    transition: var(--transition);
+    color: var(--text-main);
+}
+
+.formControl:focus {
+    background-color: #fff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 5px rgba(0, 123, 85, 0.1);
+}
+
+.formText {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: rgba(0, 123, 85, 0.05);
+    border-radius: var(--radius-pill);
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+    line-height: 1.6;
+}
+
+.providerControlRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.providerSelect {
+    min-width: 0;
+    width: 100%;
+    padding-right: 40px;
+}
+
+.providerHealthBtn {
+    white-space: nowrap;
+}
+
+.providerHealthText {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.taskProgressPanel {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(180deg, rgba(0, 123, 85, 0.06), rgba(0, 123, 85, 0.02));
+    border: 1px solid rgba(0, 123, 85, 0.2);
+}
+
+.taskProgressTrack {
+    margin-top: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.taskProgressFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    transition: width 0.35s ease;
+}
+
+.taskProgressText {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+    font-weight: 700;
+}
+
+/* Talking Script panel tweaks */
+.scriptOptionsPanel {
+    background: #ffffff;
+    border: 1px solid rgba(32, 101, 209, 0.15);
+    border-left: 5px solid var(--aurora-blue);
+    padding: 24px;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+/* --- 3. Generated result preview refinements --- */
+.slidesGridLayout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2.5rem;
+    margin-top: 2rem;
+}
+
+.resultsCard {
+    padding: 40px;
+}
+
+.slideCard {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 35px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.slideCard:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-hover);
+}
+
+.slideCard::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--primary-color), var(--aurora-cyan));
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+}
+
+.slideCard h4 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+}
+
+.slideCard ul {
+    padding-left: 1.2rem;
+    margin: 0;
+}
+
+.slideCard li {
+    margin-bottom: 12px;
+    color: var(--text-sub);
+    line-height: 1.7;
+    font-size: 1.05rem;
+}
+
+/* Custom scrollbar */
+.markdownContent::-webkit-scrollbar {
+    width: 6px;
+}
+
+.markdownContent::-webkit-scrollbar-thumb {
+    background: rgba(0, 123, 85, 0.2);
+    border-radius: var(--radius-pill);
+}
+
+.markdownContent::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* --- Animations --- */
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 1200px) {
+    .layoutGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .contentCard {
+        min-height: 50vh;
+    }
+
+    .contentCardBody {
+        position: static;
+    }
+
+    .markdownContent {
+        max-height: 50vh;
+    }
+
+    .providerControlRow {
+        grid-template-columns: 1fr;
+    }
+
+    .providerHealthBtn {
+        width: 100%;
+    }
+}
+
+/* --- AI Brain Loading Animation --- */
+.elegantLoadingContainer {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    margin-top: 2rem;
+    border: 1px solid rgba(0, 123, 85, 0.1);
+    animation: slideUpFade 0.5s var(--ease-spring);
+}
+
+.spinnerCore {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aiIcon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    z-index: 10;
+    animation: pulseIcon 2s infinite ease-in-out;
+}
+
+.ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: var(--aurora-cyan);
+    animation: spinRing 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.ring2 {
+    top: 10%;
+    left: 10%;
+    border-top-color: var(--primary-color);
+    animation-duration: 2s;
+    animation-direction: reverse;
+    width: 80%;
+    height: 80%;
+}
+
+.ring3 {
+    top: 20%;
+    left: 20%;
+    border-top-color: var(--aurora-blue);
+    animation-duration: 2.5s;
+    width: 60%;
+    height: 60%;
+}
+
+.loadingText {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin-bottom: 0.8rem;
+    background: linear-gradient(90deg, var(--primary-color), #00B8D9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.loadingSubtext {
+    color: var(--text-sub);
+    font-size: 1.15rem;
+    font-weight: 500;
+}
+
+@keyframes spinRing {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulseIcon {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+        text-shadow: 0 0 20px rgba(0, 123, 85, 0.5);
+    }
+}
+/* --- Elegant Script Area & Buttons --- */
+.talkingScriptElegant { background: linear-gradient(to right, rgba(0, 184, 217, 0.04), rgba(32, 101, 209, 0.04)); border: 1px solid rgba(32, 101, 209, 0.15); border-radius: var(--radius-pill); padding: 30px; margin-top: 2.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; animation: slideUpFade 0.6s var(--ease-spring) backwards 0.3s; }
+.scriptInfo h4 { color: #00B8D9; font-weight: 800; margin-bottom: 10px; font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
+.scriptInfo p { margin: 0; color: var(--text-sub); font-size: 1.05rem; }
+
+.btnDownloadWord { background: white; border: 2px solid #00B8D9; color: #00B8D9; padding: 14px 28px; border-radius: var(--radius-pill); font-weight: 700; font-size: 1.1rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0, 184, 217, 0.1); }
+.btnDownloadWord:hover { background: #00B8D9; color: white !important; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 184, 217, 0.2); }
+
+.btnProceed { background: var(--text-main); color: white; padding: 14px 34px; border-radius: var(--radius-pill); font-size: 1.15rem; font-weight: 700; border: none; transition: var(--transition); box-shadow: 0 10px 25px rgba(0,0,0,0.15); cursor: pointer; display: inline-flex; align-items: center; gap: 12px; }
+.btnProceed:hover { background: #000; transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.25); color: white !important; }
+
+.taskTimelineCard {
+    margin-top: 1.5rem;
+}
+
+.taskTimelineList {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.taskTimelineEvent {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+
+.proceedWrap {
+    text-align: center;
+    margin-top: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+    .talkingScriptElegant { flex-direction: column; text-align: center; gap: 20px; }
+
+    .resultsCard {
+        padding: 20px;
+    }
+}

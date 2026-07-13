@@ -1,0 +1,273 @@
+/* =============================================
+   RAG Eval Panel — extracted from AdminDashboard.module.css
+   ============================================= */
+
+/* Re-export shared buttons from core */
+.btnPrimary {
+    composes: btnPrimary from './AdminDashboard.module.css';
+}
+.btnSecondary {
+    composes: btnSecondary from './AdminDashboard.module.css';
+}
+
+.ragSectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ragSectionTitle {
+    margin: 0;
+}
+
+.ragSectionTitleSpaced {
+    margin: 0 0 8px;
+}
+
+.ragSubheading {
+    margin: 20px 0 8px;
+}
+
+.ragInlineIcon {
+    margin-right: 6px;
+}
+
+.ragFormCard {
+    background: var(--bg-elevated, #2a2a3e);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.ragFormTitle {
+    margin: 0 0 8px;
+}
+
+.ragInlineFormRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ragInlineFormRowTight {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ragControlSmall {
+    width: 64px;
+}
+
+.ragControlMedium {
+    width: 200px;
+}
+
+.ragControlWide {
+    min-width: 180px;
+}
+
+.ragControlXWide {
+    min-width: 260px;
+}
+
+.ragControlGrow {
+    flex: 1;
+}
+
+.ragInputFlex1 {
+    flex: 1;
+}
+
+.ragInputFlex2 {
+    flex: 2;
+}
+
+.ragToggleLabel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.ragSelectLabel {
+    font-size: 13px;
+}
+
+.ragSelectField {
+    margin-left: 6px;
+}
+
+.ragTableFull {
+    width: 100%;
+}
+
+.ragTableCompact {
+    width: 100%;
+    font-size: 13px;
+}
+
+.ragTableCompactSmall {
+    width: 100%;
+    font-size: 12px;
+}
+
+.ragMonoCell {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.ragNowrapCell {
+    white-space: nowrap;
+}
+
+.ragEllipsisCell {
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ragQueryEllipsisCell {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ragTinyCell {
+    font-size: 11px;
+}
+
+.ragEmptyCell {
+    text-align: center;
+    padding: 24px;
+    opacity: 0.6;
+}
+
+.ragModalPanelMd {
+    max-width: 720px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: var(--bg-card, #1e1e2e);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.ragModalPanelLg {
+    max-width: 900px;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: var(--bg-card, #1e1e2e);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 64px auto;
+}
+
+.ragModalCloseBtn {
+    margin-top: 12px;
+}
+
+.ragButtonInlineGap {
+    margin-right: 4px;
+}
+
+.ragMutedText {
+    opacity: 0.6;
+}
+
+.ragStatusText {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.ragJsonTextarea {
+    width: 100%;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.ragErrorText {
+    color: #f87171;
+    font-size: 13px;
+    margin-top: 4px;
+    white-space: pre-wrap;
+}
+
+.ragPrimaryTopSpacing {
+    margin-top: 8px;
+}
+
+.ragAlertList {
+    margin-bottom: 16px;
+}
+
+.ragAlertBox {
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    border: 1px solid transparent;
+}
+
+.ragAlertWarning {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: #fbbf24;
+}
+
+.ragAlertCritical {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: #f87171;
+}
+
+.ragAlertTitleWarning {
+    color: #fbbf24;
+}
+
+.ragAlertTitleCritical {
+    color: #f87171;
+}
+
+.ragAlertIcon {
+    margin-right: 6px;
+}
+
+.ragKpiLabel {
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+.ragKpiValue {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.ragMetricKey {
+    font-weight: 600;
+}
+
+.ragDeltaStrong {
+    font-weight: 600;
+}
+
+.ragTonePositive {
+    color: #4ade80;
+}
+
+.ragToneNegative {
+    color: #f87171;
+}
+
+.ragToneNeutral {
+    color: #64748b;
+}
+
+.ragMissRow {
+    background: rgba(248, 113, 113, 0.08);
+}

@@ -1,0 +1,66 @@
+/* --- From SearchResultsinModal.module.css --- */
+/* ── Search Results in Modal ── */
+
+.searchResultItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.searchResultInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchResultName {
+  font-size: 0.99rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.searchResultRole {
+  font-size: 0.81rem;
+  color: #94a3b8;
+}
+
+.btnSmall {
+  padding: 5px 14px;
+  font-size: 0.87rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.btnAdd {
+  background: #0f766e;
+  color: #fff;
+}
+
+.btnAdd:hover {
+  opacity: 0.85;
+}
+
+.btnDanger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btnDanger:hover {
+  background: #fecaca;
+}
+
+.btnAccept {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.btnAccept:hover {
+  background: #bbf7d0;
+}
+
+
