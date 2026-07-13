@@ -13,7 +13,8 @@ class ExtractQuestionsSchema(BaseModel):
 
 class GenerateQuestionsSchema(BaseModel):
     provider: Optional[AIProvider] = 'local_ollama'
-    task_id: str
+    task_id: Optional[str] = None
+    source_text: str = ""
     question_type: str
     num_questions: int
     difficulty: int | str
@@ -27,6 +28,15 @@ class GenerateQuestionsSchema(BaseModel):
     subject: str = ""
     question_basis: Optional[str] = None
     knowledge_points: str = ""
+
+
+class QuestionDraftSchema(BaseModel):
+    id: str
+    stem: str
+    options: List[str] = []
+    answer: str = ""
+    explanation: str = ""
+    raw_markdown: str = ""
 
 
 class SuggestConstraintsSchema(BaseModel):
@@ -44,6 +54,18 @@ class UploadScreenshotSchema(BaseModel):
     chapter_number: str = "unknown"
     sub_chapter_number: str = "unknown"
     exercise_number: str = "unknown"
+
+
+class QuestionHistoryFinalizeSchema(BaseModel):
+    questions: List[QuestionDraftSchema]
+    markdown: str = ""
+    selected_question_ids: List[str] = []
+
+
+class QuestionExportSelectionSchema(BaseModel):
+    questions: List[QuestionDraftSchema]
+    format: Literal['markdown', 'txt'] = 'markdown'
+    filename: str = "questions"
 
 
 class QuestionOpsRunCreateSchema(BaseModel):

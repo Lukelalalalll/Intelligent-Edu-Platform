@@ -1,19 +1,17 @@
 """v1 JSON-based course & assignment CRUD + relations overview."""
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.core.security import get_admin_user
 from backend.repositories import user_repo
 from backend.schemas import AdminCourseSchema, AdminCourseStudentSchema, AdminAssignmentSchema
-from .router import (
-    admin_router,
-    _load_courses_payload, _save_courses_payload,
-    _find_course, _find_assignment, _is_object_id,
-)
+from .router import _find_assignment, _find_course, _is_object_id, _load_courses_payload, _save_courses_payload
+
+router = APIRouter()
 
 
-@admin_router.get("/relations/overview")
+@router.get("/relations/overview")
 async def get_relations_overview(admin: dict = Depends(get_admin_user)):
     users = await db.users.find().to_list(2000)
     teachers = [
@@ -43,7 +41,7 @@ async def get_relations_overview(admin: dict = Depends(get_admin_user)):
     }
 
 
-@admin_router.post("/courses")
+@router.post("/courses")
 async def create_course(req: AdminCourseSchema, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     courses = payload.get("courses", [])
@@ -70,7 +68,7 @@ async def create_course(req: AdminCourseSchema, admin: dict = Depends(get_admin_
     return {"message": "Course created", "course": new_course}
 
 
-@admin_router.put("/courses/{course_id}")
+@router.put("/courses/{course_id}")
 async def update_course(course_id: str, req: AdminCourseSchema, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     courses = payload.get("courses", [])
@@ -97,7 +95,7 @@ async def update_course(course_id: str, req: AdminCourseSchema, admin: dict = De
     return {"message": "Course updated", "course": course}
 
 
-@admin_router.delete("/courses/{course_id}")
+@router.delete("/courses/{course_id}")
 async def delete_course(course_id: str, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     courses = payload.get("courses", [])
@@ -112,7 +110,7 @@ async def delete_course(course_id: str, admin: dict = Depends(get_admin_user)):
     return {"message": "Course deleted"}
 
 
-@admin_router.post("/courses/{course_id}/students")
+@router.post("/courses/{course_id}/students")
 async def add_course_student(course_id: str, req: AdminCourseStudentSchema, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     course = _find_course(payload.get("courses", []), course_id)
@@ -128,7 +126,7 @@ async def add_course_student(course_id: str, req: AdminCourseStudentSchema, admi
     return {"message": "Student added", "course": course}
 
 
-@admin_router.delete("/courses/{course_id}/students/{student_id}")
+@router.delete("/courses/{course_id}/students/{student_id}")
 async def remove_course_student(course_id: str, student_id: str, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     course = _find_course(payload.get("courses", []), course_id)
@@ -143,7 +141,7 @@ async def remove_course_student(course_id: str, student_id: str, admin: dict = D
     return {"message": "Student removed", "course": course}
 
 
-@admin_router.post("/courses/{course_id}/assignments")
+@router.post("/courses/{course_id}/assignments")
 async def create_assignment(course_id: str, req: AdminAssignmentSchema, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     course = _find_course(payload.get("courses", []), course_id)
@@ -166,7 +164,7 @@ async def create_assignment(course_id: str, req: AdminAssignmentSchema, admin: d
     return {"message": "Assignment created", "assignment": assignment}
 
 
-@admin_router.put("/courses/{course_id}/assignments/{assignment_id}")
+@router.put("/courses/{course_id}/assignments/{assignment_id}")
 async def update_assignment(course_id: str, assignment_id: str, req: AdminAssignmentSchema, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     course = _find_course(payload.get("courses", []), course_id)
@@ -186,7 +184,7 @@ async def update_assignment(course_id: str, assignment_id: str, req: AdminAssign
     return {"message": "Assignment updated", "assignment": assignment}
 
 
-@admin_router.delete("/courses/{course_id}/assignments/{assignment_id}")
+@router.delete("/courses/{course_id}/assignments/{assignment_id}")
 async def delete_assignment(course_id: str, assignment_id: str, admin: dict = Depends(get_admin_user)):
     payload = await _load_courses_payload()
     course = _find_course(payload.get("courses", []), course_id)

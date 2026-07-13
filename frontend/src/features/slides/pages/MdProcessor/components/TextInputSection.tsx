@@ -15,7 +15,7 @@ interface TextInputSectionProps {
     provider?: string;
     setProvider?: (v: 'coze' | 'local_ollama' | 'deepseek') => void;
     handleCozeGenerate: () => void;
-    handleProcessText: (path: string) => void;
+    handleProcessText: () => void;
 }
 
 export default function TextInputSection({
@@ -109,21 +109,21 @@ export default function TextInputSection({
                 <div className={textStyles.textActionRow}>
                     <button
                         className={`${styles.btn} ${styles.btnPrimary} ${textStyles.textProceedBtn}`}
-                        onClick={() => handleProcessText('/slides/ai-theme-config')}
+                        onClick={handleProcessText}
                         disabled={!textContent.trim() || textProcessing}
                     >
                         {textProcessing ? (
                             <><i className="fas fa-spinner fa-spin"></i> Processing...</>
                         ) : (
-                            <><i className="fas fa-magic"></i> AI Theme & Generate</>
+                            <><i className="fas fa-wand-magic-sparkles"></i> Continue to Style Config</>
                         )}
                     </button>
                     <button
                         className={`btn btn-secondary ${textStyles.textProceedBtn}`}
-                        onClick={() => handleProcessText('/slides/ai-theme-config')}
+                        onClick={handleProcessText}
                         disabled={!textContent.trim() || textProcessing}
                     >
-                        <i className="fas fa-bolt"></i> Quick Generate
+                        <i className="fas fa-bolt"></i> Quick Continue
                     </button>
                 </div>
             </div>

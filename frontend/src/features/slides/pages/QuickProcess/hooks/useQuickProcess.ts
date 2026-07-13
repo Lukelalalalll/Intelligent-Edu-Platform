@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import { marked } from 'marked';
 import client from '@/shared/api/client';
-import { slidesGenerationApi } from '../../../api/slidesApi';
+import { slidesGenerationApi, type SlidesProviderStatus } from '../../../api/slidesApi';
 import type { SlidesSection, SlidesTaskEvent, SlidesProvider } from '../../../types';
+import { getStoredSlidesProvider, setStoredSlidesProvider } from '../../../utils/providerStorage';
 
 type QuickProcessFormState = {
     totalPages: number;
@@ -15,11 +16,25 @@ type QuickProcessFormState = {
     generateWordDocument: boolean;
 };
 
-export function useQuickProcess(navigate: NavigateFunction) {
+type QuickProcessOptions = {
+    missingContentRedirect?: string;
+};
+
+function resolvePreferredProvider(options: SlidesProviderStatus[], stored: SlidesProvider): SlidesProvider {
+    const storedHealthy = options.find((item) => item.id === stored && item.available && item.configured);
+    if (stored !== 'auto' && storedHealthy) {
+        return stored;
+    }
+    const firstHealthyConfigured = options.find((item) => item.id !== 'auto' && item.available && item.configured);
+    return firstHealthyConfigured?.id || 'auto';
+}
+
+export function useQuickProcess(navigate: NavigateFunction, options: QuickProcessOptions = {}) {
     const [contentLoading, setContentLoading] = useState(true);
     const [loading, setLoading] = useState(false);
     const [sections, setSections] = useState<SlidesSection[]>([]);
     const [currentFilename, setCurrentFilename] = useState('');
+    const [currentDisplayFilename, setCurrentDisplayFilename] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
 
     const [formState, setFormState] = useState<QuickProcessFormState>({
@@ -39,14 +54,22 @@ export function useQuickProcess(navigate: NavigateFunction) {
     const [taskProgress, setTaskProgress] = useState(0);
     const [taskStep, setTaskStep] = useState('');
     const [taskEvents, setTaskEvents] = useState<SlidesTaskEvent[]>([]);
-    const [provider, setProvider] = useState<SlidesProvider>('local_ollama');
+    const [provider, setProvider] = useState<SlidesProvider>(() => getStoredSlidesProvider());
+    const [providerOptions, setProviderOptions] = useState<SlidesProviderStatus[]>([]);
     const [providerHealth, setProviderHealth] = useState('');
 
     useEffect(() => {
         const fetchContent = async () => {
             const filename = localStorage.getItem('combinedFilename');
-            if (!filename) { navigate('/slides/md-processor'); return; }
+            if (!filename) {
+                navigate(options.missingContentRedirect || '/slides/ppt_generator/dashboard');
+                return;
+            }
             setCurrentFilename(filename);
+            const displayFilename = localStorage.getItem('slidesSourceDisplayName')
+                || localStorage.getItem('currentDisplayFilename')
+                || filename;
+            setCurrentDisplayFilename(displayFilename);
 
             try {
                 const res = await client.get(`/slides/download/${filename}`, { responseType: 'text' });
@@ -69,7 +92,7 @@ export function useQuickProcess(navigate: NavigateFunction) {
                 setFormState(prev => ({
                     ...prev,
                     totalPages: parsed.length,
-                    presentationTitle: filename.replace(/\.[^/.]+$/, '') + ' - Script',
+                    presentationTitle: displayFilename.replace(/\.[^/.]+$/, '') + ' - Script',
                 }));
             } catch {
                 setErrorMsg('Failed to load content');
@@ -78,7 +101,41 @@ export function useQuickProcess(navigate: NavigateFunction) {
             }
         };
         fetchContent();
-    }, [navigate]);
+    }, [navigate, options.missingContentRedirect]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchProviders = async () => {
+            try {
+                const data = await slidesGenerationApi.listProviders();
+                if (cancelled) return;
+                const nextOptions = data.providers || [];
+                setProviderOptions(nextOptions);
+
+                const stored = getStoredSlidesProvider();
+                const nextProvider = resolvePreferredProvider(nextOptions, stored);
+                setProvider(nextProvider);
+                setStoredSlidesProvider(nextProvider);
+            } catch (error: any) {
+                if (!cancelled) {
+                    setProviderHealth(error?.response?.data?.detail || error?.message || 'Failed to load providers');
+                }
+            }
+        };
+
+        fetchProviders();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const selected = providerOptions.find((item) => item.id === provider);
+        if (selected) {
+            setProviderHealth(selected.message || '');
+        }
+    }, [provider, providerOptions]);
 
     const checkProviderHealth = async (targetProvider?: SlidesProvider) => {
         try {
@@ -108,18 +165,34 @@ export function useQuickProcess(navigate: NavigateFunction) {
         setTaskStep('queued');
         setTaskEvents([]);
         try {
+            const selected = providerOptions.find((item) => item.id === provider);
+            if (selected && provider !== 'auto' && (!selected.configured || !selected.available)) {
+                throw new Error(selected.message || `${selected.label} is not available`);
+            }
+            const sourceKind = (localStorage.getItem('slidesSourceKind') || '').trim();
+            const sourceFilename = localStorage.getItem('slidesSourceFilename') || '';
+            const sourceDisplayName = localStorage.getItem('slidesSourceDisplayName')
+                || currentDisplayFilename
+                || currentFilename;
+            const combinedFilename = localStorage.getItem('combinedFilename') || currentFilename;
             const res = await slidesGenerationApi.createTask({
                 provider,
                 chapterData: sections.map(s => ({ sectionTitle: s.title, text: s.content })),
                 total_pages: Number(formState.totalPages),
                 num_of_bullets: Number(formState.numOfBullets),
                 words_each_bullet: Number(formState.wordsEachBullet),
-                presentation_title: currentFilename.replace(/\.[^/.]+$/, ''),
+                presentation_title: (currentDisplayFilename || currentFilename).replace(/\.[^/.]+$/, ''),
                 script_style: formState.scriptStyle,
                 generate_talking_script: Boolean(formState.generateTalkingScript),
                 generate_word_document: Boolean(formState.generateWordDocument),
+                source_kind: sourceKind === 'upload' ? 'upload' : 'text',
+                source_filename: sourceFilename,
+                source_display_name: sourceDisplayName,
+                combined_markdown_filename: combinedFilename,
             });
             setTaskId(res.task_id);
+            localStorage.setItem('slides_last_task_id', res.task_id);
+            setStoredSlidesProvider(provider);
 
             let pollCount = 0;
             while (pollCount < 240) {
@@ -137,6 +210,9 @@ export function useQuickProcess(navigate: NavigateFunction) {
                     if (status.result.ppt_schema) {
                         setGeneratedPptSchema(status.result.ppt_schema);
                         localStorage.setItem('ppt_schema', JSON.stringify(status.result.ppt_schema));
+                    }
+                    if (status.result.deck_id) {
+                        localStorage.setItem('slides_last_deck_id', status.result.deck_id);
                     }
                     break;
                 }
@@ -172,7 +248,14 @@ export function useQuickProcess(navigate: NavigateFunction) {
     };
 
     const handleProceed = () => {
-        navigate('/slides/ppt-template', { state: { pptSchema: generatedPptSchema } });
+        navigate('/slides/generate-workbench', {
+            state: {
+                taskId,
+                deckId: talkingScriptResult?.deck_id,
+                result: talkingScriptResult,
+                pptSchema: generatedPptSchema,
+            },
+        });
     };
 
     return {
@@ -191,11 +274,15 @@ export function useQuickProcess(navigate: NavigateFunction) {
             taskStep,
             taskEvents,
             provider,
+            providerOptions,
             providerHealth,
         },
         handlers: {
             setFormState,
-            setProvider,
+            setProvider: (next: SlidesProvider) => {
+                setProvider(next);
+                setStoredSlidesProvider(next);
+            },
             checkProviderHealth,
             handleSubmit,
             handleProceed,

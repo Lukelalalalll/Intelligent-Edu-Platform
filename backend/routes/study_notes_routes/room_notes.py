@@ -1,4 +1,4 @@
-"""Study Room cloud notes endpoints."""
+﻿"""Study Room cloud notes endpoints."""
 from __future__ import annotations
 
 from typing import Optional
@@ -7,7 +7,7 @@ from fastapi import Depends
 from pydantic import BaseModel, Field
 
 from backend.core.security import get_current_user
-from backend.services.study_room_note_service import (
+from backend.services.study.study_room_note_service import (
     delete_room_note as delete_room_note_service,
     list_room_notes as list_room_notes_service,
     upsert_room_note as upsert_room_note_service,
@@ -47,3 +47,4 @@ async def delete_room_note(
     user: dict = Depends(get_current_user),
 ):
     return await delete_room_note_service(note_id=note_id, user=user)
+

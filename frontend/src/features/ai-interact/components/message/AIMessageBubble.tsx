@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { RenderedMarkdown } from '@/shared/markdown';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import styles from '../../styles/AIMessage.module.css';
 import type { RagCitation } from '../../../../types/api';
 import { useTypewriter } from '../../hooks/useTypewriter';
-import CitationPanel from './CitationPanel';
+
+const RenderedMarkdown = lazy(() => import('@/shared/markdown/RenderedMarkdown'));
+const CitationPanel = lazy(() => import('./CitationPanel'));
 
 interface AIMessageBubbleProps {
     content: string;
@@ -84,12 +85,14 @@ export default function AIMessageBubble({
 
             {displayedContent ? (
                 <>
-                    <RenderedMarkdown
-                        content={displayedContent}
-                        isStreaming={isStreaming}
-                        deferHighlightDuringStreaming
-                        className={`${styles['markdown-body']} markdown-body`}
-                    />
+                    <Suspense fallback={<div className={`${styles['markdown-body']} markdown-body`}>{displayedContent}</div>}>
+                        <RenderedMarkdown
+                            content={displayedContent}
+                            isStreaming={isStreaming}
+                            deferHighlightDuringStreaming
+                            className={`${styles['markdown-body']} markdown-body`}
+                        />
+                    </Suspense>
                     {stillTyping && <span className={styles['typing-cursor']} />}
                 </>
             ) : (
@@ -97,7 +100,9 @@ export default function AIMessageBubble({
             )}
 
             {citations && citations.length > 0 && (
-                <CitationPanel citations={citations} isCourseRelevant={isCourseRelevant} />
+                <Suspense fallback={null}>
+                    <CitationPanel citations={citations} isCourseRelevant={isCourseRelevant} />
+                </Suspense>
             )}
 
             {content && (

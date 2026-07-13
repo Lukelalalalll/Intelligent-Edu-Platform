@@ -36,15 +36,20 @@ export function isLocale(value: string | null | undefined): value is Locale {
 
 export function applyLocale(locale: Locale) {
   const option = LOCALE_OPTIONS.find((item) => item.code === locale);
-  document.documentElement.lang = option?.htmlLang ?? locale;
-  document.documentElement.dataset.locale = locale;
-  window.localStorage.setItem(STORAGE_KEY, locale);
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = option?.htmlLang ?? locale;
+    document.documentElement.dataset.locale = locale;
+  }
+
+  if (typeof window !== 'undefined') {
+    window.localStorage?.setItem?.(STORAGE_KEY, locale);
+  }
 }
 
 export function detectInitialLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
 
-  const storedLocale = window.localStorage.getItem(STORAGE_KEY);
+  const storedLocale = window.localStorage?.getItem?.(STORAGE_KEY);
   if (isLocale(storedLocale)) return storedLocale;
 
   const browserLocale = window.navigator.language.toLowerCase();

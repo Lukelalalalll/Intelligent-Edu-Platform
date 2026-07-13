@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import type { MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import AnnotationLayer from './AnnotationLayer';
-import LabelEditor, { AnnotationData } from './LabelEditor';
-import Toolbar from './Toolbar';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import AnnotationLayer from './AnnotationLayer';
+import LabelEditor from './LabelEditor';
+import Toolbar from './Toolbar';
+import type { WorkbenchAnnotation } from '../types/workbench';
 
 // Always use react-pdf's bundled worker to keep API/Worker versions aligned.
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
 interface PDFViewerProps {
     file?: string;
-    annotations?: AnnotationData[];
-    onSaveAnnotation?: (annotation: AnnotationData) => Promise<AnnotationData | null>;
+    annotations?: WorkbenchAnnotation[];
+    onSaveAnnotation?: (annotation: WorkbenchAnnotation) => Promise<WorkbenchAnnotation | null>;
     onDeleteAnnotation?: (id: string) => Promise<void>;
 }
 
@@ -18,7 +21,7 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [numPages, setNumPages] = useState<number | null>(null);
     const [pageNumber, setPageNumber] = useState(1);
     const [scale, setScale] = useState(1);
-    const [activeAnnotation, setActiveAnnotation] = useState<AnnotationData | null>(null);
+    const [activeAnnotation, setActiveAnnotation] = useState<WorkbenchAnnotation | null>(null);
     const [isPlacingLabel, setIsPlacingLabel] = useState(false);
     const [saving, setSaving] = useState(false);
     const [localError, setLocalError] = useState('');
@@ -28,19 +31,22 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     const [containerWidth, setContainerWidth] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Measure container width for auto-fit
     const measureWidth = useCallback(() => {
         if (containerRef.current) {
-            const w = containerRef.current.clientWidth - 24; // subtract padding
-            if (w > 0) setContainerWidth(w);
+            const nextWidth = containerRef.current.clientWidth - 24;
+            if (nextWidth > 0) {
+                setContainerWidth(nextWidth);
+            }
         }
     }, []);
 
     useEffect(() => {
         measureWidth();
-        const ro = new ResizeObserver(measureWidth);
-        if (containerRef.current) ro.observe(containerRef.current);
-        return () => ro.disconnect();
+        const resizeObserver = new ResizeObserver(measureWidth);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+        return () => resizeObserver.disconnect();
     }, [measureWidth]);
 
     useEffect(() => {
@@ -53,16 +59,23 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     }, [file]);
 
     const resolvedFile = useMemo(() => {
-        if (!file) return file;
+        if (!file) {
+            return file;
+        }
+
         const separator = file.includes('?') ? '&' : '?';
         return `${file}${separator}pdf_retry=${loadRetry}`;
     }, [file, loadRetry]);
 
-    const handlePageClick = useCallback((event, pageNum) => {
-        if (!onSaveAnnotation || !isPlacingLabel) return;
+    const handlePageClick = useCallback((event: MouseEvent<HTMLElement>, pageNum: number) => {
+        if (!onSaveAnnotation || !isPlacingLabel) {
+            return;
+        }
+
         const rect = event.currentTarget.getBoundingClientRect();
         const x = (event.clientX - rect.left) / rect.width;
         const y = (event.clientY - rect.top) / rect.height;
+
         setActiveAnnotation({
             pageNumber: pageNum,
             x,
@@ -77,7 +90,9 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     }, [isPlacingLabel, onSaveAnnotation]);
 
     const handleSaveTag = async () => {
-        if (!activeAnnotation || !onSaveAnnotation) return;
+        if (!activeAnnotation || !onSaveAnnotation) {
+            return;
+        }
         if (!activeAnnotation.comment?.trim()) {
             setLocalError('Please enter label content (e.g., a teacher comment) before saving.');
             return;
@@ -100,14 +115,17 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
     };
 
     const handleDeleteTag = async () => {
-        if (!activeAnnotation?.id || !onDeleteAnnotation) return;
+        if (!activeAnnotation?.id || !onDeleteAnnotation) {
+            return;
+        }
+
         await onDeleteAnnotation(activeAnnotation.id);
         setActiveAnnotation(null);
         setLocalError('');
     };
 
     const visibleAnnotations = useMemo(
-        () => annotations.filter((a) => a.pageNumber === pageNumber),
+        () => annotations.filter((annotation) => annotation.pageNumber === pageNumber),
         [annotations, pageNumber],
     );
     const hasPendingNewLabel = useMemo(
@@ -115,9 +133,9 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         [activeAnnotation, pageNumber],
     );
     const renderAnnotations = useMemo(
-        () => hasPendingNewLabel && activeAnnotation
+        () => (hasPendingNewLabel && activeAnnotation
             ? [...visibleAnnotations, { ...activeAnnotation, id: '__pending_label__' }]
-            : visibleAnnotations,
+            : visibleAnnotations),
         [activeAnnotation, hasPendingNewLabel, visibleAnnotations],
     );
 
@@ -128,11 +146,11 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                 numPages={numPages}
                 scale={scale}
                 isPlacingLabel={isPlacingLabel}
-                onPrev={() => setPageNumber((p) => Math.max(1, p - 1))}
-                onNext={() => setPageNumber((p) => (numPages ? Math.min(numPages, p + 1) : p))}
+                onPrev={() => setPageNumber((prevPage) => Math.max(1, prevPage - 1))}
+                onNext={() => setPageNumber((prevPage) => (numPages ? Math.min(numPages, prevPage + 1) : prevPage))}
                 onScaleChange={setScale}
                 onToggleLabel={() => {
-                    setIsPlacingLabel((v) => !v);
+                    setIsPlacingLabel((value) => !value);
                     setLocalError('');
                 }}
             />
@@ -156,21 +174,20 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                         <Document
                             file={resolvedFile}
                             options={{ withCredentials: true }}
-                            onLoadSuccess={({ numPages: n }) => {
-                                setNumPages(n);
+                            onLoadSuccess={({ numPages: nextNumPages }) => {
+                                setNumPages(nextNumPages);
                                 setPdfLoadError('');
                             }}
                             onLoadError={(err) => {
                                 setPdfLoadError(`PDF load failed: ${err?.message || 'network error'}`);
-                                // Auto-retry up to MAX_AUTO_RETRIES with fresh cache-busting URL.
-                                setLoadRetry((prev) => (prev < MAX_AUTO_RETRIES ? prev + 1 : prev));
+                                setLoadRetry((prevRetry) => (prevRetry < MAX_AUTO_RETRIES ? prevRetry + 1 : prevRetry));
                             }}
                             loading={<div style={{ padding: 20 }}>Loading PDF...</div>}
                         >
                             <Page
                                 pageNumber={pageNumber}
                                 width={containerWidth > 0 ? containerWidth * scale : undefined}
-                                onClick={(e) => handlePageClick(e, pageNumber)}
+                                onClick={(event) => handlePageClick(event, pageNumber)}
                                 renderAnnotationLayer={false}
                                 renderTextLayer={false}
                             />
@@ -180,10 +197,19 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                                 <span>{pdfLoadError}</span>
                                 <button
                                     type="button"
-                                    onClick={() => { setPdfLoadError(''); setLoadRetry((p) => p + 1); }}
+                                    onClick={() => {
+                                        setPdfLoadError('');
+                                        setLoadRetry((prevRetry) => prevRetry + 1);
+                                    }}
                                     style={{
-                                        border: '1px solid #b91c1c', background: '#fff', color: '#b91c1c',
-                                        borderRadius: 4, padding: '2px 10px', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
+                                        border: '1px solid #b91c1c',
+                                        background: '#fff',
+                                        color: '#b91c1c',
+                                        borderRadius: 4,
+                                        padding: '2px 10px',
+                                        cursor: 'pointer',
+                                        fontSize: 12,
+                                        whiteSpace: 'nowrap',
                                     }}
                                 >
                                     Retry
@@ -201,8 +227,8 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
                                 annotation={activeAnnotation}
                                 saving={saving}
                                 localError={localError}
-                                onChangeAnnotation={(fn: (prev: AnnotationData) => AnnotationData) => {
-                                    setActiveAnnotation((prev) => (prev === null ? null : fn(prev)));
+                                onChangeAnnotation={(updateAnnotation) => {
+                                    setActiveAnnotation((prev) => (prev === null ? null : updateAnnotation(prev)));
                                 }}
                                 onSave={handleSaveTag}
                                 onDelete={handleDeleteTag}
@@ -220,5 +246,3 @@ export default function PDFViewer({ file, annotations = [], onSaveAnnotation, on
         </div>
     );
 }
-
-

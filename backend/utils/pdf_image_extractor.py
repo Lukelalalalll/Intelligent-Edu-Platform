@@ -18,6 +18,8 @@ import os
 import shutil
 import tempfile
 
+from backend.utils.pdf_loader_adapter import convert_pdf
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,14 +33,12 @@ def _collect_image_nodes(node: dict, results: list) -> None:
 
 def _extract_pdf_diagrams_opendataloader(path: str) -> list[dict]:
     """Primary: use opendataloader_pdf for fast image extraction."""
-    import opendataloader_pdf
-
     tmp_dir = tempfile.mkdtemp(prefix="sub4_pdf_")
     try:
         img_dir = os.path.join(tmp_dir, "images")
         os.makedirs(img_dir, exist_ok=True)
 
-        opendataloader_pdf.convert(
+        convert_pdf(
             input_path=path,
             output_dir=tmp_dir,
             format="json",

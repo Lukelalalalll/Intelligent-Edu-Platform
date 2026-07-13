@@ -1,4 +1,4 @@
-"""Step E — FFmpeg compositing."""
+﻿"""Step E 鈥?FFmpeg compositing."""
 from __future__ import annotations
 
 import subprocess
@@ -11,11 +11,117 @@ from .types import logger
 _CLIP_TIMEOUT = 300
 
 
+def _resolve_ffmpeg() -> str:
+    for name in ("ffmpeg", "ffmpeg.exe"):
+        p = shutil.which(name)
+        if p:
+            return p
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        exe = get_ffmpeg_exe()
+        if exe and Path(exe).exists():
+            return exe
+    except Exception:
+        pass
+    for cand in [
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\tools\ffmpeg\bin\ffmpeg.exe",
+    ]:
+        if Path(cand).exists():
+            return cand
+    raise FileNotFoundError(
+        "ffmpeg executable not found. "
+        "Install ffmpeg and add to PATH, or ensure imageio-ffmpeg is installed in the active venv."
+    )
+
+
+def _resolve_ffprobe() -> str:
+    for name in ("ffprobe", "ffprobe.exe"):
+        p = shutil.which(name)
+        if p:
+            return p
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        exe = get_ffmpeg_exe()
+        if exe:
+            base = Path(exe).parent
+            for n in ("ffprobe.exe", "ffprobe"):
+                cand = base / n
+                if cand.exists():
+                    return str(cand)
+    except Exception:
+        pass
+    for cand in [
+        r"C:\Program Files\ffmpeg\bin\ffprobe.exe",
+        r"C:\ffmpeg\bin\ffprobe.exe",
+        r"C:\tools\ffmpeg\bin\ffprobe.exe",
+    ]:
+        if Path(cand).exists():
+            return cand
+    try:
+        return str(Path(_resolve_ffmpeg()).with_name("ffprobe.exe"))
+    except Exception:
+        raise FileNotFoundError("ffprobe not found (required for duration probing).")
+
+def _resolve_ffmpeg() -> str:
+    for name in ("ffmpeg", "ffmpeg.exe"):
+        p = shutil.which(name)
+        if p:
+            return p
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        exe = get_ffmpeg_exe()
+        if exe and Path(exe).exists():
+            return exe
+    except Exception:
+        pass
+    for cand in [
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\tools\ffmpeg\bin\ffmpeg.exe",
+    ]:
+        if Path(cand).exists():
+            return cand
+    raise FileNotFoundError(
+        "ffmpeg executable not found. "
+        "Install ffmpeg and add to PATH, or ensure imageio-ffmpeg is installed in the active venv."
+    )
+
+
+def _resolve_ffprobe() -> str:
+    for name in ("ffprobe", "ffprobe.exe"):
+        p = shutil.which(name)
+        if p:
+            return p
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        exe = get_ffmpeg_exe()
+        if exe:
+            base = Path(exe).parent
+            for n in ("ffprobe.exe", "ffprobe"):
+                cand = base / n
+                if cand.exists():
+                    return str(cand)
+    except Exception:
+        pass
+    for cand in [
+        r"C:\Program Files\ffmpeg\bin\ffprobe.exe",
+        r"C:\ffmpeg\bin\ffprobe.exe",
+        r"C:\tools\ffmpeg\bin\ffprobe.exe",
+    ]:
+        if Path(cand).exists():
+            return cand
+    try:
+        return str(Path(_resolve_ffmpeg()).with_name("ffprobe.exe"))
+    except Exception:
+        raise FileNotFoundError("ffprobe not found (required for duration probing).")
+
 def _probe_duration(audio_path: Path) -> float:
     """Return audio duration (seconds) via ffprobe."""
     result = subprocess.run(
         [
-            "ffprobe", "-v", "error",
+            _resolve_ffprobe(), "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
             str(audio_path),
@@ -37,10 +143,10 @@ def _make_clip(
 ) -> None:
     """Compose one slide image (or animated webm) + audio into an MP4 clip.
 
-    slide_is_video=True  — img_path is a short animated .webm (Phase 2.1 high).
+    slide_is_video=True  鈥?img_path is a short animated .webm (Phase 2.1 high).
       The animation plays once, then the last frame is held for the remainder
       of the audio duration.
-    slide_is_video=False — img_path is a static PNG (default behaviour).
+    slide_is_video=False 鈥?img_path is a static PNG (default behaviour).
     """
     duration = _probe_duration(audio_path)
     fade_dur = 0.8
@@ -52,11 +158,11 @@ def _make_clip(
         f"afade=type=out:start_time={max(0.0, duration - 0.6):.3f}:duration=0.5"
     )
 
-    # ── Animated-video branch (Phase 2.1 high) ───────────────────────────────
+    # 鈹€鈹€ Animated-video branch (Phase 2.1 high) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     if slide_is_video:
         # Probe webm duration so we know how long to freeze the last frame
         probe = subprocess.run(
-            ["ffprobe", "-v", "error",
+            [_resolve_ffprobe(), "-v", "error",
              "-show_entries", "format=duration",
              "-of", "default=noprint_wrappers=1:nokey=1",
              str(img_path)],
@@ -84,7 +190,7 @@ def _make_clip(
             )
 
         cmd = [
-            "ffmpeg", "-y",
+            _resolve_ffmpeg(), "-y",
             "-i", str(img_path),
             "-i", str(audio_path),
             "-filter_complex", f"[0:v]{vf_chain}[vout]",
@@ -115,8 +221,8 @@ def _make_clip(
             ) from exc
         return
 
-    # ── Static-image branch (default) ────────────────────────────────────────
-    # Build video filter chain — no zoompan
+    # 鈹€鈹€ Static-image branch (default) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # Build video filter chain 鈥?no zoompan
     vf_parts = [
         # Scale to fill 1920x1080, preserve aspect ratio, black padding
         "scale=1920:1080:force_original_aspect_ratio=decrease,"
@@ -142,7 +248,7 @@ def _make_clip(
     vf = ",".join(vf_parts)
 
     cmd = [
-        "ffmpeg", "-y",
+        _resolve_ffmpeg(), "-y",
         "-loop", "1", "-framerate", "24",
         "-t", f"{duration:.3f}",
         "-i", str(img_path),
@@ -184,12 +290,12 @@ def _concat_video(
     list_file.write_text("\n".join(f"file '{p}'" for p in clip_paths))
 
     if bgm_path and bgm_path.exists():
-        # ── Two-pass: concat first, then mix BGM ──
+        # 鈹€鈹€ Two-pass: concat first, then mix BGM 鈹€鈹€
         concat_tmp = final_path.parent / "concat_tmp.mp4"
 
         subprocess.run(
             [
-                "ffmpeg", "-y",
+                _resolve_ffmpeg(), "-y",
                 "-f", "concat", "-safe", "0",
                 "-i", str(list_file),
                 "-c", "copy",
@@ -202,7 +308,7 @@ def _concat_video(
         # Probe duration for BGM loop truncation
         probe = subprocess.run(
             [
-                "ffprobe", "-v", "error",
+                _resolve_ffprobe(), "-v", "error",
                 "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 str(concat_tmp),
@@ -216,7 +322,7 @@ def _concat_video(
 
         subprocess.run(
             [
-                "ffmpeg", "-y",
+                _resolve_ffmpeg(), "-y",
                 "-i", str(concat_tmp),
                 "-stream_loop", "-1", "-t", f"{vid_dur:.3f}", "-i", str(bgm_path),
                 "-filter_complex",
@@ -232,7 +338,7 @@ def _concat_video(
     else:
         subprocess.run(
             [
-                "ffmpeg", "-y",
+                _resolve_ffmpeg(), "-y",
                 "-f", "concat", "-safe", "0",
                 "-i", str(list_file),
                 "-c", "copy",
@@ -243,3 +349,57 @@ def _concat_video(
         )
 
     list_file.unlink(missing_ok=True)
+
+
+def _mux_generated_video(
+    raw_video_path: Path,
+    audio_path: Path,
+    out_path: Path,
+    *,
+    subtitle_path: Optional[Path] = None,
+    width: int = 1280,
+    height: int = 720,
+) -> None:
+    """Normalize a pre-rendered video clip and mux narration audio into MP4."""
+    vf_parts = [
+        f"scale={width}:{height}:force_original_aspect_ratio=decrease",
+        f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2",
+        "setsar=1",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+    ]
+    if subtitle_path and subtitle_path.exists():
+        srt_escaped = str(subtitle_path).replace("'", "\\'").replace(":", "\\:")
+        vf_parts.append(
+            f"subtitles='{srt_escaped}':"
+            "force_style='FontSize=28,PrimaryColour=&HFFFFFF&,OutlineColour=&H40000000&,"
+            "BorderStyle=4,BackColour=&HB0000000&,Outline=1,MarginV=30,Alignment=2'"
+        )
+    vf = ",".join(vf_parts)
+    subprocess.run(
+        [
+            _resolve_ffmpeg(), "-y",
+            "-i", str(raw_video_path),
+            "-i", str(audio_path),
+            "-filter:v", vf,
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "23",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ar", "44100",
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            "-movflags", "+faststart",
+            "-loglevel", "error",
+            str(out_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+
+
+
+

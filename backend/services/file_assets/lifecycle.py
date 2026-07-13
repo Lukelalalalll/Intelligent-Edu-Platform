@@ -3,47 +3,30 @@ from __future__ import annotations
 import shutil
 from typing import Any
 
-from bson import ObjectId
-from pymongo import ReturnDocument
-
 from backend.core.database import db
-from backend.repositories import file_asset_repo
+from backend.repositories import ai_session_repo, file_asset_repo
+from backend.repositories._helpers import coerce_object_id
 
 from .shared import absolute_from_storage_path, to_iso, utcnow
 
 
 async def soft_delete_asset(asset_id: str, actor_id: str, reason: str = "") -> dict | None:
     now = utcnow()
-    result = await db.file_assets.find_one_and_update(
-        {"file_id": asset_id, "status": {"$ne": "hard_deleted"}},
-        {
-            "$set": {
-                "status": "soft_deleted",
-                "deleted_at": now,
-                "updated_at": now,
-                "deleted_by": actor_id,
-                "delete_reason": reason,
-            }
-        },
-        return_document=ReturnDocument.AFTER,
+    result = await file_asset_repo.soft_delete_asset_by_file_id(
+        file_id=asset_id,
+        now=now,
+        actor_id=actor_id,
+        reason=reason,
     )
     return to_iso(result) if result else None
 
 
 async def restore_asset(asset_id: str, actor_id: str) -> dict | None:
     now = utcnow()
-    result = await db.file_assets.find_one_and_update(
-        {"file_id": asset_id, "status": "soft_deleted"},
-        {
-            "$set": {
-                "status": "active",
-                "deleted_at": None,
-                "updated_at": now,
-                "restored_by": actor_id,
-                "restored_at": now,
-            }
-        },
-        return_document=ReturnDocument.AFTER,
+    result = await file_asset_repo.restore_asset_by_file_id(
+        file_id=asset_id,
+        now=now,
+        actor_id=actor_id,
     )
     return to_iso(result) if result else None
 
@@ -51,16 +34,17 @@ async def restore_asset(asset_id: str, actor_id: str) -> dict | None:
 async def check_references(asset: dict) -> dict[str, Any]:
     owner_type = str(asset.get("owner_type", ""))
     owner_id = str(asset.get("owner_id", ""))
+    owner_oid = coerce_object_id(owner_id)
 
     if owner_type == "chat_message":
-        if ObjectId.is_valid(owner_id):
-            exists = await db.chat_messages.find_one({"_id": ObjectId(owner_id)})
+        if owner_oid is not None:
+            exists = await db.chat_messages.find_one({"_id": owner_oid})
             return {"ok_to_delete": exists is None, "reason": "chat_message_reference" if exists else ""}
         return {"ok_to_delete": True, "reason": ""}
 
     if owner_type == "submission_document":
-        if ObjectId.is_valid(owner_id):
-            exists = await db.documents.find_one({"_id": ObjectId(owner_id)})
+        if owner_oid is not None:
+            exists = await db.documents.find_one({"_id": owner_oid})
             return {"ok_to_delete": exists is None, "reason": "document_reference" if exists else ""}
         return {"ok_to_delete": True, "reason": ""}
 
@@ -88,7 +72,7 @@ async def check_references(asset: dict) -> dict[str, Any]:
 
 
 async def hard_delete_asset(asset_id: str, actor_id: str) -> dict | None:
-    asset = await db.file_assets.find_one({"file_id": asset_id})
+    asset = await file_asset_repo.find_asset_by_file_id(asset_id)
     if not asset:
         return None
 
@@ -111,20 +95,13 @@ async def hard_delete_asset(asset_id: str, actor_id: str) -> dict | None:
     if str(asset.get("owner_type", "")) == "ai_chat_session":
         deleted_from_session = await _delete_ai_session_image(asset)
 
-    await db.file_assets.update_one(
-        {"file_id": asset_id},
-        {
-            "$set": {
-                "status": "hard_deleted",
-                "updated_at": now,
-                "hard_deleted_at": now,
-                "hard_deleted_by": actor_id,
-                "deleted_from_disk": deleted_from_disk,
-                "deleted_from_session": deleted_from_session,
-            }
-        },
+    updated = await file_asset_repo.mark_asset_hard_deleted(
+        file_id=asset_id,
+        now=now,
+        actor_id=actor_id,
+        deleted_from_disk=deleted_from_disk,
+        deleted_from_session=deleted_from_session,
     )
-    updated = await db.file_assets.find_one({"file_id": asset_id})
     return to_iso(updated) if updated else None
 
 
@@ -133,10 +110,10 @@ async def _delete_ai_session_image(asset: dict) -> bool:
     metadata = dict(asset.get("metadata") or {})
     msg_idx = metadata.get("message_index")
     img_idx = metadata.get("image_index")
-    if not (ObjectId.is_valid(session_id) and isinstance(msg_idx, int) and isinstance(img_idx, int)):
+    if coerce_object_id(session_id) is None or not (isinstance(msg_idx, int) and isinstance(img_idx, int)):
         return False
 
-    session = await db.ai_chat_sessions.find_one({"_id": ObjectId(session_id)})
+    session = await ai_session_repo.find_by_id(session_id)
     if not session:
         return False
 
@@ -152,8 +129,8 @@ async def _delete_ai_session_image(asset: dict) -> bool:
     images[img_idx] = ""
     message["images"] = images
     messages[msg_idx] = message
-    await db.ai_chat_sessions.update_one(
-        {"_id": ObjectId(session_id)},
+    await ai_session_repo.update_by_id(
+        session_id,
         {"$set": {"messages": messages, "updatedAt": utcnow()}},
     )
     return True

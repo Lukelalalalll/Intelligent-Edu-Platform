@@ -1,20 +1,21 @@
-"""File center views: chat rooms and AI user asset browsing."""
+﻿"""File center views: chat rooms and AI user asset browsing."""
 from __future__ import annotations
 
 from fastapi import Depends, Query
 
 from backend.core.security import get_admin_user
-from backend.services.file_center_service import (
+from backend.services.files.file_center_service import (
     list_ai_user_assets,
     list_ai_users,
     list_chat_room_assets,
     list_chat_rooms,
 )
 
-from .router import admin_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@admin_router.get("/files/chat/rooms")
+@router.get("/files/chat/rooms")
 async def list_chat_rooms_for_file_center(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
@@ -23,7 +24,7 @@ async def list_chat_rooms_for_file_center(
     return await list_chat_rooms(skip=skip, limit=limit)
 
 
-@admin_router.get("/files/chat/rooms/{room_id}/assets")
+@router.get("/files/chat/rooms/{room_id}/assets")
 async def list_chat_room_assets_for_admin(
     room_id: str,
     status: str = Query(default="", max_length=32),
@@ -32,7 +33,7 @@ async def list_chat_room_assets_for_admin(
     return await list_chat_room_assets(room_id=room_id, status=status)
 
 
-@admin_router.get("/files/ai/users")
+@router.get("/files/ai/users")
 async def list_ai_users_for_file_center(
     role: str = Query(default="student", pattern="^(teacher|student)$"),
     skip: int = Query(default=0, ge=0),
@@ -42,7 +43,7 @@ async def list_ai_users_for_file_center(
     return await list_ai_users(role=role, skip=skip, limit=limit)
 
 
-@admin_router.get("/files/ai/users/{user_id}/assets")
+@router.get("/files/ai/users/{user_id}/assets")
 async def list_ai_user_assets_for_admin(
     user_id: str,
     group_by: str = Query(default="day", pattern="^(day|month)$"),
@@ -50,3 +51,4 @@ async def list_ai_user_assets_for_admin(
     admin: dict = Depends(get_admin_user),
 ):
     return await list_ai_user_assets(user_id=user_id, group_by=group_by, status=status)
+

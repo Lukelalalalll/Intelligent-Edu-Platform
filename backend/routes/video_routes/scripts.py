@@ -11,12 +11,12 @@ from backend.services.video_service import (
     extract_text_from_md_txt,
     extract_text_from_pdf,
     generate_slide_contents,
-    get_script_job,
-    new_script_job,
     smart_extract,
 )
+from backend.services.video_service.script_job_service import VideoScriptJobService
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 from .shared import ALLOWED_EXT, UPLOAD_TMP
 
 logger = logging.getLogger(__name__)
@@ -99,15 +99,26 @@ async def optimize_script_async(
     if not file_path and not text:
         raise HTTPException(400, "Provide either text or a file")
 
-    job_id = uuid.uuid4().hex
-    new_script_job(job_id)
+    job = await VideoScriptJobService.create_job(
+        user_id=str(current_user.get("id") or ""),
+        meta={
+            "lang": lang,
+            "provider": provider,
+            "audience": audience,
+            "max_segments": max_segments,
+        },
+    )
+    job_id = str(job["job_id"])
+    user_id = str(current_user.get("id") or "")
 
     async def _run():
-        job = get_script_job(job_id)
-        if job is None:
-            return
         try:
-            job.update({"progress": 10, "message": "Extracting & splitting content..."})
+            await VideoScriptJobService.update_job(
+                job_id,
+                user_id=user_id,
+                progress=10,
+                message="Extracting & splitting content...",
+            )
             scripts = await smart_extract(
                 text=text,
                 file_path=file_path,
@@ -117,7 +128,12 @@ async def optimize_script_async(
                 provider=provider,
                 audience=audience,
             )
-            job.update({"progress": 60, "message": "Generating slide contents..."})
+            await VideoScriptJobService.update_job(
+                job_id,
+                user_id=user_id,
+                progress=60,
+                message="Generating slide contents...",
+            )
 
             source_text = text or ""
             if file_path:
@@ -130,18 +146,24 @@ async def optimize_script_async(
                     source_text = ""
 
             slide_contents = await generate_slide_contents(scripts, source_text, lang, provider, audience)
-            job.update(
-                {
-                    "status": "done",
-                    "progress": 100,
-                    "message": "Done",
-                    "scripts": scripts,
-                    "slideContents": slide_contents,
-                }
+            await VideoScriptJobService.update_job(
+                job_id,
+                user_id=user_id,
+                status="done",
+                progress=100,
+                message="Done",
+                scripts=scripts,
+                slideContents=slide_contents,
             )
         except Exception as exc:
             logger.exception("Script generation job %s failed", job_id)
-            job.update({"status": "error", "progress": 0, "message": str(exc)})
+            await VideoScriptJobService.update_job(
+                job_id,
+                user_id=user_id,
+                status="error",
+                progress=0,
+                message=str(exc),
+            )
 
     background_tasks.add_task(_run)
     return {"jobId": job_id}

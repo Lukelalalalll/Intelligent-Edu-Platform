@@ -1,4 +1,4 @@
-"""Course material indexing endpoints — teacher only."""
+﻿"""Course material indexing endpoints 鈥?teacher only."""
 
 import logging
 
@@ -6,7 +6,8 @@ from fastapi import Depends, HTTPException, Request
 
 from backend.core.dependencies import require_teacher_or_admin
 
-from .router import ai_router
+from fastapi import APIRouter
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ async def _verify_course_ownership(user: dict, course_id: str) -> None:
     if role == "admin":
         return  # admins may manage any course
 
-    from backend.services.enrollment_service import get_user_course_profile
+    from backend.services.student.enrollment_service import get_user_course_profile
     try:
         profile = await get_user_course_profile(user)
         owned_ids = {str(c.get("courseId") or c.get("id") or "") for c in profile.get("courses", [])}
@@ -33,7 +34,7 @@ async def _verify_course_ownership(user: dict, course_id: str) -> None:
         raise HTTPException(403, "Unable to verify course ownership")
 
 
-@ai_router.get("/index-course/summary")
+@router.get("/index-course/summary")
 async def index_course_summary(user: dict = Depends(require_teacher_or_admin)):
     """Return a summary of all courses with indexed documents. Teachers / admins only."""
     from backend.services.course_rag_service import course_rag_service
@@ -41,7 +42,7 @@ async def index_course_summary(user: dict = Depends(require_teacher_or_admin)):
     return {"courses": course_rag_service.get_index_summary()}
 
 
-@ai_router.post("/index-course/{course_id}")
+@router.post("/index-course/{course_id}")
 async def index_course_material(
     course_id: str,
     request: Request,
@@ -73,7 +74,7 @@ async def index_course_material(
     if len(content_bytes) > 20 * 1024 * 1024:  # 20 MB limit
         raise HTTPException(413, "File too large (max 20 MB)")
 
-    from backend.services.indexing_job_service import create_job
+    from backend.services.rag.indexing_job_service import create_job
 
     user_id = str(user.get("_id", user.get("id", "")))
     job = await create_job(
@@ -90,13 +91,13 @@ async def index_course_material(
     return job
 
 
-@ai_router.get("/index-course/job/{job_id}")
+@router.get("/index-course/job/{job_id}")
 async def get_indexing_job_status(
     job_id: str,
     user: dict = Depends(require_teacher_or_admin),
 ):
     """Poll the status of an async indexing job."""
-    from backend.services.indexing_job_service import get_job_status
+    from backend.services.rag.indexing_job_service import get_job_status
 
     job = await get_job_status(job_id)
     if not job:
@@ -104,7 +105,7 @@ async def get_indexing_job_status(
     return job
 
 
-@ai_router.get("/index-course/{course_id}")
+@router.get("/index-course/{course_id}")
 async def list_indexed_documents(
     course_id: str,
     user: dict = Depends(require_teacher_or_admin),
@@ -119,7 +120,7 @@ async def list_indexed_documents(
     return {"course_id": course_id, "documents": docs}
 
 
-@ai_router.get("/index-course/{course_id}/{doc_name}/diagnostics")
+@router.get("/index-course/{course_id}/{doc_name}/diagnostics")
 async def get_indexed_document_diagnostics(
     course_id: str,
     doc_name: str,
@@ -135,7 +136,7 @@ async def get_indexed_document_diagnostics(
     return diagnostics
 
 
-@ai_router.delete("/index-course/{course_id}/{doc_name}")
+@router.delete("/index-course/{course_id}/{doc_name}")
 async def remove_indexed_document(
     course_id: str,
     doc_name: str,
@@ -150,15 +151,15 @@ async def remove_indexed_document(
     if not removed:
         raise HTTPException(404, "Document not found in index")
 
-    from backend.services.file_asset_service import soft_delete_course_source_assets
-    from backend.services.indexing_job_service import mark_document_removed
+    from backend.services.files.file_asset_service import soft_delete_course_source_assets
+    from backend.services.rag.indexing_job_service import mark_document_removed
 
     await mark_document_removed(course_id=course_id, filename=doc_name)
     await soft_delete_course_source_assets(course_id=course_id, filename=doc_name)
     return {"ok": True}
 
 
-@ai_router.post("/index-course/{course_id}/test-retrieval")
+@router.post("/index-course/{course_id}/test-retrieval")
 async def test_retrieval(
     course_id: str,
     body: dict,
@@ -226,3 +227,4 @@ async def test_retrieval(
         "fallback_reason": detailed.fallback_reason,
         "evidence_spans": detailed.evidence_spans,
     }
+

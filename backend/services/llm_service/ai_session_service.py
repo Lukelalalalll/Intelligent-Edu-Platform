@@ -49,6 +49,8 @@ def sanitize_session_update_payload(payload: UpdateAiSessionSchema) -> dict[str,
 
     if payload.title is not None:
         update_fields["title"] = str(payload.title).strip()[:200]
+    if payload.history_start is not None:
+        update_fields["history_start"] = int(payload.history_start)
 
     if payload.messages is None:
         return update_fields

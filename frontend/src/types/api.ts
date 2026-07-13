@@ -130,6 +130,10 @@ export interface AISession {
   title: string;
   messages: ChatMessage[];
   _needFetch?: boolean;
+  historyStart?: number;
+  messageCount?: number;
+  hasMoreMessages?: boolean;
+  previewMessages?: ChatMessage[];
 }
 
 export interface AISessionListResponse {
@@ -213,16 +217,51 @@ export interface Sub2GeneratePayload {
 export interface Sub2GenerateResponse {
   success: boolean;
   questions?: unknown;
+  markdown?: string;
+  question_drafts?: QuestionDraft[];
+  history_id?: string;
+  task_id?: string;
+  source_kind?: string;
   error?: string;
+}
+
+export interface QuestionDraft {
+  id: string;
+  stem: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+  raw_markdown: string;
 }
 
 export interface GenerationHistoryItem {
   id: string;
   tool?: string;
+  tool_key?: string;
   created_at?: string;
   preview?: string;
   params?: Record<string, any>;
   result?: any;
+  source?: Record<string, any>;
+  slides_detail?: {
+    request_id?: string;
+    workflow?: Record<string, unknown> | null;
+    source_artifacts?: Record<string, unknown>;
+    result_artifacts?: Record<string, unknown>;
+    result_data?: unknown;
+  };
+}
+
+export interface QuestionHistoryDetail extends GenerationHistoryItem {
+  result_data?: {
+    markdown?: string;
+    questions?: QuestionDraft[];
+    selected_question_ids?: string[];
+    finalized?: boolean;
+  };
+  result_markdown?: string;
+  question_drafts?: QuestionDraft[];
+  selected_question_ids?: string[];
 }
 
 /* ── Sub4 / Diagram Tool ───────────────────────────────── */

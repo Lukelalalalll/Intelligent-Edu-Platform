@@ -1,28 +1,40 @@
-"""Session CRUD endpoints, all scoped to current user."""
+﻿"""Session CRUD endpoints, all scoped to current user."""
 
-from fastapi import Depends, Request
+from fastapi import Depends, Query, Request
 
 from backend.core.security import get_current_user
 from backend.schemas import UpdateAiSessionSchema
-from backend.services.ai_session_service import (
+from backend.services.ai.ai_session_service import (
     create_session_for_user,
     delete_session_for_user,
     get_session_for_user,
+    get_session_preview_for_user,
     list_sessions_for_user,
     update_session_for_user,
 )
 
 from .prompting import _STUDENT_SYSTEM_MSG, _TEACHER_SYSTEM_MSG
-from .router import ai_router
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@ai_router.get("/sessions")
-async def list_sessions(user: dict = Depends(get_current_user)):
+@router.get("/sessions")
+async def list_sessions(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_user),
+):
     """Return all sessions for the current user (title + meta only, no messages)."""
-    return {"sessions": await list_sessions_for_user(str(user["id"]))}
+    result = await list_sessions_for_user(str(user["id"]), page=page, page_size=page_size)
+    return {
+        "sessions": result["items"],
+        "total": result["total"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+    }
 
 
-@ai_router.post("/sessions")
+@router.post("/sessions")
 async def create_session(user: dict = Depends(get_current_user)):
     """Create a new empty session and return its server-side id."""
     role = user.get("role", "student")
@@ -30,7 +42,7 @@ async def create_session(user: dict = Depends(get_current_user)):
     return await create_session_for_user(user_id=str(user["id"]), system_content=system_content)
 
 
-@ai_router.put("/sessions/{session_id}")
+@router.put("/sessions/{session_id}")
 async def update_session(
     session_id: str,
     body: UpdateAiSessionSchema,
@@ -49,14 +61,20 @@ async def update_session(
     )
 
 
-@ai_router.delete("/sessions/{session_id}")
+@router.delete("/sessions/{session_id}")
 async def delete_session(session_id: str, user: dict = Depends(get_current_user)):
     """Delete a session owned by the current user."""
     await delete_session_for_user(session_id=session_id, user_id=str(user["id"]))
     return {"ok": True}
 
 
-@ai_router.get("/sessions/{session_id}")
-async def get_session(session_id: str, user: dict = Depends(get_current_user)):
-    """Return a single session with full messages."""
-    return await get_session_for_user(session_id=session_id, user_id=str(user["id"]))
+@router.get("/sessions/{session_id}")
+async def get_session(session_id: str, limit: int | None = None, user: dict = Depends(get_current_user)):
+    """Return a single session with a tail window of messages by default."""
+    return await get_session_for_user(session_id=session_id, user_id=str(user["id"]), limit=limit)
+
+
+@router.get("/sessions/{session_id}/preview")
+async def get_session_preview(session_id: str, limit: int = 12, user: dict = Depends(get_current_user)):
+    return await get_session_preview_for_user(session_id=session_id, user_id=str(user["id"]), limit=limit)
+

@@ -1,16 +1,18 @@
 """Theme and placeholder template management routes."""
 import logging
-from fastapi import HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from backend.config import Config
+from backend.core.security import get_current_user
 from backend.services.slides import PPTTemplateManager
-from .router import slides_router, public_slides_router
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
+public_router = APIRouter()
 
 
-@slides_router.get("/get_themes")
-@public_slides_router.get("/get_themes", include_in_schema=False)
-def get_themes():
+@router.get("/get_themes")
+@public_router.get("/get_themes", include_in_schema=False)
+def get_themes(user: dict = Depends(get_current_user)):
     try:
         manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
         return manager.get_available_themes()
@@ -19,9 +21,9 @@ def get_themes():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@slides_router.get("/get_placeholders/{theme_name}")
-@public_slides_router.get("/get_placeholders/{theme_name}", include_in_schema=False)
-def get_placeholders(theme_name: str):
+@router.get("/get_placeholders/{theme_name}")
+@public_router.get("/get_placeholders/{theme_name}", include_in_schema=False)
+def get_placeholders(theme_name: str, user: dict = Depends(get_current_user)):
     try:
         manager = PPTTemplateManager(Config.PPT_TEMPLATES_FOLDER)
         return manager.get_placeholders(theme_name)

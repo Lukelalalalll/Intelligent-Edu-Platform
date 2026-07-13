@@ -1,5 +1,15 @@
 import pytest
+from pathlib import Path
 
+from backend.apps.manifests import (
+    CORE_APP_MANIFEST,
+    HIGHLIGHTER_APP_MANIFEST,
+    QUESTIONS_APP_MANIFEST,
+    SLIDES_APP_MANIFEST,
+    STUDY_NOTES_APP_MANIFEST,
+    VIDEO_APP_MANIFEST,
+    VISUAL_APP_MANIFEST,
+)
 from backend.config import Config
 from backend.core.config import Settings
 from backend.services.llm_service.ai_session_service import sanitize_session_update_payload
@@ -16,6 +26,49 @@ def test_config_rejects_weak_keys_in_production(monkeypatch):
     cfg = Settings()
     with pytest.raises(SystemExit):
         cfg.validate_startup()
+
+
+def test_config_rejects_localhost_origins_in_production(monkeypatch):
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "A_Strong_Random_Secret_Value_1234567890!")
+    monkeypatch.setenv("JWT_SECRET_KEY", "Another_Strong_Random_Secret_Value_0987654321!")
+    monkeypatch.setenv("JWT_COOKIE_SECURE", "true")
+    monkeypatch.setenv("JWT_COOKIE_SAMESITE", "none")
+    monkeypatch.setenv("ALLOWED_ORIGINS", "http://localhost:5173")
+
+    cfg = Settings()
+    with pytest.raises(SystemExit):
+        cfg.validate_startup()
+
+
+def test_repo_production_env_templates_are_sanitized():
+    repo_root = Path(__file__).resolve().parents[2]
+    backend_env = (repo_root / "backend" / ".env.production").read_text(encoding="utf-8")
+    frontend_env = (repo_root / "frontend" / ".env.production").read_text(encoding="utf-8")
+
+    assert "CHANGE_ME_TO_A_RANDOM_64_CHAR_STRING" in backend_env
+    assert "CHANGE_ME_TO_A_DIFFERENT_RANDOM_64_CHAR_STRING" in backend_env
+    assert "CHANGE_ME_TO_A_THIRD_RANDOM_64_CHAR_STRING" in backend_env
+    assert "mongodb://USERNAME:PASSWORD@YOUR-MONGO-HOST:27017/intelligent_edu" in backend_env
+    assert "https://your-vercel-app.vercel.app" in backend_env
+    assert "https://your-backend.example.com" in frontend_env
+
+
+def test_app_manifests_do_not_expose_uploads_or_data_mounts():
+    manifests = (
+        CORE_APP_MANIFEST,
+        SLIDES_APP_MANIFEST,
+        QUESTIONS_APP_MANIFEST,
+        VISUAL_APP_MANIFEST,
+        VIDEO_APP_MANIFEST,
+        STUDY_NOTES_APP_MANIFEST,
+        HIGHLIGHTER_APP_MANIFEST,
+    )
+
+    for manifest in manifests:
+        mounted_prefixes = {prefix for prefix, _, _ in manifest.static_mounts}
+        assert "/data" not in mounted_prefixes
+        assert all(not prefix.startswith("/uploads/") for prefix in mounted_prefixes)
 
 
 def test_session_update_rejects_oversized_attachment_metadata():

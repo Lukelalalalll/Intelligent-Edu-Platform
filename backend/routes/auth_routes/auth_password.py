@@ -1,23 +1,25 @@
-"""Registration and password reset endpoints."""
+﻿"""Registration and password reset endpoints."""
 from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
 from backend.schemas import AuthSchema, PasswordResetConfirmSchema, PasswordResetRequestSchema
-from backend.services.auth_account_service import confirm_password_reset, register_user, request_password_reset_with_guards
-from backend.services.security_audit import record_security_event
+from backend.services.auth.auth_account_service import confirm_password_reset, register_user, request_password_reset_with_guards
+from backend.services.auth.security_audit import record_security_event
 
-from .router import auth_router, limiter
+from .router import limiter
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@auth_router.post("/register")
+@router.post("/register")
 @limiter.limit("10/minute")
 async def register(request: Request, req: AuthSchema):
     await register_user(req)
     return {"message": "Account created successfully"}
 
 
-@auth_router.post("/password-reset/request")
+@router.post("/password-reset/request")
 @limiter.limit("5/minute")
 async def reset_password_request(request: Request, req: PasswordResetRequestSchema):
     request_id = getattr(request.state, "request_id", "unknown")
@@ -47,7 +49,7 @@ async def reset_password_request(request: Request, req: PasswordResetRequestSche
     return result
 
 
-@auth_router.post("/password-reset/confirm")
+@router.post("/password-reset/confirm")
 @limiter.limit("5/minute")
 async def reset_password_confirm(request: Request, req: PasswordResetConfirmSchema):
     request_id = getattr(request.state, "request_id", "unknown")
@@ -72,3 +74,4 @@ async def reset_password_confirm(request: Request, req: PasswordResetConfirmSche
         detail="password reset token redeemed",
     )
     return {"message": "Password reset successfully"}
+

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 
-from bson import ObjectId
-
-from backend.core.database import db
+from backend.repositories import ai_session_repo, file_asset_repo
 
 from .shared import utcnow
 
@@ -55,23 +54,47 @@ def _legacy_files_from_content(content: str) -> list[tuple[str, str]]:
     return found
 
 
+def _conversation_date_from_value(value) -> str:
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        else:
+            value = value.astimezone(timezone.utc)
+        return value.date().isoformat()
+
+    text = str(value or "").strip()
+    if not text:
+        return ""
+
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return text[:10]
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed.date().isoformat()
+
+
 async def ensure_ai_session_image_assets(user_id: str) -> int:
     """Backfill file_assets for AI chat attachments stored inside session messages."""
     created = 0
-    if not ObjectId.is_valid(str(user_id or "")):
+    cursor = ai_session_repo.find_cursor_for_user(
+        user_id,
+        projection={"_id": 1, "messages": 1, "createdAt": 1, "updatedAt": 1},
+    )
+    if cursor is None:
         return created
 
-    cursor = db.ai_chat_sessions.find({"userId": ObjectId(user_id)})
     async for session in cursor:
         session_id = str(session.get("_id"))
         messages = list(session.get("messages") or [])
         for msg_idx, message in enumerate(messages):
             created_at = message.get("createdAt") or session.get("updatedAt") or session.get("createdAt")
-            conversation_date = ""
-            if hasattr(created_at, "date"):
-                conversation_date = created_at.date().isoformat()
-            elif created_at:
-                conversation_date = str(created_at)[:10]
+            conversation_date = _conversation_date_from_value(created_at)
 
             created += await _backfill_images(
                 session_id=session_id,
@@ -111,10 +134,11 @@ async def _backfill_images(
         if not base64_data:
             continue
         file_id = f"aiimg_{session_id}_{msg_idx}_{img_idx}"
-        exists = await db.file_assets.find_one({"file_id": file_id})
+        exists = await file_asset_repo.find_asset_by_file_id(file_id)
         if exists:
             continue
-        await db.file_assets.insert_one(
+        now = utcnow()
+        await file_asset_repo.insert_asset(
             {
                 "file_id": file_id,
                 "file_type": "ai_chat_attachment",
@@ -133,8 +157,8 @@ async def _backfill_images(
                 "session_id": session_id,
                 "conversation_date": conversation_date,
                 "created_by": str(user_id),
-                "created_at": utcnow(),
-                "updated_at": utcnow(),
+                "created_at": now,
+                "updated_at": now,
                 "deleted_at": None,
                 "status": "active",
                 "metadata": {
@@ -165,10 +189,11 @@ async def _backfill_files(
             continue
         mime_type = str(item.get("mime_type") or "").strip() or _guess_mime_from_name(file_name)
         file_id = f"aifile_{session_id}_{msg_idx}_{file_idx}"
-        exists = await db.file_assets.find_one({"file_id": file_id})
+        exists = await file_asset_repo.find_asset_by_file_id(file_id)
         if exists:
             continue
-        await db.file_assets.insert_one(
+        now = utcnow()
+        await file_asset_repo.insert_asset(
             {
                 "file_id": file_id,
                 "file_type": "ai_chat_attachment",
@@ -187,8 +212,8 @@ async def _backfill_files(
                 "session_id": session_id,
                 "conversation_date": conversation_date,
                 "created_by": str(user_id),
-                "created_at": utcnow(),
-                "updated_at": utcnow(),
+                "created_at": now,
+                "updated_at": now,
                 "deleted_at": None,
                 "status": "active",
                 "metadata": {
@@ -213,10 +238,11 @@ async def _backfill_legacy_content_files(
     created = 0
     for legacy_idx, (file_name, mime_type) in enumerate(_legacy_files_from_content(message.get("content") or "")):
         file_id = f"aifile_legacy_{session_id}_{msg_idx}_{legacy_idx}"
-        exists = await db.file_assets.find_one({"file_id": file_id})
+        exists = await file_asset_repo.find_asset_by_file_id(file_id)
         if exists:
             continue
-        await db.file_assets.insert_one(
+        now = utcnow()
+        await file_asset_repo.insert_asset(
             {
                 "file_id": file_id,
                 "file_type": "ai_chat_attachment",
@@ -235,8 +261,8 @@ async def _backfill_legacy_content_files(
                 "session_id": session_id,
                 "conversation_date": conversation_date,
                 "created_by": str(user_id),
-                "created_at": utcnow(),
-                "updated_at": utcnow(),
+                "created_at": now,
+                "updated_at": now,
                 "deleted_at": None,
                 "status": "active",
                 "metadata": {

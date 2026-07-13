@@ -1,0 +1,461 @@
+.toolbarSwitch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.shellContent {
+    display: grid;
+    gap: 20px;
+}
+
+.hubSection {
+    display: grid;
+    gap: 18px;
+}
+
+.heroGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.entryCard,
+.historyCard,
+.panel,
+.questionCard,
+.previewPanel,
+.providerRail,
+.startCard,
+.statusCard {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 248, 0.96));
+    box-shadow: 0 20px 40px -28px rgba(15, 23, 42, 0.2);
+}
+
+.entryCard {
+    border-radius: 24px;
+    padding: 24px;
+    min-height: 220px;
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.entryCardInteractive:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 123, 85, 0.28);
+    box-shadow: 0 28px 48px -32px rgba(0, 123, 85, 0.28);
+}
+
+.entryCardDisabled {
+    opacity: 0.78;
+}
+
+.entryTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.entryIcon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 123, 85, 0.12);
+    color: rgb(0, 123, 85);
+}
+
+.entryBadge,
+.historyBadge,
+.statusBadge,
+.metaPill {
+    width: fit-content;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.entryBadge,
+.statusBadge {
+    background: rgba(0, 123, 85, 0.12);
+    color: rgb(0, 123, 85);
+}
+
+.historyBadge {
+    background: rgba(59, 130, 246, 0.12);
+    color: rgb(37, 99, 235);
+}
+
+.metaPill {
+    background: rgba(15, 23, 42, 0.06);
+    color: rgba(23, 32, 51, 0.76);
+}
+
+.entryTitle {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.18;
+}
+
+.entryText,
+.sectionText,
+.mutedText,
+.historyPreview,
+.statusMessage,
+.helperText,
+.emptyState {
+    color: rgba(23, 32, 51, 0.72);
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.sectionTitle {
+    margin: 0;
+    font-size: 20px;
+}
+
+.historyStrip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(280px, 320px);
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.historyCard {
+    border-radius: 20px;
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+    min-height: 180px;
+}
+
+.historyTop {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.historyMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.historyPreview {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+}
+
+.workspace {
+    display: grid;
+    gap: 20px;
+}
+
+.startCard {
+    border-radius: 24px;
+    padding: 28px;
+    display: grid;
+    gap: 20px;
+}
+
+.startHeader {
+    display: grid;
+    gap: 12px;
+    max-width: 760px;
+}
+
+.startActions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.composerGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.9fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.providerRail {
+    display: grid;
+}
+
+.panel {
+    border-radius: 24px;
+    padding: 22px;
+    display: grid;
+    gap: 16px;
+}
+
+.panelTitleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.panelTitle {
+    margin: 0;
+    font-size: 18px;
+}
+
+.fieldGroup {
+    display: grid;
+    gap: 8px;
+}
+
+.fieldLabel {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(23, 32, 51, 0.9);
+}
+
+.textArea,
+.textInput,
+.selectInput {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 14px 16px;
+    color: rgb(23, 32, 51);
+    font: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.textArea:focus,
+.textInput:focus,
+.selectInput:focus {
+    border-color: rgba(0, 123, 85, 0.5);
+    box-shadow: 0 0 0 4px rgba(0, 123, 85, 0.1);
+}
+
+.uploadDropzone {
+    border: 1.5px dashed rgba(0, 123, 85, 0.28);
+    border-radius: 18px;
+    padding: 20px;
+    background: rgba(244, 250, 247, 0.94);
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+}
+
+.uploadDropzoneActive {
+    border-color: rgba(0, 123, 85, 0.56);
+    background: rgba(231, 247, 239, 0.96);
+}
+
+.uploadMeta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.providerList {
+    display: grid;
+    gap: 10px;
+}
+
+.providerOption {
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 14px;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.providerOptionActive {
+    border-color: rgba(0, 123, 85, 0.4);
+    box-shadow: 0 16px 26px -24px rgba(0, 123, 85, 0.35);
+    transform: translateY(-1px);
+}
+
+.providerName {
+    font-weight: 700;
+}
+
+.actionRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.resultLayout {
+    display: grid;
+    gap: 18px;
+}
+
+.statusCard {
+    border-radius: 22px;
+    padding: 20px;
+    display: grid;
+    gap: 10px;
+}
+
+.statusRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.questionList {
+    display: grid;
+    gap: 16px;
+}
+
+.questionCard {
+    border-radius: 22px;
+    padding: 20px;
+    display: grid;
+    gap: 18px;
+}
+
+.questionHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.questionIndex {
+    margin: 0;
+    font-size: 18px;
+}
+
+.questionGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.95fr);
+    gap: 18px;
+}
+
+.editorColumn,
+.previewPanel {
+    display: grid;
+    gap: 14px;
+}
+
+.previewPanel {
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.optionRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.optionControls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.selectionSummary {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.footerActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.markdownPreview {
+    color: rgb(23, 32, 51);
+    line-height: 1.7;
+}
+
+.markdownPreview :global(p) {
+    margin: 0 0 12px;
+}
+
+.markdownPreview :global(ol),
+.markdownPreview :global(ul) {
+    margin: 0 0 14px 20px;
+}
+
+.markdownPreview :global(li) {
+    margin-bottom: 6px;
+}
+
+.markdownPreview :global(code) {
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.06);
+    padding: 2px 6px;
+}
+
+.spinner {
+    animation: questionStudioSpin 0.9s linear infinite;
+}
+
+@keyframes questionStudioSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.emptyState {
+    border-radius: 20px;
+    border: 1px dashed rgba(148, 163, 184, 0.34);
+    padding: 24px;
+    text-align: center;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+@media (max-width: 1080px) {
+    .composerGrid,
+    .questionGrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 820px) {
+    .heroGrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .entryTitle {
+        font-size: 22px;
+    }
+
+    .historyStrip {
+        grid-auto-columns: minmax(250px, 86vw);
+    }
+}

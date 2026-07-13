@@ -28,7 +28,10 @@ async def list_rag_courses_data() -> list[dict]:
     from backend.services.course_rag_service import course_rag_service
     from pathlib import Path
 
-    all_courses = await db.courses.find({}, {"_id": 0, "courseId": 1, "name": 1}).to_list(500)
+    all_courses = [
+        course
+        async for course in db.courses.find({}, {"_id": 0, "courseId": 1, "name": 1})
+    ]
     name_map = {str(c.get("courseId", "")): c.get("name", "") for c in all_courses}
 
     indexed_counts: dict = {}

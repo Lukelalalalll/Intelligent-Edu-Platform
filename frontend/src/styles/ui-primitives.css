@@ -17,26 +17,19 @@
     --banner-padding-block: var(--workspace-banner-padding-block);
     --banner-title-size: var(--workspace-title-size);
     --banner-subtitle-size: var(--workspace-subtitle-size);
-    --banner-intro-margin-bottom: var(--workspace-banner-intro-margin-bottom);
-    --banner-intro-padding-block: var(--workspace-banner-intro-padding-block);
-    --banner-intro-title-size: var(--workspace-banner-intro-title-size);
-    --banner-intro-subtitle-size: var(--workspace-banner-intro-subtitle-size);
-    --banner-subtitle-opacity: 1;
-    --banner-subtitle-max-height: 5rem;
-    --banner-subtitle-transform: translateY(0);
     --banner-orb-opacity: 1;
     text-align: center;
     margin-bottom: var(--banner-margin-bottom);
     padding: var(--banner-padding-block) var(--banner-padding-inline);
     background-image: var(--primary-gradient-animated);
     background-size: 300% 300%;
-    animation: gradientFlow 8s ease infinite, tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: gradientFlow 8s ease infinite;
     border-radius: var(--banner-radius);
     box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
     color: white;
     position: relative;
     overflow: hidden;
-    opacity: 0;
+    opacity: 1;
     transition:
         margin-bottom 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
         padding 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -51,39 +44,10 @@
     --banner-subtitle-size: var(--hero-banner-subtitle-size);
 }
 
-.page-header--workspace.page-header--intro {
-    animation:
-        gradientFlow 8s ease infinite,
-        tabPopIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
-        workspaceBannerSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
-}
-
-.page-header--workspace.page-header--collapsible.page-header--collapsed {
-    --banner-margin-bottom: 0.75rem;
-    --banner-padding-block: 0.95rem;
-    --banner-title-size: 1.1rem;
-    --banner-subtitle-opacity: 0;
-    --banner-subtitle-max-height: 0;
-    --banner-subtitle-transform: translateY(-8px);
-    --banner-orb-opacity: 0.3;
-    box-shadow: 0 14px 28px -14px rgba(0, 123, 85, 0.3);
-}
-
 @keyframes gradientFlow {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
-}
-
-@keyframes tabPopIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
 }
 
 .page-header::before,
@@ -132,17 +96,10 @@
     margin: 0 auto;
     font-weight: 400;
     line-height: 1.55;
-    max-height: var(--banner-subtitle-max-height);
-    opacity: var(--banner-subtitle-opacity);
-    overflow: hidden;
     position: relative;
-    transform: var(--banner-subtitle-transform);
     z-index: 1;
     transition:
         font-size 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-        opacity 180ms ease,
-        max-height 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-        transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
         margin-top 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -154,10 +111,6 @@
     margin-bottom: 0.8rem;
 }
 
-.page-header--workspace.page-header--collapsible.page-header--collapsed h1 {
-    margin-bottom: 0;
-}
-
 @keyframes slideUpFade {
     to {
         opacity: 1;
@@ -165,54 +118,17 @@
     }
 }
 
-@keyframes workspaceBannerSettle {
+@keyframes tabPopIn {
     from {
-        margin-bottom: var(--banner-intro-margin-bottom);
-        padding-top: var(--banner-intro-padding-block);
-        padding-bottom: var(--banner-intro-padding-block);
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
     }
     to {
-        margin-bottom: var(--banner-margin-bottom);
-        padding-top: var(--banner-padding-block);
-        padding-bottom: var(--banner-padding-block);
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
-
-@keyframes workspaceTitleSettle {
-    from {
-        font-size: var(--banner-intro-title-size);
-        margin-bottom: 0.8rem;
-    }
-    to {
-        font-size: var(--banner-title-size);
-        margin-bottom: 0.55rem;
-    }
-}
-
-@keyframes workspaceSubtitleSettle {
-    from {
-        font-size: var(--banner-intro-subtitle-size);
-    }
-    to {
-        font-size: var(--banner-subtitle-size);
-    }
-}
-
-.page-header--workspace.page-header--intro h1 {
-    animation: workspaceTitleSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
-}
-
-.page-header--workspace.page-header--intro .subtitle {
-    animation: workspaceSubtitleSettle 0.46s cubic-bezier(0.22, 0.8, 0.24, 1) 0.08s both;
-}
-
 @media (max-width: 1024px) {
-    .page-header--workspace {
-        --banner-intro-padding-block: 3rem;
-        --banner-intro-title-size: 2rem;
-        --banner-intro-subtitle-size: 1.05rem;
-    }
-
     .page-header--hero {
         --banner-padding-block: 3rem;
         --banner-padding-inline: 1.5rem;
@@ -231,14 +147,6 @@
         --banner-padding-block: 2rem;
         --banner-title-size: 1.65rem;
         --banner-subtitle-size: 0.95rem;
-        --banner-intro-padding-block: 2.8rem;
-        --banner-intro-title-size: 1.9rem;
-        --banner-intro-subtitle-size: 1rem;
-    }
-
-    .page-header--workspace.page-header--collapsible.page-header--collapsed {
-        --banner-padding-block: 0.85rem;
-        --banner-title-size: 1rem;
     }
 
     .page-header--hero {
@@ -253,13 +161,6 @@
     .page-header--workspace {
         --banner-title-size: 1.5rem;
         --banner-subtitle-size: 0.92rem;
-        --banner-intro-padding-block: 2.5rem;
-        --banner-intro-title-size: 1.55rem;
-        --banner-intro-subtitle-size: 0.92rem;
-    }
-
-    .page-header--workspace.page-header--collapsible.page-header--collapsed {
-        --banner-title-size: 0.98rem;
     }
 
     .page-header--hero {
@@ -273,9 +174,6 @@
     .page-header--workspace {
         --banner-title-size: 1.35rem;
         --banner-subtitle-size: 0.86rem;
-        --banner-intro-padding-block: 2.2rem;
-        --banner-intro-title-size: 1.4rem;
-        --banner-intro-subtitle-size: 0.86rem;
     }
 
     .page-header--hero {

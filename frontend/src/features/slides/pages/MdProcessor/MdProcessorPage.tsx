@@ -7,18 +7,90 @@ import Button from '../../../../shared/components/Button/Button';
 import Card from '../../../../shared/components/Card/Card';
 import { useMdProcessorUpload } from './hooks/useMdProcessorUpload';
 import { useMdProcessorTextInput } from './hooks/useMdProcessorTextInput';
-import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
 import mdStyles from './styles/mdProcessor.module.css';
 import s from '../../../../styles/history.module.css';
+import PptGeneratorShell from '../../components/PptGeneratorShell';
+import { loadMdProcessorWizardState, saveMdProcessorWizardState } from './hooks/mdProcessorWizardState';
 
-export default function MdProcessor() {
+export type MdProcessorPageProps = {
+    nextRoute?: string;
+    bannerTitle?: React.ReactNode;
+    bannerSubtitle?: string;
+    continueLabel?: string;
+    quickContinueLabel?: string;
+};
+
+export default function MdProcessor({
+    nextRoute = '/slides/ppt_generator/dashboard',
+    bannerTitle,
+    bannerSubtitle,
+    continueLabel,
+    quickContinueLabel,
+}: MdProcessorPageProps) {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const transferConsumedRef = useRef(false);
     const [activeView, setActiveView] = useState<'workflow' | 'history'>('workflow');
+    const hydrationRef = useRef(false);
+    const [hydrationReady, setHydrationReady] = useState(false);
 
     const upload = useMdProcessorUpload();
     const textInput = useMdProcessorTextInput();
+
+    useEffect(() => {
+        const state = loadMdProcessorWizardState();
+        if (!hydrationRef.current && state) {
+            hydrationRef.current = true;
+            setActiveView(state.activeView || 'workflow');
+            textInput.setInputMode(state.inputMode || 'file');
+            textInput.setTextContent(state.textContent || '');
+            textInput.setTextTitle(state.textTitle || '');
+            textInput.setSeedContent(state.seedContent || '');
+            textInput.setProvider(state.provider || 'local_ollama');
+            upload.hydrateState({
+                currentFilename: state.currentFilename || '',
+                currentDisplayFilename: state.currentDisplayFilename || '',
+                headers: state.headers || [],
+                selectedIndices: state.selectedIndices || [],
+                useLLM: Boolean(state.useLLM),
+                headerLlmProvider: state.headerLlmProvider || 'local_ollama',
+            });
+        }
+        setHydrationReady(true);
+    }, []);
+
+    useEffect(() => {
+        if (!hydrationReady) return;
+        saveMdProcessorWizardState({
+            activeView,
+            currentStep: 0,
+            inputMode: textInput.inputMode,
+            textContent: textInput.textContent,
+            textTitle: textInput.textTitle,
+            seedContent: textInput.seedContent,
+            provider: textInput.provider,
+            currentFilename: upload.currentFilename,
+            currentDisplayFilename: upload.currentDisplayFilename,
+            headers: upload.headers,
+            selectedIndices: upload.selectedIndices,
+            useLLM: upload.useLLM,
+            headerLlmProvider: upload.headerLlmProvider,
+        });
+    }, [
+        activeView,
+        textInput.inputMode,
+        textInput.textContent,
+        textInput.textTitle,
+        textInput.seedContent,
+        textInput.provider,
+        upload.currentFilename,
+        upload.currentDisplayFilename,
+        upload.headers,
+        upload.selectedIndices,
+        upload.useLLM,
+        upload.headerLlmProvider,
+        hydrationReady,
+    ]);
 
     // Transfer auto-consumption
     useEffect(() => {
@@ -56,6 +128,7 @@ export default function MdProcessor() {
         loading: upload.loading,
         errorMsg: upload.errorMsg,
         currentFilename: upload.currentFilename,
+        currentDisplayFilename: upload.currentDisplayFilename,
         fileInputRef: upload.fileInputRef,
         setUseLLM: upload.setUseLLM,
         setHeaderLlmProvider: upload.setHeaderLlmProvider,
@@ -66,17 +139,17 @@ export default function MdProcessor() {
         clearFile: upload.clearFile,
         handleUpload: upload.handleUpload,
         handleCheckboxChange: upload.handleCheckboxChange,
-        combineSections: async (redirectUrl: string) => {
+        combineSections: async () => {
             if (textInput.textContent) {
                 localStorage.setItem('slidesContentMD', textInput.textContent);
             }
-            upload.combineSections(redirectUrl, navigate);
+            upload.combineSections(nextRoute, navigate);
         },
-        proceedWithFullDoc: async (redirectUrl: string) => {
+        proceedWithFullDoc: async () => {
             if (textInput.textContent) {
                 localStorage.setItem('slidesContentMD', textInput.textContent);
             }
-            upload.proceedWithFullDoc(redirectUrl, navigate);
+            upload.proceedWithFullDoc(nextRoute, navigate);
         },
         inputMode: textInput.inputMode,
         setInputMode: textInput.setInputMode,
@@ -92,10 +165,14 @@ export default function MdProcessor() {
         provider: textInput.provider,
         setProvider: textInput.setProvider,
         handleCozeGenerate: textInput.handleCozeGenerate,
-        handleProcessText: async (redirectUrl: string) => {
+        handleProcessText: async () => {
             localStorage.setItem('slidesContentMD', textInput.textContent);
-            textInput.handleProcessText(redirectUrl, navigate, upload.setErrorMsg);
+            textInput.handleProcessText(nextRoute, navigate, upload.setErrorMsg);
         },
+        bannerTitle,
+        bannerSubtitle,
+        continueLabel,
+        quickContinueLabel,
     };
 
     const viewSwitchJSX = (
@@ -109,22 +186,18 @@ export default function MdProcessor() {
         </div>
     );
 
+    const workflowContent = (
+        <MdProcessorView {...pageProps} hideBanner viewSwitchSlot={null} />
+    );
+
     return (
-        <div className="container">
-            <WelcomeBanner
-                title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
-                subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
-                className={mdStyles.pageHeader}
-                as="header"
-                variant="workspace"
-            />
-            {viewSwitchJSX}
-            {activeView === 'workflow' && <MdProcessorView {...pageProps} hideBanner viewSwitchSlot={null} />}
+        <PptGeneratorShell className="container" currentStep={0} toolbar={viewSwitchJSX} contentClassName={mdStyles.pageContent}>
+            {activeView === 'workflow' && workflowContent}
             {activeView === 'history' && (
                 <Card className={s.historyViewCard} glass>
                     <HistoryPanel onReplay={() => setActiveView('workflow')} />
                 </Card>
             )}
-        </div>
+        </PptGeneratorShell>
     );
 }

@@ -8,6 +8,7 @@ from backend.config import Config
 from backend.infrastructure import llm_telemetry, TelemetryTimer
 from backend.services.llm_service.local_llm_service import LocalLLMService, LocalLLMUnavailableError
 from backend.services.llm_service.deepseek_service import DeepSeekService, DeepSeekUnavailableError
+from backend.services.llm_service.openai_service import OpenAIService, OpenAIUnavailableError
 
 from backend.services.ai_gateway_service.context_builder import serialize_context
 from backend.services.ai_gateway_service.coze_client import chat_v3_stream, chat_v3_stream_tokens
@@ -42,7 +43,25 @@ class AIGatewayService:
             return True, "ok"
         if p == "deepseek":
             return await self.deepseek.health_check()
+        if p in {"openai", "bigmodel"}:
+            return await OpenAIService().health_check()
         return False, "Unknown provider"
+
+    async def check_runtime_health(self, runtime) -> tuple[bool, str]:
+        p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
+        if p in {"openai", "bigmodel"}:
+            return await OpenAIService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).health_check()
+        if p == "deepseek":
+            return await DeepSeekService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).health_check()
+        return await self.check_provider_health(p)
 
     def _serialize_context(self, context: Optional[Dict[str, Any]] = None) -> str:
         return serialize_context(context)
@@ -109,6 +128,20 @@ class AIGatewayService:
                 context["fallback_from"] = "deepseek"
                 p = "coze"
 
+        if p in {"openai", "bigmodel"}:
+            logger.info("Using %s provider", p)
+            try:
+                service = OpenAIService()
+                return await service.chat(message=message, context=context)
+            except OpenAIUnavailableError as e:
+                if not allow_fallback:
+                    raise
+                logger.error("%s unavailable: %s. Falling back to Coze.", p, e)
+                if context is None:
+                    context = {}
+                context["fallback_from"] = p
+                p = "coze"
+
         if p != "coze":
             raise ValueError(f"Unsupported provider: {p}")
 
@@ -139,6 +172,34 @@ class AIGatewayService:
         )
         return result
 
+    async def chat_with_runtime(
+        self,
+        *,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        runtime,
+        allow_fallback: bool = False,
+    ) -> str:
+        p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
+        if p in {"openai", "bigmodel"}:
+            return await OpenAIService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).chat(message=message, context=context)
+        if p == "deepseek":
+            return await DeepSeekService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).chat(message=message, context=context)
+        return await self.chat_with_provider(
+            message=message,
+            context=context,
+            provider=p,
+            allow_fallback=allow_fallback,
+        )
+
     async def chat_stream_with_provider(
         self,
         *,
@@ -151,6 +212,11 @@ class AIGatewayService:
 
         if p == "deepseek":
             async for chunk in self.deepseek.chat_stream(message=message, context=context):
+                yield chunk
+            return
+
+        if p in {"openai", "bigmodel"}:
+            async for chunk in OpenAIService().chat_stream(message=message, context=context):
                 yield chunk
             return
 
@@ -173,6 +239,33 @@ class AIGatewayService:
 
         # local_ollama — stream via local service
         async for chunk in self.local_llm.chat_stream(message=message, context=context):
+            yield chunk
+
+    async def chat_stream_with_runtime(
+        self,
+        *,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        runtime,
+    ) -> AsyncGenerator[str, None]:
+        p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
+        if p in {"openai", "bigmodel"}:
+            async for chunk in OpenAIService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).chat_stream(message=message, context=context):
+                yield chunk
+            return
+        if p == "deepseek":
+            async for chunk in DeepSeekService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).chat_stream(message=message, context=context):
+                yield chunk
+            return
+        async for chunk in self.chat_stream_with_provider(message=message, context=context, provider=p):
             yield chunk
 
     async def analyze_submission(

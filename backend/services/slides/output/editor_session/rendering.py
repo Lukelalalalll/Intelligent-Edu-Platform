@@ -9,6 +9,27 @@ from io import BytesIO as Bio
 from typing import List
 
 
+def _font_candidates() -> list[str]:
+    if os.name == "nt":
+        return [
+            r"C:\Windows\Fonts\msyh.ttc",
+            r"C:\Windows\Fonts\msyhbd.ttc",
+            r"C:\Windows\Fonts\simhei.ttf",
+            r"C:\Windows\Fonts\simsun.ttc",
+            r"C:\Windows\Fonts\arial.ttf",
+        ]
+    if sys.platform == "darwin":
+        return [
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/System/Library/Fonts/PingFang.ttc",
+            "/Library/Fonts/Arial.ttf",
+        ]
+    return [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+
+
 def render_slides_via_pillow(pptx_bytes: bytes) -> List[bytes]:
     """Render slides from in-memory PPTX using Pillow.
 
@@ -52,21 +73,10 @@ def render_slides_via_pillow(pptx_bytes: bytes) -> List[bytes]:
     title_font = None
     text_font = None
     try:
-        if sys.platform == "darwin":
-            font_paths = [
-                "/System/Library/Fonts/Helvetica.ttc",
-                "/System/Library/Fonts/PingFang.ttc",
-                "/Library/Fonts/Arial.ttf",
-            ]
-        else:
-            font_paths = [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            ]
-        for fp in font_paths:
+        for fp in _font_candidates():
             if os.path.isfile(fp):
-                title_font = ImageFont.truetype(fp, 36)
-                text_font = ImageFont.truetype(fp, 24)
+                title_font = ImageFont.truetype(fp, 40)
+                text_font = ImageFont.truetype(fp, 26)
                 break
     except Exception:
         pass

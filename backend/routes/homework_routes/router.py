@@ -1,8 +1,8 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File
 from backend.core.security import get_current_user
 from backend.schemas.homework import HomeworkCreate, HomeworkResponse, HomeworkSubmissionResponse
-from backend.services.homework_service import (
+from backend.services.homework.homework_service import (
     list_student_assignments,
     list_teacher_homeworks,
     publish_homework as publish_homework_service,
@@ -45,3 +45,4 @@ async def submit_homework(
         content=contents,
         current_user=current_user,
     )
+

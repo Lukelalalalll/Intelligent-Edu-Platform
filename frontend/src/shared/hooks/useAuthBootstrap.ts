@@ -4,6 +4,10 @@ import client from '../api/client';
 import { SESSION_CHECK_INTERVAL, useAuthStore, type User } from '../store/useAuthStore';
 
 let sessionCheckPromise: Promise<void> | null = null;
+const AUTH_BOOTSTRAP_BYPASS_PATHS = new Set([
+  '/pdf-maker',
+  '/slides/ppt_generator/pdf-maker',
+]);
 
 function shouldRefreshSession() {
   const { user, status, isSessionLoading, lastValidatedAt } = useAuthStore.getState();
@@ -52,17 +56,31 @@ async function ensureSession(force = false) {
   return sessionCheckPromise;
 }
 
-export function useAuthBootstrap() {
+export function shouldBypassAuthBootstrap(pathname: string) {
+  const normalizedPathname =
+    pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname;
+  return AUTH_BOOTSTRAP_BYPASS_PATHS.has(normalizedPathname);
+}
+
+export function useAuthBootstrap(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const user = useAuthStore((s) => s.user);
   const status = useAuthStore((s) => s.status);
   const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
   const lastValidatedAt = useAuthStore((s) => s.lastValidatedAt);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     void ensureSession();
-  }, [user, status, isSessionLoading, lastValidatedAt]);
+  }, [enabled, user, status, isSessionLoading, lastValidatedAt]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         void ensureSession();
@@ -76,5 +94,5 @@ export function useAuthBootstrap() {
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [enabled]);
 }

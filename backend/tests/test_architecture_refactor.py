@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import pytest
 from fastapi.routing import APIRoute, APIWebSocketRoute
@@ -8,9 +9,36 @@ from fastapi.routing import APIRoute, APIWebSocketRoute
 _BACKEND_ROOT = Path(__file__).resolve().parents[1]
 _ROUTES_ROOT = _BACKEND_ROOT / "routes"
 _SERVICES_ROOT = _BACKEND_ROOT / "services"
+_ARCHITECTURE_FACADES_ROOT = _BACKEND_ROOT / "application" / "architecture_facades"
+_PRESENTATION_ENDPOINT_ROOT = _BACKEND_ROOT / "presenton_runtime" / "api" / "v1" / "ppt" / "endpoints" / "presentation"
 
 _ROUTE_DB_IMPORT_ALLOWLIST = {
     "routes/admin_routes/db_console.py",
+}
+
+_SERVICE_DOMAIN_NAMES = {
+    "admin",
+    "ai",
+    "auth",
+    "files",
+    "homework",
+    "presenton",
+    "questions",
+    "rag",
+    "slides",
+    "student",
+    "study",
+    "visual",
+}
+
+_SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST = {
+    ("services/admin/admin_security_service.py", "auth"),
+    ("services/admin/admin_user_service.py", "auth"),
+    ("services/ai/ai_session_service.py", "auth"),
+    ("services/ai/ai_session_service.py", "files"),
+    ("services/student/student_assignment_service_support/profile_courses.py", "auth"),
+    ("services/student/student_assignment_service_support/submission_flow.py", "auth"),
+    ("services/student/student_assignment_service_support/submission_flow.py", "files"),
 }
 
 _LONG_FILE_ALLOWLIST = {
@@ -21,23 +49,96 @@ _LONG_FILE_ALLOWLIST = {
     "routes/ai_routes/rag_orchestrator.py",
     "routes/questions_routes/generate.py",
     "routes/questions_routes/validators.py",
-    "routes/slides_routes/delivery.py",
-    "routes/slides_routes/editor.py",
-    "routes/slides_routes/generation.py",
     "services/chat_service/room_service.py",
     "services/chat_service/transfer_dispatch_service.py",
+    "services/ai/ai_session_service.py",
+    "services/auth/google_auth_service.py",
     "services/rag_service/rag_eval_wizard_service.py",
-    "services/slides/generation/chapter_summarizer.py",
-    "services/slides/generation/diagram_generator.py",
-    "services/slides/generation/img_chart_processor.py",
     "services/slides/html_renderer.py",
     "services/slides/infra/task_tracker.py",
-    "services/slides/output/business_ppt_creator.py",
-    "services/slides/output/editor_session/core.py",
     "services/slides/output/ppt_creator/core.py",
-    "services/student_assignment_service.py",
     "services/video_service/render/html_renderer.py",
-    "services/video_service/script.py",
+}
+
+_ROOT_SERVICE_FILE_ALLOWLIST = {
+    "__init__.py",
+    "background_job_dispatcher.py",
+    "background_job_runtime.py",
+    "grading_normalizer.py",
+    "history_service.py",
+    "mailbox_service.py",
+    "secret_storage.py",
+}
+
+_ARCHITECTURE_IMPL_LONG_ALLOWLIST = {
+    "application/architecture_facades/course_rag_chunking_impl.py",
+    "application/architecture_facades/course_rag_indexing_service_impl.py",
+    "application/architecture_facades/course_rag_store_manager_impl.py",
+}
+
+_ARCHITECTURE_HELPER_ROOTS = (
+    _ARCHITECTURE_FACADES_ROOT / "indexing_job",
+    _ARCHITECTURE_FACADES_ROOT / "indexing_job_extractors",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_retrieval",
+    _ARCHITECTURE_FACADES_ROOT / "auth_session",
+    _ARCHITECTURE_FACADES_ROOT / "user_profile",
+    _ARCHITECTURE_FACADES_ROOT / "auth_account",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_opensearch_sparse_retriever",
+    _ARCHITECTURE_FACADES_ROOT / "course_rag_retrieval_helpers",
+)
+
+_PRESENTON_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "export_task",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "memory_layer_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "service_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "chat" / "tools_support",
+    _BACKEND_ROOT / "presenton_runtime" / "services" / "image_generation_service_support",
+    _BACKEND_ROOT / "services" / "presenton" / "presenton_projection",
+)
+
+_PRESENTON_UTILITY_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "utils" / "oauth" / "openai_codex_support",
+)
+
+_PRESENTON_ENDPOINT_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "api" / "v1" / "ppt" / "endpoints" / "pptx_slides_support",
+)
+
+_PRESENTON_TEMPLATE_HELPER_ROOTS = (
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "fonts_and_slides_preview_support",
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "get_layout_by_name_support",
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "handler_support",
+    _BACKEND_ROOT / "presenton_runtime" / "templates" / "pptx_font_utils_support",
+)
+
+_SERVICE_HELPER_ROOTS = (
+    _BACKEND_ROOT / "services" / "video_service" / "script_support",
+    _BACKEND_ROOT / "services" / "slides" / "output" / "business_ppt_creator_support",
+    _BACKEND_ROOT / "services" / "student" / "student_assignment_service_support",
+)
+
+_EXPLICIT_LINE_BOUNDS = {
+    "application/architecture_facades/course_rag_retrieval_service_impl.py": 200,
+    "application/architecture_facades/auth_session_service_impl.py": 200,
+    "application/architecture_facades/user_profile_service_impl.py": 200,
+    "presenton_runtime/services/export_task_service.py": 200,
+    "presenton_runtime/services/chat/memory_layer.py": 200,
+    "presenton_runtime/api/v1/ppt/endpoints/pptx_slides.py": 200,
+    "services/presenton/presenton_projection_service.py": 200,
+    "presenton_runtime/templates/fonts_and_slides_preview.py": 200,
+    "presenton_runtime/templates/handler.py": 200,
+    "presenton_runtime/templates/pptx_font_utils.py": 200,
+    "presenton_runtime/services/chat/service.py": 200,
+    "presenton_runtime/services/chat/tools.py": 200,
+    "services/video_service/script.py": 200,
+    "services/slides/output/business_ppt_creator.py": 200,
+    "application/architecture_facades/auth_account_service_impl.py": 200,
+    "application/architecture_facades/course_rag_opensearch_sparse_retriever_impl.py": 200,
+    "presenton_runtime/templates/get_layout_by_name.py": 200,
+    "presenton_runtime/services/image_generation_service.py": 200,
+    "presenton_runtime/utils/oauth/openai_codex.py": 200,
+    "services/student/student_assignment_service.py": 200,
+    "application/architecture_facades/course_rag_retrieval_helpers_impl.py": 200,
 }
 
 
@@ -129,6 +230,56 @@ def test_service_layer_does_not_import_route_packages():
             offenders.append(str(path.relative_to(services_root.parent)))
 
     assert offenders == []
+
+
+def test_root_services_only_expose_cross_domain_infra_modules():
+    actual = {path.name for path in _SERVICES_ROOT.glob("*.py")}
+    assert actual == _ROOT_SERVICE_FILE_ALLOWLIST
+
+
+def test_architecture_facades_do_not_import_route_packages():
+    offenders: set[str] = set()
+    for path in _ARCHITECTURE_FACADES_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "from backend.routes" in text or "import backend.routes" in text:
+            offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_architecture_facades_do_not_parse_http_request_shapes():
+    fastapi_pattern = re.compile(r"from\s+fastapi\s+import\s+[^\n]*\b(APIRouter|Body|Query|Path|Depends)\b")
+    offenders: dict[str, list[str]] = {}
+    for path in _ARCHITECTURE_FACADES_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        hits: list[str] = []
+        if fastapi_pattern.search(text):
+            hits.append("fastapi-http-schema-import")
+        if "Annotated[" in text:
+            hits.append("Annotated[")
+        if hits:
+            offenders[_relative_backend_path(path)] = hits
+    assert offenders == {}
+
+
+def test_domain_services_only_use_explicitly_allowlisted_cross_domain_imports():
+    pattern = re.compile(r"(?:from|import)\s+backend\.services\.([a-z_]+)\b")
+    offenders: set[tuple[str, str]] = set()
+
+    for domain_root in sorted(_SERVICE_DOMAIN_NAMES):
+        root = _SERVICES_ROOT / domain_root
+        if not root.exists():
+            continue
+        for path in root.rglob("*.py"):
+            relative_path = _relative_backend_path(path)
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for imported_domain in pattern.findall(text):
+                if imported_domain not in _SERVICE_DOMAIN_NAMES or imported_domain == domain_root:
+                    continue
+                entry = (relative_path, imported_domain)
+                if entry not in _SERVICE_CROSS_DOMAIN_IMPORT_ALLOWLIST:
+                    offenders.add(entry)
+
+    assert offenders == set()
 
 
 def test_core_app_mounts_expected_router_topology():
@@ -238,6 +389,102 @@ def test_route_layer_db_imports_are_allowlisted_only():
     assert unexpected == set()
 
 
+def test_slides_routes_use_explicit_router_aggregation():
+    slides_routes_root = _ROUTES_ROOT / "slides_routes"
+    package_init = (slides_routes_root / "__init__.py").read_text(encoding="utf-8", errors="ignore")
+
+    assert "include_router(" in package_init
+    assert "slides_router.include_router(router)" in package_init
+    assert "public_slides_router.include_router(router)" in package_init
+    assert "legacy_sub1_router.include_router(legacy_router)" in package_init
+
+    offenders: set[str] = set()
+    for path in slides_routes_root.rglob("*.py"):
+        if path.name in {"__init__.py", "router.py"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "from .router import slides_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "from .router import public_slides_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "from .router import legacy_sub1_router" in text:
+            offenders.add(_relative_backend_path(path))
+        if "slides_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+        if "public_slides_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+        if "legacy_sub1_router.include_router(" in text:
+            offenders.add(_relative_backend_path(path))
+
+    assert offenders == set()
+
+
+def test_route_packages_do_not_use_import_side_effect_registration():
+    package_inits = [
+        _ROUTES_ROOT / "auth_routes" / "__init__.py",
+        _ROUTES_ROOT / "chat_routes" / "__init__.py",
+        _ROUTES_ROOT / "questions_routes" / "__init__.py",
+        _ROUTES_ROOT / "ai_routes" / "__init__.py",
+        _ROUTES_ROOT / "admin_routes" / "__init__.py",
+        _ROUTES_ROOT / "ai_gateway_routes" / "__init__.py",
+        _ROUTES_ROOT / "file_center_routes" / "__init__.py",
+        _ROUTES_ROOT / "video_routes" / "__init__.py",
+    ]
+
+    for path in package_inits:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        assert "from . import " not in text
+        assert "include_router(" in text
+
+
+def test_runtime_layers_do_not_import_settings_leaf_modules_directly():
+    allowed_roots = {
+        _BACKEND_ROOT / "core" / "config.py",
+        _BACKEND_ROOT / "core" / "settings",
+    }
+    offenders: set[str] = set()
+
+    for root in (
+        _BACKEND_ROOT / "routes",
+        _BACKEND_ROOT / "services",
+        _BACKEND_ROOT / "apps",
+        _BACKEND_ROOT / "presenton_host",
+    ):
+        for path in root.rglob("*.py"):
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "backend.core.settings" not in text:
+                continue
+            if any(str(path).startswith(str(allowed_root)) for allowed_root in allowed_roots):
+                continue
+            offenders.add(_relative_backend_path(path))
+
+    assert offenders == set()
+
+
+def test_presenton_runtime_mount_defers_runtime_router_wiring():
+    path = _BACKEND_ROOT / "presenton_host" / "runtime_mount.py"
+    text = path.read_text(encoding="utf-8", errors="ignore")
+
+    assert "def ensure_presenton_router_wired" in text
+    assert "load_presenton_runtime().API_V1_PPT_ROUTER" in text
+    assert "app.include_router(ensure_presenton_router_wired())" in text
+    assert "PRESENTON_HOST_ROUTER.include_router(\n    load_presenton_runtime().API_V1_PPT_ROUTER" not in text
+
+
+def test_presenton_presentation_package_does_not_import_template_font_giants():
+    forbidden = (
+        "templates.pptx_font_utils",
+        "templates.fonts_and_slides_preview",
+    )
+    offenders: dict[str, list[str]] = {}
+    for path in _PRESENTATION_ENDPOINT_ROOT.rglob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        hits = [token for token in forbidden if token in text]
+        if hits:
+            offenders[_relative_backend_path(path)] = hits
+    assert offenders == {}
+
+
 def test_direct_ai_gateway_instantiation_only_happens_in_provider_factory():
     allowlist = {"services/ai_gateway_service/provider_factory.py"}
     offenders: set[str] = set()
@@ -250,6 +497,95 @@ def test_direct_ai_gateway_instantiation_only_happens_in_provider_factory():
 
     unexpected = offenders - allowlist
     assert unexpected == set()
+
+
+def test_architecture_impl_files_are_explicitly_bounded():
+    offenders: set[str] = set()
+    for path in _ARCHITECTURE_FACADES_ROOT.glob("*_impl.py"):
+        relative = _relative_backend_path(path)
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > 200 and relative not in _ARCHITECTURE_IMPL_LONG_ALLOWLIST:
+            offenders.add(relative)
+    assert offenders == set()
+
+
+def test_architecture_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _ARCHITECTURE_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_service_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _SERVICE_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_endpoint_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_ENDPOINT_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_template_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_TEMPLATE_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_utility_helper_modules_are_bounded():
+    offenders: set[str] = set()
+    for root in _PRESENTON_UTILITY_HELPER_ROOTS:
+        for path in root.rglob("*.py"):
+            line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+            if line_count > 350:
+                offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_presenton_presentation_package_modules_are_bounded():
+    offenders: set[str] = set()
+    for path in _PRESENTATION_ENDPOINT_ROOT.rglob("*.py"):
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > 350:
+            offenders.add(_relative_backend_path(path))
+    assert offenders == set()
+
+
+def test_explicit_thin_entrypoints_stay_bounded():
+    offenders: set[str] = set()
+    for relative_path, threshold in _EXPLICIT_LINE_BOUNDS.items():
+        path = _BACKEND_ROOT / Path(relative_path)
+        line_count = len(path.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count > threshold:
+            offenders.add(f"{relative_path}:{line_count}>{threshold}")
+    assert offenders == set()
 
 
 @pytest.mark.parametrize(

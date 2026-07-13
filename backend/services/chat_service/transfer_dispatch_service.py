@@ -13,6 +13,7 @@ from typing import Optional
 
 from backend.config import Config
 from backend.core.database import db
+from backend.repositories._helpers import coerce_object_id, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,14 @@ def _resolve_message_extension(file_name: str, file_url: str, mime_type: str) ->
     return _ext_from_mime(mime_type)
 
 
+def _as_aware_utc(value: datetime | None) -> datetime | None:
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 async def create_transfer(
     room_id: str,
     message_id: str,
@@ -103,9 +112,6 @@ async def create_transfer(
     target_options: Optional[dict] = None,
 ) -> dict:
     """Create a transfer ticket from a chat file message to a target module."""
-    from bson import ObjectId
-    from bson.errors import InvalidId
-
     # Validate target
     if target_module not in MODULE_ALLOWED_EXTENSIONS:
         raise ValueError(f"Invalid target module: {target_module}")
@@ -116,12 +122,10 @@ async def create_transfer(
         raise ValueError("Message is still syncing. Please retry transfer in a moment.")
 
     # message_id must be a valid ObjectId
-    msg = None
-    try:
-        oid = ObjectId(message_id)
-        msg = await db.chat_messages.find_one({"_id": oid})
-    except (InvalidId, TypeError):
+    message_oid = coerce_object_id(message_id)
+    if message_oid is None:
         raise ValueError(f"Invalid message_id: {message_id}")
+    msg = await db.chat_messages.find_one({"_id": message_oid})
 
     if not msg:
         raise ValueError("Source message not found")
@@ -152,7 +156,7 @@ async def create_transfer(
         file_data = f.read()
     sha256 = _compute_sha256(file_data)
 
-    now = datetime.utcnow()
+    now = utcnow()
     transfer_id = uuid.uuid4().hex
 
     transfer_doc = {
@@ -234,12 +238,9 @@ async def consume_transfer(transfer_id: str, user_id: str) -> dict:
         raise ValueError(f"Transfer ticket is in status '{status}', cannot consume")
 
     # Check expiration
-    now = datetime.utcnow()
-    expires_at = doc.get("expires_at")
+    now = utcnow()
+    expires_at = _as_aware_utc(doc.get("expires_at"))
     if expires_at:
-        # Ensure both are naive UTC for comparison (MongoDB strips tzinfo)
-        if expires_at.tzinfo is not None:
-            expires_at = expires_at.replace(tzinfo=None)
         if now > expires_at:
             await db.chat_file_transfers.update_one(
                 {"transfer_id": transfer_id},
@@ -263,7 +264,7 @@ async def consume_transfer(transfer_id: str, user_id: str) -> dict:
         {"transfer_id": transfer_id},
         {"$set": {
             "status": "consumed",
-            "consumed_at": datetime.utcnow(),
+            "consumed_at": utcnow(),
         }},
     )
 
@@ -356,7 +357,7 @@ async def _dispatch_sub2(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub3 (image-extractor): extract-pdf-images logic."""
-    from backend.services.image_extractor_service import extract_images_from_pdf
+    from backend.services.visual.image_extractor_service import extract_images_from_pdf
 
     result = extract_images_from_pdf(abs_path)
     return {
@@ -367,7 +368,7 @@ async def _dispatch_sub3(abs_path: str, file_name: str, options: dict) -> dict:
 
 async def _dispatch_sub4(abs_path: str, file_name: str, options: dict) -> dict:
     """Adapter for sub4 (diagram): upload_document logic."""
-    from backend.services.diagram_extractor_service import extract_diagrams_from_file
+    from backend.services.visual.diagram_extractor_service import extract_diagrams_from_file
 
     result = extract_diagrams_from_file(abs_path, file_name)
     return {

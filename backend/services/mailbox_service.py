@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from backend.repositories import user_repo
-from backend.services.grading_service import get_grade, list_submissions
+from backend.services.grading_service import get_grade, list_all_submissions
 
 
 async def list_assignment_submissions_with_student_info(assignment_id: str) -> list[dict]:
-    submissions = await list_submissions(assignment_id)
+    submissions = await list_all_submissions(assignment_id)
 
     student_ids = [submission.get("studentId", "") for submission in submissions if submission.get("studentId")]
     students = await user_repo.find_many_by_ids(

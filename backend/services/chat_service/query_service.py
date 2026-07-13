@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
-from bson import ObjectId
 from fastapi import HTTPException
 
 from backend.core.database import db
 from backend.core.utils import safe_object_id
+from backend.repositories import user_repo
+from backend.repositories._helpers import utcnow
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return utcnow().isoformat()
 
 
 def serialize_doc(doc: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -28,10 +28,7 @@ def hash_color(name: str) -> str:
 
 
 async def get_chat_user_by_id(user_id: str) -> dict[str, Any] | None:
-    if not ObjectId.is_valid(str(user_id or "")):
-        return None
-
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    user = await user_repo.find_by_id(user_id)
     if not user:
         return None
 
@@ -72,14 +69,10 @@ async def get_message_by_id(
 
 
 async def get_user_map(user_ids: list[str]) -> dict[str, dict[str, Any]]:
-    valid_oids = [ObjectId(user_id) for user_id in user_ids if ObjectId.is_valid(user_id)]
-    if not valid_oids:
-        return {}
-
     user_map: dict[str, dict[str, Any]] = {}
-    async for user in db.users.find(
-        {"_id": {"$in": valid_oids}},
-        {"_id": 1, "username": 1, "email": 1, "role": 1},
+    for user in await user_repo.find_many_by_ids(
+        user_ids,
+        projection={"_id": 1, "username": 1, "email": 1, "role": 1},
     ):
         user_id = str(user["_id"])
         user_map[user_id] = {

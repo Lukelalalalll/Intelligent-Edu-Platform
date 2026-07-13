@@ -6,6 +6,8 @@ import HighlightsPanel from './components/HighlightsPanel';
 import { log } from '@/shared/utils/logger';
 import { injectHighlightsIntoHtml } from './utils/highlightUtils';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import useTextHighlighter from './hooks/useTextHighlighter';
 
 export default function Highlighter({
@@ -18,6 +20,7 @@ export default function Highlighter({
     categoryFilter, setCategoryFilter,
     removeByCategoryOrConfidence
 }) {
+    const isEntranceActive = usePageEntrance();
     // Track the latest highlights in a ref to avoid infinite re-renders from useEffect dependencies
     const highlightsRef = useRef(highlights);
     useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
@@ -109,7 +112,7 @@ export default function Highlighter({
     }, [highlights]);
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <style>{`
                 .stats-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
                 .stats-tag {

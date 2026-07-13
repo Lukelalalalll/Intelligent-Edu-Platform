@@ -57,4 +57,4 @@ async def list_active_for_user(
         .find({"user_id": user_id, "revoked_at": None}, projection)
         .sort("last_seen_at", -1)
     )
-    return await cursor.to_list(length=100)
+    return await cursor.to_list(length=None)

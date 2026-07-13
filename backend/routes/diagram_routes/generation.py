@@ -11,7 +11,7 @@ from backend.core.database import compute_history_expires_at, db
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.services.ai_gateway_service import get_ai_gateway_service
-from backend.services.diagram_service import generate_svg
+from backend.services.visual.diagram_service import generate_svg
 from .router import diagram_router
 
 logger = logging.getLogger(__name__)

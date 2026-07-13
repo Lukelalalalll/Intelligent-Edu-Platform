@@ -13,6 +13,7 @@ from backend.core.database import (
     _ensure_user_sessions_indexes,
     _find_equivalent_username_index_name,
     _is_equivalent_username_index,
+    ensure_indexes,
     close_database_client,
 )
 from backend.apps.factory import create_app
@@ -80,6 +81,9 @@ class _FakeCreateIndexesCollection:
         self.create_indexes_calls.append(indexes)
         return [f"idx_{i}" for i, _ in enumerate(indexes)]
 
+    async def drop_index(self, _name):
+        return None
+
 
 class _FakeProxyDatabase:
     def __init__(self, label):
@@ -138,6 +142,66 @@ class _LoopCheckingMotorClient:
 
     def close(self):
         self.closed = True
+
+
+class _FakeEnsureIndexesDatabase:
+    def __init__(self):
+        self.users = _FakeUsersCollection(indexes=[])
+        self._collections = {
+            "google_auth_tickets": _FakeCreateIndexesCollection(),
+            "user_sessions": _FakeCreateIndexesCollection(),
+            "auth_attempt_counters": _FakeCreateIndexesCollection(),
+            "security_audit_events": _FakeCreateIndexesCollection(),
+            "login_mfa_challenges": _FakeCreateIndexesCollection(),
+            "annotations": _FakeCreateIndexesCollection(),
+            "course_sections": _FakeCreateIndexesCollection(),
+            "enrollments": _FakeCreateIndexesCollection(),
+            "assignments": _FakeCreateIndexesCollection(),
+            "submissions": _FakeCreateIndexesCollection(),
+            "documents": _FakeCreateIndexesCollection(),
+            "grades": _FakeCreateIndexesCollection(),
+            "courses": _FakeCreateIndexesCollection(),
+            "llm_telemetry": _FakeCreateIndexesCollection(),
+            "sub1_task_tracking": _FakeCreateIndexesCollection(),
+            "sub1_checkpoints": _FakeCreateIndexesCollection(),
+            "sub1_audit_log": _FakeCreateIndexesCollection(),
+            "chat_contacts": _FakeCreateIndexesCollection(),
+            "chat_rooms": _FakeCreateIndexesCollection(),
+            "chat_messages": _FakeCreateIndexesCollection(),
+            "ai_chat_sessions": _FakeCreateIndexesCollection(),
+            "staff_codes": _FakeCreateIndexesCollection(),
+            "chat_ai_jobs": _FakeCreateIndexesCollection(),
+            "chat_file_transfers": _FakeCreateIndexesCollection(),
+            "indexing_jobs": _FakeCreateIndexesCollection(),
+            "background_jobs": _FakeCreateIndexesCollection(),
+            "file_assets": _FakeCreateIndexesCollection(),
+            "password_reset_tokens": _FakeCreateIndexesCollection(),
+            "question_ops_runs": _FakeCreateIndexesCollection(),
+            "question_ops_items": _FakeCreateIndexesCollection(),
+            "slides_delivery_jobs": _FakeCreateIndexesCollection(),
+            "study_plan_profiles": _FakeCreateIndexesCollection(),
+            "study_review_queue": _FakeCreateIndexesCollection(),
+            "ai_session_buckets": _FakeCreateIndexesCollection(),
+        }
+        for collection_name in (
+            "sub1_generation_history",
+            "sub2_generation_history",
+            "sub3_generation_history",
+            "sub4_generation_history",
+            "sub5_generation_history",
+            "video_generation_history",
+        ):
+            self._collections[collection_name] = _FakeCreateIndexesCollection()
+
+    def __getattr__(self, name):
+        if name == "users":
+            return self.users
+        if name in self._collections:
+            return self._collections[name]
+        raise AttributeError(name)
+
+    def __getitem__(self, name):
+        return self._collections[name]
 
 
 def test_is_equivalent_username_index_matches_unique_username_index():
@@ -267,6 +331,11 @@ def test_ensure_user_sessions_indexes_creates_expected_indexes(monkeypatch):
     assert len(fake_sessions.create_indexes_calls) == 1
     created_indexes = fake_sessions.create_indexes_calls[0]
     assert len(created_indexes) == 6
+    created_specs = [index.document for index in created_indexes]
+    assert any(
+        list(spec["key"].items()) == [("user_id", 1), ("revoked_at", 1), ("last_seen_at", -1)]
+        for spec in created_specs
+    )
 
 
 def test_ensure_google_auth_ticket_indexes_creates_expected_indexes(monkeypatch):
@@ -302,6 +371,120 @@ def test_ensure_auth_security_indexes_creates_expected_indexes(monkeypatch):
     assert len(fake_attempts.create_indexes_calls[0]) == 3
     assert len(fake_audit.create_indexes_calls) == 1
     assert len(fake_audit.create_indexes_calls[0]) == 3
+
+
+def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypatch):
+    fake_db = _FakeEnsureIndexesDatabase()
+    monkeypatch.setattr("backend.core.database.db", fake_db)
+
+    asyncio.run(ensure_indexes())
+
+    def _index_specs(collection_name: str):
+        created = fake_db[collection_name].create_indexes_calls
+        assert created, f"expected indexes for {collection_name}"
+        return [index.document for index in created[0]]
+
+    def _has_index(
+        specs,
+        keys,
+        *,
+        unique: bool | None = None,
+    ) -> bool:
+        for spec in specs:
+            if list(spec["key"].items()) != keys:
+                continue
+            if unique is not None and spec.get("unique") is not unique:
+                continue
+            return True
+        return False
+
+    course_specs = _index_specs("course_sections")
+    enrollment_specs = _index_specs("enrollments")
+    assignment_specs = _index_specs("assignments")
+    submission_specs = _index_specs("submissions")
+    document_specs = _index_specs("documents")
+    grade_specs = _index_specs("grades")
+    indexing_job_specs = _index_specs("indexing_jobs")
+    background_job_specs = _index_specs("background_jobs")
+    file_asset_specs = _index_specs("file_assets")
+
+    assert _has_index(
+        course_specs,
+        [("courseCode", 1), ("semester", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        enrollment_specs,
+        [("courseSectionId", 1), ("userId", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        enrollment_specs,
+        [("courseSectionId", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        enrollment_specs,
+        [("userId", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        assignment_specs,
+        [("courseSectionId", 1), ("dueAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        submission_specs,
+        [("assignmentId", 1), ("studentId", 1), ("attemptNo", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        submission_specs,
+        [("assignmentId", 1), ("submittedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        submission_specs,
+        [("studentId", 1), ("submittedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        document_specs,
+        [("ownerId", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        document_specs,
+        [("ownerId", 1), ("sourceType", 1), ("updatedAt", -1), ("createdAt", -1)],
+    )
+    assert _has_index(
+        grade_specs,
+        [("submissionId", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        indexing_job_specs,
+        [("course_id", 1), ("filename", 1), ("content_hash", 1), ("chapter_id", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        indexing_job_specs,
+        [("course_id", 1), ("normalized_hash", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("job_id", 1)],
+        unique=True,
+    )
+    assert _has_index(
+        background_job_specs,
+        [("status", 1), ("available_at", 1), ("created_at", 1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("job_type", 1), ("status", 1), ("available_at", 1), ("created_at", 1)],
+    )
+    assert _has_index(
+        background_job_specs,
+        [("status", 1), ("lease_expires_at", 1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("file_type", 1), ("public_url", 1)],
+    )
 
 
 def test_db_proxy_recreates_client_when_event_loop_changes(monkeypatch):

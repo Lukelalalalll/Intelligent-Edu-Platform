@@ -1,4 +1,4 @@
-import re
+﻿import re
 from typing import Literal, List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -75,9 +75,11 @@ class PptProcessSchema(BaseModel):
 class SlidesGenerateV2Schema(BaseModel):
     model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
 
-    provider: Optional[AIProvider] = None
+    provider: Optional[AIProvider] = "auto"
+    theme: str = ""
     content: str = ""
     chapterData: List[dict] = []
+    outlineSlides: List[dict] = []
     total_pages: int = 8
     num_of_bullets: int = 3
     words_each_bullet: int = 15
@@ -85,6 +87,37 @@ class SlidesGenerateV2Schema(BaseModel):
     script_style: str = "academic"
     generate_talking_script: bool = False
     generate_word_document: bool = True
+    source_kind: Optional[Literal["upload", "text"]] = None
+    source_filename: str = ""
+    source_display_name: str = ""
+    combined_markdown_filename: str = ""
+
+
+class PptGeneratorOutlineRequestSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
+    provider: Optional[AIProvider] = "auto"
+    content: str = ""
+    chapterData: List[dict] = []
+    total_pages: int = 8
+    presentation_title: str = ""
+    source_kind: Optional[Literal["upload", "text"]] = None
+    source_filename: str = ""
+    source_display_name: str = ""
+    combined_markdown_filename: str = ""
+
+
+class PptGeneratorAssistantMessageSchema(BaseModel):
+    model_config = ConfigDict(alias_generator=_camel_to_snake, populate_by_name=True)
+
+    provider: Optional[AIProvider] = "auto"
+    message: str
+    presentation_title: str = ""
+    history: List[dict] = []
+    current_slide_index: Optional[int] = None
+    current_slide_title: str = ""
+    current_slide_content: List[str] = []
+    slides: List[dict] = []
 
 
 class SlidesTaskResponseSchema(BaseModel):
@@ -106,14 +139,6 @@ class SlidesTaskStatusSchema(BaseModel):
     events: List[dict] = []
 
 
-class GenerateRenderRequest(BaseModel):
-    """Request for the new unified HTML-based slide generation pipeline."""
-    md_content: str
-    base_style: str = "minimalist"
-    custom_style_prompt: str = ""
-    provider: Optional[AIProvider] = "local_ollama"
-    title: str = "Presentation"
-
-
 class ThemeListResponse(BaseModel):
     themes: list[dict]
+

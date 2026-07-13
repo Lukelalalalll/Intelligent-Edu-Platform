@@ -1,6 +1,8 @@
 import React from 'react';
 import styles from './styles/specify.module.css';
 import WelcomeBanner from '../../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import SlidesLoadingState from '../../components/SlidesLoadingState';
 
 /** Converts `<br>` / `<br/>` / `<br />` inside table cells into real line-break rendering. */
@@ -19,8 +21,10 @@ export default function Specify({
     results, talkingScriptResult, handleProceed,
     handleDownloadScript
 }) {
+    const isEntranceActive = usePageEntrance();
+
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title="Configure Your Scripts"
                 subtitle="Customize bullet points, and generate talking scripts"

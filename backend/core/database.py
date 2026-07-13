@@ -3,6 +3,7 @@ import logging
 import threading
 from datetime import datetime, timedelta, timezone
 
+from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ASCENDING, DESCENDING, IndexModel
 from pymongo.errors import OperationFailure
@@ -113,6 +114,15 @@ _EMAIL_NORMALIZED_INDEX_KEYS = [("email_normalized", ASCENDING)]
 _GOOGLE_SUB_INDEX_KEYS = [("google_auth.sub", ASCENDING)]
 
 
+def _maybe_object_id(value: str | ObjectId | None) -> ObjectId | None:
+    if isinstance(value, ObjectId):
+        return value
+    try:
+        return ObjectId(str(value))
+    except Exception:
+        return None
+
+
 def _normalize_index_keys(raw_keys) -> list[tuple[str, int]]:
     if raw_keys is None:
         return []
@@ -187,11 +197,16 @@ async def _ensure_google_auth_ticket_indexes() -> None:
 
 
 async def _ensure_user_sessions_indexes() -> None:
+    try:
+        await db.user_sessions.drop_index("user_id_1_last_seen_at_-1")
+    except Exception:
+        pass
+
     await db.user_sessions.create_indexes([
         IndexModel([("session_id", ASCENDING)], unique=True),
         IndexModel([("refresh_token_hash", ASCENDING)], unique=True),
         IndexModel([("refresh_jti", ASCENDING)], unique=True),
-        IndexModel([("user_id", ASCENDING), ("last_seen_at", DESCENDING)]),
+        IndexModel([("user_id", ASCENDING), ("revoked_at", ASCENDING), ("last_seen_at", DESCENDING)]),
         IndexModel([("family_id", ASCENDING)]),
         IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
     ])
@@ -214,7 +229,10 @@ async def compute_history_expires_at(user_id: str) -> datetime | None:
     """Return the ``expires_at`` datetime for a new history document based on
     the user's ``history_ttl_days`` setting.  Returns ``None`` when the user
     chose permanent storage (ttl == 0)."""
-    user_doc = await db.users.find_one({"_id": user_id}, {"history_ttl_days": 1})
+    user_oid = _maybe_object_id(user_id)
+    if user_oid is None:
+        return datetime.now(timezone.utc) + timedelta(days=DEFAULT_HISTORY_TTL_DAYS)
+    user_doc = await db.users.find_one({"_id": user_oid}, {"history_ttl_days": 1})
     ttl = (user_doc or {}).get("history_ttl_days", DEFAULT_HISTORY_TTL_DAYS)
     if ttl == 0:
         return None
@@ -244,31 +262,55 @@ async def ensure_indexes() -> None:
         await db.course_sections.create_indexes([
             IndexModel([("courseCode", ASCENDING)]),
             IndexModel([("ownerTeacherId", ASCENDING)]),
-            IndexModel([("courseCode", ASCENDING), ("semester", ASCENDING)]),
+            IndexModel([("ownerTeacherId", ASCENDING), ("semester", ASCENDING), ("courseCode", ASCENDING)]),
+            IndexModel([("courseCode", ASCENDING), ("semester", ASCENDING)], unique=True),
         ])
 
         await db.enrollments.create_indexes([
             IndexModel([("courseSectionId", ASCENDING), ("userId", ASCENDING)], unique=True),
-            IndexModel([("userId", ASCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("userId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("userId", ASCENDING), ("roleInCourse", ASCENDING), ("courseSectionId", ASCENDING)]),
         ])
+
+        try:
+            await db.assignments.drop_index("courseSectionId_1_dueAt_-1")
+        except Exception:
+            pass
 
         await db.assignments.create_indexes([
-            IndexModel([("courseSectionId", ASCENDING)]),
-            IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("courseSectionId", ASCENDING), ("dueAt", DESCENDING), ("createdAt", DESCENDING)]),
         ])
 
+        try:
+            await db.submissions.drop_index("assignmentId_1_submittedAt_-1")
+        except Exception:
+            pass
+        try:
+            await db.submissions.drop_index("studentId_1_submittedAt_-1")
+        except Exception:
+            pass
+
         await db.submissions.create_indexes([
-            IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING)]),
-            IndexModel([("studentId", ASCENDING)]),
+            IndexModel([("assignmentId", ASCENDING), ("studentId", ASCENDING), ("attemptNo", ASCENDING)], unique=True),
+            IndexModel([("assignmentId", ASCENDING), ("submittedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("studentId", ASCENDING), ("submittedAt", DESCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("status", ASCENDING), ("submittedAt", DESCENDING)]),
         ])
 
+        try:
+            await db.documents.drop_index("ownerId_1_sourceType_1")
+        except Exception:
+            pass
+
         await db.documents.create_indexes([
-            IndexModel([("ownerId", ASCENDING), ("sourceType", ASCENDING)]),
+            IndexModel([("ownerId", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
+            IndexModel([("ownerId", ASCENDING), ("sourceType", ASCENDING), ("updatedAt", DESCENDING), ("createdAt", DESCENDING)]),
         ])
 
         await db.grades.create_indexes([
-            IndexModel([("submissionId", ASCENDING)]),
+            IndexModel([("submissionId", ASCENDING)], unique=True),
             IndexModel([("graderId", ASCENDING), ("gradedAt", DESCENDING)]),
         ])
 
@@ -363,6 +405,7 @@ async def ensure_indexes() -> None:
 
         await db.ai_chat_sessions.create_indexes([
             IndexModel([("userId", ASCENDING), ("updatedAt", DESCENDING)]),
+            IndexModel([("userId", ASCENDING), ("createdAt", DESCENDING)]),
             IndexModel([("updatedAt", ASCENDING)]),
         ])
 
@@ -393,28 +436,51 @@ async def ensure_indexes() -> None:
         ])
 
         # ── knowledge indexing jobs ───────────────────────────────────────────
+        try:
+            await db.indexing_jobs.drop_index("course_id_1_normalized_hash_1_status_1")
+        except Exception:
+            pass
+
         await db.indexing_jobs.create_indexes([
             IndexModel([("job_id", ASCENDING)], unique=True),
             IndexModel([("course_id", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("course_id", ASCENDING), ("filename", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
-            IndexModel([("course_id", ASCENDING), ("normalized_hash", ASCENDING), ("status", ASCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("filename", ASCENDING), ("content_hash", ASCENDING), ("chapter_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("course_id", ASCENDING), ("normalized_hash", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             # TTL: auto-delete records older than 180 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_180D),
         ])
 
         # persistent background jobs (bridge toward claim-based worker execution)
+        try:
+            await db.background_jobs.drop_index("job_type_1_status_1_available_at_1")
+        except Exception:
+            pass
+
         await db.background_jobs.create_indexes([
             IndexModel([("job_id", ASCENDING)], unique=True),
-            IndexModel([("job_type", ASCENDING), ("status", ASCENDING), ("available_at", ASCENDING)]),
+            IndexModel([("status", ASCENDING), ("available_at", ASCENDING), ("created_at", ASCENDING)]),
+            IndexModel([("job_type", ASCENDING), ("status", ASCENDING), ("available_at", ASCENDING), ("created_at", ASCENDING)]),
             IndexModel([("status", ASCENDING), ("lease_expires_at", ASCENDING)]),
             # TTL: auto-delete records older than 30 days
             IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_30D),
         ])
-
+        await db.video_projects.create_indexes([
+            IndexModel([("user_id", ASCENDING), ("updated_at", DESCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("user_id", ASCENDING), ("status", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("status", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        ])
+        await db.video_script_jobs.create_indexes([
+            IndexModel([("job_id", ASCENDING)], unique=True),
+            IndexModel([("user_id", ASCENDING), ("updated_at", DESCENDING)]),
+            IndexModel([("created_at", ASCENDING)], expireAfterSeconds=_TTL_7D),
+        ])
         # ── file assets registry ──────────────────────────────────────────────
         await db.file_assets.create_indexes([
             IndexModel([("file_id", ASCENDING)], unique=True),
             IndexModel([("file_type", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("file_type", ASCENDING), ("public_url", ASCENDING)]),
             IndexModel([("owner_type", ASCENDING), ("owner_id", ASCENDING)]),
             IndexModel([("course_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),

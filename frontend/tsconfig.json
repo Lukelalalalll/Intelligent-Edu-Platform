@@ -34,7 +34,12 @@
 
     /* Path resolution */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "next": ["./src/ppt_generator/shims/next.ts"],
+      "next/navigation": ["./src/ppt_generator/shims/next-navigation.ts"],
+      "next/link": ["./src/ppt_generator/shims/next-link.tsx"],
+      "next/image": ["./src/ppt_generator/shims/next-image.tsx"],
+      "next/headers": ["./src/ppt_generator/shims/next-headers.ts"]
     }
   },
   "include": ["src"]

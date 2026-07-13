@@ -7,22 +7,31 @@ import os
 import re
 import time
 
-from fastapi import Depends, Request, Query
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from backend.config import Config
 from backend.core.ai_provider import resolve_provider
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
-from backend.schemas import SuggestConstraintsSchema, UploadScreenshotSchema
+from backend.schemas import (
+    QuestionExportSelectionSchema,
+    SuggestConstraintsSchema,
+    UploadScreenshotSchema,
+)
 from backend.services.ai_gateway_service import get_ai_gateway_service
 from backend.services.questions import (
+    build_questions_markdown,
+    build_questions_txt,
     extract_text_from_image, extract_pdf_text_with_loader,
+    normalize_question_drafts,
 )
-from .router import questions_router, _get_task
+from .router import _get_task
+
+router = APIRouter()
 
 
-@questions_router.post("/suggest_constraints")
+@router.post("/suggest_constraints")
 async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Request, user: dict = Depends(get_current_user)):
     """Suggest Step3 additional requirements from current task source content."""
     resolved_provider = resolve_provider(req.provider, feature="questions.generate", user=user)
@@ -123,7 +132,7 @@ async def suggest_constraints_route(req: SuggestConstraintsSchema, request: Requ
             return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@questions_router.post("/export_questions")
+@router.post("/export_questions")
 def export_questions_route(request: Request, task_id: str = Query(None), user: dict = Depends(get_current_user)):
     """Export generated questions as a Markdown file download."""
     try:
@@ -152,7 +161,35 @@ def export_questions_route(request: Request, task_id: str = Query(None), user: d
         return JSONResponse(content={'success': False, 'error': str(e)}, status_code=500)
 
 
-@questions_router.post("/upload_screenshot")
+@router.post("/export_selection")
+def export_selection_route(payload: QuestionExportSelectionSchema, user: dict = Depends(get_current_user)):
+    try:
+        questions = normalize_question_drafts([item.model_dump() for item in payload.questions])
+        if not questions:
+            return JSONResponse(content={"success": False, "error": "No questions selected"}, status_code=400)
+
+        safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", str(payload.filename or "questions")).strip("._-") or "questions"
+        if payload.format == "txt":
+            content = build_questions_txt(questions)
+            media_type = "text/plain; charset=utf-8"
+            extension = "txt"
+        else:
+            content = build_questions_markdown(questions)
+            media_type = "text/markdown; charset=utf-8"
+            extension = "md"
+
+        return Response(
+            content=content.encode("utf-8"),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{safe_filename}.{extension}"',
+            },
+        )
+    except Exception as exc:
+        return JSONResponse(content={"success": False, "error": str(exc)}, status_code=500)
+
+
+@router.post("/upload_screenshot")
 def upload_screenshot(req: UploadScreenshotSchema, user: dict = Depends(get_current_user)):
     try:
         img_data = base64.b64decode(req.image.split(',')[1])

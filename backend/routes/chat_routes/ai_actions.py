@@ -15,7 +15,8 @@ from backend.schemas import (
 )
 from backend.services.chat_service.query_service import get_room_for_member
 
-from .router import chat_router
+from fastapi import APIRouter
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ async def _verify_room_member(room_id: str, user_id: str):
     return room
 
 
-@chat_router.post("/rooms/{room_id}/ai/summary")
+@router.post("/rooms/{room_id}/ai/summary")
 async def ai_summary(
     room_id: str,
     body: ChatAiSummarySchema,
@@ -55,7 +56,7 @@ async def ai_summary(
         raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
 
 
-@chat_router.post("/rooms/{room_id}/ai/reply-suggestions")
+@router.post("/rooms/{room_id}/ai/reply-suggestions")
 async def ai_reply_suggestions(
     room_id: str,
     body: ChatAiReplySuggestionsSchema,
@@ -81,7 +82,7 @@ async def ai_reply_suggestions(
         raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
 
 
-@chat_router.post("/rooms/{room_id}/ai/rewrite")
+@router.post("/rooms/{room_id}/ai/rewrite")
 async def ai_rewrite(
     room_id: str,
     body: ChatAiRewriteSchema,
@@ -107,7 +108,7 @@ async def ai_rewrite(
         raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
 
 
-@chat_router.post("/rooms/{room_id}/ai/assistant")
+@router.post("/rooms/{room_id}/ai/assistant")
 async def ai_assistant(
     room_id: str,
     body: ChatAiAssistantSchema,
@@ -135,7 +136,7 @@ async def ai_assistant(
 
 # ── File Transfer Station ──
 
-@chat_router.post("/transfers/start")
+@router.post("/transfers/start")
 async def transfer_start(
     body: ChatTransferStartSchema,
     user: dict = Depends(get_current_user),
@@ -160,7 +161,7 @@ async def transfer_start(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@chat_router.get("/transfers/{transfer_id}")
+@router.get("/transfers/{transfer_id}")
 async def transfer_get(
     transfer_id: str,
     user: dict = Depends(get_current_user),
@@ -179,7 +180,7 @@ async def transfer_get(
     return {"ok": True, "transfer": result}
 
 
-@chat_router.post("/transfers/{transfer_id}/consume")
+@router.post("/transfers/{transfer_id}/consume")
 async def transfer_consume(
     transfer_id: str,
     user: dict = Depends(get_current_user),
@@ -199,7 +200,7 @@ async def transfer_consume(
         raise HTTPException(status_code=502, detail=f"Dispatch error: {exc}")
 
 
-@chat_router.post("/transfers/{transfer_id}/retry")
+@router.post("/transfers/{transfer_id}/retry")
 async def transfer_retry(
     transfer_id: str,
     user: dict = Depends(get_current_user),

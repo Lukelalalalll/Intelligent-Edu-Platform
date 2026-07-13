@@ -26,12 +26,10 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
 from typing import Any
 
-from bson import ObjectId
-
 from backend.core.database import db
+from backend.repositories._helpers import require_object_id, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -54,26 +52,26 @@ async def save_messages_bucketed(
     and ``bucket_count``.
     """
     total = len(messages)
+    session_oid = require_object_id(session_id, detail="Invalid session id")
 
     if total <= BUCKET_SIZE:
         # Short session — no buckets needed, wipe any old ones
-        await db[BUCKET_COLLECTION].delete_many({"sessionId": ObjectId(session_id)})
+        await db[BUCKET_COLLECTION].delete_many({"sessionId": session_oid})
         return {"inline_messages": messages, "bucket_count": 0}
 
     # Split into buckets
     num_buckets = math.ceil(total / BUCKET_SIZE)
-    oid = ObjectId(session_id)
-    now = datetime.now(timezone.utc)
+    now = utcnow()
 
     # Delete old buckets and re-write (simple & idempotent)
-    await db[BUCKET_COLLECTION].delete_many({"sessionId": oid})
+    await db[BUCKET_COLLECTION].delete_many({"sessionId": session_oid})
 
     bucket_docs = []
     for i in range(num_buckets - 1):  # all except the last bucket
         start = i * BUCKET_SIZE
         end = start + BUCKET_SIZE
         bucket_docs.append({
-            "sessionId": oid,
+            "sessionId": session_oid,
             "bucketIndex": i,
             "messages": messages[start:end],
             "messageCount": end - start,
@@ -97,14 +95,65 @@ async def save_messages_bucketed(
     }
 
 
+async def append_messages_bucketed(
+    session_id: str,
+    delta_messages: list[dict[str, Any]],
+    *,
+    existing_inline_messages: list[dict[str, Any]] | None = None,
+    existing_bucket_count: int = 0,
+) -> dict[str, Any]:
+    """Append new messages to the current inline tail without rewriting old buckets."""
+    inline_messages = list(existing_inline_messages or [])
+    session_oid = require_object_id(session_id, detail="Invalid session id")
+    if not delta_messages:
+        return {
+            "inline_messages": inline_messages,
+            "bucket_count": int(existing_bucket_count or 0),
+        }
+
+    combined = [*inline_messages, *delta_messages]
+    if len(combined) <= BUCKET_SIZE:
+        return {
+            "inline_messages": combined,
+            "bucket_count": int(existing_bucket_count or 0),
+        }
+
+    remainder = len(combined) % BUCKET_SIZE or BUCKET_SIZE
+    promote_count = len(combined) - remainder
+    promote_messages = combined[:promote_count]
+    next_inline_messages = combined[promote_count:]
+    next_bucket_index = int(existing_bucket_count or 0)
+    now = utcnow()
+
+    bucket_docs = []
+    for start in range(0, promote_count, BUCKET_SIZE):
+        chunk = promote_messages[start:start + BUCKET_SIZE]
+        bucket_docs.append({
+            "sessionId": session_oid,
+            "bucketIndex": next_bucket_index,
+            "messages": chunk,
+            "messageCount": len(chunk),
+            "createdAt": now,
+        })
+        next_bucket_index += 1
+
+    if bucket_docs:
+        await db[BUCKET_COLLECTION].insert_many(bucket_docs)
+
+    return {
+        "inline_messages": next_inline_messages,
+        "bucket_count": next_bucket_index,
+    }
+
+
 async def load_all_messages(session_id: str, inline_messages: list[dict]) -> list[dict]:
     """Reconstruct the full message list from buckets + inline tail.
 
     If no buckets exist, ``inline_messages`` is the complete list.
     """
-    oid = ObjectId(session_id)
+    session_oid = require_object_id(session_id, detail="Invalid session id")
     cursor = db[BUCKET_COLLECTION].find(
-        {"sessionId": oid},
+        {"sessionId": session_oid},
     ).sort("bucketIndex", 1)
 
     all_messages: list[dict] = []
@@ -118,7 +167,7 @@ async def load_all_messages(session_id: str, inline_messages: list[dict]) -> lis
 async def delete_session_buckets(session_id: str) -> int:
     """Remove all buckets for a session. Returns deleted count."""
     result = await db[BUCKET_COLLECTION].delete_many(
-        {"sessionId": ObjectId(session_id)},
+        {"sessionId": require_object_id(session_id, detail="Invalid session id")},
     )
     return result.deleted_count
 

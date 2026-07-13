@@ -1,4 +1,4 @@
-/* Global app layout */
+﻿/* Global app layout */
 main {
     flex: 1;
     max-width: var(--page-max-width);
@@ -25,7 +25,8 @@ main:has(.auth-page-root),
 main:has(.global-ai-wrapper),
 main:has(.global-chat-wrapper),
 main:has(.study-room-workspace),
-main:has([class*="ai-workspace-wrapper"]) {
+main:has([class*="ai-workspace-wrapper"]),
+main:has(.ppt-generator-screen) {
     padding: 0;
     max-width: 100%;
     display: flex;
@@ -41,3 +42,4 @@ main:has([class*="ai-workspace-wrapper"]) {
 .auth-wrapper {
     min-height: calc(100vh - var(--nav-height));
 }
+

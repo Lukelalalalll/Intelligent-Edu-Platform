@@ -12,10 +12,12 @@ export interface StreamMessage {
     content: string;
 }
 
-export const WELCOME_MESSAGE: ChatMsg = {
-    id: 'welcome',
-    sender: 'ai',
-    role: 'assistant',
-    text: "Hi there! I'm your HKU AI Assistant. How can I help you with your studies today?",
-    modelProvider: 'local_ollama',
-};
+export function createWelcomeMessage(text: string): ChatMsg {
+    return {
+        id: 'welcome',
+        sender: 'ai',
+        role: 'assistant',
+        text,
+        modelProvider: 'local_ollama',
+    };
+}

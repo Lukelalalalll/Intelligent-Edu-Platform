@@ -34,7 +34,7 @@ export default function ChatComposer({
                     disabled={isLoading}
                     title={t('aiChat.provider.local.title')}
                 >
-                    <i className="fas fa-microchip"></i> LLaMA
+                    <i className="fas fa-microchip"></i> {t('aiChat.llamaModel')}
                 </button>
                 <button 
                     className={`${styles['provider-btn']} ${provider === 'coze' ? styles['provider-active'] : ''}`}
@@ -42,7 +42,7 @@ export default function ChatComposer({
                     disabled={isLoading}
                     title={t('aiChat.provider.coze.title')}
                 >
-                    <i className="fas fa-cloud"></i> Coze
+                    <i className="fas fa-cloud"></i> {t('aiChat.cozeModel')}
                 </button>
                 <button 
                     className={`${styles['provider-btn']} ${provider === 'deepseek' ? styles['provider-active'] : ''}`}
@@ -50,7 +50,7 @@ export default function ChatComposer({
                     disabled={isLoading}
                     title={t('aiChat.provider.deepseek.title')}
                 >
-                    <i className="fas fa-brain"></i> DeepSeek
+                    <i className="fas fa-brain"></i> {t('aiChat.deepseekModel')}
                 </button>
             </div>
             <div className={styles['input-wrapper']}>

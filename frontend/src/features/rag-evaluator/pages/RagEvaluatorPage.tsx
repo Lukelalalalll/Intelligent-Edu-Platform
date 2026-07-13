@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import styles from '../styles/RagEvaluator.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import StepConfig from '../components/StepConfig';
 import type { EvalConfig } from '../components/StepConfig';
 import StepDataset from '../components/StepDataset';
@@ -50,6 +52,7 @@ function saveConfig(config: EvalConfig) {
 }
 
 export default function RagEvaluatorPage() {
+    const isEntranceActive = usePageEntrance();
     const [step, setStep] = useState<Step>(1);
     const [config, setConfig] = useState<EvalConfig>(loadSavedConfig);
     const [dataset, setDataset] = useState<TestCase[]>([]);
@@ -126,7 +129,7 @@ export default function RagEvaluatorPage() {
     if (results) completedSteps.add(3);
 
     return (
-        <div className={styles.page}>
+        <div className={`${styles.page} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title="RAG Evaluator"
                 subtitle="Evaluate retrieval quality with A/B comparison between Hybrid and Vector-Only modes"

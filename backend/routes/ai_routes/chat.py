@@ -8,10 +8,12 @@ from backend.core.security import get_current_user
 from backend.schemas import AiChatSchema
 
 from .chat_orchestration import hydrate_chat_request, parse_and_validate_chat_request, stream_chat_frames
-from .router import _limiter, ai_router
+from .router import _limiter
+from fastapi import APIRouter
+router = APIRouter()
 
 
-@ai_router.post("/chat")
+@router.post("/chat")
 @_limiter.limit("30/minute")
 async def ai_chat(
     request: Request,

@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import client from '@/shared/api/client';
 import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../../../shared/aiProvider';
 
+export type MdProcessorTextResult = {
+    filename: string;
+    content: string;
+    title: string;
+};
+
 export function useMdProcessorTextInput() {
     const [inputMode, setInputMode] = useState<'file' | 'text'>('file');
     const [textContent, setTextContent] = useState('');
@@ -9,6 +15,7 @@ export function useMdProcessorTextInput() {
     const [seedContent, setSeedContent] = useState('');
     const [cozeLoading, setCozeLoading] = useState(false);
     const [cozeError, setCozeError] = useState('');
+    const [processError, setProcessError] = useState('');
     const [textProcessing, setTextProcessing] = useState(false);
     const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
 
@@ -36,25 +43,47 @@ export function useMdProcessorTextInput() {
         }
     };
 
-    const handleProcessText = async (redirectUrl: string, navigate: (url: string) => void, setErrorMsg: (msg: string) => void) => {
-        if (!textContent.trim()) { setErrorMsg('Please enter or generate some content first'); return; }
+    const processTextInline = async (): Promise<MdProcessorTextResult | null> => {
+        if (!textContent.trim()) {
+            setProcessError('Please enter or generate some content first');
+            return null;
+        }
         setTextProcessing(true);
-        setErrorMsg('');
+        setProcessError('');
         try {
             const res = await client.post('/slides/process-text', {
                 text: textContent.trim(),
                 title: textTitle.trim() || 'untitled',
             });
-            if (res.data.filename) {
-                localStorage.setItem('combinedFilename', res.data.filename);
-                if (redirectUrl) setTimeout(() => navigate(redirectUrl), 300);
+            const filename = res.data.filename;
+            if (!filename) {
+                throw new Error('Processing failed');
             }
+            localStorage.setItem('combinedFilename', filename);
+            localStorage.setItem('currentDisplayFilename', textTitle.trim() || 'untitled');
+            localStorage.removeItem('currentFilename');
+            localStorage.setItem('slidesSourceKind', 'text');
+            localStorage.setItem('slidesSourceFilename', '');
+            localStorage.setItem('slidesSourceDisplayName', textTitle.trim() || 'untitled');
+            const contentRes = await client.get(`/slides/download/${filename}`);
+            const content = typeof contentRes.data === 'string' ? contentRes.data : contentRes.data?.content || '';
+            return {
+                filename,
+                content,
+                title: textTitle.trim() || 'untitled',
+            };
         } catch (error: unknown) {
             const e = error as { response?: { data?: { detail?: string } }; message?: string };
-            setErrorMsg(e.response?.data?.detail || 'Processing failed: ' + (e.message ?? ''));
+            setProcessError(e.response?.data?.detail || 'Processing failed: ' + (e.message ?? ''));
+            return null;
         } finally {
             setTextProcessing(false);
         }
+    };
+
+    const handleProcessText = async (redirectUrl: string, navigate: (url: string) => void, setErrorMsg: (msg: string) => void) => {
+        const result = await processTextInline();
+        if (result?.filename && redirectUrl) setTimeout(() => navigate(redirectUrl), 300);
     };
 
     return {
@@ -63,9 +92,12 @@ export function useMdProcessorTextInput() {
         textTitle, setTextTitle,
         seedContent, setSeedContent,
         cozeLoading, cozeError,
+        processError,
         textProcessing,
         provider, setProvider,
         handleCozeGenerate,
+        processTextInline,
         handleProcessText,
+        resetGeneratedText: () => setTextContent(''),
     };
 }

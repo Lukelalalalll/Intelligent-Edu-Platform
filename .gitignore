@@ -32,6 +32,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
 frontend/*.local
+.pnpm-store/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -78,7 +79,10 @@ backend/static/sub4/
 backend/static/chat_files/
 backend/sub3/screenshots/
 backend/sub4/results/
-
+thirdprojectreference/
+presenton-main/
+presentation-export/
+ai-video-production-system-master/
 # 如果你不需要提交评测数据，也可以取消下面这行的注释
 # evaluations/
 
@@ -101,3 +105,10 @@ infra/opensearch/runtime/
 infra/opensearch/opensearch-*/
 .codegraph/
 .codex-logs/
+.codex-tmp/
+backend/app_data/
+backend-start*.log
+frontend-*.log
+frontend-dev-*.log
+frontend-start*.log
+frontend-theme-*.log

@@ -25,6 +25,7 @@ FROM python-base AS core
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
+    openjdk-17-jre-headless \
     tesseract-ocr \
     fonts-noto-cjk \
     fonts-liberation \
@@ -51,6 +52,7 @@ ENV GUNICORN_BIND=0.0.0.0:5010
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice \
     poppler-utils \
+    openjdk-17-jre-headless \
     tesseract-ocr \
     fonts-noto-cjk \
     fonts-liberation \
@@ -102,6 +104,7 @@ ENV GUNICORN_BIND=0.0.0.0:5013
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
+    openjdk-17-jre-headless \
     tesseract-ocr \
     fonts-noto-cjk \
     fonts-liberation \
@@ -127,6 +130,7 @@ ENV GUNICORN_BIND=0.0.0.0:5014
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
+    openjdk-17-jre-headless \
     fonts-noto-cjk \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
@@ -151,6 +155,7 @@ ENV GUNICORN_BIND=0.0.0.0:5015
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
+    openjdk-17-jre-headless \
     fonts-noto-cjk \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
@@ -175,6 +180,7 @@ ENV GUNICORN_BIND=0.0.0.0:5011
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    openjdk-17-jre-headless \
     fonts-noto-cjk \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*

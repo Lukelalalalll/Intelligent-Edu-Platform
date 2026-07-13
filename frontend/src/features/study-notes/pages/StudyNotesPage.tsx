@@ -9,12 +9,15 @@ import styles from '../styles/studyNotes.module.css';
 import s from '../../../styles/history.module.css';
 import stepStyles from '../../../shared/styles/stepper.module.css';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import { useStudyNotesUpload } from '../hooks/useStudyNotesUpload';
 import { useStudyNotesGenerate } from '../hooks/useStudyNotesGenerate';
 import { useSpacedReview } from '../hooks/useSpacedReview';
 import type { StudyPlanDurationOption } from '../api/studyNotesApi';
 
 export default function StudyNotesPage() {
+    const isEntranceActive = usePageEntrance();
     const [searchParams, setSearchParams] = useSearchParams();
     const [activeView, setActiveView] = useState<'workflow' | 'history'>('workflow');
     const [currentStep, setCurrentStep] = useState(1);
@@ -92,7 +95,7 @@ export default function StudyNotesPage() {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={<><i className="fas fa-book-reader" aria-hidden="true"></i> AI Study Notes Generator</>}
                 subtitle="Upload lecture PDFs to generate structured notes and flashcards"

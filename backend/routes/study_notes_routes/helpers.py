@@ -8,6 +8,11 @@ from pydantic import BaseModel, Field
 
 from backend.config import Config
 from backend.core.dependencies import get_ai_gateway_service
+from backend.utils.pdf_loader_adapter import (
+    PDFLoaderError,
+    convert_pdf,
+    read_markdown_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,35 +44,19 @@ class StudyReviewSubmitSchema(BaseModel):
 def extract_pdf_text(path: str, max_chars: int = MAX_PDF_TEXT_CHARS) -> str:
     """Extract text from PDF using OpenDataLoader, fallback to PyMuPDF."""
     try:
-        import opendataloader_pdf
         with tempfile.TemporaryDirectory(prefix="sub5_odl_") as tmp_dir:
-            opendataloader_pdf.convert(
+            convert_pdf(
                 input_path=path,
                 output_dir=tmp_dir,
                 format="markdown",
                 quiet=True,
                 image_output="off",
             )
-
-            stem = os.path.splitext(os.path.basename(path))[0]
-            md_candidates = [
-                os.path.join(tmp_dir, f"{stem}.md"),
-                os.path.join(tmp_dir, f"{stem}_markdown.md"),
-            ]
-            md_path = next((p for p in md_candidates if os.path.exists(p)), None)
-
-            if not md_path:
-                md_files = [f for f in os.listdir(tmp_dir) if f.lower().endswith(".md")]
-                if md_files:
-                    md_path = os.path.join(tmp_dir, md_files[0])
-
-            if md_path:
-                with open(md_path, "r", encoding="utf-8", errors="replace") as f:
-                    text = f.read()
-                if text.strip():
-                    logger.info("PDF extracted via opendataloader: %d chars", len(text))
-                    return text[:max_chars]
-    except Exception:
+            text = read_markdown_output(tmp_dir, path)
+            if text.strip():
+                logger.info("PDF extracted via opendataloader: %d chars", len(text))
+                return text[:max_chars]
+    except PDFLoaderError:
         logger.warning("opendataloader_pdf failed for %s, falling back to PyMuPDF", path)
 
     import fitz

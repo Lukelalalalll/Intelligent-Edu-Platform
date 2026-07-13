@@ -1,8 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 from types import ModuleType
 from types import SimpleNamespace
+
+_TEMP_BACKEND_STUBS: set[str] = set()
 
 
 def _install_stub_module(name: str, **attrs):
@@ -10,6 +12,8 @@ def _install_stub_module(name: str, **attrs):
     for key, value in attrs.items():
         setattr(module, key, value)
     sys.modules[name] = module
+    if name.startswith("backend."):
+        _TEMP_BACKEND_STUBS.add(name)
     return module
 
 
@@ -81,12 +85,12 @@ if "backend.services.background_job_runtime" not in sys.modules:
         spawn_background_coro=lambda *args, **kwargs: None,
     )
 
-if "backend.services.file_asset_service" not in sys.modules:
+if "backend.services.files.file_asset_service" not in sys.modules:
     async def _register_file_asset_stub(*args, **kwargs):
         return {}
 
     _install_stub_module(
-        "backend.services.file_asset_service",
+        "backend.services.files.file_asset_service",
         register_file_asset=_register_file_asset_stub,
     )
 
@@ -101,13 +105,16 @@ if "backend.services.course_rag_service.embedding_provider" not in sys.modules:
         CourseRagEmbeddingProvider=_StubCourseRagEmbeddingProvider,
     )
 
-from backend.services import indexing_job_extractors
+from backend.services.rag import indexing_job_extractors
 from backend.services.course_rag_service.chunking import build_structured_chunks
 from backend.services.course_rag_service.indexing_service import CourseRagIndexingService
 from backend.services.course_rag_service.query_handler import bm25_retrieve_for_course
 from backend.services.course_rag_service.store_manager import CourseRagStoreManager
-from backend.services.indexing_job_extractors import ParsedDocumentResult, extract_document_payload
-from backend.services.indexing_job_service import _reuse_existing_index
+from backend.services.rag.indexing_job_extractors import ParsedDocumentResult, extract_document_payload
+from backend.services.rag.indexing_job_service import _reuse_existing_index
+
+for _stub_name in list(_TEMP_BACKEND_STUBS):
+    sys.modules.pop(_stub_name, None)
 
 
 class _FakeEmbeddingProvider:
@@ -257,6 +264,21 @@ def test_extract_document_payload_fast_auto_skips_docling(monkeypatch, tmp_path)
 
     assert result.parser_used == "fast"
     assert result.fallback_chain == []
+
+
+def test_normalize_markdown_collapses_blank_lines():
+    normalized = indexing_job_extractors._normalize_markdown("Line 1\r\n\r\n\r\nLine 2\r\n")
+    assert normalized == "Line 1\n\nLine 2"
+
+
+def test_structure_and_quality_helpers_classify_formula_blocks():
+    markdown = "# Algebra\n\nx = y + z\n\nReasoning paragraph with enough length to avoid poor quality."
+    structure = indexing_job_extractors._build_structure_from_markdown(markdown, "algebra.md")
+    assert any(block["element_type"] == "formula" for block in structure["blocks"])
+
+    quality_report = indexing_job_extractors._build_quality_report(markdown, structure)
+    assert quality_report["block_count"] >= 2
+    assert quality_report["section_count"] >= 1
 
 
 def test_build_structured_chunks_preserves_paragraphs_and_tables():
@@ -489,3 +511,4 @@ async def test_reuse_existing_index_clones_nodes_and_diagnostics(monkeypatch):
     assert fake_store_manager.clone_call["overrides"]["parser_used"] == "docling"
     assert fake_store_manager.clone_call["overrides"]["chapter_id"] == "chapter-b"
     assert fake_store_manager.diagnostics_call["payload"]["reused_from_job_id"] == "job-old"
+

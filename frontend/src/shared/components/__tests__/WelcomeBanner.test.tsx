@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import WelcomeBanner from '../WelcomeBanner';
 
@@ -26,8 +26,7 @@ describe('WelcomeBanner', () => {
 
         const banner = screen.getByText('Workspace Title').closest('section');
         expect(banner).toHaveClass('page-header--workspace');
-        expect(banner).toHaveAttribute('data-banner-collapsible', 'false');
-        expect(banner).toHaveAttribute('data-banner-collapsed', 'false');
+        expect(banner).toHaveAttribute('data-banner-variant', 'workspace');
     });
 
     it('renders the hero variant when requested', () => {
@@ -37,44 +36,12 @@ describe('WelcomeBanner', () => {
         expect(banner).toHaveClass('page-header--hero');
     });
 
-    it('collapses on scroll with hysteresis thresholds', async () => {
-        render(
-            <WelcomeBanner
-                title="Collapsible Title"
-                subtitle="Collapsible Subtitle"
-                collapseOnScroll
-            />,
-        );
+    it('renders the requested tag without intro or collapse classes', () => {
+        render(<WelcomeBanner title="Header Title" subtitle="Header Subtitle" as="header" />);
 
-        const banner = screen.getByText('Collapsible Title').closest('section');
-        expect(banner).toHaveAttribute('data-banner-collapsible', 'true');
-        expect(banner).toHaveAttribute('data-banner-collapsed', 'false');
-
-        act(() => {
-            setScrollY(80);
-            window.dispatchEvent(new Event('scroll'));
-        });
-
-        await waitFor(() => {
-            expect(banner).toHaveAttribute('data-banner-collapsed', 'true');
-        });
-
-        act(() => {
-            setScrollY(48);
-            window.dispatchEvent(new Event('scroll'));
-        });
-
-        await waitFor(() => {
-            expect(banner).toHaveAttribute('data-banner-collapsed', 'true');
-        });
-
-        act(() => {
-            setScrollY(20);
-            window.dispatchEvent(new Event('scroll'));
-        });
-
-        await waitFor(() => {
-            expect(banner).toHaveAttribute('data-banner-collapsed', 'false');
-        });
+        const banner = screen.getByText('Header Title').closest('header');
+        expect(banner).not.toHaveClass('page-header--intro');
+        expect(banner).not.toHaveClass('page-header--collapsible');
+        expect(banner).not.toHaveClass('page-header--collapsed');
     });
 });

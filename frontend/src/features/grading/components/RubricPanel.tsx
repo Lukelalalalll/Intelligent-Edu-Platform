@@ -1,10 +1,26 @@
 import { useEffect, useState } from 'react';
+import type {
+    WorkbenchGrade,
+    WorkbenchRubric,
+} from '../types/workbench';
 
-export default function RubricPanel({ rubric = {}, existingScores, onSave }: { rubric?: Record<string, number>; existingScores?: { rubricScores?: Record<string, number>; totalScore?: number; overallFeedback?: string }; onSave?: (data: { totalScore: number; rubricScores: Record<string, number>; overallFeedback: string }) => void }) {
+interface CustomRow {
+    id: string;
+    question: string;
+    score: string;
+}
+
+interface RubricPanelProps {
+    rubric?: WorkbenchRubric;
+    existingScores?: WorkbenchGrade | null;
+    onSave?: (data: WorkbenchGrade) => void | Promise<void>;
+}
+
+export default function RubricPanel({ rubric = {}, existingScores, onSave }: RubricPanelProps) {
     const [scores, setScores] = useState<Record<string, number | string>>(existingScores?.rubricScores || {});
     const [total, setTotal] = useState(existingScores?.totalScore || '');
     const [note, setNote] = useState(existingScores?.overallFeedback || '');
-    const [customRows, setCustomRows] = useState<Array<{ id: string; question: string; score: string }>>([]);
+    const [customRows, setCustomRows] = useState<CustomRow[]>([]);
 
     useEffect(() => {
         const nextScores = existingScores?.rubricScores || {};
@@ -23,7 +39,7 @@ export default function RubricPanel({ rubric = {}, existingScores, onSave }: { r
         setCustomRows(extras);
     }, [existingScores, rubric]);
 
-    const handleChange = (key, value) => {
+    const handleChange = (key: string, value: string) => {
         setScores((prev) => ({ ...prev, [key]: value === '' ? '' : Number(value) }));
     };
 
@@ -38,19 +54,19 @@ export default function RubricPanel({ rubric = {}, existingScores, onSave }: { r
         ]);
     };
 
-    const handleCustomRowChange = (id, field, value) => {
+    const handleCustomRowChange = (id: string, field: keyof CustomRow, value: string) => {
         setCustomRows((prev) =>
             prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
         );
     };
 
-    const handleRemoveCustomRow = (id) => {
+    const handleRemoveCustomRow = (id: string) => {
         setCustomRows((prev) => prev.filter((row) => row.id !== id));
     };
 
     const handleSave = () => {
         const builtInKeys = Object.keys(rubric || {});
-        const normalizedScores = {};
+        const normalizedScores: Record<string, number> = {};
 
         builtInKeys.forEach((key) => {
             const value = scores[key];

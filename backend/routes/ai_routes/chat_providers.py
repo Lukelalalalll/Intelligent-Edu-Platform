@@ -293,7 +293,7 @@ async def _generate_via_deepseek(
         DeepSeekService,
         DeepSeekUnavailableError,
     )
-    from backend.services.user_profile_service import load_deepseek_runtime_config
+    from backend.services.auth.user_profile_service import load_deepseek_runtime_config
 
     deepseek = DeepSeekService.from_config(await load_deepseek_runtime_config(req.user))
     answer_t0 = time.perf_counter()
@@ -373,6 +373,81 @@ async def _generate_via_deepseek(
     yield SSE_DONE
 
 
+async def _generate_via_openai_compatible(
+    req: ParsedRequest,
+    rag: RAGResult,
+    meta: StreamMeta,
+    context: dict,
+    *,
+    provider: str,
+) -> AsyncIterator[str]:
+    """Generate the answer via a user-configured OpenAI-compatible provider."""
+    from backend.services.auth.user_profile_service import (
+        load_bigmodel_runtime_config,
+        load_openai_runtime_config,
+    )
+    from backend.services.llm_service.openai_service import OpenAIService
+
+    runtime_loader = (
+        load_bigmodel_runtime_config
+        if provider == "bigmodel"
+        else load_openai_runtime_config
+    )
+    service = OpenAIService.from_config(await runtime_loader(req.user))
+
+    answer_t0 = time.perf_counter()
+    yield sse_meta(meta.to_dict())
+
+    should_buffer = _needs_postcheck(req)
+    full_answer_parts: list[str] = []
+    if should_buffer:
+        full_answer = await service.chat(
+            message=req.latest_user_message,
+            context=context,
+        )
+    else:
+        async for chunk in service.chat_stream(
+            req.latest_user_message,
+            context=context,
+        ):
+            full_answer_parts.append(chunk)
+            yield sse_delta(chunk)
+        full_answer = "".join(full_answer_parts) or _NO_RESPONSE_PLACEHOLDER
+        if not full_answer_parts:
+            yield sse_delta(full_answer)
+
+    postcheck_downgraded = 0
+    if should_buffer:
+        full_answer, postcheck_downgraded = _finalize_answer_text(
+            req=req,
+            rag=rag,
+            meta=meta,
+            answer=full_answer,
+        )
+        async for frame in _stream_buffered_answer(full_answer):
+            yield frame
+
+    answer_latency_ms = round((time.perf_counter() - answer_t0) * 1000, 2)
+    await record_chat_telemetry(
+        user_id=req.user_id,
+        role=req.role,
+        is_student=req.is_student,
+        course_ids=rag.student_course_ids,
+        query=req.latest_user_message,
+        rag_citations=rag.rag_citations,
+        rag_retrieval_latency_ms=rag.rag_retrieval_latency_ms,
+        rag_retrieve_top_n=rag.rag_retrieve_top_n,
+        rag_retry_used=rag.rag_retry_used,
+        rag_retry_success=rag.rag_retry_success,
+        rag_empty_after_retry=rag.rag_empty_after_retry,
+        answer_latency_ms=answer_latency_ms,
+        postcheck_downgraded=postcheck_downgraded,
+        phase=_phase_name(provider, meta),
+        extra=_build_p0_telemetry_extra(req, rag),
+    )
+    yield SSE_DONE
+
+
 async def generate_chat_response(
     req: ParsedRequest,
     rag: RAGResult,
@@ -408,6 +483,42 @@ async def generate_chat_response(
             meta.fallback_from = "deepseek"
             meta.fallback_to = "coze"
             meta.warning = f"DeepSeek unavailable: {exc}"
+
+    if meta.provider == "openai":
+        try:
+            async for frame in _generate_via_openai_compatible(
+                req,
+                rag,
+                meta,
+                context,
+                provider="openai",
+            ):
+                yield frame
+            return
+        except Exception as exc:
+            logger.warning("OpenAI unavailable, fallback to Coze: %s", exc)
+            meta.provider = "coze"
+            meta.fallback_from = "openai"
+            meta.fallback_to = "coze"
+            meta.warning = f"OpenAI unavailable: {exc}"
+
+    if meta.provider == "bigmodel":
+        try:
+            async for frame in _generate_via_openai_compatible(
+                req,
+                rag,
+                meta,
+                context,
+                provider="bigmodel",
+            ):
+                yield frame
+            return
+        except Exception as exc:
+            logger.warning("BigModel unavailable, fallback to Coze: %s", exc)
+            meta.provider = "coze"
+            meta.fallback_from = "bigmodel"
+            meta.fallback_to = "coze"
+            meta.warning = f"BigModel unavailable: {exc}"
 
     async for frame in _generate_via_coze(req, rag, meta, context):
         yield frame

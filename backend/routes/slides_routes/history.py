@@ -1,14 +1,14 @@
 """Slides generation history: list, detail, replay."""
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.core.security import get_current_user
-from backend.services.history_service import get_history_document, list_history, serialize_history_doc
+from backend.services.history_service import enrich_slides_history_detail, get_history_document, list_history, serialize_history_doc
 
-from .router import slides_router
+router = APIRouter()
 
 
-@slides_router.get("/generation_history")
+@router.get("/generation_history")
 async def get_generation_history(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
@@ -29,7 +29,7 @@ async def get_generation_history(
     }
 
 
-@slides_router.get("/generation_history/{history_id}")
+@router.get("/generation_history/{history_id}")
 async def get_generation_detail(history_id: str, user: dict = Depends(get_current_user)):
     doc = await get_history_document(
         tools=("slides",),
@@ -38,10 +38,13 @@ async def get_generation_detail(history_id: str, user: dict = Depends(get_curren
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Record not found")
-    return {"success": True, **serialize_history_doc(doc, include_result=True)}
+    payload = serialize_history_doc(doc, include_result=True)
+    if payload.get("tool_key") == "slides":
+        payload = await enrich_slides_history_detail(payload)
+    return {"success": True, **payload}
 
 
-@slides_router.post("/generation_history/{history_id}/replay")
+@router.post("/generation_history/{history_id}/replay")
 async def replay_generation_history(history_id: str, user: dict = Depends(get_current_user)):
     doc = await get_history_document(
         tools=("slides",),

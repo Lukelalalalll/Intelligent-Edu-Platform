@@ -7,6 +7,8 @@ import {
     type FileAsset,
 } from './api/fileCenterApi';
 import WelcomeBanner from '../../shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import BaseModal from '../../shared/BaseModal';
 import '../../styles/base.css';
 import styles from './styles/AdminFileCenter.module.css';
@@ -27,6 +29,7 @@ type RootMode = 'entry' | 'group' | 'personal' | 'toolHistory';
 type RoleMode = 'teacher' | 'student';
 
 export default function AdminFileCenterPage() {
+    const isEntranceActive = usePageEntrance();
     const [rootMode, setRootMode] = useState<RootMode>('entry');
 
     const [chatRooms, setChatRooms] = useState<ChatRoomAssetSummary[]>([]);
@@ -273,7 +276,7 @@ export default function AdminFileCenterPage() {
     };
 
     return (
-        <div className={styles.page}>
+        <div className={`${styles.page} ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 title={<><i className="fa-solid fa-server" aria-hidden="true"></i> Admin File Center</>}
                 subtitle="Oversee, manage, and audit all digital assets across the platform. Control group files and AI chat attachments within a centralized, secure environment."

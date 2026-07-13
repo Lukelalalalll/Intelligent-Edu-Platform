@@ -7,9 +7,12 @@ import HistoryPanel from './HistoryPanel';
 import Button from '@/shared/components/Button/Button';
 import Card from '@/shared/components/Card/Card';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import styles from '../styles/questionBank.module.css';
 
 export default function QuestionGenerator({ states, handlers }) {
+    const isEntranceActive = usePageEntrance();
     const [activeView, setActiveView] = useState('workflow');
     const currentStep = states.currentStep || 1;
 
@@ -31,7 +34,7 @@ export default function QuestionGenerator({ states, handlers }) {
     };
 
     return (
-        <div className="container">
+        <div className={`container ${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner
                 className={styles.sub2Banner}
                 title="Intelligent Question Extraction and Generation"

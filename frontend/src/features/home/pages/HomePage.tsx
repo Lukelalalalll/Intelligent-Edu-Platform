@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import WelcomeBanner from '@/shared/components/WelcomeBanner';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import { useI18n } from '@/shared/i18n';
 import ToolCard from '../components/ToolCard';
 import AIChatBox from '../components/AIChatBox';
 import layoutStyles from '../styles/HomeLayout.module.css';
 
 const HOME_URLS = {
-    sub1: '/slides/md-processor',
+    pptGenerator: '/slides/ppt_generator/dashboard',
     sub2: '/questions',
     sub4: '/diagram',
     sub5: '/study-notes',
@@ -20,6 +22,7 @@ const HOME_URLS = {
 };
 
 export default function HomePage() {
+    const isEntranceActive = usePageEntrance();
     const location = useLocation();
     const { t } = useI18n();
     const initialTab = new URLSearchParams(location.search).get('tab');
@@ -27,7 +30,7 @@ export default function HomePage() {
         initialTab === 'tools' || initialTab === 'ai' || initialTab === 'homework' ? initialTab : 'ai',
     ); // 'ai' | 'tools' | 'homework'
     const toolCardsData = useMemo(() => [
-        { title: t('home.tool.aiSlides.title'), desc: t('home.tool.aiSlides.desc'), icon: "fa-book-open", url: HOME_URLS.sub1 },
+        { title: t('home.tool.ppt_generator.title'), desc: t('home.tool.ppt_generator.desc'), icon: "fa-file-powerpoint", url: HOME_URLS.pptGenerator },
         { title: t('home.tool.highlighter.title'), desc: t('home.tool.highlighter.desc'), icon: "fa-highlighter", url: HOME_URLS.highlighter },
         { title: t('home.tool.questions.title'), desc: t('home.tool.questions.desc'), icon: "fa-question-circle", url: HOME_URLS.sub2 },
         { title: t('home.tool.visual.title'), desc: t('home.tool.visual.desc'), icon: "fa-images", url: HOME_URLS.sub4 },
@@ -52,7 +55,7 @@ export default function HomePage() {
 
 
     return (
-        <div>
+        <div className={`${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}>
             <WelcomeBanner className={layoutStyles['welcome-banner']} variant="hero" />
 
             {/* Tab Switcher: AI Space | Tools | Homework Manage */}
@@ -103,3 +106,5 @@ export default function HomePage() {
         </div>
     );
 }
+
+

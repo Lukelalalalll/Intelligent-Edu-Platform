@@ -1,10 +1,4 @@
-"""Layout preview image generation endpoint.
-
-GET /api/slides/layout-preview?theme=Business&layout=Section-1
-  → Returns a real PNG screenshot of the layout slide from the PPTX template.
-  → First call: ~1-2 s (LibreOffice headless render)
-  → Subsequent calls: instant (disk-cached at static/img/{theme}/{layout}.png)
-"""
+"""Authenticated layout preview generation with template/layout whitelisting."""
 from __future__ import annotations
 
 import io
@@ -16,33 +10,97 @@ import tempfile
 import time
 import zipfile
 from pathlib import Path
+from urllib.parse import unquote
 
-from fastapi import HTTPException, Query
+from cachetools import TTLCache
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from backend.config import Config
-from .router import slides_router, public_slides_router
+from backend.core.security import get_current_user
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
+public_router = APIRouter()
 
-STATIC_IMG_ROOT = os.path.join(os.path.dirname(Config.PPT_TEMPLATES_FOLDER), "img")
+STATIC_IMG_ROOT = Path(os.path.dirname(Config.PPT_TEMPLATES_FOLDER)).resolve() / "img"
 SOFFICE_BIN = shutil.which("soffice") or shutil.which("libreoffice")
+_LAYOUT_PREVIEW_RATE_LIMIT = 20
+_LAYOUT_PREVIEW_WINDOW_SECONDS = 60
+_layout_preview_requests: TTLCache = TTLCache(maxsize=1024, ttl=_LAYOUT_PREVIEW_WINDOW_SECONDS)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _cache_path(theme: str, layout_name: str) -> str:
-    """Return the on-disk cache path for a layout preview PNG."""
-    safe_layout = layout_name  # keep unicode; OS handles it fine
-    return os.path.join(STATIC_IMG_ROOT, theme, f"{safe_layout}.png")
+def _assert_within(base_dir: Path, candidate: Path) -> Path:
+    base = base_dir.resolve()
+    resolved = candidate.resolve()
+    try:
+        resolved.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("Resolved path escaped the allowed directory") from exc
+    return resolved
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    return str(getattr(request.client, "host", "") or "unknown")
+
+
+def _enforce_preview_rate_limit(request: Request) -> None:
+    key = _client_ip(request)
+    count = int(_layout_preview_requests.get(key, 0) or 0) + 1
+    _layout_preview_requests[key] = count
+    if count > _LAYOUT_PREVIEW_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many preview requests")
+
+
+def _available_template_paths() -> dict[str, Path]:
+    templates_root = Path(Config.PPT_TEMPLATES_FOLDER).resolve()
+    if not templates_root.is_dir():
+        return {}
+    paths: dict[str, Path] = {}
+    for file in templates_root.glob("*.pptx"):
+        paths[file.stem.casefold()] = _assert_within(templates_root, file)
+    return paths
+
+
+def _resolve_theme_template_path(theme: str) -> tuple[str, Path]:
+    requested = unquote(str(theme or "").strip())
+    if not requested:
+        raise ValueError("Theme is required")
+    template_paths = _available_template_paths()
+    match = template_paths.get(requested.casefold())
+    if match is None:
+        raise ValueError(f"Theme '{requested}' is not available.")
+    return match.stem, match
+
+
+def _get_layout_names(template_path: Path) -> list[str]:
+    try:
+        from pptx import Presentation
+    except ImportError as exc:
+        raise RuntimeError("python-pptx not installed") from exc
+
+    prs = Presentation(str(template_path))
+    return [str(layout.name or "").strip() for layout in prs.slide_layouts if str(layout.name or "").strip()]
+
+
+def _resolve_layout_name(template_path: Path, layout_name: str) -> str:
+    requested = unquote(str(layout_name or "").strip())
+    if not requested:
+        raise ValueError("Layout is required")
+    for candidate in _get_layout_names(template_path):
+        if candidate == requested:
+            return candidate
+    raise ValueError(f"Layout '{requested}' is not available for theme '{template_path.stem}'.")
+
+
+def _cache_path(theme: str, layout_name: str) -> Path:
+    return _assert_within(STATIC_IMG_ROOT, STATIC_IMG_ROOT / theme / f"{layout_name}.png")
 
 
 def _dedup_zip(src_bytes: bytes) -> bytes:
-    """Remove duplicate entries from a ZIP/PPTX byte stream.
-
-    python-pptx can produce duplicate ZIP entries when saving a Presentation
-    loaded from a template file.  We fix this by re-writing the archive,
-    keeping only the first occurrence of each entry name.
-    """
     seen: set[str] = set()
     out = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(src_bytes), "r") as zin:
@@ -56,51 +114,44 @@ def _dedup_zip(src_bytes: bytes) -> bytes:
 
 
 def _render_layout_png(theme: str, layout_name: str) -> str:
-    """Generate & cache a layout preview PNG.  Returns the cache path."""
-    cache = _cache_path(theme, layout_name)
-    if os.path.exists(cache):
-        return cache
+    resolved_theme, template_path = _resolve_theme_template_path(theme)
+    resolved_layout_name = _resolve_layout_name(template_path, layout_name)
+    cache = _cache_path(resolved_theme, resolved_layout_name)
+    if cache.exists():
+        return str(cache)
 
     if not SOFFICE_BIN:
         raise RuntimeError("LibreOffice (soffice) not found on PATH.")
 
-    template_path = os.path.join(Config.PPT_TEMPLATES_FOLDER, f"{theme}.pptx")
-    if not os.path.exists(template_path):
-        raise FileNotFoundError(f"Template not found: {template_path}")
-
-    # ── 1. Build a single-slide PPTX in memory ──────────────────────────────
     try:
-        from pptx import Presentation  # lazy import — keeps startup fast
-        from pptx.util import Pt
+        from pptx import Presentation
     except ImportError as exc:
         raise RuntimeError("python-pptx not installed") from exc
 
-    prs = Presentation(template_path)
+    prs = Presentation(str(template_path))
     target_layout = next(
-        (l for l in prs.slide_layouts if l.name == layout_name), None
+        (layout for layout in prs.slide_layouts if str(layout.name or "").strip() == resolved_layout_name),
+        None,
     )
     if target_layout is None:
-        raise ValueError(f"Layout '{layout_name}' not found in theme '{theme}'.")
+        raise ValueError(f"Layout '{resolved_layout_name}' not found in theme '{resolved_theme}'.")
 
-    # Add one slide using the target layout (title placeholder filled for context)
     slide = prs.slides.add_slide(target_layout)
-    for ph in slide.placeholders:
+    for placeholder in slide.placeholders:
         try:
-            if ph.placeholder_format.type == 1:   # title
-                ph.text = layout_name
+            if placeholder.placeholder_format.type == 1:
+                placeholder.text = resolved_layout_name
         except Exception:
             pass
 
-    # ── 2. Save to BytesIO and fix duplicate ZIP entries ────────────────────
     buf = io.BytesIO()
     prs.save(buf)
     fixed_bytes = _dedup_zip(buf.getvalue())
 
-    # ── 3. Write fixed PPTX to temp dir and convert via LibreOffice ─────────
     with tempfile.TemporaryDirectory() as tmp:
         pptx_file = os.path.join(tmp, "slide.pptx")
-        with open(pptx_file, "wb") as f:
-            f.write(fixed_bytes)
+        with open(pptx_file, "wb") as handle:
+            handle.write(fixed_bytes)
 
         t0 = time.time()
         result = subprocess.run(
@@ -118,69 +169,65 @@ def _render_layout_png(theme: str, layout_name: str) -> str:
         elapsed = time.time() - t0
         logger.info(
             "[layout-preview] soffice finished in %.1fs for %s/%s (rc=%d)",
-            elapsed, theme, layout_name, result.returncode,
+            elapsed,
+            resolved_theme,
+            resolved_layout_name,
+            result.returncode,
         )
 
-        # LibreOffice outputs one PNG per slide, named like "slide.png"
-        # (it may also append page numbers: "slide1.png", "slide2.png" … for
-        # multi-page documents — we always want the LAST page which is ours)
         import glob
+
         pngs = sorted(glob.glob(os.path.join(tmp, "*.png")))
         if not pngs:
             raise RuntimeError(
-                f"LibreOffice produced no PNG for {theme}/{layout_name}. "
+                f"LibreOffice produced no PNG for {resolved_theme}/{resolved_layout_name}. "
                 f"stderr: {result.stderr[:400]}"
             )
 
-        # Pick the last PNG (= our newly added slide)
         src_png = pngs[-1]
 
-        # ── 4. Resize to thumbnail and save to cache ─────────────────────
         try:
             from PIL import Image
+
             img = Image.open(src_png).convert("RGB")
             img = img.resize((480, 270), Image.LANCZOS)
-            os.makedirs(os.path.dirname(cache), exist_ok=True)
-            img.save(cache, "PNG", optimize=True)
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            img.save(str(cache), "PNG", optimize=True)
         except ImportError:
-            # PIL not available — just copy raw PNG at original size
-            os.makedirs(os.path.dirname(cache), exist_ok=True)
-            shutil.copy2(src_png, cache)
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_png, str(cache))
 
-    return cache
+    return str(cache)
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
-
-@slides_router.get("/layout-preview")
-@public_slides_router.get("/layout-preview", include_in_schema=False)
+@router.get("/layout-preview")
+@public_router.get("/layout-preview", include_in_schema=False)
 def get_layout_preview(
+    request: Request,
     theme: str = Query(..., description="Theme name, e.g. 'Business'"),
     layout: str = Query(..., description="Layout name, e.g. 'Section-1'"),
+    user: dict = Depends(get_current_user),
 ):
-    """Return a real screenshot of the requested PPTX layout slide as PNG.
-
-    Results are cached on first render and served as static files on
-    subsequent requests (typically < 10 ms after first call).
-    """
+    """Return a real screenshot of the requested PPTX layout slide as PNG."""
     try:
+        _enforce_preview_rate_limit(request)
         cache_file = _render_layout_png(theme, layout)
         return FileResponse(
             cache_file,
             media_type="image/png",
             headers={
-                "Cache-Control": "public, max-age=86400",
+                "Cache-Control": "private, max-age=3600",
                 "X-Layout-Preview-Theme": theme,
                 "X-Layout-Preview-Layout": layout,
             },
         )
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except RuntimeError as e:
-        logger.error("[layout-preview] RuntimeError: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except RuntimeError as exc:
+        logger.error("[layout-preview] RuntimeError: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
         logger.exception("[layout-preview] Unexpected error for %s/%s", theme, layout)
         raise HTTPException(status_code=500, detail="Layout preview generation failed.")

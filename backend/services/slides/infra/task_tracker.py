@@ -231,6 +231,7 @@ class TaskTracker:
         return {
             "request_id": self.request_id,
             "user_id": self.user_id,
+            "created_by": self.user_id,
             "task_type": self.task_type,
             "status": self.overall_status.value,
             "total_latency_ms": round(self.total_latency_ms, 2),
@@ -243,6 +244,7 @@ class TaskTracker:
         return {
             "request_id": self.request_id,
             "user_id": self.user_id,
+            "created_by": self.user_id,
             "task_type": self.task_type,
             "status": self.overall_status.value,
             "total_latency_ms": round(self.total_latency_ms, 2),
@@ -264,15 +266,18 @@ class TaskTracker:
             logger.exception("[%s] failed to save task record", self.request_id)
 
     @staticmethod
-    async def get_stats(hours: int = 24) -> dict[str, Any]:
+    async def get_stats(hours: int = 24, user_id: str | None = None) -> dict[str, Any]:
         """Aggregate pipeline stats for the last N hours."""
         from datetime import timedelta
         from backend.core.database import db
 
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        match_filter: dict[str, Any] = {"created_at": {"$gte": cutoff}}
+        if user_id:
+            match_filter["user_id"] = user_id
 
         pipeline = [
-            {"$match": {"created_at": {"$gte": cutoff}}},
+            {"$match": match_filter},
             {
                 "$group": {
                     "_id": "$task_type",
@@ -307,7 +312,7 @@ class TaskTracker:
 
         # Step-level breakdown
         step_pipeline = [
-            {"$match": {"created_at": {"$gte": cutoff}}},
+            {"$match": match_filter},
             {"$unwind": "$steps"},
             {
                 "$group": {
@@ -336,7 +341,7 @@ class TaskTracker:
 
         # Error breakdown
         error_pipeline = [
-            {"$match": {"created_at": {"$gte": cutoff}}},
+            {"$match": match_filter},
             {"$unwind": "$steps"},
             {"$match": {"steps.status": "failed"}},
             {
@@ -364,11 +369,14 @@ class TaskTracker:
         }
 
     @staticmethod
-    async def get_task(request_id: str) -> dict[str, Any] | None:
+    async def get_task(request_id: str, user_id: str | None = None) -> dict[str, Any] | None:
         """Get a single task record by request_id."""
         from backend.core.database import db
+        query: dict[str, Any] = {"request_id": request_id}
+        if user_id:
+            query["user_id"] = user_id
         doc = await db["sub1_task_tracking"].find_one(
-            {"request_id": request_id},
+            query,
             {"_id": 0}
         )
         return doc

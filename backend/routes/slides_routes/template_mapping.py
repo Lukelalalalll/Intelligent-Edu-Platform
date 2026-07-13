@@ -4,12 +4,12 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from backend.core.security import get_current_user
 from backend.schemas import MapToSlidesSchema, ValidateSlidesSchema, EvaluateQualitySchema
-from .router import slides_router
 
 logger = logging.getLogger(__name__)
+router = APIRouter()
 
 
-@slides_router.post("/map-to-slides")
+@router.post("/map-to-slides")
 def map_summaries_to_slides_endpoint(req: MapToSlidesSchema, user: dict = Depends(get_current_user)):
     try:
         from backend.services.slides.output.template_mapper import map_summaries_to_slides, validate_presentation
@@ -25,7 +25,7 @@ def map_summaries_to_slides_endpoint(req: MapToSlidesSchema, user: dict = Depend
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@slides_router.post("/validate-slides")
+@router.post("/validate-slides")
 def validate_slides_endpoint(req: ValidateSlidesSchema, user: dict = Depends(get_current_user)):
     try:
         from backend.services.slides.output.template_mapper import validate_presentation
@@ -35,7 +35,7 @@ def validate_slides_endpoint(req: ValidateSlidesSchema, user: dict = Depends(get
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@slides_router.post("/evaluate-quality")
+@router.post("/evaluate-quality")
 def evaluate_quality(req: EvaluateQualitySchema, user: dict = Depends(get_current_user)):
     from backend.services.slides.generation.quality_evaluator import evaluate_pipeline_run
 

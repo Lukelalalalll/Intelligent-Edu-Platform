@@ -2,22 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from bson import ObjectId
-
-from backend.core.database import db
+from backend.repositories import file_asset_repo
 
 from .shared import absolute_from_storage_path, to_iso
 
 
 async def find_by_owner(owner_type: str, owner_id: str) -> list[dict[str, Any]]:
-    cursor = db.file_assets.find(
-        {
-            "owner_type": owner_type,
-            "owner_id": str(owner_id),
-            "status": {"$ne": "hard_deleted"},
-        }
-    ).sort("created_at", -1)
-    return [to_iso(item) async for item in cursor]
+    return [to_iso(item) for item in await file_asset_repo.find_assets_by_owner(owner_type, owner_id)]
 
 
 async def list_assets(
@@ -53,9 +44,8 @@ async def list_assets(
             {"course_id": {"$regex": escaped, "$options": "i"}},
         ]
 
-    total = await db.file_assets.count_documents(query)
-    cursor = db.file_assets.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    documents = [to_iso(item) async for item in cursor]
+    total, docs = await file_asset_repo.list_assets_page(query, limit=limit, skip=skip)
+    documents = [to_iso(item) for item in docs]
     for document in documents:
         path = absolute_from_storage_path(document.get("storage_path", ""))
         document["exists_on_disk"] = path.is_file() or path.is_dir()
@@ -63,12 +53,7 @@ async def list_assets(
 
 
 async def get_asset(asset_id: str) -> dict[str, Any] | None:
-    if ObjectId.is_valid(asset_id):
-        query = {"_id": ObjectId(asset_id)}
-    else:
-        query = {"file_id": asset_id}
-
-    document = await db.file_assets.find_one(query)
+    document = await file_asset_repo.find_asset_by_identifier(asset_id)
     if not document:
         return None
 

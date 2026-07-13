@@ -1,0 +1,311 @@
+.shell {
+    display: flex;
+    flex-direction: column;
+}
+
+.shellDense {
+    --banner-margin-bottom: 0.7rem;
+    --banner-padding-inline: 1.4rem;
+    --banner-padding-block: 1.15rem;
+    --banner-title-size: 1.34rem;
+    --banner-subtitle-size: 0.84rem;
+    --banner-intro-margin-bottom: 0.9rem;
+    --banner-intro-padding-block: 1.35rem;
+    --banner-intro-title-size: 1.46rem;
+    --banner-intro-subtitle-size: 0.88rem;
+}
+
+.banner {
+    margin-bottom: 1rem !important;
+}
+
+.topRail {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 0.9rem;
+    min-width: 0;
+}
+
+.topRailLeading {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.topRailUnified {
+    min-height: 0;
+    justify-content: center;
+}
+
+.stepperWrap {
+    composes: stepperWrap from '../../../shared/styles/stepper.module.css';
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+}
+
+.stepperWrapCompact {
+    flex: 0 1 860px;
+    width: min(100%, 860px);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 14px 28px;
+    scrollbar-width: none;
+}
+
+.stepperWrapCompact::-webkit-scrollbar {
+    display: none;
+}
+
+.stepperWrapUnified {
+    display: flex;
+    align-items: center;
+    min-height: 60px;
+    background: var(--bg-card, #fff);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,0.08));
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.topRailUnifiedLeading {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stepperGroup {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    overflow: hidden;
+}
+
+.stepperWrapUnifiedCentered {
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    flex: 0 0 auto;
+    margin-inline: auto;
+}
+
+.stepperGroupCollapsed {
+    flex: 0 0 0;
+    width: 0;
+    max-width: 0;
+    margin-left: 0;
+    padding-left: 0;
+    padding-right: 0;
+    pointer-events: none;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.shellDense .stepperWrap {
+    margin-bottom: 0;
+}
+
+.shellDense :global(.stepperWrap) {
+    padding: 12px 28px;
+    margin: 0;
+}
+
+.shellDense :global(.stepperItem) {
+    gap: 8px;
+}
+
+.shellDense :global(.stepperCircle) {
+    width: 34px;
+    height: 34px;
+    font-size: 0.82rem;
+    box-sizing: border-box;
+}
+
+.shellDense :global(.stepperLabel) {
+    font-size: 0.84rem;
+}
+
+.stepperGroup,
+.topRailUnifiedLeading {
+    will-change: transform, opacity, width, padding, margin;
+}
+
+.shellDense :global(.stepperItem:not(:last-child)::after) {
+    right: -74px;
+    width: 56px;
+}
+
+.stepperItem {
+    composes: stepperItem from '../../../shared/styles/stepper.module.css';
+}
+
+.stepperCircle {
+    composes: stepperCircle from '../../../shared/styles/stepper.module.css';
+    width: 38px;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.stepperWrapCompact .stepperItem {
+    gap: 10px;
+}
+
+.stepperWrapCompact .stepperCircle {
+    width: 34px;
+    height: 34px;
+    font-size: 0.82rem;
+}
+
+.stepperWrapCompact .stepperLabel {
+    font-size: 0.84rem;
+}
+
+.stepperWrapCompact .stepperItem:not(:last-child)::after {
+    right: -68px;
+    width: 50px;
+}
+
+.stepperLabel {
+    composes: stepperLabel from '../../../shared/styles/stepper.module.css';
+}
+
+.stepperItemDone {
+    composes: stepperItemDone from '../../../shared/styles/stepper.module.css';
+}
+
+.stepperItemActive {
+    composes: stepperItemActive from '../../../shared/styles/stepper.module.css';
+}
+
+.stepperItemActive .stepperCircle {
+    border-width: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.stepperButton {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-sizing: border-box;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+
+.stepperItemFuture {
+    opacity: 0.74;
+}
+
+.toolbarSlot {
+    width: 100%;
+    animation: shellFadeUp 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.1s;
+}
+
+.shellDense .toolbarSlot {
+    margin-bottom: 0.1rem;
+}
+
+.content {
+    width: 100%;
+    animation: shellFadeUp 0.46s cubic-bezier(0.2, 0.8, 0.2, 1) both 0.16s;
+}
+
+@keyframes shellFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .topRail,
+    .topRailLeading,
+    .stepperWrap,
+    .stepperWrapUnified,
+    .topRailUnifiedLeading,
+    .stepperGroup,
+    .stepperItem,
+    .stepperButton,
+    .toolbarSlot,
+    .content {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .topRail {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .topRailLeading {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .stepperWrap {
+        width: 100%;
+    }
+
+    .stepperWrapCompact {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: none;
+    }
+
+    .stepperWrapUnified {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .topRailUnifiedLeading {
+        width: 100%;
+    }
+
+    .stepperGroup {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stepperWrapUnifiedCentered {
+        justify-content: center;
+    }
+
+    .stepperGroupCollapsed {
+        width: 100%;
+        max-width: 100%;
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .stepperWrapCompact {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding: 12px 20px;
+    }
+
+    .stepperWrapCompact .stepperItem:not(:last-child)::after {
+        right: -58px;
+        width: 40px;
+    }
+}

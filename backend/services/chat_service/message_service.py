@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -9,7 +9,8 @@ from fastapi import HTTPException
 from backend.core.ai_provider import resolve_provider
 from backend.core.database import db
 from backend.core.utils import safe_object_id
-from backend.services.file_asset_service import register_file_asset
+from backend.repositories import file_asset_repo
+from backend.services.files.file_asset_service import register_file_asset
 
 from .query_service import get_message_by_id, get_room_for_member, serialize_doc, utcnow_iso
 
@@ -91,23 +92,12 @@ async def create_message(
 
     if file_url:
         try:
-            matched = await db.file_assets.update_one(
-                {
-                    "file_type": "chat_attachment",
-                    "public_url": str(file_url),
-                    "status": {"$ne": "hard_deleted"},
-                },
-                {
-                    "$set": {
-                        "owner_type": "chat_message",
-                        "owner_id": msg_doc["id"],
-                        "scope": "chat_group",
-                        "room_id": room_id,
-                        "user_id": user_id,
-                        "updated_at": datetime.now(timezone.utc),
-                        "status": "active",
-                    }
-                },
+            matched = await file_asset_repo.bind_chat_attachment_to_message(
+                public_url=str(file_url),
+                owner_id=msg_doc["id"],
+                room_id=room_id,
+                user_id=user_id,
+                now=datetime.now(timezone.utc),
             )
             if matched.matched_count == 0:
                 await register_file_asset(
@@ -163,9 +153,17 @@ async def mark_room_read_for_member(*, room_id: str, user_id: str) -> dict[str, 
 
 def _parse_message_timestamp(raw_value: Any) -> datetime:
     if isinstance(raw_value, datetime):
+        if raw_value.tzinfo is None:
+            return raw_value.replace(tzinfo=timezone.utc)
         return raw_value.astimezone(timezone.utc)
     if isinstance(raw_value, str):
-        return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).astimezone(timezone.utc)
+        try:
+            parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid message timestamp") from exc
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
     raise HTTPException(status_code=400, detail="Invalid message timestamp")
 
 
@@ -299,3 +297,4 @@ async def forward_messages(
         )
 
     return {"room": room, "forwarded": forwarded}
+

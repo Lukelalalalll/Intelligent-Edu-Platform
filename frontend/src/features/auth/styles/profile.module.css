@@ -86,45 +86,6 @@
     /* Ensures content stacks above the ambient orb */
 }
 
-.profileContainer::before,
-.profileContainer::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--profile-edge-blur);
-    z-index: 3;
-    pointer-events: none;
-    backdrop-filter: blur(18px) saturate(1.18);
-    -webkit-backdrop-filter: blur(18px) saturate(1.18);
-    opacity: 0.92;
-    will-change: backdrop-filter, opacity;
-}
-
-.profileContainer::before {
-    left: 0;
-    background: linear-gradient(
-        90deg,
-        rgba(0, 111, 82, 0.42) 0%,
-        rgba(0, 111, 82, 0.2) 52%,
-        rgba(0, 111, 82, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-    mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-}
-
-.profileContainer::after {
-    right: 0;
-    background: linear-gradient(
-        270deg,
-        rgba(10, 127, 104, 0.42) 0%,
-        rgba(10, 127, 104, 0.2) 52%,
-        rgba(10, 127, 104, 0) 100%
-    );
-    -webkit-mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-    mask-image: linear-gradient(270deg, #000 0%, rgba(0, 0, 0, 0.9) 48%, transparent 100%);
-}
-
 .profileRail {
     width: 100%;
     position: relative;
@@ -139,31 +100,8 @@
     overflow-y: hidden;
     padding: 2px 2px 8px;
     scroll-snap-type: x proximity;
-    scroll-padding-inline: var(--profile-edge-fade);
     scrollbar-gutter: stable;
     overscroll-behavior-x: contain;
-    -webkit-mask-image: linear-gradient(
-        90deg,
-        transparent 0,
-        rgba(0, 0, 0, 0.18) 12px,
-        #000 var(--profile-edge-fade),
-        #000 calc(100% - var(--profile-edge-fade)),
-        rgba(0, 0, 0, 0.18) calc(100% - 12px),
-        transparent 100%
-    );
-    mask-image: linear-gradient(
-        90deg,
-        transparent 0,
-        rgba(0, 0, 0, 0.18) 12px,
-        #000 var(--profile-edge-fade),
-        #000 calc(100% - var(--profile-edge-fade)),
-        rgba(0, 0, 0, 0.18) calc(100% - 12px),
-        transparent 100%
-    );
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
 }
 
 .profileLane {
@@ -187,6 +125,10 @@
 
 .profileLaneSingle {
     grid-template-rows: minmax(0, 1fr);
+}
+
+.profileLaneSecurity {
+    grid-template-rows: minmax(0, 1.08fr) minmax(0, 0.92fr);
 }
 
 .cardScrollArea {
@@ -607,6 +549,93 @@
     line-height: 1.45;
 }
 
+.connectedAccountSummary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised) 74%, transparent);
+    border: 1px solid var(--line-soft);
+}
+
+.connectedAccountAvatar,
+.connectedAccountAvatarFallback {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    flex: 0 0 46px;
+}
+
+.connectedAccountAvatar {
+    object-fit: cover;
+}
+
+.connectedAccountAvatarFallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 123, 85, 0.12);
+    color: var(--primary-color);
+    font-weight: 800;
+}
+
+.connectedAccountMeta {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.connectedAccountMeta strong,
+.connectedAccountMeta span {
+    overflow-wrap: anywhere;
+}
+
+.connectedAccountMeta strong {
+    color: var(--text-main);
+    font-size: 0.92rem;
+}
+
+.connectedAccountMeta span {
+    color: var(--text-sub);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.connectedAccountProvider {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(0, 123, 85, 0.1);
+    border: 1px solid rgba(0, 123, 85, 0.18);
+    color: var(--primary-dark);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.accountBindingHint {
+    margin: 0;
+    color: var(--text-sub);
+    font-size: 0.83rem;
+    line-height: 1.5;
+}
+
+.profileGoogleButtonWrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.profileGoogleButtonContainer {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    justify-content: center;
+}
+
 .backupCodeGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
@@ -875,8 +904,18 @@
 
     .courseItem,
     .securityBox,
-    .securitySummary {
+    .securitySummary,
+    .connectedAccountSummary {
         border-radius: 14px;
+    }
+
+    .connectedAccountSummary {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .connectedAccountProvider {
+        grid-column: 1 / -1;
+        justify-self: start;
     }
 }
 

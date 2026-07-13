@@ -1,4 +1,4 @@
-"""Password and MFA login endpoints."""
+﻿"""Password and MFA login endpoints."""
 from __future__ import annotations
 
 import logging
@@ -7,18 +7,20 @@ from fastapi import HTTPException, Request, Response
 
 from backend.config import Config
 from backend.schemas import AuthSchema, MfaChallengeVerifySchema
-from backend.services.auth_account_service import authenticate_user_with_guards, serialize_session_user
-from backend.services.auth_session_service import create_authenticated_session
-from backend.services.login_challenge_service import create_login_challenge, verify_login_challenge
-from backend.services.security_audit import record_security_event
+from backend.services.auth.auth_account_service import authenticate_user_with_guards, serialize_session_user
+from backend.services.auth.auth_session_service import create_authenticated_session
+from backend.services.auth.login_challenge_service import create_login_challenge, verify_login_challenge
+from backend.services.auth.security_audit import record_security_event
 
 from .auth_cookies import _set_auth_cookies, _set_mfa_challenge_cookie
-from .router import auth_router, limiter
+from .router import limiter
+from fastapi import APIRouter
+router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
 
-@auth_router.post("/login")
+@router.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, req: AuthSchema, response: Response):
     request_id = getattr(request.state, "request_id", "unknown")
@@ -100,7 +102,7 @@ async def login(request: Request, req: AuthSchema, response: Response):
     }
 
 
-@auth_router.post("/login/mfa/verify")
+@router.post("/login/mfa/verify")
 @limiter.limit("20/minute")
 async def verify_login_mfa(
     request: Request,
@@ -171,3 +173,4 @@ async def verify_login_mfa(
         "mfaRequired": False,
         "user": serialize_session_user(user),
     }
+

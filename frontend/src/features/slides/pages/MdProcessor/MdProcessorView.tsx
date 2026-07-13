@@ -18,6 +18,7 @@ const formatFileSize = (bytes) => {
 export default function MdProcessor({
     file, useLLM, headerLlmProvider, isDragging, uploadStatus, uploadProgress, headers, selectedIndices, loading, errorMsg,
     currentFilename,
+    currentDisplayFilename,
     fileInputRef, setUseLLM, setHeaderLlmProvider, handleDragOver, handleDragLeave, handleDrop, onFileChange, clearFile,
     handleUpload, handleCheckboxChange, combineSections, proceedWithFullDoc,
     // Tab 2 props
@@ -27,16 +28,21 @@ export default function MdProcessor({
     handleCozeGenerate, handleProcessText,
     viewSwitchSlot,
     hideBanner,
+    bannerTitle,
+    bannerSubtitle,
+    continueLabel,
+    quickContinueLabel,
 }) {
     const showUploadCard = !currentFilename;
-    const wordCount = textContent ? textContent.trim().split(/\s+/).filter(Boolean).length : 0;
+    const displayFilename = file?.name || currentDisplayFilename || currentFilename;
+    const showParsedEmptyState = Boolean(currentFilename) && headers.length === 0;
 
     return (
         <div className={hideBanner ? undefined : "container"}>
             {!hideBanner && (
                 <WelcomeBanner
-                    title={<><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
-                    subtitle="Process and enhance your PDF and Markdown files with intelligent section extraction"
+                    title={bannerTitle || <><i className="fas fa-file-alt" aria-hidden="true"></i> Markdown File Processor</>}
+                    subtitle={bannerSubtitle || "Process and enhance your PDF and Markdown files with intelligent section extraction"}
                     className={styles.pageHeader}
                     as="header"
                     variant="workspace"
@@ -112,7 +118,7 @@ export default function MdProcessor({
                                 <i className="fas fa-list-ul" aria-hidden="true"></i> Select Required Sections
                             </h5>
                             <button type="button" className="btn btn-outline-secondary btn-sm" onClick={clearFile}>
-                                <i className="fas fa-arrow-left"></i> Re-upload
+                                <i className="fas fa-arrow-left"></i> Choose Another File
                             </button>
                         </div>
 
@@ -120,24 +126,26 @@ export default function MdProcessor({
                             <div className={styles.fileInfoContent}>
                                 <i className="fas fa-file-alt"></i>
                                 <div className={styles.fileDetails}>
-                                    <span id="fileName" className={styles.fileName}>{file?.name}</span>
-                                    <span id="fileSize" className={styles.fileSize}>{file ? formatFileSize(file.size) : ''}</span>
+                                    <span id="fileName" className={styles.fileName}>{displayFilename}</span>
+                                    <span id="fileSize" className={styles.fileSize}>
+                                        {file ? formatFileSize(file.size) : 'Restored draft state'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div id="headersList" className={`mt-4 ${styles.headersList}`} aria-live="polite">
-                            {!file && headers.length === 0 && (
+                            {!currentFilename && headers.length === 0 && (
                                 <div className={styles.emptyState}>
                                     <i className="fas fa-file-alt" aria-hidden="true"></i>
                                     <p>No file uploaded yet. Upload a file to see available sections.</p>
                                 </div>
                             )}
 
-                            {file && headers.length === 0 && currentFilename && (
+                            {showParsedEmptyState && (
                                 <div className={`text-center py-4 ${styles.emptyState}`}>
                                     <i className="fas fa-info-circle mb-3" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
-                                    <p className="text-muted">No headers found in the document. You can proceed with the full document.</p>
+                                    <p className="text-muted">No headers found in the document. You can continue with the full document.</p>
                                 </div>
                             )}
 
@@ -164,27 +172,27 @@ export default function MdProcessor({
 
                         {headers.length > 0 && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={() => combineSections('/slides/ai-theme-config')}>
-                                    <i className="fas fa-file-export" aria-hidden="true"></i> Generate Combined File
+                                <button id="combineBtn" className={`btn btn-success ${styles.btn} ${styles.btnSuccess}`} onClick={combineSections}>
+                                    <i className="fas fa-layer-group" aria-hidden="true"></i> Build Selected Markdown
                                 </button>
-                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => combineSections('/slides/ai-theme-config')}>
-                                    <i className="fas fa-magic" aria-hidden="true"></i> AI Theme & Generate
+                                <button id="highlightBtn" className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={combineSections}>
+                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> {continueLabel || 'Continue to Style Config'}
                                 </button>
                                 <button id="quickProceedBtn" className="btn btn-secondary"
-                                    onClick={() => combineSections('/slides/ai-theme-config')}>
-                                    <i className="fas fa-bolt"></i> Quick Proceed
+                                    onClick={combineSections}>
+                                    <i className="fas fa-bolt"></i> {quickContinueLabel || 'Quick Continue'}
                                 </button>
                             </div>
                         )}
 
                         {headers.length === 0 && currentFilename && (
                             <div className={`mt-4 ${styles.actionButtons}`} id="actionButtons">
-                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
-                                    <i className="fas fa-magic" aria-hidden="true"></i> AI Theme & Generate
+                                <button className={`btn btn-primary ${styles.btn} ${styles.btnPrimary}`} onClick={proceedWithFullDoc}>
+                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true"></i> {continueLabel || 'Continue to Style Config'}
                                 </button>
                                 <button className="btn btn-secondary"
-                                    onClick={() => proceedWithFullDoc('/slides/ai-theme-config')}>
-                                    <i className="fas fa-bolt"></i> Quick Proceed
+                                    onClick={proceedWithFullDoc}>
+                                    <i className="fas fa-bolt"></i> {quickContinueLabel || 'Quick Continue'}
                                 </button>
                             </div>
                         )}

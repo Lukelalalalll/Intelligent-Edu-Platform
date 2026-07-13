@@ -3,18 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from bson import ObjectId
-from bson.errors import InvalidId
 
 from backend.core.database import db
+from backend.repositories._helpers import coerce_object_id
 
 
 def _user_oid(user_id: str | ObjectId) -> ObjectId | None:
-    if isinstance(user_id, ObjectId):
-        return user_id
-    try:
-        return ObjectId(str(user_id))
-    except (InvalidId, TypeError, ValueError):
-        return None
+    return coerce_object_id(user_id)
 
 
 async def find_by_username(username: str, projection: dict[str, Any] | None = None) -> dict[str, Any] | None:

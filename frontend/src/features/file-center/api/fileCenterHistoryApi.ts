@@ -9,6 +9,7 @@ export interface ToolSummary {
 export interface HistoryItem {
     id: string;
     tool: string;
+    tool_key?: string;
     params: Record<string, unknown>;
     preview: string;
     source: Record<string, unknown>;
@@ -17,6 +18,13 @@ export interface HistoryItem {
 
 export interface HistoryDetail extends HistoryItem {
     result: unknown;
+    slides_detail?: {
+        request_id?: string;
+        workflow?: Record<string, unknown> | null;
+        source_artifacts?: Record<string, unknown>;
+        result_artifacts?: Record<string, unknown>;
+        result_data?: unknown;
+    };
 }
 
 export interface AdminUser {

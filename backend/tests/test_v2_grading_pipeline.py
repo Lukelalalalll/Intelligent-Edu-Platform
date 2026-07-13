@@ -1,303 +1,221 @@
-"""
-Integration tests for the v2 grading pipeline.
+from __future__ import annotations
 
-Covers:
-  1. Course visibility — teacher sees only owned/enrolled courses
-  2. Assignment / submission access control — non-course teachers get 403
-  3. Student submission validation — enrollment & assignment checks
-  4. Workbench bundle completeness — all fields present
-"""
-import os
 import asyncio
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch, MagicMock
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
+from bson import ObjectId
 
-# ---------------------------------------------------------------------------
-# Ensure MONGO_URI points to a test DB (or will be mocked)
-# ---------------------------------------------------------------------------
-os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/test_edu_platform")
-os.environ.setdefault("JWT_SECRET", "test-secret")
-
-from backend.services.grading_service import (
-    create_course_section, create_assignment, create_submission,
-    enroll_user, upsert_grade, get_submission_bundle,
-    list_course_sections, list_assignments, list_submissions,
-    list_enrollments, get_assignment,
-)
+from backend.services.grading_service import orchestration
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+class _AsyncListCursor:
+    def __init__(self, rows):
+        self._rows = list(rows)
 
-def _utcnow():
-    return datetime.now(timezone.utc).isoformat()
+    def __aiter__(self):
+        self._iter = iter(self._rows)
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._iter)
+        except StopIteration as exc:
+            raise StopAsyncIteration from exc
 
 
-@pytest.fixture
-def teacher_user():
-    return {
-        "_id": "teacher_001",
-        "id": "teacher_001",
-        "username": "Dr. Smith",
-        "role": "teacher",
-        "email": "smith@hku.hk",
+class _FakeDeleteCollection:
+    def __init__(self, *, delete_many=None, rows=None):
+        self.delete_many = delete_many or AsyncMock()
+        self._rows = list(rows or [])
+
+    def find(self, *args, **kwargs):
+        return _AsyncListCursor(self._rows)
+
+
+class _FakeTransactionContext:
+    def __init__(self, recorder: dict[str, bool]):
+        self._recorder = recorder
+
+    async def __aenter__(self):
+        self._recorder["transaction_started"] = True
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self._recorder["transaction_aborted"] = exc_type is not None
+        self._recorder["transaction_committed"] = exc_type is None
+
+
+class _FakeSessionContext:
+    def __init__(self, recorder: dict[str, bool]):
+        self._recorder = recorder
+
+    async def __aenter__(self):
+        self._recorder["session_started"] = True
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self._recorder["session_closed"] = True
+
+    def start_transaction(self):
+        return _FakeTransactionContext(self._recorder)
+
+
+class _FakeClient:
+    def __init__(self, recorder: dict[str, bool]):
+        self._recorder = recorder
+
+    async def start_session(self):
+        return _FakeSessionContext(self._recorder)
+
+
+def test_list_all_course_sections_collects_all_pages(monkeypatch):
+    calls: list[tuple[int, int]] = []
+
+    async def _fake_list_course_sections(_filter, *, page, page_size):
+        calls.append((page, page_size))
+        pages = {
+            1: {"items": [{"id": "course-1"}], "total": 3, "page": 1, "page_size": page_size},
+            2: {"items": [{"id": "course-2"}], "total": 3, "page": 2, "page_size": page_size},
+            3: {"items": [{"id": "course-3"}], "total": 3, "page": 3, "page_size": page_size},
+        }
+        return pages[page]
+
+    monkeypatch.setattr(
+        orchestration.course_section_repo,
+        "list_course_sections",
+        _fake_list_course_sections,
+    )
+
+    items = asyncio.run(orchestration.list_all_course_sections({"ownerTeacherId": "teacher-1"}))
+
+    assert [item["id"] for item in items] == ["course-1", "course-2", "course-3"]
+    assert calls == [(1, 100), (2, 100), (3, 100)]
+
+
+def test_list_all_assignments_collects_all_pages(monkeypatch):
+    calls: list[tuple[int, int]] = []
+
+    async def _fake_list_assignments(_course_section_id, *, page, page_size):
+        calls.append((page, page_size))
+        if page == 1:
+            return {
+                "items": [{"id": "assignment-1"}, {"id": "assignment-2"}],
+                "total": 3,
+                "page": 1,
+                "page_size": page_size,
+            }
+        return {
+            "items": [{"id": "assignment-3"}],
+            "total": 3,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    monkeypatch.setattr(
+        orchestration.assignment_repo,
+        "list_assignments",
+        _fake_list_assignments,
+    )
+
+    items = asyncio.run(orchestration.list_all_assignments("course-1"))
+
+    assert [item["id"] for item in items] == [
+        "assignment-1",
+        "assignment-2",
+        "assignment-3",
+    ]
+    assert calls == [(1, 100), (2, 100)]
+
+
+def test_find_submission_v2_handles_invalid_id_without_objectid_blowup(monkeypatch):
+    monkeypatch.setattr(orchestration, "get_submission", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        orchestration,
+        "find_submission",
+        AsyncMock(return_value=("legacy-course", "legacy-assignment", "legacy-submission")),
+    )
+
+    result = asyncio.run(orchestration.find_submission_v2("not-an-object-id"))
+
+    assert result == ("legacy-course", "legacy-assignment", "legacy-submission")
+
+
+def test_delete_assignment_aborts_transaction_on_midstream_failure(monkeypatch):
+    recorder = {
+        "transaction_started": False,
+        "transaction_aborted": False,
+        "transaction_committed": False,
+        "session_started": False,
+        "session_closed": False,
     }
+    session_sentinel = object()
+
+    monkeypatch.setattr(orchestration, "_get_client", lambda: _FakeClient(recorder))
+    monkeypatch.setattr(
+        orchestration.assignment_repo,
+        "get_assignment",
+        AsyncMock(return_value={"id": "assignment-1"}),
+    )
+    delete_assignment = AsyncMock(return_value=True)
+    monkeypatch.setattr(orchestration.assignment_repo, "delete_assignment", delete_assignment)
+
+    submissions_find = _FakeDeleteCollection(
+        rows=[
+            {
+                "_id": ObjectId(),
+                "latestDocumentId": str(ObjectId()),
+            }
+        ]
+    )
+    grades = _FakeDeleteCollection()
+    annotations = _FakeDeleteCollection(delete_many=AsyncMock(side_effect=RuntimeError("boom")))
+    documents = _FakeDeleteCollection()
+    submissions = SimpleNamespace(
+        find=submissions_find.find,
+        delete_many=AsyncMock(),
+    )
+    monkeypatch.setattr(
+        orchestration,
+        "db",
+        SimpleNamespace(
+            submissions=submissions,
+            grades=grades,
+            annotations=annotations,
+            documents=documents,
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(orchestration.delete_assignment("assignment-1"))
+
+    assert recorder["transaction_started"] is True
+    assert recorder["transaction_aborted"] is True
+    assert recorder["transaction_committed"] is False
+    assert delete_assignment.await_count == 0
 
 
-@pytest.fixture
-def other_teacher_user():
-    return {
-        "_id": "teacher_002",
-        "id": "teacher_002",
-        "username": "Dr. Jones",
-        "role": "teacher",
-        "email": "jones@hku.hk",
+def test_mongo_transaction_context_aborts_on_exception(monkeypatch):
+    recorder = {
+        "transaction_started": False,
+        "transaction_aborted": False,
+        "transaction_committed": False,
+        "session_started": False,
+        "session_closed": False,
     }
+    monkeypatch.setattr(orchestration, "_get_client", lambda: _FakeClient(recorder))
 
+    async def _run():
+        with pytest.raises(RuntimeError, match="force abort"):
+            async with orchestration._mongo_transaction():
+                raise RuntimeError("force abort")
 
-@pytest.fixture
-def admin_user():
-    return {
-        "_id": "admin_001",
-        "id": "admin_001",
-        "username": "Admin",
-        "role": "admin",
-        "email": "admin@hku.hk",
-    }
+    asyncio.run(_run())
 
-
-@pytest.fixture
-def student_user():
-    return {
-        "_id": "student_001",
-        "id": "student_001",
-        "username": "Alice",
-        "role": "student",
-        "email": "alice@hku.hk",
-    }
-
-
-@pytest.fixture
-def unenrolled_student():
-    return {
-        "_id": "student_999",
-        "id": "student_999",
-        "username": "Eve",
-        "role": "student",
-        "email": "eve@hku.hk",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Test 1 — Course visibility
-# ---------------------------------------------------------------------------
-
-class TestCourseVisibility:
-    """Verify that teachers only see courses they own or are enrolled in."""
-
-    @pytest.mark.asyncio
-    async def test_owner_sees_own_course(self, teacher_user):
-        course = await create_course_section({
-            "courseCode": "COMP3278",
-            "name": "Intro to DBMS",
-            "ownerTeacherId": teacher_user["_id"],
-            "semester": "2025-26 S1",
-        })
-        assert course["id"]
-
-        # list_course_sections with owner filter should return this course
-        owned = await list_course_sections({"ownerTeacherId": teacher_user["_id"]})
-        ids = {c["id"] for c in owned}
-        assert course["id"] in ids
-
-    @pytest.mark.asyncio
-    async def test_other_teacher_does_not_see_course(self, teacher_user, other_teacher_user):
-        course = await create_course_section({
-            "courseCode": "COMP9999",
-            "name": "Secret Course",
-            "ownerTeacherId": teacher_user["_id"],
-            "semester": "2025-26 S1",
-        })
-        # other teacher's owned courses should not include this one
-        other_owned = await list_course_sections({"ownerTeacherId": other_teacher_user["_id"]})
-        ids = {c["id"] for c in other_owned}
-        assert course["id"] not in ids
-
-    @pytest.mark.asyncio
-    async def test_enrolled_teacher_sees_course(self, other_teacher_user):
-        course = await create_course_section({
-            "courseCode": "COMP1000",
-            "name": "Shared Course",
-            "ownerTeacherId": "someone_else",
-            "semester": "2025-26 S2",
-        })
-        await enroll_user(course["id"], other_teacher_user["_id"], "teacher")
-        enrollments = await list_enrollments(user_id=other_teacher_user["_id"])
-        section_ids = {e["courseSectionId"] for e in enrollments if e.get("roleInCourse") in ("teacher", "ta")}
-        assert course["id"] in section_ids
-
-
-# ---------------------------------------------------------------------------
-# Test 2 — Assignment / submission access control
-# ---------------------------------------------------------------------------
-
-class TestAccessControl:
-    """Verify teacher cannot access assignments/submissions of unrelated courses."""
-
-    @pytest.mark.asyncio
-    async def test_assignment_belongs_to_course(self, teacher_user):
-        course = await create_course_section({
-            "courseCode": "COMP2222",
-            "name": "Test Course",
-            "ownerTeacherId": teacher_user["_id"],
-        })
-        assignment = await create_assignment({
-            "courseSectionId": course["id"],
-            "title": "HW1",
-            "description": "First homework",
-        })
-        assignments = await list_assignments(course["id"])
-        assert any(a["id"] == assignment["id"] for a in assignments)
-
-    @pytest.mark.asyncio
-    async def test_submissions_belong_to_assignment(self, teacher_user, student_user):
-        course = await create_course_section({
-            "courseCode": "COMP3333",
-            "name": "Another Course",
-            "ownerTeacherId": teacher_user["_id"],
-        })
-        assignment = await create_assignment({
-            "courseSectionId": course["id"],
-            "title": "HW2",
-        })
-        submission = await create_submission({
-            "assignmentId": assignment["id"],
-            "studentId": student_user["_id"],
-            "studentName": student_user["username"],
-            "pdfPath": "test.pdf",
-        })
-        subs = await list_submissions(assignment["id"])
-        assert any(s["id"] == submission["id"] for s in subs)
-
-    @pytest.mark.asyncio
-    async def test_wrong_course_returns_empty_assignments(self, teacher_user):
-        """Querying assignments for a non-existent course section returns empty."""
-        assignments = await list_assignments("000000000000000000000000")
-        assert assignments == []
-
-
-# ---------------------------------------------------------------------------
-# Test 3 — Student submission validation
-# ---------------------------------------------------------------------------
-
-class TestStudentSubmitValidation:
-    """Verify assignment existence and enrollment checks."""
-
-    @pytest.mark.asyncio
-    async def test_assignment_must_exist(self):
-        result = await get_assignment("000000000000000000000000")
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_enrolled_student_can_see_enrollment(self, student_user):
-        course = await create_course_section({
-            "courseCode": "ENRL100",
-            "name": "Enrollment Test",
-            "ownerTeacherId": "teacher_x",
-        })
-        await enroll_user(course["id"], student_user["_id"], "student")
-        enrollments = await list_enrollments(
-            course_section_id=course["id"],
-            user_id=student_user["_id"]
-        )
-        assert len(enrollments) > 0
-        assert enrollments[0]["roleInCourse"] == "student"
-
-    @pytest.mark.asyncio
-    async def test_unenrolled_student_has_no_enrollment(self, unenrolled_student):
-        course = await create_course_section({
-            "courseCode": "ENRL200",
-            "name": "No Enrollment",
-            "ownerTeacherId": "teacher_y",
-        })
-        enrollments = await list_enrollments(
-            course_section_id=course["id"],
-            user_id=unenrolled_student["_id"],
-        )
-        assert len(enrollments) == 0
-
-
-# ---------------------------------------------------------------------------
-# Test 4 — Workbench bundle completeness
-# ---------------------------------------------------------------------------
-
-class TestWorkbenchBundle:
-    """Verify get_submission_bundle returns all required fields."""
-
-    @pytest.mark.asyncio
-    async def test_bundle_contains_all_keys(self, teacher_user, student_user):
-        course = await create_course_section({
-            "courseCode": "BNDL100",
-            "name": "Bundle Test",
-            "ownerTeacherId": teacher_user["_id"],
-        })
-        assignment = await create_assignment({
-            "courseSectionId": course["id"],
-            "title": "Bundle HW",
-            "rubric": {"q1": {"maxScore": 10}},
-        })
-        submission = await create_submission({
-            "assignmentId": assignment["id"],
-            "studentId": student_user["_id"],
-            "studentName": student_user["username"],
-            "pdfPath": "test_pdf/sample.pdf",
-        })
-
-        bundle = await get_submission_bundle(submission["id"])
-        assert bundle is not None
-        # All required keys present
-        for key in ("course", "assignment", "submission", "annotations", "grade", "document"):
-            assert key in bundle, f"Missing key: {key}"
-
-        assert bundle["course"]["id"] == course["id"]
-        assert bundle["assignment"]["id"] == assignment["id"]
-        assert bundle["submission"]["id"] == submission["id"]
-        # Annotations should at least have the default structure
-        assert "annotations" in bundle["annotations"]
-
-    @pytest.mark.asyncio
-    async def test_bundle_nonexistent_submission(self):
-        bundle = await get_submission_bundle("000000000000000000000000")
-        assert bundle is None
-
-    @pytest.mark.asyncio
-    async def test_bundle_includes_grade_after_grading(self, teacher_user, student_user):
-        course = await create_course_section({
-            "courseCode": "BNDL200",
-            "name": "Graded Bundle",
-            "ownerTeacherId": teacher_user["_id"],
-        })
-        assignment = await create_assignment({
-            "courseSectionId": course["id"],
-            "title": "Graded HW",
-        })
-        submission = await create_submission({
-            "assignmentId": assignment["id"],
-            "studentId": student_user["_id"],
-            "studentName": student_user["username"],
-            "pdfPath": "test.pdf",
-        })
-        await upsert_grade(submission["id"], teacher_user["_id"], {
-            "totalScore": 85,
-            "rubricScores": {"q1": 85},
-            "overallFeedback": "Good work",
-            "gradingStatus": "final",
-        })
-
-        bundle = await get_submission_bundle(submission["id"])
-        assert bundle["grade"] is not None
-        assert bundle["grade"]["totalScore"] == 85
-        assert bundle["grade"]["gradingStatus"] == "final"
+    assert recorder["session_started"] is True
+    assert recorder["session_closed"] is True
+    assert recorder["transaction_started"] is True
+    assert recorder["transaction_aborted"] is True
+    assert recorder["transaction_committed"] is False

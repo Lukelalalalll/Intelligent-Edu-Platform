@@ -53,6 +53,9 @@ describe('vite dev proxy config', () => {
     const config = createConfig({ command: 'serve', mode: 'development' } as any);
 
     expect(config.server?.proxy?.['/api']).toMatchObject({ headers: {} });
+    expect(config.server?.proxy?.['/api']).toMatchObject({
+      target: 'http://127.0.0.1:5009',
+    });
     expect(console.warn).toHaveBeenCalledWith(
       '[vite] INTERNAL_GATEWAY_TOKEN is not set. Local /api proxy requests will fail until it matches backend/.env.'
     );

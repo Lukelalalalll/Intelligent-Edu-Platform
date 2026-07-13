@@ -16,7 +16,6 @@
         "sidebar main"
         "sidebar footer";
     min-height: 100dvh;
-    transition: grid-template-columns 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .withSidebar.sidebarExpanded {
@@ -30,6 +29,13 @@
     overflow-x: hidden;
     background: transparent;
     container-type: inline-size;
+}
+
+.mainContentEdgeToEdge {
+    max-width: 100%;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .mainContentNoScroll {
@@ -67,6 +73,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    height: 100%;
+    min-width: 0;
 }
 
 /* ─── Sidebar Toggle Button ─── */
@@ -96,12 +104,23 @@
 .navLogo {
     display: flex;
     align-items: center;
+    height: 100%;
+    min-width: 0;
+    margin-left: 25px;
+}
+
+.navLogo > a {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    min-width: 0;
 }
 
 .logoImg {
-    height: 140px;
+    height: 81%;
+    max-height: 100%;
     width: auto;
-    max-width: 220px;
+    max-width: min(378px, calc(100vw - 82px));
     object-fit: contain;
     display: block;
 }
@@ -256,13 +275,14 @@
     border-right: 1px solid var(--line-soft);
     overflow-y: auto;
     overflow-x: hidden;
-    transition: width 0.38s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.28s ease,
-        box-shadow 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-        background 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 0.3s ease;
     z-index: 100;
+}
+
+.appShell[data-sidebar-animating="true"] .sidebar,
+.sidebar[data-sidebar-animating="true"] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 10px 0 24px rgba(15, 23, 42, 0.1);
 }
 
 .sidebarOpen {
@@ -284,6 +304,24 @@
     flex-direction: column;
     gap: 8px;
     padding: 14px 10px;
+    transition: padding 0.2s ease, gap 0.2s ease;
+}
+
+.sidebarInner {
+    min-height: 100%;
+    transform-origin: left top;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+    will-change: transform, opacity;
+}
+
+.sidebarOpen .sidebarInner {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.sidebarCollapsed .sidebarInner {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .sidebarSection {
@@ -295,6 +333,7 @@
     border-radius: 14px;
     background: var(--surface-overlay);
     border: 1px solid var(--line-soft);
+    transition: background-color 0.2s ease, border-color 0.2s ease, padding 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sectionTitle {
@@ -308,9 +347,17 @@
     overflow: hidden;
 }
 
+.sectionTitleClip {
+    display: inline-block;
+    max-width: 180px;
+    overflow: hidden;
+    transition: max-width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .sectionTitleText {
     display: inline-block;
     transform-origin: left center;
+    will-change: transform, opacity;
     transition: opacity 0.2s ease, transform 0.24s ease;
 }
 
@@ -332,9 +379,17 @@
 
 .linkText {
     display: inline-block;
-    max-width: 180px;
     transform-origin: left center;
-    transition: opacity 0.2s ease, transform 0.24s ease, max-width 0.24s ease;
+    will-change: transform, opacity;
+    transition: opacity 0.2s ease, transform 0.24s ease;
+}
+
+.linkTextClip {
+    flex: 0 1 180px;
+    max-width: 180px;
+    min-width: 0;
+    overflow: hidden;
+    transition: max-width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebarLink i {
@@ -409,61 +464,61 @@
 .sidebarCollapsed .sidebarLink {
     justify-content: center;
     gap: 0;
-    padding: 10px 8px;
+    padding: 11px 8px;
     border-left: none;
+    border-radius: 14px;
 }
 
-.sidebarCollapsed .sidebarLink i {
-    transform: translateX(0);
+.sidebarCollapsed .sidebarNav {
+    gap: 10px;
+    padding: 14px 6px;
+}
+
+.sidebarCollapsed .sidebarSection {
+    padding: 4px 0;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.sidebarCollapsed .sectionTitle {
+    padding: 0;
+    height: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sidebarCollapsed .sectionTitleClip,
+.sidebarCollapsed .linkTextClip {
+    max-width: 0;
+    transition-delay: 0ms;
 }
 
 .sidebarCollapsed .sectionTitleText,
 .sidebarCollapsed .linkText {
     opacity: 0;
-    transform: translateX(-8px) scale(0.98);
-    max-width: 0;
-    width: 0;
-    margin: 0;
+    transform: translateX(-6px);
     pointer-events: none;
+    transition-delay: 0ms;
+}
+
+.sidebarOpen .sectionTitleClip,
+.sidebarOpen .linkTextClip {
+    max-width: 180px;
+    transition-delay: 40ms;
 }
 
 .sidebarOpen .sectionTitleText,
 .sidebarOpen .linkText {
     opacity: 1;
-    transform: translateX(0) scale(1);
-    max-width: 180px;
+    transform: translateX(0);
+    transition-delay: 82ms;
 }
-
-.sidebarOpen .sidebarLink {
-    opacity: 0;
-    transform: translateX(-8px) scale(0.98);
-    animation: sidebarLinkEnter 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.sidebarOpen .sidebarSection:nth-child(1) .sidebarLink:nth-child(2) { animation-delay: 40ms; }
-.sidebarOpen .sidebarSection:nth-child(1) .sidebarLink:nth-child(3) { animation-delay: 70ms; }
-.sidebarOpen .sidebarSection:nth-child(1) .sidebarLink:nth-child(4) { animation-delay: 100ms; }
-.sidebarOpen .sidebarSection:nth-child(2) .sidebarLink:nth-child(2) { animation-delay: 120ms; }
-.sidebarOpen .sidebarSection:nth-child(2) .sidebarLink:nth-child(3) { animation-delay: 150ms; }
-.sidebarOpen .sidebarSection:nth-child(2) .sidebarLink:nth-child(4) { animation-delay: 180ms; }
-.sidebarOpen .sidebarSection:nth-child(3) .sidebarLink:nth-child(2) { animation-delay: 200ms; }
-.sidebarOpen .sidebarSection:nth-child(3) .sidebarLink:nth-child(3) { animation-delay: 230ms; }
-.sidebarOpen .sidebarSection:nth-child(3) .sidebarLink:nth-child(4) { animation-delay: 260ms; }
 
 .sidebarCollapsed .sidebarLinkActive {
     background: rgba(0, 123, 85, 0.18);
-}
-
-@keyframes sidebarLinkEnter {
-    from {
-        opacity: 0;
-        transform: translateX(-8px) scale(0.98);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0) scale(1);
-    }
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 123, 85, 0.12);
 }
 
 /* Scrollbar for sidebar */
@@ -497,6 +552,13 @@
         z-index: 1100;
         box-shadow: 8px 0 30px rgba(0, 0, 0, 0.24);
         transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), width 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+    }
+
+    .sidebarInner {
+        opacity: 1;
+        transform: none;
+        transition: none;
+        will-change: auto;
     }
 
     .sidebarOpen {
@@ -551,6 +613,7 @@
 @media (prefers-reduced-motion: reduce) {
     .withSidebar,
     .sidebar,
+    .sidebarInner,
     .sidebarLink,
     .sectionTitleText,
     .linkText,

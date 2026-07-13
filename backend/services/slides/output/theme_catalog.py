@@ -27,9 +27,9 @@ THEME_VARIANTS = {
     ],
 }
 
-# Presenton-style template groups (from presentation-templates folders)
+# PPT Generator-style template groups (from presentation-templates folders)
 # are mapped to available local PPTX base themes.
-PRESENTON_GROUP_MAP = {
+PPT_GENERATOR_GROUP_MAP = {
     "general": "Light",
     "modern": "Business",
     "standard": "Classic",
@@ -41,26 +41,32 @@ PRESENTON_GROUP_MAP = {
     "education": "Classic",
     "report": "Business",
     "code": "Dark",
+    "pitch-deck": "Business",
+    "pitchdeck": "Business",
+    "product-overview": "Business",
     "productoverview": "Business",
 }
 
-PRESENTON_LAYOUT_COUNTS = {
+PPT_GENERATOR_LAYOUT_COUNTS = {
     "general": 12,
     "modern": 10,
     "standard": 11,
     "swift": 9,
-    "neo-general": 24,
+    "code": 16,
+    "education": 14,
+    "product-overview": 21,
+    "productoverview": 21,
+    "report": 22,
+    "pitch-deck": 25,
+    "pitchdeck": 25,
+    "neo-general": 29,
     "neo-modern": 17,
     "neo-standard": 17,
     "neo-swift": 15,
-    "education": 10,
-    "report": 12,
-    "code": 8,
-    "productoverview": 10,
 }
 
-ENABLE_PRESENTON_THEME_ALIASES = (
-    os.getenv("SUB1_ENABLE_PRESENTON_THEME_ALIASES", "false").strip().lower() == "true"
+ENABLE_PPT_GENERATOR_THEME_ALIASES = (
+    os.getenv("SUB1_ENABLE_PPT_GENERATOR_THEME_ALIASES", "false").strip().lower() == "true"
 )
 
 
@@ -87,21 +93,21 @@ def build_theme_catalog(template_names: List[str]) -> List[Dict[str, str]]:
                 }
             )
 
-    # Presenton aliases are opt-in because they are mapped to local PPTX themes.
-    if ENABLE_PRESENTON_THEME_ALIASES:
-        for group_name, mapped_base in PRESENTON_GROUP_MAP.items():
+    # PPT Generator aliases are opt-in because they are mapped to local PPTX themes.
+    if ENABLE_PPT_GENERATOR_THEME_ALIASES:
+        for group_name, mapped_base in PPT_GENERATOR_GROUP_MAP.items():
             if mapped_base not in available:
                 continue
-            display_name = f"Presenton {group_name.replace('-', ' ').title()}"
+            display_name = f"PPT Generator {group_name.replace('-', ' ').title()}"
             themes.append(
                 {
                     "name": display_name,
                     "base_theme": mapped_base,
-                    "description": f"Presenton-mapped template family: {group_name}",
+                    "description": f"PPT Generator-mapped template family: {group_name}",
                     "preview_theme": mapped_base,
-                    "source": "presenton_alias",
+                    "source": "ppt_generator_alias",
                     "source_group": group_name,
-                    "layout_count": PRESENTON_LAYOUT_COUNTS.get(group_name),
+                    "layout_count": PPT_GENERATOR_LAYOUT_COUNTS.get(group_name),
                 }
             )
 
@@ -142,16 +148,16 @@ def resolve_base_theme(requested_theme: str, template_names: List[str]) -> str:
     if not normalized:
         raise ValueError(f"Theme: {requested_theme} does not exist")
 
-    # Support direct Presenton group keys (e.g., "code", "neo-modern").
+    # Support direct PPT Generator group keys (e.g., "code", "neo-modern").
     group_key = normalized.lower().replace(" ", "-")
-    mapped = PRESENTON_GROUP_MAP.get(group_key)
+    mapped = PPT_GENERATOR_GROUP_MAP.get(group_key)
     if mapped in available:
         return mapped
 
-    # Support catalog display names (e.g., "Presenton Code").
-    if normalized.lower().startswith("presenton "):
-        suffix = normalized[len("Presenton ") :].strip().lower().replace(" ", "-")
-        mapped = PRESENTON_GROUP_MAP.get(suffix)
+    # Support catalog display names (e.g., "PPT Generator Code").
+    if normalized.lower().startswith("ppt generator "):
+        suffix = normalized[len("PPT Generator ") :].strip().lower().replace(" ", "-")
+        mapped = PPT_GENERATOR_GROUP_MAP.get(suffix)
         if mapped in available:
             return mapped
 

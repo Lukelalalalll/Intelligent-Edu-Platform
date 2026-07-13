@@ -32,13 +32,6 @@ export default function ModeSidebar({ activeMode, setActiveMode }: ModeSidebarPr
                 LLM Cost Monitor
             </button>
             <button
-                className={`${styles.modeBtn} ${activeMode === 'api-keys' ? styles.modeBtnActive : ''}`}
-                onClick={() => setActiveMode('api-keys')}
-            >
-                <i className="fas fa-key"></i>
-                API Keys
-            </button>
-            <button
                 className={`${styles.modeBtn} ${activeMode === 'staff-codes' ? styles.modeBtnActive : ''}`}
                 onClick={() => setActiveMode('staff-codes')}
             >

@@ -1,5 +1,7 @@
 import React from 'react';
 import styles from '../styles/KnowledgeBase.module.css';
+import entranceStyles from '@/shared/page-entrance/PageEntrance.module.css';
+import { usePageEntrance } from '@/shared/page-entrance/usePageEntrance';
 import CoursePanel from './CoursePanel';
 import DocumentManager from './DocumentManager';
 import WelcomeBanner from '../../../shared/components/WelcomeBanner';
@@ -46,10 +48,14 @@ export default function KnowledgeBaseView({
     useFastExtract, onToggleExtractMode,
     indexProfile, parserStrategy, forceReindex, onChangeIndexProfile, onChangeParserStrategy, onToggleForceReindex,
 }: KnowledgeBaseViewProps) {
+    const isEntranceActive = usePageEntrance();
     const selectedCourse = courses.find(c => c.courseId === selectedCourseId);
 
     return (
-        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px' }}>
+        <div
+            className={`${entranceStyles.pageEntrance} ${isEntranceActive ? entranceStyles.pageEntranceActive : ''}`}
+            style={{ maxWidth: 1440, margin: '0 auto', padding: '0 32px' }}
+        >
             <WelcomeBanner
                 className={styles['kb-banner']}
                 title={<><i className="fas fa-book-open"></i> Course Knowledge Base</>}

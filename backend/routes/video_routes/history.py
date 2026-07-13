@@ -5,7 +5,8 @@ from fastapi import Depends, HTTPException, Query
 from backend.core.security import get_current_user
 from backend.services.history_service import get_history_document, list_history, serialize_history_doc
 
-from .router import router
+from fastapi import APIRouter
+router = APIRouter()
 
 
 @router.get("/generation_history")

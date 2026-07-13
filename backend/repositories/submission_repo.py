@@ -1,40 +1,109 @@
-"""Submission repository — CRUD for the submissions collection."""
-from typing import Any, Dict, List, Optional
+"""Submission repository CRUD for the submissions collection."""
+from __future__ import annotations
 
-from bson import ObjectId
+from typing import Any
 
 from backend.core.database import db
-from ._helpers import serialize_doc, utcnow
+
+from ._helpers import (
+    build_page_result,
+    coerce_object_id,
+    normalize_pagination,
+    serialize_doc,
+    serialize_docs,
+    utcnow,
+)
 
 
-async def create_submission(data: Dict[str, Any]) -> Dict[str, Any]:
+async def create_submission(
+    data: dict[str, Any],
+    *,
+    session=None,
+) -> dict[str, Any]:
     data.pop("_id", None)
+    now = utcnow()
     data.setdefault("status", "pending")
-    data.setdefault("submittedAt", utcnow())
+    data.setdefault("submittedAt", now)
+    data.setdefault("createdAt", data["submittedAt"])
+    data["updatedAt"] = now
     data.setdefault("attemptNo", 1)
-    result = await db.submissions.insert_one(data)
-    doc = await db.submissions.find_one({"_id": result.inserted_id})
+    result = await db.submissions.insert_one(data, session=session)
+    doc = await db.submissions.find_one({"_id": result.inserted_id}, session=session)
     return serialize_doc(doc)
 
 
-async def get_submission(submission_id: str) -> Optional[Dict[str, Any]]:
-    doc = await db.submissions.find_one({"_id": ObjectId(submission_id)})
+async def get_submission(submission_id: str, *, session=None) -> dict[str, Any] | None:
+    oid = coerce_object_id(submission_id)
+    if oid is None:
+        return None
+    doc = await db.submissions.find_one({"_id": oid}, session=session)
     if doc:
         return serialize_doc(doc)
     return None
 
 
-async def list_submissions(assignment_id: str) -> List[Dict[str, Any]]:
-    docs = await db.submissions.find({"assignmentId": assignment_id}).to_list(length=5000)
-    return [serialize_doc(d) for d in docs]
+async def list_submissions(
+    assignment_id: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    session=None,
+) -> dict[str, Any]:
+    safe_page, safe_page_size = normalize_pagination(page=page, page_size=page_size)
+    query = {"assignmentId": assignment_id}
+    skip = (safe_page - 1) * safe_page_size
+    total = await db.submissions.count_documents(query, session=session)
+    docs = await (
+        db.submissions.find(query, session=session)
+        .sort([("submittedAt", -1), ("createdAt", -1)])
+        .skip(skip)
+        .limit(safe_page_size)
+        .to_list(length=safe_page_size)
+    )
+    return build_page_result(
+        items=serialize_docs(docs),
+        total=total,
+        page=safe_page,
+        page_size=safe_page_size,
+    )
 
 
-async def list_submissions_for_student(student_id: str) -> List[Dict[str, Any]]:
-    docs = await db.submissions.find({"studentId": student_id}).to_list(length=5000)
-    return [serialize_doc(d) for d in docs]
+async def list_submissions_for_student(
+    student_id: str,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+    session=None,
+) -> dict[str, Any]:
+    safe_page, safe_page_size = normalize_pagination(page=page, page_size=page_size)
+    query = {"studentId": student_id}
+    skip = (safe_page - 1) * safe_page_size
+    total = await db.submissions.count_documents(query, session=session)
+    docs = await (
+        db.submissions.find(query, session=session)
+        .sort([("submittedAt", -1), ("createdAt", -1)])
+        .skip(skip)
+        .limit(safe_page_size)
+        .to_list(length=safe_page_size)
+    )
+    return build_page_result(
+        items=serialize_docs(docs),
+        total=total,
+        page=safe_page,
+        page_size=safe_page_size,
+    )
 
 
-async def update_submission(submission_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def update_submission(
+    submission_id: str,
+    data: dict[str, Any],
+    *,
+    session=None,
+) -> dict[str, Any] | None:
+    oid = coerce_object_id(submission_id)
+    if oid is None:
+        return None
     data.pop("_id", None)
-    await db.submissions.update_one({"_id": ObjectId(submission_id)}, {"$set": data})
-    return await get_submission(submission_id)
+    data["updatedAt"] = utcnow()
+    await db.submissions.update_one({"_id": oid}, {"$set": data}, session=session)
+    return await get_submission(submission_id, session=session)

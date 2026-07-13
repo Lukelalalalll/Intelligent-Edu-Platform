@@ -8,7 +8,7 @@ import json
 from backend.agent.tools import tool_registry
 
 
-# ── RAG / Knowledge Retrieval ──────────────────────────────────────────
+# 鈹€鈹€ RAG / Knowledge Retrieval 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 @tool_registry.register
 async def search_course_knowledge(query: str, course_id: str = "", top_k: int = 5) -> str:
@@ -48,7 +48,7 @@ async def search_course_knowledge(query: str, course_id: str = "", top_k: int = 
         })
 
 
-# ── Diagram Generation ─────────────────────────────────────────────────
+# 鈹€鈹€ Diagram Generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 @tool_registry.register
 async def generate_diagram(description: str, diagram_type: str = "flowchart") -> str:
@@ -56,7 +56,7 @@ async def generate_diagram(description: str, diagram_type: str = "flowchart") ->
     Returns a diagram element that the frontend will render."""
     import uuid
     try:
-        from backend.services.diagram_service import DiagramService
+        from backend.services.visual.diagram_service import DiagramService
 
         svc = DiagramService()
         task_id = str(uuid.uuid4())[:8]
@@ -80,7 +80,7 @@ async def generate_diagram(description: str, diagram_type: str = "flowchart") ->
         })
 
 
-# ── Slide / PPT Generation ─────────────────────────────────────────────
+# 鈹€鈹€ Slide / PPT Generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 @tool_registry.register
 async def render_presentation(topic: str, requirements: str = "") -> str:
@@ -104,7 +104,7 @@ async def render_presentation(topic: str, requirements: str = "") -> str:
     """
     import os
     try:
-        from backend.services.slides_pipeline_service import generate_outline as _gen_outline
+        from backend.services.slides.pipeline_service import generate_outline as _gen_outline
         from backend.services.slides.html_renderer import SlidesHtmlRenderer
         from backend.services.slides.dynamic_theme_service import DynamicThemeService
         from backend.config import Config
@@ -144,7 +144,7 @@ async def render_presentation(topic: str, requirements: str = "") -> str:
                 # Fallback to base CSS if LLM customization fails
                 custom_css = base_css
 
-        # 4. Render Markdown → HTML → PPTX
+        # 4. Render Markdown 鈫?HTML 鈫?PPTX
         renderer = SlidesHtmlRenderer()
         output_dir = Config.PPT_RESULTS_FOLDER
         os.makedirs(output_dir, exist_ok=True)
@@ -174,7 +174,7 @@ async def render_presentation(topic: str, requirements: str = "") -> str:
         })
 
 
-# ── PDF Content Extraction ─────────────────────────────────────────────
+# 鈹€鈹€ PDF Content Extraction 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 @tool_registry.register
 async def extract_pdf_content(pdf_url: str, page_number: int = 1) -> str:
@@ -183,7 +183,7 @@ async def extract_pdf_content(pdf_url: str, page_number: int = 1) -> str:
         import requests
         from bs4 import BeautifulSoup
 
-        # For local files, use the pdf_loader module
+        # Full local extraction is handled by the backend PDF extraction pipeline.
         if pdf_url.startswith("http"):
             resp = requests.get(pdf_url, timeout=30)
             resp.raise_for_status()
@@ -193,11 +193,11 @@ async def extract_pdf_content(pdf_url: str, page_number: int = 1) -> str:
                     "status": "error",
                     "message": f"URL does not point to a PDF file (got: {content_type})",
                 })
-            # Return a marker — full extraction would use pdf_loader
+            # Return a marker; full extraction uses the backend OpenDataLoader wrapper.
             return json.dumps({
                 "status": "success",
                 "message": f"PDF at {pdf_url} is accessible ({len(resp.content)} bytes).",
-                "page_count_hint": "Use local pdf_loader for full extraction.",
+                "page_count_hint": "Use backend PDF extraction for full extraction.",
             })
 
         # Local file path
