@@ -91,6 +91,7 @@ const ThemePanel: React.FC = () => {
   } = editorState
   const {
     slideContainerRef,
+    previewThemeStyle,
     previewScale,
     previewSlideWidth,
     previewSlideHeight,
@@ -336,20 +337,21 @@ const ThemePanel: React.FC = () => {
           currentStepMeta={currentStepMeta}
           customColors={customColors}
           customFonts={customFonts}
-          customBrandLogo={customBrandLogo}
-          isLogoUploading={isLogoUploading}
-          isFontUploading={isFontUploading}
+        customBrandLogo={customBrandLogo}
+        isLogoUploading={isLogoUploading}
+        isFontUploading={isFontUploading}
           isPaletteGenerating={isPaletteGenerating}
           paletteDirty={paletteDirty}
           hasGeneratedPalette={hasGeneratedPalette}
           showColorPicker={showColorPicker}
           themeCompanyName={themeCompanyName}
-          userFonts={userFonts}
-          totalThemeCount={totalThemeCount}
-          slideContainerRef={slideContainerRef}
-          previewScale={previewScale}
-          previewSlideWidth={previewSlideWidth}
-          previewSlideHeight={previewSlideHeight}
+        userFonts={userFonts}
+        totalThemeCount={totalThemeCount}
+        slideContainerRef={slideContainerRef}
+        previewThemeStyle={previewThemeStyle}
+        previewScale={previewScale}
+        previewSlideWidth={previewSlideWidth}
+        previewSlideHeight={previewSlideHeight}
           previewLayouts={previewLayouts}
           isPreviewLayoutsLoading={isPreviewLayoutsLoading}
           onClickOutside={handleClickOutside}
@@ -371,4 +373,3 @@ const ThemePanel: React.FC = () => {
 }
 
 export default ThemePanel
-

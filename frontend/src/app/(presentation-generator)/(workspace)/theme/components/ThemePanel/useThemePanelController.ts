@@ -17,7 +17,7 @@ import {
   THEME_EDITOR_STEPS,
 } from './constants'
 import {
-  applyThemeToElement,
+  buildThemeCssVariables,
   buildThemeParams,
   buildThemeWithCustomizations,
   calculatePreviewScale,
@@ -79,6 +79,7 @@ export function useThemePanelController() {
   const [isPaletteGenerating, setIsPaletteGenerating] = useState(false)
   const [lastGeneratedPaletteSeeds, setLastGeneratedPaletteSeeds] =
     useState<ThemePaletteSeedSnapshot | null>(null)
+  const [paletteSeedMode, setPaletteSeedMode] = useState<'generated' | 'manual'>('generated')
 
   const slideContainerRef = useRef<HTMLDivElement>(null)
   const previousSelectedThemeIdRef = useRef(selectedTheme.id)
@@ -115,15 +116,10 @@ export function useThemePanelController() {
       }),
     [customBrandLogo, customColors, customFonts, selectedTheme, themeCompanyName]
   )
-
-  const applyPreviewTheme = useCallback((theme: Theme) => {
-    if (!slideContainerRef.current) return
-
-    applyThemeToElement(slideContainerRef.current, theme)
-    loadFontAssets({
-      [theme.data.fonts.textFont.name]: theme.data.fonts.textFont.url,
-    })
-  }, [])
+  const previewThemeStyle = useMemo(
+    () => buildThemeCssVariables(previewTheme),
+    [previewTheme]
+  )
 
   const buildPaletteSeedSnapshot = useCallback(
     (colors: ThemeColors): ThemePaletteSeedSnapshot => ({
@@ -183,8 +179,10 @@ export function useThemePanelController() {
   useEffect(() => {
     if (!isSheetOpen) return
 
-    applyPreviewTheme(previewTheme)
-  }, [applyPreviewTheme, isSheetOpen, previewTheme])
+    loadFontAssets({
+      [previewTheme.data.fonts.textFont.name]: previewTheme.data.fonts.textFont.url,
+    })
+  }, [isSheetOpen, previewTheme])
 
   useEffect(() => {
     let isCancelled = false
@@ -228,7 +226,11 @@ export function useThemePanelController() {
       }
     }
 
-    if (defaultThemes.length > 0 && shouldHydrateDefaultThemeRef.current) {
+    if (
+      defaultThemes.length > 0 &&
+      shouldHydrateDefaultThemeRef.current &&
+      newThemeTab !== 'new-theme'
+    ) {
       const firstTheme = defaultThemes[0]
       const editorValues = extractThemeEditorValues(firstTheme)
 
@@ -240,7 +242,7 @@ export function useThemePanelController() {
       setCustomBrandLogoId(editorValues.brandLogoId)
       setThemeCompanyName(editorValues.companyName)
       setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
-      applyPreviewTheme(firstTheme)
+      setPaletteSeedMode('generated')
     }
 
     void loadCustomThemes()
@@ -249,7 +251,7 @@ export function useThemePanelController() {
     return () => {
       isCancelled = true
     }
-  }, [applyPreviewTheme, buildPaletteSeedSnapshot, defaultThemes, t])
+  }, [buildPaletteSeedSnapshot, defaultThemes, newThemeTab, t])
 
   useEffect(() => {
     if (previousSelectedThemeIdRef.current === selectedTheme.id) return
@@ -262,6 +264,7 @@ export function useThemePanelController() {
     setCustomBrandLogoId(editorValues.brandLogoId)
     setThemeCompanyName(editorValues.companyName)
     setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
+    setPaletteSeedMode('generated')
   }, [buildPaletteSeedSnapshot, selectedTheme])
 
   const handleCloseSheet = useCallback((open: boolean) => {
@@ -285,7 +288,7 @@ export function useThemePanelController() {
     setIsSheetOpen(true)
     setCurrentStep('colors')
     setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
-    applyPreviewTheme(theme)
+    setPaletteSeedMode('generated')
 
     const themeSource = getThemeSource(theme)
 
@@ -301,7 +304,7 @@ export function useThemePanelController() {
       theme_name: theme.name,
       theme_source: themeSource,
     })
-  }, [applyPreviewTheme, buildPaletteSeedSnapshot, pathname])
+  }, [buildPaletteSeedSnapshot, pathname])
 
   const handleColorChange = useCallback((colorKey: keyof ThemeColors, value: string) => {
     const validValue = value && !value.startsWith('#') ? `#${value}` : value
@@ -309,6 +312,9 @@ export function useThemePanelController() {
       ...currentColors,
       [colorKey]: validValue,
     }))
+    if (colorKey === 'primary' || colorKey === 'background') {
+      setPaletteSeedMode('manual')
+    }
   }, [])
 
   const handleShowColorPicker = useCallback((colorKey: string | null) => {
@@ -402,7 +408,7 @@ export function useThemePanelController() {
     setCurrentStep('colors')
     setThemeCompanyName('')
     setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(editorValues.colors))
-    applyPreviewTheme(nextTheme)
+    setPaletteSeedMode('generated')
 
     trackEvent(MixpanelEvent.Theme_Editor_Opened, {
       pathname,
@@ -410,18 +416,22 @@ export function useThemePanelController() {
       theme_name: nextTheme.name,
       theme_source: 'new_draft',
     })
-  }, [applyPreviewTheme, buildPaletteSeedSnapshot, generateTheme, pathname, t])
+  }, [buildPaletteSeedSnapshot, generateTheme, pathname, t])
 
   const handleGeneratePalette = useCallback(async () => {
     try {
       setIsPaletteGenerating(true)
+      const shouldPreserveCurrentSeeds = paletteSeedMode === 'manual'
       const generatedTheme = await generateTheme({
-        primary: customColors.primary,
-        background: customColors.background,
+        primary: shouldPreserveCurrentSeeds ? customColors.primary : undefined,
+        background: shouldPreserveCurrentSeeds ? customColors.background : undefined,
         source: 'refresh',
       })
       setCustomColors(generatedTheme)
       setLastGeneratedPaletteSeeds(buildPaletteSeedSnapshot(generatedTheme))
+      if (!shouldPreserveCurrentSeeds) {
+        setPaletteSeedMode('generated')
+      }
     } catch (error: any) {
       console.error('Failed to generate theme palette', error)
       notify.error(
@@ -431,7 +441,14 @@ export function useThemePanelController() {
     } finally {
       setIsPaletteGenerating(false)
     }
-  }, [buildPaletteSeedSnapshot, customColors.background, customColors.primary, generateTheme, t])
+  }, [
+    buildPaletteSeedSnapshot,
+    customColors.background,
+    customColors.primary,
+    generateTheme,
+    paletteSeedMode,
+    t,
+  ])
 
   const saveTheme = useCallback(async () => {
     const saveBase = {
@@ -704,6 +721,7 @@ export function useThemePanelController() {
       previewSlideHeight,
       previewLayouts,
       isPreviewLayoutsLoading,
+      previewThemeStyle,
     },
     actions: {
       handleCloseSheet,
@@ -725,4 +743,3 @@ export function useThemePanelController() {
     },
   }
 }
-

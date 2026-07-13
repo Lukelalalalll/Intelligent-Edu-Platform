@@ -7,6 +7,7 @@ import styles from './ThemePanel.module.css'
 
 interface ThemePreviewPaneProps {
   slideContainerRef: React.RefObject<HTMLDivElement>
+  previewThemeStyle: React.CSSProperties
   previewScale: number
   previewSlideWidth: number
   previewSlideHeight: number
@@ -17,6 +18,7 @@ interface ThemePreviewPaneProps {
 
 export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
   slideContainerRef,
+  previewThemeStyle,
   previewScale,
   previewSlideWidth,
   previewSlideHeight,
@@ -46,7 +48,10 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
 
       <div
         ref={slideContainerRef}
-        style={{ backgroundColor: 'var(--page-background-color)' }}
+        style={{
+          ...previewThemeStyle,
+          backgroundColor: 'var(--page-background-color, var(--background-color))',
+        }}
         className={styles.previewViewport}
       >
         {isLoading && previewLayouts.length === 0 ? (
@@ -104,4 +109,3 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
     </div>
   )
 }
-

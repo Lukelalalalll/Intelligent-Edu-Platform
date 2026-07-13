@@ -238,5 +238,58 @@ describe('useThemePanelController', () => {
       logo_url: null,
     })
   })
-})
 
+  it('regenerates a full palette when current seed colors were auto-generated', async () => {
+    navigationState.searchParams = new URLSearchParams('tab=new-theme')
+    themeApi.generateTheme
+      .mockResolvedValueOnce(buildGeneratedPalette('#5a43d5', '#f5f2ff'))
+      .mockResolvedValueOnce(buildGeneratedPalette('#1f7ae0', '#eef8ff'))
+
+    const { result } = renderHook(() => useThemePanelController(), {
+      wrapper: buildWrapper(),
+    })
+
+    await waitFor(() => expect(themeApi.generateTheme).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      await result.current.actions.handleGeneratePalette()
+    })
+
+    expect(themeApi.generateTheme).toHaveBeenCalledTimes(2)
+    expect(themeApi.generateTheme.mock.calls[1][0]).toEqual({})
+    expect(result.current.editorState.customColors.primary).toBe('#1f7ae0')
+    expect(result.current.editorState.customColors.background).toBe('#eef8ff')
+    expect(result.current.editorState.paletteDirty).toBe(false)
+  })
+
+  it('preserves manually edited seed colors when regenerating the palette', async () => {
+    navigationState.searchParams = new URLSearchParams('tab=new-theme')
+    themeApi.generateTheme
+      .mockResolvedValueOnce(buildGeneratedPalette('#5a43d5', '#f5f2ff'))
+      .mockResolvedValueOnce(buildGeneratedPalette('#111111', '#fafafa'))
+
+    const { result } = renderHook(() => useThemePanelController(), {
+      wrapper: buildWrapper(),
+    })
+
+    await waitFor(() => expect(themeApi.generateTheme).toHaveBeenCalledTimes(1))
+
+    act(() => {
+      result.current.actions.handleColorChange('primary', '#111111')
+      result.current.actions.handleColorChange('background', '#fafafa')
+    })
+
+    await act(async () => {
+      await result.current.actions.handleGeneratePalette()
+    })
+
+    expect(themeApi.generateTheme).toHaveBeenCalledTimes(2)
+    expect(themeApi.generateTheme.mock.calls[1][0]).toMatchObject({
+      primary: '#111111',
+      background: '#fafafa',
+    })
+    expect(result.current.editorState.customColors.primary).toBe('#111111')
+    expect(result.current.editorState.customColors.background).toBe('#fafafa')
+    expect(result.current.editorState.paletteDirty).toBe(false)
+  })
+})

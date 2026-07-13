@@ -1,4 +1,5 @@
 ﻿import { Theme, ThemeParams } from '@/app/(presentation-generator)/services/api/types'
+import type { CSSProperties } from 'react'
 import type { TranslationKey } from '@/shared/i18n'
 import {
   FALLBACK_THEME,
@@ -94,9 +95,24 @@ export function buildThemeWithCustomizations(
 }
 
 export function applyThemeToElement(element: HTMLElement, theme: Theme) {
-  const cssVariables = {
+  const cssVariables = buildThemeCssVariables(theme)
+
+  Object.entries(cssVariables).forEach(([key, value]) => {
+    if (key === 'fontFamily') {
+      element.style.setProperty('font-family', value)
+      return
+    }
+    element.style.setProperty(key, value)
+  })
+}
+
+export function buildThemeCssVariables(theme: Theme): CSSProperties & Record<string, string> {
+  const fontFamily = `"${theme.data.fonts.textFont.name}"`
+
+  return {
     '--primary-color': theme.data.colors.primary,
     '--background-color': theme.data.colors.background,
+    '--page-background-color': theme.data.colors.background,
     '--card-color': theme.data.colors.card,
     '--stroke': theme.data.colors.stroke,
     '--primary-text': theme.data.colors.primary_text,
@@ -111,14 +127,10 @@ export function applyThemeToElement(element: HTMLElement, theme: Theme) {
     '--graph-7': theme.data.colors.graph_7,
     '--graph-8': theme.data.colors.graph_8,
     '--graph-9': theme.data.colors.graph_9,
+    '--heading-font-family': fontFamily,
+    '--body-font-family': fontFamily,
+    fontFamily,
   }
-
-  Object.entries(cssVariables).forEach(([key, value]) => {
-    element.style.setProperty(key, value)
-  })
-
-  element.style.setProperty('font-family', `"${theme.data.fonts.textFont.name}"`)
-  element.style.setProperty('--heading-font-family', `"${theme.data.fonts.textFont.name}"`)
 }
 
 export function mapGeneratedThemeColors(generatedTheme: Record<string, string>): ThemeColors {
@@ -223,4 +235,3 @@ export function getThemeSource(theme: Theme) {
 export function isPersistedCustomTheme(theme: Theme) {
   return Boolean(theme.user && theme.user !== 'system' && !theme.id.startsWith('custom-'))
 }
-

@@ -61,6 +61,7 @@ function buildProps(
     userFonts: { fonts: [] },
     totalThemeCount: 5,
     slideContainerRef: React.createRef<HTMLDivElement>(),
+    previewThemeStyle: { '--primary-color': FALLBACK_THEME.data.colors.primary } as React.CSSProperties,
     previewScale: 0.5,
     previewSlideWidth: 640,
     previewSlideHeight: 360,
@@ -172,4 +173,3 @@ describe('ThemeEditorSheet', () => {
     expect(screen.getByRole('button', { name: 'Save Custom Theme' })).toBeInTheDocument()
   })
 })
-

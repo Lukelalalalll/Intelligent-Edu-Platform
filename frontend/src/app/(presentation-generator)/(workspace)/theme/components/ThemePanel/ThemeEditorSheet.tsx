@@ -37,6 +37,7 @@ interface ThemeEditorSheetProps {
   userFonts: UserFontLibrary
   totalThemeCount: number
   slideContainerRef: React.RefObject<HTMLDivElement>
+  previewThemeStyle: React.CSSProperties
   previewScale: number
   previewSlideWidth: number
   previewSlideHeight: number
@@ -87,6 +88,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
   userFonts,
   totalThemeCount,
   slideContainerRef,
+  previewThemeStyle,
   previewScale,
   previewSlideWidth,
   previewSlideHeight,
@@ -248,6 +250,7 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
 
           <ThemePreviewPane
             slideContainerRef={slideContainerRef}
+            previewThemeStyle={previewThemeStyle}
             previewScale={previewScale}
             previewSlideWidth={previewSlideWidth}
             previewSlideHeight={previewSlideHeight}
@@ -260,4 +263,3 @@ export const ThemeEditorSheet: React.FC<ThemeEditorSheetProps> = ({
     </Sheet>
   )
 }
-
