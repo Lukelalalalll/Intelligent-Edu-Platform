@@ -44,3 +44,19 @@ export const zhHKSharedHomeToolMessages = {
   "home.tool.visual.desc": "\u5716\u8868\u64f7\u53d6\u3001\u5716\u50cf\u64f7\u53d6\u3001SVG \u7de8\u8f2f\u540c AI \u751f\u6210",
   "home.tool.visual.title": "AI \u8996\u89ba\u5de5\u5177",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWSharedHomeToolMessages = {
+  "home.tool.highlighter.desc": "智慧文件標註與重點擷取",
+  "home.tool.highlighter.title": "文件重點工具",
+  "home.tool.ppt_generator.desc": "使用你目前設定的 AI provider 和已儲存產物，完成整套 PPT 工作流程",
+  "home.tool.ppt_generator.title": "PPT 生成器",
+  "home.tool.questions.desc": "智慧題目擷取與自動生成",
+  "home.tool.questions.title": "AI 題目生成器",
+  "home.tool.studyNotes.desc": "基於課程 PDF 生成結構化學習筆記與閃卡",
+  "home.tool.studyNotes.title": "AI 學習筆記",
+  "home.tool.video.desc": "將 PDF、筆記或文字轉為配音教學影片",
+  "home.tool.video.title": "AI 影片生成器",
+  "home.tool.visual.desc": "圖表擷取、圖片擷取、SVG 編輯與 AI 生成",
+  "home.tool.visual.title": "AI 視覺工具",
+} as const satisfies MessageDictionary;

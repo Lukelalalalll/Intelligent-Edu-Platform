@@ -1,4 +1,11 @@
-export { applyLocale, detectInitialLocale, I18nProvider, isLocale, useI18n } from './I18nProvider';
+export {
+  applyLocale,
+  detectInitialLocale,
+  detectLocaleFromBrowserLanguage,
+  I18nProvider,
+  isLocale,
+  useI18n,
+} from './I18nProvider';
 export {
   DEFAULT_LOCALE,
   LOCALE_OPTIONS,

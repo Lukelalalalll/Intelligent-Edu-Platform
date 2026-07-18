@@ -13,3 +13,8 @@ export const zhCNPptLoadingMessages = {
 export const zhHKPptLoadingMessages = {
   "ppt_generator.loading": "正在載入 PPT Generator...",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWPptLoadingMessages = {
+  "ppt_generator.loading": "正在載入 PPT Generator...",
+} as const satisfies MessageDictionary;

@@ -1,4 +1,9 @@
-﻿import * as z from "zod";
+﻿import type { ComponentType } from "react";
+import * as z from "zod";
+
+export type TemplateData = Record<string, unknown>;
+export type TemplateComponent<TData extends TemplateData = TemplateData> =
+    ComponentType<{ data: TData }>;
 
 /**
  * Extracts default values from a Zod schema by parsing an empty object
@@ -28,15 +33,68 @@ export function getSchemaJSON(schema: z.ZodTypeAny) {
     }
 }
 
-export function createTemplateEntry(
-    component: React.ComponentType<{ data: any }>,
-    schema: any,
-    layoutId: string,
-    layoutName: string,
-    layoutDescription: string,
-    templateName: string,
-    fileName: string
-): TemplateWithData {
+export interface TemplateLayoutDescriptor<TData extends TemplateData = TemplateData> {
+    component: TemplateComponent<TData>;
+    schema: z.ZodTypeAny;
+    layoutId: string;
+    layoutName: string;
+    layoutDescription: string;
+    templateName: string;
+    fileName: string;
+}
+
+type TemplateEntryArgs<TData extends TemplateData = TemplateData> =
+    | [TemplateLayoutDescriptor<TData>]
+    | [
+        TemplateComponent<TData>,
+        z.ZodTypeAny,
+        string,
+        string,
+        string,
+        string,
+        string,
+    ];
+
+function normalizeTemplateDescriptor<TData extends TemplateData>(
+    args: TemplateEntryArgs<TData>
+): TemplateLayoutDescriptor<TData> {
+    if (args.length === 1) {
+        return args[0];
+    }
+
+    const [
+        component,
+        schema,
+        layoutId,
+        layoutName,
+        layoutDescription,
+        templateName,
+        fileName,
+    ] = args;
+
+    return {
+        component,
+        schema,
+        layoutId,
+        layoutName,
+        layoutDescription,
+        templateName,
+        fileName,
+    };
+}
+
+export function createTemplateEntry<TData extends TemplateData = TemplateData>(
+    ...args: TemplateEntryArgs<TData>
+): TemplateWithData<TData> {
+    const {
+        component,
+        schema,
+        layoutId,
+        layoutName,
+        layoutDescription,
+        templateName,
+        fileName,
+    } = normalizeTemplateDescriptor(args);
     const id = `${templateName}:${layoutId}`;
     return {
         component,
@@ -46,7 +104,7 @@ export function createTemplateEntry(
         layoutDescription,
         templateName,
         fileName,
-        sampleData: getSchemaDefaults(schema),
+        sampleData: getSchemaDefaults(schema) as TData,
         schemaJSON: getSchemaJSON(schema),
     };
 }
@@ -65,11 +123,11 @@ export interface TemplateMetadata {
 /**
  * Template with component and sample data
  */
-export interface TemplateWithData extends TemplateMetadata {
-    component: React.ComponentType<{ data: any }>;
-    sampleData: Record<string, unknown>;
+export interface TemplateWithData<TData extends TemplateData = TemplateData> extends TemplateMetadata {
+    component: TemplateComponent<TData>;
+    sampleData: TData;
     schema: z.ZodTypeAny;
-    schemaJSON: any;
+    schemaJSON: unknown;
 }
 
 /**
@@ -82,6 +140,13 @@ export interface TemplateGroupSettings {
     icon_weight?: string;
 }
 
+export interface TemplateFamilyManifest {
+    id: string;
+    folder: string;
+    name: string;
+    settings: TemplateGroupSettings;
+}
+
 // Template with settings
 export interface TemplateLayoutsWithSettings {
     id: string;
@@ -90,5 +155,4 @@ export interface TemplateLayoutsWithSettings {
     settings: TemplateGroupSettings;
     layouts: TemplateWithData[];
 }
-
 

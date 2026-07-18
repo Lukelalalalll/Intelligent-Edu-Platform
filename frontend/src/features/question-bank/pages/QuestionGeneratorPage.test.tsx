@@ -1,18 +1,15 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import QuestionGeneratorPage from './QuestionGeneratorPage';
 
 const {
-    mockAiConfigApi,
     mockQuestionApi,
     openPdfMock,
 } = vi.hoisted(() => ({
-    mockAiConfigApi: {
-        get: vi.fn(),
-    },
     mockQuestionApi: {
         getGenerationHistory: vi.fn(),
         getGenerationDetail: vi.fn(),
@@ -20,6 +17,7 @@ const {
         uploadFile: vi.fn(),
         finalizeQuestionHistory: vi.fn(),
         exportQuestionSelection: vi.fn(),
+        listQuestionProviders: vi.fn(),
     },
     openPdfMock: vi.fn(),
 }));
@@ -51,14 +49,6 @@ vi.mock('../exportQuestionPdf', () => ({
     openQuestionPdfExport: openPdfMock,
 }));
 
-vi.mock('@/features/ai-config/api/aiConfigApi', async () => {
-    const actual = await vi.importActual<typeof import('@/features/ai-config/api/aiConfigApi')>('@/features/ai-config/api/aiConfigApi');
-    return {
-        ...actual,
-        aiConfigApi: mockAiConfigApi,
-    };
-});
-
 vi.mock('../api/questionBankApi', async () => {
     const actual = await vi.importActual<typeof import('../api/questionBankApi')>('../api/questionBankApi');
     return {
@@ -69,6 +59,7 @@ vi.mock('../api/questionBankApi', async () => {
         uploadFile: mockQuestionApi.uploadFile,
         finalizeQuestionHistory: mockQuestionApi.finalizeQuestionHistory,
         exportQuestionSelection: mockQuestionApi.exportQuestionSelection,
+        listQuestionProviders: mockQuestionApi.listQuestionProviders,
     };
 });
 
@@ -80,88 +71,45 @@ function renderPage() {
     );
 }
 
-function makeAiConfig() {
-    return {
-        deepseek: {
-            base_url: 'https://api.deepseek.com',
-            api_key: '',
-            api_key_set: true,
-            model: 'deepseek-v4-pro',
-            stream: false,
-            reasoning_effort: 'high' as const,
-            thinking_type: 'enabled' as const,
-            updated_at: null,
-        },
-        openai: {
-            base_url: 'https://api.openai.com/v1',
-            api_key: '',
-            api_key_set: true,
+function makeProviders() {
+    return [
+        {
+            id: 'auto',
+            label: 'Auto',
+            available: true,
+            configured: true,
+            source: 'auto',
             model: 'gpt-5.5',
-            stream: false,
-            updated_at: null,
+            message: 'Will use openai (gpt-5.5)',
+            is_recommended: false,
         },
-        bigmodel: {
-            base_url: 'https://open.bigmodel.cn/api/paas/v4',
-            api_key: '',
-            api_key_set: false,
-            text_model: 'glm-4.5-flash',
-            image_model: 'glm-5v-flash',
-            stream: false,
-            updated_at: null,
+        {
+            id: 'openai',
+            label: 'OpenAI',
+            available: true,
+            configured: true,
+            source: 'user_ai_config',
+            model: 'gpt-5.5',
+            message: 'ok',
+            is_recommended: true,
         },
-        text: {
-            deepseek: {
-                base_url: 'https://api.deepseek.com',
-                api_key: '',
-                api_key_set: true,
-                model: 'deepseek-v4-pro',
-                stream: false,
-                reasoning_effort: 'high' as const,
-                thinking_type: 'enabled' as const,
-                updated_at: null,
-            },
-            openai: {
-                base_url: 'https://api.openai.com/v1',
-                api_key: '',
-                api_key_set: true,
-                model: 'gpt-5.5',
-                stream: false,
-                updated_at: null,
-            },
-            bigmodel: {
-                base_url: 'https://open.bigmodel.cn/api/paas/v4',
-                api_key: '',
-                api_key_set: false,
-                model: 'glm-4.5-flash',
-                stream: false,
-                updated_at: null,
-            },
+        {
+            id: 'local_ollama',
+            label: 'Local Ollama',
+            available: true,
+            configured: true,
+            source: 'global_service',
+            model: 'llama3.2',
+            message: 'ok',
+            is_recommended: false,
         },
-        multimodal: {
-            openai: {
-                base_url: 'https://api.openai.com/v1',
-                api_key: '',
-                api_key_set: false,
-                model: 'gpt-4o',
-                stream: false,
-                updated_at: null,
-            },
-            bigmodel: {
-                base_url: 'https://open.bigmodel.cn/api/paas/v4',
-                api_key: '',
-                api_key_set: false,
-                model: 'glm-4.5-flash',
-                stream: false,
-                updated_at: null,
-            },
-        },
-    };
+    ];
 }
 
 describe('QuestionGeneratorPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockAiConfigApi.get.mockResolvedValue(makeAiConfig());
+        window.localStorage.clear();
         mockQuestionApi.getGenerationHistory.mockResolvedValue({
             items: [
                 {
@@ -185,6 +133,9 @@ describe('QuestionGeneratorPage', () => {
             question_drafts: [],
             selected_question_ids: [],
         });
+        mockQuestionApi.listQuestionProviders.mockResolvedValue({
+            providers: makeProviders(),
+        });
         mockQuestionApi.streamGenerateQuestions.mockImplementation(async (_payload, onEvent) => {
             onEvent({ type: 'status', phase: 'generating', message: 'Generating question set' });
             onEvent({
@@ -204,6 +155,8 @@ describe('QuestionGeneratorPage', () => {
                 task_id: 'task-1',
                 history_id: 'history-2',
                 provider: 'openai',
+                provider_source: 'user_ai_config',
+                effective_model: 'gpt-5.5',
                 markdown: '1. Question: Solve $x + 1 = 3$.',
                 question_drafts: [
                     {
@@ -217,6 +170,13 @@ describe('QuestionGeneratorPage', () => {
                 ],
                 source_kind: 'text',
             });
+        });
+        mockQuestionApi.uploadFile.mockResolvedValue({
+            success: true,
+            filename: 'notes.pdf',
+            file_type: 'pdf',
+            task_id: 'task-pdf',
+            total_pages: 12,
         });
         mockQuestionApi.finalizeQuestionHistory.mockResolvedValue({ success: true, history_id: 'history-2' });
         mockQuestionApi.exportQuestionSelection.mockResolvedValue(new Blob(['hello'], { type: 'text/markdown' }));
@@ -233,26 +193,74 @@ describe('QuestionGeneratorPage', () => {
         expect(screen.getByText('6 questions')).toBeInTheDocument();
     });
 
-    it('shows configured providers only and streams structured questions', async () => {
+    it('supports prompt-only generation with backend provider status and shows source/model', async () => {
         const user = userEvent.setup();
         renderPage();
 
         await user.click(await screen.findByRole('button', { name: /Open Generator/i }));
         await user.click(screen.getByRole('button', { name: /Begin/i }));
 
-        expect(await screen.findByText('OpenAI')).toBeInTheDocument();
-        expect(screen.getByText('DeepSeek')).toBeInTheDocument();
-        expect(screen.queryByText('BigModel / GLM')).not.toBeInTheDocument();
+        expect(await screen.findByText('This selector prefers healthy models from your AI Config.')).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'OpenAI · gpt-5.5' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /Local Ollama/i })).not.toBeInTheDocument();
 
         await user.type(screen.getByPlaceholderText(/Paste course notes/i), 'Generate algebra questions.');
+        expect(screen.getByRole('button', { name: /Generate Questions/i })).toBeEnabled();
         await user.click(screen.getByRole('button', { name: /Generate Questions/i }));
 
         await waitFor(() => {
             expect(mockQuestionApi.streamGenerateQuestions).toHaveBeenCalled();
         });
 
+        const payload = mockQuestionApi.streamGenerateQuestions.mock.calls[0][0];
+        expect(payload.provider).toBe('openai');
         expect(await screen.findByText('Question 1')).toBeInTheDocument();
         expect(screen.getByDisplayValue('Solve $x + 1 = 3$.')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Export Markdown/i })).toBeEnabled();
+        expect(screen.getAllByText('OpenAI').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('gpt-5.5').length).toBeGreaterThan(0);
+    });
+
+    it('sends selected page numbers instead of always using the full PDF', async () => {
+        const user = userEvent.setup();
+        const { container } = renderPage();
+
+        await user.click(await screen.findByRole('button', { name: /Open Generator/i }));
+        await user.click(screen.getByRole('button', { name: /Begin/i }));
+
+        const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+        const pdfFile = new File(['pdf'], 'notes.pdf', { type: 'application/pdf' });
+        await user.upload(fileInput, pdfFile);
+
+        expect(await screen.findByText('12 pages')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Generate Questions/i })).toBeEnabled();
+        await user.click(screen.getByRole('button', { name: 'Selected pages' }));
+        await user.type(screen.getByPlaceholderText('e.g. 1-3, 6, 9'), '1-3, 6');
+        await user.click(screen.getByRole('button', { name: /Generate Questions/i }));
+
+        await waitFor(() => {
+            expect(mockQuestionApi.streamGenerateQuestions).toHaveBeenCalled();
+        });
+
+        const payload = mockQuestionApi.streamGenerateQuestions.mock.calls[0][0];
+        expect(payload.page_numbers).toEqual([0, 1, 2, 5]);
+    });
+
+    it('shows provider failure from the stream instead of pretending generation succeeded', async () => {
+        const user = userEvent.setup();
+        mockQuestionApi.streamGenerateQuestions.mockImplementationOnce(async (_payload, onEvent) => {
+            onEvent({
+                type: 'error',
+                message: 'Provider openai unavailable for questions.generate: OPENAI_API_KEY is not set',
+            });
+        });
+
+        renderPage();
+        await user.click(await screen.findByRole('button', { name: /Open Generator/i }));
+        await user.click(screen.getByRole('button', { name: /Begin/i }));
+        await user.type(screen.getByPlaceholderText(/Paste course notes/i), 'Generate algebra questions.');
+        await user.click(screen.getByRole('button', { name: /Generate Questions/i }));
+
+        expect(await screen.findByText('Provider openai unavailable for questions.generate: OPENAI_API_KEY is not set')).toBeInTheDocument();
+        expect(screen.getByText('No questions available yet.')).toBeInTheDocument();
     });
 });

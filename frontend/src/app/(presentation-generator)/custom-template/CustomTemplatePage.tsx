@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React from "react";
-import { ArrowLeft, Palette } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import PptGeneratorShell from "@/features/slides/components/PptGeneratorShell";
 import { useI18n } from "@/shared/i18n";
@@ -35,11 +35,7 @@ const CustomTemplatePage = () => {
       }
       className={styles.shell}
       contentClassName={styles.page}
-      bannerTitle={
-        <>
-          <Palette className="h-6 w-6" aria-hidden="true" /> {t("ppt_generator.customTemplate.page.title")}
-        </>
-      }
+      bannerTitle={t("ppt_generator.customTemplate.page.title")}
       bannerSubtitle={t("ppt_generator.customTemplate.page.subtitle")}
       toolbar={<CustomTemplateShellToolbar toolbar={controller.shell.toolbar} />}
     >
@@ -63,4 +59,3 @@ const CustomTemplatePage = () => {
 };
 
 export default CustomTemplatePage;
-

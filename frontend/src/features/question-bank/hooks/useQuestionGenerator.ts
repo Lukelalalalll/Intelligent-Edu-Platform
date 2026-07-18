@@ -1,200 +1,472 @@
-import { useState, useEffect } from 'react';
-import * as sub2Api from '../api/questionBankApi';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
 import { useToast } from '@/shared/hooks/useToast';
-import { log } from '@/shared/utils/logger';
-import { useStep1Upload } from './useStep1Upload';
-import { useStep2Extract } from './useStep2Extract';
-import { useStep3Generate } from './useStep3Generate';
-import { useQuestionOps } from './useQuestionOps';
+import type { QuestionDraft } from '@/types/api';
 
-export function useQuestionGenerator() {
+import { transferApi } from '../../chat/api/transferApi';
+import {
+    exportQuestionSelection,
+    finalizeQuestionHistory,
+    getGenerationDetail,
+    getGenerationHistory,
+    streamGenerateQuestions,
+    uploadFile,
+    type QuestionGenerationStreamEvent,
+} from '../api/questionBankApi';
+import { openQuestionPdfExport } from '../exportQuestionPdf';
+import {
+    formatQuestionProviderSource,
+    isQuestionProviderReady,
+    resolveQuestionProvider,
+    type QuestionStudioProvider,
+} from '../questionProviderConfig';
+import { buildQuestionsMarkdown, normalizeQuestionDraft } from '../questionDraftUtils';
+import { downloadBlob } from '../utils/downloadBlob';
+import { formatPageRangeSummary, parsePageSelectionInput } from '../utils/pageSelection';
+import type {
+    HistoryState,
+    QuestionExportFormat,
+    QuestionGeneratorController,
+    StudioView,
+    WorkspaceStep,
+} from './questionGeneratorTypes';
+import { useQuestionDraftActions } from './useQuestionDraftActions';
+import { useQuestionGeneratorProviders } from './useQuestionGeneratorProviders';
+
+export type {
+    HistoryState,
+    QuestionExportFormat,
+    QuestionGeneratorController,
+    StudioView,
+    WorkspaceStep,
+} from './questionGeneratorTypes';
+
+const READY_MESSAGE = 'Ready to generate.';
+
+export function useQuestionGenerator(): QuestionGeneratorController {
     const { toasts, showToast, removeToast } = useToast();
-    
-    // Adapt showToast to match the expected signature for sub-hooks
-    const adaptedShowToast = (msg: string, type?: string) => showToast(msg, type as any);
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const streamAbortRef = useRef<AbortController | null>(null);
 
-    const [currentStep, setCurrentStep] = useState(() => {
-        const saved = typeof window !== 'undefined' ? window.localStorage.getItem('sub2_current_step') : null;
-        const parsed = Number(saved);
-        return [1, 2, 3].includes(parsed) ? parsed : 1;
-    });
+    const [view, setView] = useState<StudioView>('hub');
+    const [workspaceStep, setWorkspaceStep] = useState<WorkspaceStep>('start');
+    const [historyState, setHistoryState] = useState<HistoryState>({ items: [], loading: true });
+    const [sourceText, setSourceText] = useState('');
+    const [questionType, setQuestionType] = useState('Multiple choice');
+    const [numQuestions, setNumQuestions] = useState(6);
+    const [difficulty, setDifficulty] = useState(3);
+    const [outputLanguage, setOutputLanguage] = useState('English');
+    const [constraints, setConstraints] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [dragActive, setDragActive] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [taskId, setTaskId] = useState<string | null>(null);
+    const [totalPages, setTotalPages] = useState(0);
+    const [useAllPages, setUseAllPages] = useState(true);
+    const [pageSelectionInput, setPageSelectionInput] = useState('');
+    const [historyId, setHistoryId] = useState<string | null>(null);
+    const [streamPhase, setStreamPhase] = useState('idle');
+    const [streamMessage, setStreamMessage] = useState(READY_MESSAGE);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isSavingHistory, setIsSavingHistory] = useState(false);
+    const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+    const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+    const [resultProvider, setResultProvider] = useState<QuestionStudioProvider | null>(null);
+    const [resultProviderSource, setResultProviderSource] = useState('');
+    const [resultEffectiveModel, setResultEffectiveModel] = useState('');
+    const {
+        providerOptions,
+        provider,
+        setProvider,
+        providerLoading,
+        providerError,
+        selectedProviderStatus,
+        preferredProviderOptions,
+        preferredAiConfigOptions,
+    } = useQuestionGeneratorProviders(showToast);
 
-    // ── Sub-hooks ──────────────────────────────────────────────────────────────
-    const step1 = useStep1Upload({ showToast: adaptedShowToast });
-    const step2 = useStep2Extract({
-        taskId: step1.taskId,
-        selectedPages: step1.selectedPages,
-        setGenerationSource: step1.setGenerationSource,
-        showToast: adaptedShowToast,
-    });
-    const step3 = useStep3Generate({
-        taskId: step1.taskId,
-        generationSource: step1.generationSource,
-        selectedPages: step1.selectedPages,
-        savedScreenshots: step2.savedScreenshots,
-        showToast: adaptedShowToast,
-    });
-    const qOps = useQuestionOps({
-        taskId: step1.taskId,
-        generatedQuestions: step3.generatedQuestions,
-        rawExtractText: step2.rawExtractText,
-        showToast: adaptedShowToast,
-    });
+    const selectedQuestions = useMemo(
+        () => questions.filter((question) => selectedQuestionIds.includes(question.id)),
+        [questions, selectedQuestionIds],
+    );
+    const resultProviderStatus = useMemo(
+        () => providerOptions.find((option) => option.id === resultProvider) || null,
+        [providerOptions, resultProvider],
+    );
 
-    // ── Derived ────────────────────────────────────────────────────────────────
-    const canEnterStep2 = step1.canEnterStep2;
-    const hasExtractedResult = step2.hasExtractedResult;
-    const canEnterStep3 = step1.generationMode === 'pdf_direct'
-        ? Boolean(step1.file)
-        : hasExtractedResult;
-
-    // ── Effects ────────────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            window.localStorage.setItem('sub2_current_step', String(currentStep));
+    const loadHistory = useCallback(async () => {
+        setHistoryState((current) => ({ ...current, loading: true }));
+        try {
+            const data = await getGenerationHistory(1, 12);
+            setHistoryState({ items: Array.isArray(data.items) ? data.items : [], loading: false });
+        } catch (error) {
+            console.error(error);
+            setHistoryState({ items: [], loading: false });
+            showToast('Failed to load question history.', 'error');
         }
-    }, [currentStep]);
+    }, [showToast]);
 
     useEffect(() => {
-        if (currentStep === 3 && !canEnterStep3) {
-            setCurrentStep(canEnterStep2 ? 2 : 1);
-        } else if (currentStep === 2 && !canEnterStep2) {
-            setCurrentStep(1);
+        void loadHistory();
+    }, [loadHistory]);
+
+    useEffect(() => () => {
+        streamAbortRef.current?.abort();
+    }, []);
+
+    const resetResultState = useCallback(() => {
+        setQuestions([]);
+        setSelectedQuestionIds([]);
+        setHistoryId(null);
+        setStreamPhase('idle');
+        setStreamMessage(READY_MESSAGE);
+        setResultProvider(null);
+        setResultProviderSource('');
+        setResultEffectiveModel('');
+    }, []);
+
+    const handleUploadedFile = useCallback(async (file: File) => {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            showToast('V1 only supports PDF upload in Question Studio.', 'warning');
+            return;
         }
-    }, [currentStep, canEnterStep2, canEnterStep3]);
+        setUploading(true);
+        try {
+            const result = await uploadFile(file);
+            if (!result.success) {
+                throw new Error(result.error || 'Upload failed');
+            }
+            setSelectedFile(file);
+            setTaskId(result.task_id);
+            setTotalPages(Number(result.total_pages || 0));
+            setUseAllPages(true);
+            setPageSelectionInput('');
+            showToast(`Uploaded ${result.filename}.`, 'success');
+        } catch (error) {
+            console.error(error);
+            showToast(error instanceof Error ? error.message : 'Upload failed.', 'error');
+        } finally {
+            setUploading(false);
+        }
+    }, [showToast]);
 
     useEffect(() => {
-        if ((step2.exercises.length > 0 || step3.generatedQuestions) && (window as any).MathJax) {
-            (window as any).MathJax.typesetPromise().catch((err: any) => {
-                log.warn('sub2', 'MathJax typeset failed', { message: err?.message });
-            });
-        }
-    }, [step2.exercises, step3.generatedQuestions]);
+        const transferId = searchParams.get('transfer_id');
+        if (!transferId) return undefined;
 
-    // ── replayFromHistory (cross-cutting: touches step1 + step3 state) ─────────
-    const replayFromHistory = async (historyItem: any) => {
-        if (!historyItem?.id) {
-            showToast('Replay failed: invalid history item.', 'error');
+        let cancelled = false;
+        void (async () => {
+            try {
+                const { file } = await transferApi.transferConsumeAndDownload(transferId);
+                if (cancelled) return;
+                setView('generate');
+                setWorkspaceStep('composer');
+                await handleUploadedFile(file);
+                const next = new URLSearchParams(searchParams);
+                next.delete('transfer_id');
+                setSearchParams(next, { replace: true });
+            } catch (error) {
+                console.error('Transfer consume failed:', error);
+                showToast('Failed to import transferred PDF.', 'error');
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [handleUploadedFile, searchParams, setSearchParams, showToast]);
+
+    const hydrateHistoryResult = useCallback(async (targetHistoryId: string) => {
+        try {
+            const detail = await getGenerationDetail(targetHistoryId);
+            const sourceDrafts = Array.isArray(detail.question_drafts)
+                ? detail.question_drafts
+                : Array.isArray(detail.result_data?.questions)
+                    ? detail.result_data.questions
+                    : [];
+            const drafts = sourceDrafts.map((item, index) => normalizeQuestionDraft(item, index));
+            if (!drafts.length) {
+                showToast('This history item has no structured questions to reopen.', 'warning');
+                return;
+            }
+            const selectedIds = Array.isArray(detail.selected_question_ids)
+                ? detail.selected_question_ids
+                : detail.result_data?.selected_question_ids;
+
+            setView('generate');
+            setWorkspaceStep('result');
+            setQuestions(drafts);
+            setSelectedQuestionIds(
+                Array.isArray(selectedIds) && selectedIds.length > 0
+                    ? selectedIds
+                    : drafts.map((item) => item.id),
+            );
+            setHistoryId(targetHistoryId);
+            setStreamPhase('complete');
+            setStreamMessage('Loaded final version from history.');
+            const params = detail.params || {};
+            setResultProvider((params.provider_resolved || params.provider || null) as QuestionStudioProvider | null);
+            setResultProviderSource(String(params.provider_source || detail.source?.provider_source || ''));
+            setResultEffectiveModel(String(params.effective_model || detail.source?.effective_model || ''));
+        } catch (error) {
+            console.error(error);
+            showToast('Failed to open history item.', 'error');
+        }
+    }, [showToast]);
+
+    const handleStreamEvent = useCallback((event: QuestionGenerationStreamEvent) => {
+        if (event.type === 'status') {
+            setStreamPhase(event.phase);
+            setStreamMessage(event.message);
+            return;
+        }
+        if (event.type === 'question') {
+            setQuestions((current) => [...current, normalizeQuestionDraft(event.question, current.length)]);
+            return;
+        }
+        if (event.type === 'complete') {
+            const drafts = Array.isArray(event.question_drafts)
+                ? event.question_drafts.map((item, index) => normalizeQuestionDraft(item, index))
+                : [];
+            setQuestions(drafts);
+            setSelectedQuestionIds(drafts.map((item) => item.id));
+            setHistoryId(event.history_id);
+            setTaskId(event.task_id);
+            setStreamPhase('complete');
+            setStreamMessage('Generation complete. Review and export the questions you want.');
+            setResultProvider((event.provider as QuestionStudioProvider) || null);
+            setResultProviderSource(String(event.provider_source || ''));
+            setResultEffectiveModel(String(event.effective_model || ''));
+            return;
+        }
+        setStreamPhase('error');
+        setStreamMessage(event.message);
+        showToast(event.message, 'error');
+    }, [showToast]);
+
+    const handleGenerate = useCallback(async () => {
+        const nextProvider = provider || resolveQuestionProvider(providerOptions);
+        const nextProviderStatus = providerOptions.find((option) => option.id === nextProvider) || null;
+
+        if (!nextProvider) {
+            showToast('No available AI model found. Configure one in AI Config or check runtime availability.', 'warning');
+            return;
+        }
+        if (!nextProviderStatus || !isQuestionProviderReady(nextProviderStatus)) {
+            showToast('The selected AI model is not ready yet. Choose another model or update AI Config.', 'warning');
+            return;
+        }
+        if (!sourceText.trim() && !taskId) {
+            showToast('Add source text, upload a PDF, or both.', 'warning');
             return;
         }
 
-        const params = historyItem.params || {};
-        if (params.question_type) step3.setQuestionType(params.question_type);
-        if (params.num_questions) step3.setNumQuestions(params.num_questions);
-        if (params.difficulty) step3.setDifficulty(params.difficulty);
-        if (Array.isArray(params.constraints)) step3.setConstraints(params.constraints.join('\n'));
-        if (params.output_language) step3.setOutputLanguage(params.output_language);
-        if (params.source_type) step1.setGenerationSource(params.source_type);
+        const pageSelection = selectedFile && !useAllPages
+            ? parsePageSelectionInput(pageSelectionInput, totalPages)
+            : { pages: [] as number[] };
+        if (selectedFile && !useAllPages && pageSelection.error) {
+            showToast(pageSelection.error, 'warning');
+            return;
+        }
+
+        streamAbortRef.current?.abort();
+        streamAbortRef.current = new AbortController();
+        resetResultState();
+        setView('generate');
+        setWorkspaceStep('result');
+        setIsGenerating(true);
+        if (nextProvider !== provider) {
+            setProvider(nextProvider);
+        }
 
         try {
-            step1.setUploadLoading(true);
-            const data = await sub2Api.replayGenerationHistory(historyItem.id);
-            if (!data?.success || !data?.task_id) {
-                showToast(data?.error || 'Replay failed: could not restore source file.', 'error');
+            await streamGenerateQuestions({
+                provider: nextProvider,
+                task_id: taskId,
+                source_text: sourceText.trim(),
+                question_type: questionType,
+                num_questions: numQuestions,
+                difficulty,
+                constraints: constraints
+                    .split('\n')
+                    .map((item) => item.trim())
+                    .filter(Boolean),
+                output_language: outputLanguage,
+                source_type: 'pdf',
+                page_numbers: selectedFile && !useAllPages ? pageSelection.pages : [],
+            }, handleStreamEvent, streamAbortRef.current.signal);
+            await loadHistory();
+        } catch (error) {
+            console.error(error);
+            showToast(error instanceof Error ? error.message : 'Question generation failed.', 'error');
+            setStreamPhase('error');
+            setStreamMessage('Question generation failed.');
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [
+        constraints,
+        difficulty,
+        handleStreamEvent,
+        loadHistory,
+        numQuestions,
+        outputLanguage,
+        pageSelectionInput,
+        provider,
+        providerOptions,
+        resetResultState,
+        selectedFile,
+        setProvider,
+        questionType,
+        showToast,
+        sourceText,
+        taskId,
+        totalPages,
+        useAllPages,
+    ]);
+
+    const persistHistory = useCallback(async () => {
+        if (!historyId) return;
+        setIsSavingHistory(true);
+        try {
+            await finalizeQuestionHistory(historyId, {
+                questions,
+                markdown: buildQuestionsMarkdown(questions),
+                selected_question_ids: selectedQuestionIds,
+            });
+        } finally {
+            setIsSavingHistory(false);
+        }
+    }, [historyId, questions, selectedQuestionIds]);
+
+    const handleSaveHistory = useCallback(async () => {
+        try {
+            await persistHistory();
+            showToast('Saved current edits to history.', 'success');
+            await loadHistory();
+        } catch (error) {
+            console.error(error);
+            showToast(error instanceof Error ? error.message : 'Failed to save history.', 'error');
+        }
+    }, [loadHistory, persistHistory, showToast]);
+
+    const handleExport = useCallback(async (format: QuestionExportFormat) => {
+        if (selectedQuestions.length === 0) {
+            showToast('Select at least one question before exporting.', 'warning');
+            return;
+        }
+        try {
+            await persistHistory();
+            if (format === 'pdf') {
+                openQuestionPdfExport(selectedQuestions);
                 return;
             }
-
-            step1.setFile({ name: data.filename || 'history-source.pdf' } as File);
-            step1.setFileName(data.filename || 'history-source.pdf');
-            step1.setFileType(data.file_type || 'pdf');
-            step1.setTaskId(data.task_id);
-            step1.setTotalPages(Number(data.total_pages || 0));
-            step1.setSelectedPages(Array.isArray(data.page_numbers) ? data.page_numbers : []);
-
-            const replaySourceType = data.source_type || params.source_type || 'pdf';
-            step1.setGenerationSource(replaySourceType);
-            if (replaySourceType === 'pdf') {
-                step1.selectGenerationMode('pdf_direct');
-            }
-
-            setCurrentStep(1);
-            showToast('Replay ready: source PDF restored to Upload step.', 'success');
-        } catch (err: any) {
-            showToast('Replay failed: ' + (err?.message || 'unknown error'), 'error');
-        } finally {
-            step1.setUploadLoading(false);
+            const blob = await exportQuestionSelection({
+                questions: selectedQuestions,
+                format,
+                filename: 'question-studio',
+            });
+            downloadBlob(blob, format === 'markdown' ? 'question-studio.md' : 'question-studio.txt');
+        } catch (error) {
+            console.error(error);
+            showToast(error instanceof Error ? error.message : 'Export failed.', 'error');
         }
-    };
+    }, [persistHistory, selectedQuestions, showToast]);
 
-    // ── Compose states & handlers (shape kept identical for downstream components) ──
-    const states = {
-        currentStep,
-        file: step1.file, fileName: step1.fileName, fileType: step1.fileType,
-        totalPages: step1.totalPages, selectedPages: step1.selectedPages,
-        uploadLoading: step1.uploadLoading, isDragging: step1.isDragging,
-        generationMode: step1.generationMode, generationSource: step1.generationSource,
-        extractPrompt: step2.extractPrompt, extractLoading: step2.extractLoading,
-        exercises: step2.exercises, rawExtractText: step2.rawExtractText,
-        selectedExercises: step2.selectedExercises, savedScreenshots: step2.savedScreenshots,
-        hasExtractedResult,
-        questionType: step3.questionType, numQuestions: step3.numQuestions,
-        difficulty: step3.difficulty, constraints: step3.constraints,
-        constraintSuggestions: step3.constraintSuggestions,
-        isSuggestingConstraints: step3.isSuggestingConstraints,
-        outputLanguage: step3.outputLanguage, generateLoading: step3.generateLoading,
-        generatedQuestions: step3.generatedQuestions, provider: step3.provider,
-        questionOpsRunId: qOps.questionOpsRunId,
-        questionOpsSummary: qOps.questionOpsSummary,
-        questionOpsItems: qOps.questionOpsItems,
-        questionOpsLoading: qOps.questionOpsLoading,
-        questionOpsError: qOps.questionOpsError,
-        questionOpsThreshold: qOps.questionOpsThreshold,
-        questionOpsSort: qOps.questionOpsSort,
-        questionOpsDuplicatesOnly: qOps.questionOpsDuplicatesOnly,
-        questionOpsTagFilter: qOps.questionOpsTagFilter,
-        questionOpsDedupeResult: qOps.questionOpsDedupeResult,
-        questionOpsDedupeLoading: qOps.questionOpsDedupeLoading,
-    };
+    const {
+        updateQuestion,
+        addOption,
+        removeOption,
+        toggleSelectedQuestion,
+    } = useQuestionDraftActions(setQuestions, setSelectedQuestionIds);
 
-    const handlers = {
-        // Step 1
-        setGenerationMode: step1.selectGenerationMode,
-        setGenerationSource: step1.setGenerationSource,
-        handleFileChange: (e: any) => { setCurrentStep(1); step1.handleFile(e.target.files?.[0] ?? null); },
-        handleDragOver: step1.handleDragOver,
-        handleDragLeave: step1.handleDragLeave,
-        handleDrop: (e: any) => { e.preventDefault(); step1.handleDrop(e); setCurrentStep(1); },
-        togglePage: step1.togglePage,
-        selectAllPages: step1.selectAllPages,
-        clearPageSelection: step1.clearPageSelection,
-        // Step 2
-        setExtractPrompt: step2.setExtractPrompt,
-        extractContent: step2.extractContent,
-        toggleExercise: step2.toggleExercise,
-        toggleAllExercises: step2.toggleAllExercises,
-        clearExerciseSelection: step2.clearExerciseSelection,
-        updateExerciseText: step2.updateExerciseText,
-        deleteExercise: step2.deleteExercise,
-        takeSingleScreenshot: step2.takeSingleScreenshot,
-        takeBatchScreenshots: step2.takeBatchScreenshots,
-        removeScreenshot: step2.removeScreenshot,
-        // Step 3
-        setQuestionType: step3.setQuestionType,
-        setNumQuestions: step3.setNumQuestions,
-        setDifficulty: step3.setDifficulty,
-        setConstraints: step3.setConstraints,
-        setOutputLanguage: step3.setOutputLanguage,
-        setProvider: step3.setProvider,
-        onSuggestConstraints: step3.onSuggestConstraints,
-        generateQuestions: step3.generateQuestions,
-        exportQuestions: step3.exportQuestions,
-        // QuestionOps
-        setQuestionOpsThreshold: qOps.setQuestionOpsThreshold,
-        setQuestionOpsSort: qOps.setQuestionOpsSort,
-        setQuestionOpsDuplicatesOnly: qOps.setQuestionOpsDuplicatesOnly,
-        setQuestionOpsTagFilter: qOps.setQuestionOpsTagFilter,
-        runQuestionOps: qOps.runQuestionOps,
-        applyQuestionOpsDedupe: qOps.applyQuestionOpsDedupe,
-        // Navigation
-        goToStep1: () => setCurrentStep(1),
-        goToStep2: () => { if (canEnterStep2) setCurrentStep(2); },
-        goToStep3: () => {
-            if (!canEnterStep3) return;
-            if (step1.generationMode === 'pdf_direct') step1.setGenerationSource('pdf');
-            setCurrentStep(3);
+    const currentResultLabel = resultProviderStatus?.label || selectedProviderStatus?.label || (resultProvider || provider || 'Provider');
+    const currentResultModel = resultEffectiveModel || resultProviderStatus?.model || '';
+    const currentResultSource = resultProviderSource || (resultProviderStatus ? formatQuestionProviderSource(resultProviderStatus.source) : '');
+    const hasGenerationInput = Boolean(sourceText.trim() || taskId);
+    const aiSelectorLabel = preferredAiConfigOptions.length > 0 ? 'AI Model' : 'AI Runtime';
+    const streamPhaseLabel = streamPhase.charAt(0).toUpperCase() + streamPhase.slice(1);
+    const parsedComposerPageSelection = selectedFile && !useAllPages
+        ? parsePageSelectionInput(pageSelectionInput, totalPages)
+        : { pages: [] as number[] };
+    const pageScopeSummary = !selectedFile
+        ? 'No PDF connected'
+        : useAllPages
+            ? 'All pages'
+            : parsedComposerPageSelection.error
+                ? 'Choose pages'
+                : formatPageRangeSummary(parsedComposerPageSelection.pages);
+    const currentStepIndex = workspaceStep === 'start' ? 0 : workspaceStep === 'composer' ? 1 : 2;
+
+    return {
+        state: {
+            view,
+            workspaceStep,
+            historyState,
+            provider,
+            providerLoading,
+            providerError,
+            sourceText,
+            questionType,
+            numQuestions,
+            difficulty,
+            outputLanguage,
+            constraints,
+            uploading,
+            dragActive,
+            selectedFile,
+            taskId,
+            totalPages,
+            useAllPages,
+            pageSelectionInput,
+            historyId,
+            streamMessage,
+            isGenerating,
+            isSavingHistory,
+            questions,
+            selectedQuestionIds,
         },
-        replayFromHistory,
+        derived: {
+            selectedQuestions,
+            selectedProviderStatus,
+            preferredProviderOptions,
+            preferredAiConfigOptions,
+            currentResultLabel,
+            currentResultModel,
+            currentResultSource,
+            hasGenerationInput,
+            aiSelectorLabel,
+            streamPhaseLabel,
+            pageScopeSummary,
+            currentStepIndex,
+        },
+        actions: {
+            setView,
+            setWorkspaceStep,
+            setSourceText,
+            setQuestionType,
+            setNumQuestions,
+            setDifficulty,
+            setOutputLanguage,
+            setConstraints,
+            setDragActive,
+            setProvider,
+            setUseAllPages,
+            setPageSelectionInput,
+            navigateToAiConfig: () => navigate('/ai-config'),
+            handleUploadedFile,
+            hydrateHistoryResult,
+            handleGenerate,
+            handleSaveHistory,
+            handleExport,
+            updateQuestion,
+            addOption,
+            removeOption,
+            toggleSelectedQuestion,
+        },
+        toasts,
+        removeToast,
     };
-
-    return { states, handlers, toasts, removeToast };
 }

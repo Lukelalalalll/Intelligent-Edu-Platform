@@ -48,10 +48,7 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
 
       <div
         ref={slideContainerRef}
-        style={{
-          ...previewThemeStyle,
-          backgroundColor: 'var(--page-background-color, var(--background-color))',
-        }}
+        style={previewThemeStyle}
         className={styles.previewViewport}
       >
         {isLoading && previewLayouts.length === 0 ? (
@@ -83,6 +80,7 @@ export const ThemePreviewPane: React.FC<ThemePreviewPaneProps> = ({
                 style={{
                   width: `${previewSlideWidth}px`,
                   height: `${previewSlideHeight}px`,
+                  backgroundColor: 'var(--page-background-color, var(--background-color, #ffffff))',
                 }}
               >
                 <div

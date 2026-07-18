@@ -1,5 +1,7 @@
 import client from '@/shared/api/client';
 
+const QUESTION_API_PREFIX = '/sub2';
+
 export interface QuestionOpsRunPayload {
     task_id?: string | null;
     course_id?: string | null;
@@ -64,22 +66,22 @@ export interface ApplyDedupeResponse {
 
 export const questionOpsApi = {
     createRun: async (payload: QuestionOpsRunPayload): Promise<QuestionOpsRunResponse> => {
-        const res = await client.post('/questions/ops/runs', payload);
+        const res = await client.post(`${QUESTION_API_PREFIX}/ops/runs`, payload);
         return res.data;
     },
 
     getRun: async (runId: string): Promise<{ success: boolean; run: QuestionOpsRun }> => {
-        const res = await client.get(`/questions/ops/runs/${runId}`);
+        const res = await client.get(`${QUESTION_API_PREFIX}/ops/runs/${runId}`);
         return res.data;
     },
 
     getItems: async (runId: string): Promise<QuestionOpsItemsResponse> => {
-        const res = await client.get(`/questions/ops/runs/${runId}/items`);
+        const res = await client.get(`${QUESTION_API_PREFIX}/ops/runs/${runId}/items`);
         return res.data;
     },
 
     applyDedupe: async (runId: string, payload: ApplyDedupePayload): Promise<ApplyDedupeResponse> => {
-        const res = await client.post(`/questions/ops/runs/${runId}/apply-dedupe`, payload);
+        const res = await client.post(`${QUESTION_API_PREFIX}/ops/runs/${runId}/apply-dedupe`, payload);
         return res.data;
     },
 };

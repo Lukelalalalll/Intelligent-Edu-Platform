@@ -64,3 +64,25 @@ export const zhHKSharedSidebarMessages = {
   "sidebar.teacherView": "教師視圖",
   "sidebar.tools": "工具",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWSharedSidebarMessages = {
+  "sidebar.aiConfig": "AI 設定",
+  "sidebar.aiWorkspace": "AI 工作區",
+  "sidebar.chat": "聊天",
+  "sidebar.dashboard": "儀表板",
+  "sidebar.database": "資料庫",
+  "sidebar.fileCenter": "檔案中心",
+  "sidebar.home": "首頁",
+  "sidebar.knowledgeBase": "知識庫",
+  "sidebar.mailbox": "信箱",
+  "sidebar.ragEvaluator": "RAG 評估器",
+  "sidebar.section.admin": "管理",
+  "sidebar.section.aiTools": "AI 工具",
+  "sidebar.section.main": "主要",
+  "sidebar.section.workflow": "工作流程",
+  "sidebar.security": "安全",
+  "sidebar.studentView": "學生視圖",
+  "sidebar.teacherView": "教師視圖",
+  "sidebar.tools": "工具",
+} as const satisfies MessageDictionary;

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "lint:css": "stylelint \"src/styles/**/*.css\"",
     "lint:css:fix": "stylelint \"src/styles/**/*.css\" --fix",
+    "check:file-sizes": "node scripts/check-file-sizes.mjs",
     "preview": "vite preview",
     "typecheck": "npm run openapi:gen && tsc --noEmit",
     "test": "vitest",

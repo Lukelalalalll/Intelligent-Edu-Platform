@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { enMessages, mergeMessages, zhCNMessages, zhHKMessages } from './messages';
+import {
+  enMessages,
+  extendMessages,
+  mergeMessages,
+  zhCNMessages,
+  zhHKMessages,
+  zhTWMessages,
+} from './messages';
 import { LOCALE_OPTIONS, TRANSLATIONS } from './translations';
 
 describe('translation assembly', () => {
@@ -15,9 +22,15 @@ describe('translation assembly', () => {
       },
       {
         code: 'zh-HK',
-        label: '\u7cb5\u8a9e\u7e41\u9ad4',
-        shortLabel: '\u7e41',
+        label: '繁體中文（香港粵語）',
+        shortLabel: '粵繁',
         htmlLang: 'zh-HK',
+      },
+      {
+        code: 'zh-TW',
+        label: '繁體中文（台灣）',
+        shortLabel: '台繁',
+        htmlLang: 'zh-TW',
       },
     ]);
   });
@@ -26,6 +39,7 @@ describe('translation assembly', () => {
     expect(TRANSLATIONS.en).toBe(enMessages);
     expect(TRANSLATIONS['zh-CN']).toBe(zhCNMessages);
     expect(TRANSLATIONS['zh-HK']).toBe(zhHKMessages);
+    expect(TRANSLATIONS['zh-TW']).toBe(zhTWMessages);
 
     expect(TRANSLATIONS.en['ppt_generator.workflow.step.prepare']).toBe('Prompt & Files');
     expect(TRANSLATIONS['zh-CN']['ppt_generator.upload.banner.title']).toBe(
@@ -72,13 +86,42 @@ describe('translation assembly', () => {
       '\u767b\u5165\u88dd\u7f6e\u7ba1\u7406',
     );
     expect(TRANSLATIONS['zh-HK']['auth.newPassword']).toBe('\u65b0\u5bc6\u78bc');
+    expect(TRANSLATIONS['zh-TW']['language.zhTW']).toBe('繁體中文（台灣）');
+    expect(TRANSLATIONS['zh-TW']['ppt_generator.upload.banner.title']).toBe('生成簡報');
+    expect(TRANSLATIONS['zh-TW']['ppt_generator.templates.controls.create']).toBe('新增範本');
+    expect(TRANSLATIONS['zh-TW']['home.tool.video.title']).toBe('AI 影片生成器');
+    expect(TRANSLATIONS['zh-TW']['ppt_generator.settings.button.save']).toBe('儲存設定');
+    expect(TRANSLATIONS['zh-TW']['profile.sessionsTitle']).toBe('登入裝置管理');
     expect(TRANSLATIONS['zh-CN']['language.switcher.title']).toBe('\u8bed\u8a00');
     expect(TRANSLATIONS['zh-HK']['language.switcher.title']).toBe('\u8a9e\u8a00');
+    expect(TRANSLATIONS['zh-TW']['language.switcher.title']).toBe('語言');
   });
 
-  it('keeps english fallback values in locale dictionaries when overrides are absent', () => {
-    expect(TRANSLATIONS['zh-CN']['footer.copyright']).toBe(enMessages['footer.copyright']);
-    expect(TRANSLATIONS['zh-HK']['footer.copyright']).toBe(enMessages['footer.copyright']);
+  it('keeps critical keys populated for every configured locale', () => {
+    const criticalKeys = [
+      'language.switcher.title',
+      'nav.login',
+      'footer.copyright',
+      'ppt_generator.upload.banner.title',
+      'ppt_generator.templates.controls.create',
+    ] as const;
+
+    for (const option of LOCALE_OPTIONS) {
+      for (const key of criticalKeys) {
+        expect(TRANSLATIONS[option.code][key]).toBeTruthy();
+      }
+    }
+  });
+
+  it('keeps english fallback values when zh-TW overrides are absent', () => {
+    const partialZhTWMessages = extendMessages(enMessages, {
+      'language.zhTW': '繁體中文（台灣）',
+    });
+
+    expect(partialZhTWMessages['language.zhTW']).toBe('繁體中文（台灣）');
+    expect(partialZhTWMessages['ppt_generator.workflow.step.prepare']).toBe(
+      enMessages['ppt_generator.workflow.step.prepare'],
+    );
   });
 
   it('throws when duplicate translation keys are merged into the same section', () => {

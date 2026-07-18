@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from backend.services.ai_gateway_service import get_ai_gateway_service
 
 
@@ -10,12 +12,13 @@ async def call_provider_generate(
     base_content: str,
     user_requirements: str,
     question_type: str = "",
-    provider: str,
+    provider: str | None = None,
     output_language: str = "Chinese",
     question_basis: str | None = None,
     knowledge_points: str = "",
     saved_screenshots: list[str] | None = None,
     target_question_count: int | None = None,
+    runtime: Any | None = None,
 ) -> str:
     saved_screenshots = saved_screenshots or []
     basis_hint = ""
@@ -92,8 +95,19 @@ Explanation: Atomicity ensures a transaction is all-or-nothing.
 {format_rule_en}"""
 
     ai_service = get_ai_gateway_service()
+    context = {"coze_user_id": "sub2_user"}
+    if runtime is not None:
+        return await ai_service.chat_with_runtime(
+            message=prompt,
+            context=context,
+            runtime=runtime,
+            allow_fallback=False,
+        )
+    if not provider:
+        raise ValueError("provider or runtime is required for question generation")
     return await ai_service.chat_with_provider(
         message=prompt,
-        context={"coze_user_id": "sub2_user"},
+        context=context,
         provider=provider,
+        allow_fallback=False,
     )

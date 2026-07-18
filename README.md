@@ -230,16 +230,20 @@ Open a terminal at the project root and run the following commands:
    *This step is optional for general backend work, but recommended if you are developing or testing the RAG retrieval stack.*
 
 6. **Start the Backend Application**:
-   ```powershell
-   .\run-backend.cmd
+   ```bash
+   source backend/venv/bin/activate && python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009
    ```
-   *后端固定运行在 `http://127.0.0.1:5009`。可以访问 `http://127.0.0.1:5009/healthz` 进行验证。*
-   `run-backend.cmd` starts `backend.main:app` on `http://127.0.0.1:5009`, injects `JAVA_HOME` / `PATH` for `D:\Java\jdk21` when available, and prints the detected `java.exe`.
+   *The backend runs at `http://127.0.0.1:5009`. You can verify it at `http://127.0.0.1:5009/healthz`.*
 
-   To enable Uvicorn reload explicitly:
+   On Windows PowerShell, activate the virtual environment first and then run:
    ```powershell
-   $env:BACKEND_RELOAD="1"
-   .\run-backend.cmd
+   backend\venv\Scripts\activate
+   python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009
+   ```
+
+   To enable Uvicorn reload explicitly during local development:
+   ```bash
+   source backend/venv/bin/activate && python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009 --reload
    ```
 
    Verify the backend:
@@ -352,7 +356,7 @@ If the frontend service is unreachable, the backend will automatically fallback 
   ```powershell
   Restart-Service hns,WinNAT,iphlpsvc -Force
   ```
-  If the orphan listener remains, restart Windows, then start the backend with `.\run-backend.cmd`.
+  If the orphan listener remains, restart Windows, then start the backend again with `python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009` from the activated virtual environment.
 - **AI functionalities are failing**:
   Double-check the `backend/core/config.py` and `.env` file to ensure API keys (`COZE_API_KEY`) and URLs (`OLLAMA_BASE_URL`) for your chosen AI providers are correctly configured.
 - **Generated video slides look different from the browser preview**:
@@ -533,9 +537,15 @@ RAG_OPENSEARCH_VERIFY_CERTS=false
 
 5. **启动应用**：
    ```bash
-   .\run-backend.cmd
+   source backend/venv/bin/activate && python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009
    ```
    *后端固定运行在 `http://127.0.0.1:5009`。你可以访问 `http://127.0.0.1:5009/healthz` 进行验证。*
+
+   如果你使用的是 Windows PowerShell，请先激活虚拟环境再运行：
+   ```powershell
+   backend\venv\Scripts\activate
+   python -m uvicorn backend.main:app --host 127.0.0.1 --port 5009
+   ```
 
 ### B) 启动前端客户端（终端 2）
 

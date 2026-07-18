@@ -262,7 +262,8 @@ async def _repair_output_format(
     question_type: str,
     expected_count: int,
     output_language: str,
-    provider: str,
+    provider: str | None = None,
+    runtime: Any | None = None,
 ) -> str:
     qtype = _question_type_key(question_type)
     type_hint = _build_question_type_format_hint(question_type)
@@ -280,11 +281,23 @@ async def _repair_output_format(
     )
 
     ai_service = get_ai_gateway_service()
-    repaired = await ai_service.chat_with_provider(
-        message=prompt,
-        context={"coze_user_id": "sub2_user", "qtype": qtype},
-        provider=provider,
-    )
+    context = {"coze_user_id": "sub2_user", "qtype": qtype}
+    if runtime is not None:
+        repaired = await ai_service.chat_with_runtime(
+            message=prompt,
+            context=context,
+            runtime=runtime,
+            allow_fallback=False,
+        )
+    else:
+        if not provider:
+            raise ValueError("provider or runtime is required for question repair")
+        repaired = await ai_service.chat_with_provider(
+            message=prompt,
+            context=context,
+            provider=provider,
+            allow_fallback=False,
+        )
     return str(repaired or "").strip()
 
 

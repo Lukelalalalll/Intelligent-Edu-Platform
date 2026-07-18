@@ -26,6 +26,7 @@ const DATE_LOCALE_MAP: Record<Locale, string> = {
   en: "en",
   "zh-CN": "zh-CN",
   "zh-HK": "zh-HK",
+  "zh-TW": "zh-TW",
 };
 
 function getDateFormatter(
@@ -166,4 +167,3 @@ export function formatPresentationDate(
   if (!timestamp) return fallbackLabel;
   return getDateFormatter(locale, variant).format(timestamp);
 }
-

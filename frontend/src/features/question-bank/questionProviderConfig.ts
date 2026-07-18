@@ -1,21 +1,18 @@
-import type { AIConfigResponse } from '@/features/ai-config/api/aiConfigApi';
+import type { AIProvider } from '@/shared/aiProvider';
 
-export type QuestionStudioProvider = 'openai' | 'deepseek' | 'bigmodel';
+import type { QuestionProviderStatus } from './api/questionBankApi';
+
+export type QuestionStudioProvider = AIProvider;
 
 const STORAGE_KEY = 'question_studio_provider';
 
 function isProvider(value: unknown): value is QuestionStudioProvider {
-    return value === 'openai' || value === 'deepseek' || value === 'bigmodel';
-}
-
-export function getConfiguredQuestionProviders(
-    aiConfig: AIConfigResponse | null | undefined,
-): QuestionStudioProvider[] {
-    const providers: QuestionStudioProvider[] = [];
-    if (aiConfig?.text?.openai?.api_key_set) providers.push('openai');
-    if (aiConfig?.text?.deepseek?.api_key_set) providers.push('deepseek');
-    if (aiConfig?.text?.bigmodel?.api_key_set) providers.push('bigmodel');
-    return providers;
+    return value === 'auto'
+        || value === 'coze'
+        || value === 'local_ollama'
+        || value === 'deepseek'
+        || value === 'openai'
+        || value === 'bigmodel';
 }
 
 export function readStoredQuestionProvider(): QuestionStudioProvider | null {
@@ -37,14 +34,52 @@ export function writeStoredQuestionProvider(provider: QuestionStudioProvider): v
     }
 }
 
+export function isQuestionProviderReady(option: QuestionProviderStatus | null | undefined): boolean {
+    return Boolean(option?.configured && option?.available);
+}
+
+export function isAiConfigQuestionProvider(option: QuestionProviderStatus | null | undefined): boolean {
+    return option?.source === 'user_ai_config';
+}
+
+export function getPreferredQuestionProviders(
+    options: QuestionProviderStatus[] | null | undefined,
+): QuestionProviderStatus[] {
+    const normalized = Array.isArray(options) ? options : [];
+    const ready = normalized.filter((item) => isQuestionProviderReady(item));
+    const readyAiConfig = ready.filter((item) => isAiConfigQuestionProvider(item));
+    return readyAiConfig.length > 0 ? readyAiConfig : ready;
+}
+
 export function resolveQuestionProvider(
-    aiConfig: AIConfigResponse | null | undefined,
+    options: QuestionProviderStatus[] | null | undefined,
 ): QuestionStudioProvider | null {
-    const configured = getConfiguredQuestionProviders(aiConfig);
-    if (!configured.length) return null;
+    const normalized = Array.isArray(options) ? options : [];
+    if (!normalized.length) return null;
+
+    const preferred = getPreferredQuestionProviders(normalized);
+    const readyAiConfig = preferred.filter((item) => isAiConfigQuestionProvider(item));
+
     const stored = readStoredQuestionProvider();
-    if (stored && configured.includes(stored)) return stored;
-    const fallback = configured[0];
-    writeStoredQuestionProvider(fallback);
-    return fallback;
+    const storedOption = stored
+        ? normalized.find((item) => item.id === stored && isQuestionProviderReady(item))
+        : null;
+    if (storedOption && (storedOption.id !== 'auto' || readyAiConfig.length === 0)) return storedOption.id;
+
+    if (readyAiConfig.length > 0) return readyAiConfig[0].id;
+
+    const recommended = normalized.find((item) => item.is_recommended && isQuestionProviderReady(item));
+    if (recommended) return recommended.id;
+
+    const firstReady = preferred[0] || normalized.find((item) => isQuestionProviderReady(item));
+    if (firstReady) return firstReady.id;
+
+    return normalized[0]?.id || null;
+}
+
+export function formatQuestionProviderSource(source: string): string {
+    if (source === 'user_ai_config') return 'AI Config';
+    if (source === 'env_default' || source === 'global_service') return 'Server default';
+    if (source === 'auto' || source === 'auto_fallback') return 'Automatic';
+    return source || 'Unknown source';
 }

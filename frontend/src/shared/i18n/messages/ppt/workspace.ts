@@ -22,3 +22,11 @@ export const zhHKPptWorkspaceMessages = {
   "ppt_generator.workspace.nav.templates": "模板",
   "ppt_generator.workspace.nav.theme": "主題",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWPptWorkspaceMessages = {
+  "ppt_generator.workspace.nav.aria": "PPT Generator 工作區導航",
+  "ppt_generator.workspace.nav.dashboard": "儀表板",
+  "ppt_generator.workspace.nav.templates": "範本",
+  "ppt_generator.workspace.nav.theme": "主題",
+} as const satisfies MessageDictionary;

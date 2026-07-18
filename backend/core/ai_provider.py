@@ -251,8 +251,12 @@ async def check_runtime_health(runtime: ResolvedProviderRuntime) -> tuple[bool, 
     return await get_ai_gateway_service().check_runtime_health(runtime)
 
 
-async def list_provider_statuses(user: dict | None = None) -> list[ProviderStatus]:
-    requested: list[ConcreteAIProvider] = ["openai", "deepseek", "local_ollama", "coze"]
+async def list_provider_statuses(
+    user: dict | None = None,
+    *,
+    feature: str = "ai.providers",
+) -> list[ProviderStatus]:
+    requested: list[ConcreteAIProvider] = ["openai", "bigmodel", "deepseek", "local_ollama", "coze"]
     statuses: list[ProviderStatus] = []
     for provider in requested:
         config_source: ProviderConfigSource | None = None
@@ -284,8 +288,9 @@ async def list_provider_statuses(user: dict | None = None) -> list[ProviderStatu
             )
         )
 
+    recommended_runtime: ResolvedProviderRuntime | None = None
     try:
-        recommended_runtime = await resolve_provider_runtime("auto", feature="slides.providers", user=user)
+        recommended_runtime = await resolve_provider_runtime("auto", feature=feature, user=user)
         recommended_id: AIProvider = recommended_runtime.provider_id
     except HTTPException:
         recommended_id = "auto"
@@ -296,8 +301,12 @@ async def list_provider_statuses(user: dict | None = None) -> list[ProviderStatu
             available=any(item.available for item in statuses),
             configured=True,
             source="auto",
-            model=str(recommended_id),
-            message=f"Will use {recommended_id}" if recommended_id != "auto" else "No provider available",
+            model=str(recommended_runtime.model if recommended_runtime else ""),
+            message=(
+                f"Will use {recommended_id} ({recommended_runtime.model})"
+                if recommended_runtime and recommended_id != "auto"
+                else "No provider available"
+            ),
             is_recommended=True,
         ),
         *[

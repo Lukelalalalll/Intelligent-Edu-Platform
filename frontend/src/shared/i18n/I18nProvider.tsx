@@ -46,23 +46,36 @@ export function applyLocale(locale: Locale) {
   }
 }
 
+export function detectLocaleFromBrowserLanguage(language: string | null | undefined): Locale | null {
+  const browserLocale = language?.toLowerCase().replace(/_/g, '-').trim();
+  if (!browserLocale) return null;
+
+  if (browserLocale.startsWith('yue')) return 'zh-HK';
+  if (!browserLocale.startsWith('zh')) return null;
+
+  const localeParts = browserLocale.split('-');
+  if (localeParts.includes('hk') || localeParts.includes('mo')) return 'zh-HK';
+  if (localeParts.includes('tw')) return 'zh-TW';
+  if (localeParts.includes('hant')) return 'zh-TW';
+
+  return 'zh-CN';
+}
+
 export function detectInitialLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
 
   const storedLocale = window.localStorage?.getItem?.(STORAGE_KEY);
   if (isLocale(storedLocale)) return storedLocale;
 
-  const browserLocale = window.navigator.language.toLowerCase();
-  if (
-    browserLocale.startsWith('yue') ||
-    browserLocale.includes('hant') ||
-    browserLocale.startsWith('zh-hk') ||
-    browserLocale.startsWith('zh-mo') ||
-    browserLocale.startsWith('zh-tw')
-  ) {
-    return 'zh-HK';
+  const browserLanguages = [
+    ...(window.navigator.languages ?? []),
+    window.navigator.language,
+  ].filter(Boolean);
+
+  for (const language of browserLanguages) {
+    const detectedLocale = detectLocaleFromBrowserLanguage(language);
+    if (detectedLocale) return detectedLocale;
   }
-  if (browserLocale.startsWith('zh')) return 'zh-CN';
 
   return DEFAULT_LOCALE;
 }

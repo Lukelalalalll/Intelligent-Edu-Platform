@@ -10,6 +10,7 @@ import { shouldBypassAuthBootstrap, useAuthBootstrap } from './shared/hooks/useA
 import { useAuthStore } from './shared/store/useAuthStore';
 import { ROUTES, type RouteConfig } from './router/routes';
 import RouteSkeleton from './shared/RouteSkeleton';
+import { isPptGeneratorRoutePath } from './ppt_generator/routeMeta';
 
 /** Forces a full remount of children when the given URL param changes. */
 function KeyedByParam({ param, children }: { param: string; children: ReactNode }) {
@@ -57,24 +58,6 @@ function wrapRoute(route: RouteConfig) {
 
 const layoutRoutes = ROUTES.filter((r) => !r.fullScreen);
 const fullScreenRoutes = ROUTES.filter((r) => r.fullScreen);
-
-function isPptGeneratorRoutePath(pathname: string) {
-  return (
-    pathname.startsWith('/slides/ppt_generator') ||
-    [
-      '/upload',
-      '/documents-preview',
-      '/outline',
-      '/presentation',
-      '/dashboard',
-      '/templates',
-      '/theme',
-      '/settings',
-      '/template-preview',
-      '/custom-template',
-    ].includes(pathname)
-  );
-}
 
 function AppShell() {
   const location = useLocation();
@@ -136,4 +119,3 @@ function App() {
 }
 
 export default App;
-

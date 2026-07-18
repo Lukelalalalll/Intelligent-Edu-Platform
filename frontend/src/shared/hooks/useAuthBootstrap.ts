@@ -2,12 +2,9 @@ import { useEffect } from 'react';
 
 import client from '../api/client';
 import { SESSION_CHECK_INTERVAL, useAuthStore, type User } from '../store/useAuthStore';
+import { shouldBypassAuthBootstrap as shouldBypassPptGeneratorAuthBootstrap } from '@/ppt_generator/routeMeta';
 
 let sessionCheckPromise: Promise<void> | null = null;
-const AUTH_BOOTSTRAP_BYPASS_PATHS = new Set([
-  '/pdf-maker',
-  '/slides/ppt_generator/pdf-maker',
-]);
 
 function shouldRefreshSession() {
   const { user, status, isSessionLoading, lastValidatedAt } = useAuthStore.getState();
@@ -57,9 +54,7 @@ async function ensureSession(force = false) {
 }
 
 export function shouldBypassAuthBootstrap(pathname: string) {
-  const normalizedPathname =
-    pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname;
-  return AUTH_BOOTSTRAP_BYPASS_PATHS.has(normalizedPathname);
+  return shouldBypassPptGeneratorAuthBootstrap(pathname);
 }
 
 export function useAuthBootstrap(options?: { enabled?: boolean }) {

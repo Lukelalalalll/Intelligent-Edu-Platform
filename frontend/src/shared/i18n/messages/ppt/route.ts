@@ -19,3 +19,10 @@ export const zhHKPptRouteMessages = {
   "ppt_generator.route.missingId.cta": "返回首頁",
   "ppt_generator.route.missingId.title": "未找到簡報 ID",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWPptRouteMessages = {
+  "ppt_generator.route.missingId.body": "請重試",
+  "ppt_generator.route.missingId.cta": "返回首頁",
+  "ppt_generator.route.missingId.title": "未找到簡報 ID",
+} as const satisfies MessageDictionary;

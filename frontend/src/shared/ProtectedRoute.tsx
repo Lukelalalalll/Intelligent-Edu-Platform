@@ -3,24 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import RouteSkeleton from './RouteSkeleton';
 import { useAuthStore } from './store/useAuthStore';
-
-function isPptGeneratorRoute(pathname: string) {
-  return (
-    pathname.startsWith('/slides/ppt_generator') ||
-    [
-      '/upload',
-      '/documents-preview',
-      '/outline',
-      '/presentation',
-      '/dashboard',
-      '/templates',
-      '/theme',
-      '/settings',
-      '/template-preview',
-      '/custom-template',
-    ].includes(pathname)
-  );
-}
+import { isPptGeneratorRoutePath } from '@/ppt_generator/routeMeta';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -29,7 +12,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const isSessionLoading = useAuthStore((s) => s.isSessionLoading);
 
   if (status === 'unknown' || (isSessionLoading && !user)) {
-    return <RouteSkeleton tone={isPptGeneratorRoute(location.pathname) ? 'pptGenerator' : 'default'} />;
+    return <RouteSkeleton tone={isPptGeneratorRoutePath(location.pathname) ? 'pptGenerator' : 'default'} />;
   }
 
   if (!user || status === 'anonymous') {
@@ -41,4 +24,3 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 };
 
 export default ProtectedRoute;
-

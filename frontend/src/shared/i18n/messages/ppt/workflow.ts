@@ -31,3 +31,14 @@ export const zhHKPptWorkflowMessages = {
   "ppt_generator.workflow.step.preview": "生成 PPT 預覽",
   "ppt_generator.workflow.step.templates": "選擇模板",
 } as const satisfies MessageDictionary;
+
+
+export const zhTWPptWorkflowMessages = {
+  "ppt_generator.workflow.back": "返回",
+  "ppt_generator.workflow.backAriaLabel": "返回上一步",
+  "ppt_generator.workflow.label": "PPT Generator 工作流程",
+  "ppt_generator.workflow.step.outline": "大綱",
+  "ppt_generator.workflow.step.prepare": "提示詞與文件",
+  "ppt_generator.workflow.step.preview": "生成 PPT 預覽",
+  "ppt_generator.workflow.step.templates": "選擇範本",
+} as const satisfies MessageDictionary;

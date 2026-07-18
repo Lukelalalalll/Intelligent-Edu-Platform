@@ -9,11 +9,11 @@ import traceback
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from backend.config import Config
-from backend.core.ai_provider import resolve_provider
+from backend.core.ai_provider import resolve_provider, resolve_provider_runtime
 from backend.core.database import compute_history_expires_at
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
@@ -55,6 +55,20 @@ def _load_task(request: Request, task_id: str | None) -> dict[str, Any] | None:
     if not task_id:
         return None
     return _get_task(request, task_id)
+
+
+def _credential_alias_for_provider(provider: str) -> str:
+    if provider == "coze":
+        return "COZE_TOKEN"
+    if provider == "openai":
+        return "OPENAI_API_KEY"
+    if provider == "deepseek":
+        return "DEEPSEEK_API_KEY"
+    if provider == "bigmodel":
+        return "BIGMODEL_API_KEY"
+    if provider == "local_ollama":
+        return "OLLAMA_BASE_URL"
+    return "AI_PROVIDER"
 
 
 async def _build_generation_source(
@@ -120,6 +134,7 @@ async def _build_generation_source(
         "file_name": str(task.get("uploaded_filename") or ""),
         "file_type": str(task.get("file_type") or ("pdf" if source_kind == "pdf" else source_kind)),
         "total_pages": int(task.get("total_pages", 0) or 0),
+        "page_numbers": list(req.page_numbers or []),
         "source_kind": source_kind,
         "source_text_present": bool(source_text),
     }
@@ -133,14 +148,20 @@ async def _generate_question_bundle(
     user: dict,
     endpoint_label: str,
 ) -> dict[str, Any]:
-    resolved_provider = resolve_provider(req.provider, feature="questions.generate", user=user)
+    runtime = await resolve_provider_runtime(
+        req.provider or "auto",
+        feature="questions.generate",
+        user=user,
+        require_healthy=True,
+    )
+    resolved_provider = runtime.provider_id
     timer = TelemetryTimer(
         provider=resolved_provider,
-        model="question-generator",
+        model=runtime.model,
         endpoint=endpoint_label,
         user_id=user.get("id", ""),
         api_type="chat",
-        credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
+        credential_alias=_credential_alias_for_provider(resolved_provider),
     )
 
     with timer:
@@ -178,6 +199,7 @@ async def _generate_question_bundle(
                 knowledge_points="",
                 saved_screenshots=req.saved_screenshots,
                 target_question_count=req.num_questions,
+                runtime=runtime,
             )
 
             target_count = max(1, int(req.num_questions))
@@ -219,6 +241,7 @@ async def _generate_question_bundle(
                     knowledge_points="",
                     saved_screenshots=req.saved_screenshots,
                     target_question_count=target_count,
+                    runtime=runtime,
                 )
                 if "fill" in qtype_normalized and "blank" in qtype_normalized:
                     result_text = _normalize_fill_in_blank_output(result_text)
@@ -230,6 +253,7 @@ async def _generate_question_bundle(
                     expected_count=target_count,
                     output_language=req.output_language,
                     provider=resolved_provider,
+                    runtime=runtime,
                 )
                 if repaired_text:
                     result_text = repaired_text
@@ -270,10 +294,17 @@ async def _generate_question_bundle(
                     "saved_screenshots_count": len(req.saved_screenshots or []),
                     "page_numbers": req.page_numbers,
                     "source_text_present": source_meta["source_text_present"],
-                    "provider_requested": req.provider,
+                    "provider_requested": runtime.requested_provider,
                     "provider_resolved": resolved_provider,
+                    "provider_source": runtime.config_source,
+                    "effective_model": runtime.model,
                 },
-                source=source_meta,
+                source={
+                    **source_meta,
+                    "provider_resolved": resolved_provider,
+                    "provider_source": runtime.config_source,
+                    "effective_model": runtime.model,
+                },
                 result_preview=markdown[:500],
                 result_full=history_payload,
                 expires_at=await compute_history_expires_at(user.get("id", "")),
@@ -287,6 +318,8 @@ async def _generate_question_bundle(
         "success": True,
         "task_id": task_id,
         "provider": resolved_provider,
+        "provider_source": runtime.config_source,
+        "effective_model": runtime.model,
         "markdown": markdown,
         "questions": markdown,
         "question_drafts": question_drafts,
@@ -388,6 +421,9 @@ async def generate_questions_route(req: GenerateQuestionsSchema, request: Reques
         return payload
     except ValueError as exc:
         return JSONResponse(content={"success": False, "error": str(exc)}, status_code=400)
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+        return JSONResponse(content={"success": False, "error": detail}, status_code=exc.status_code)
     except Exception as exc:
         return JSONResponse(content={"success": False, "error": f"Generation failed: {str(exc)}"}, status_code=500)
 
@@ -421,6 +457,8 @@ async def generate_questions_stream_route(
                 "task_id": payload["task_id"],
                 "history_id": payload["history_id"],
                 "provider": payload["provider"],
+                "provider_source": payload["provider_source"],
+                "effective_model": payload["effective_model"],
                 "markdown": payload["markdown"],
                 "question_drafts": payload["question_drafts"],
                 "source_kind": payload["source_kind"],
@@ -428,6 +466,10 @@ async def generate_questions_stream_route(
             yield "data: [DONE]\n\n"
         except ValueError as exc:
             yield _json_sse({"type": "error", "message": str(exc)})
+            yield "data: [DONE]\n\n"
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            yield _json_sse({"type": "error", "message": detail})
             yield "data: [DONE]\n\n"
         except Exception as exc:
             yield _json_sse({"type": "error", "message": f"Generation failed: {str(exc)}"})

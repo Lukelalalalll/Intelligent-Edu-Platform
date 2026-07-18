@@ -137,6 +137,10 @@ async def replay_generation_history(history_id: str, request: Request, user: dic
         "total_pages": total_pages,
         "page_numbers": params.get("page_numbers", []),
         "source_type": params.get("source_type", "pdf"),
+        "provider_requested": params.get("provider_requested"),
+        "provider_resolved": params.get("provider_resolved") or source.get("provider_resolved"),
+        "provider_source": params.get("provider_source") or source.get("provider_source"),
+        "effective_model": params.get("effective_model") or source.get("effective_model"),
     }
 
 

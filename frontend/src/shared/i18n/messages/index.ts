@@ -1,26 +1,131 @@
 import { extendMessages, mergeMessages } from './mergeMessages';
-import { enSharedLanguageMessages, zhCNSharedLanguageMessages, zhHKSharedLanguageMessages } from "./shared/language";
-import { enSharedNavMessages, zhCNSharedNavMessages, zhHKSharedNavMessages } from "./shared/nav";
-import { enSharedSidebarMessages, zhCNSharedSidebarMessages, zhHKSharedSidebarMessages } from "./shared/sidebar";
-import { enSharedFooterMessages, zhCNSharedFooterMessages, zhHKSharedFooterMessages } from "./shared/footer";
-import { enSharedNetworkMessages, zhCNSharedNetworkMessages, zhHKSharedNetworkMessages } from "./shared/network";
-import { enSharedErrorMessages, zhCNSharedErrorMessages, zhHKSharedErrorMessages } from "./shared/error";
-import { enSharedHomeToolMessages, zhCNSharedHomeToolMessages, zhHKSharedHomeToolMessages } from "./shared/homeTool";
-import { enPptLoadingMessages, zhCNPptLoadingMessages, zhHKPptLoadingMessages } from "./ppt/loading";
-import { enPptRouteMessages, zhCNPptRouteMessages, zhHKPptRouteMessages } from "./ppt/route";
-import { enPptWorkflowMessages, zhCNPptWorkflowMessages, zhHKPptWorkflowMessages } from "./ppt/workflow";
-import { enPptUploadMessages, zhCNPptUploadMessages, zhHKPptUploadMessages } from "./ppt/upload";
-import { enPptDocumentsMessages, zhCNPptDocumentsMessages, zhHKPptDocumentsMessages } from "./ppt/documents";
-import { enPptOutlineMessages, zhCNPptOutlineMessages, zhHKPptOutlineMessages } from "./ppt/outline";
-import { enPptDashboardMessages, zhCNPptDashboardMessages, zhHKPptDashboardMessages } from "./ppt/dashboard";
-import { enPptTemplatesMessages, zhCNPptTemplatesMessages, zhHKPptTemplatesMessages } from "./ppt/templates";
-import { enPptTemplatePreviewMessages, zhCNPptTemplatePreviewMessages, zhHKPptTemplatePreviewMessages } from "./ppt/templatePreview";
-import { enPptCustomTemplateMessages, zhCNPptCustomTemplateMessages, zhHKPptCustomTemplateMessages } from "./ppt/customTemplate";
-import { enPptSettingsMessages, zhCNPptSettingsMessages, zhHKPptSettingsMessages } from "./ppt/settings";
-import { enPptThemeMessages, zhCNPptThemeMessages, zhHKPptThemeMessages } from "./ppt/theme";
-import { enPptWorkspaceMessages, zhCNPptWorkspaceMessages, zhHKPptWorkspaceMessages } from "./ppt/workspace";
-import { enPptPresentationMessages, zhCNPptPresentationMessages, zhHKPptPresentationMessages } from "./ppt/presentation";
-import { enLegacyMessages, zhCNLegacyMessages, zhHKLegacyMessages } from "./legacy";
+import {
+  enSharedLanguageMessages,
+  zhCNSharedLanguageMessages,
+  zhHKSharedLanguageMessages,
+  zhTWSharedLanguageMessages,
+} from "./shared/language";
+import {
+  enSharedNavMessages,
+  zhCNSharedNavMessages,
+  zhHKSharedNavMessages,
+  zhTWSharedNavMessages,
+} from "./shared/nav";
+import {
+  enSharedSidebarMessages,
+  zhCNSharedSidebarMessages,
+  zhHKSharedSidebarMessages,
+  zhTWSharedSidebarMessages,
+} from "./shared/sidebar";
+import {
+  enSharedFooterMessages,
+  zhCNSharedFooterMessages,
+  zhHKSharedFooterMessages,
+  zhTWSharedFooterMessages,
+} from "./shared/footer";
+import {
+  enSharedNetworkMessages,
+  zhCNSharedNetworkMessages,
+  zhHKSharedNetworkMessages,
+  zhTWSharedNetworkMessages,
+} from "./shared/network";
+import {
+  enSharedErrorMessages,
+  zhCNSharedErrorMessages,
+  zhHKSharedErrorMessages,
+  zhTWSharedErrorMessages,
+} from "./shared/error";
+import {
+  enSharedHomeToolMessages,
+  zhCNSharedHomeToolMessages,
+  zhHKSharedHomeToolMessages,
+  zhTWSharedHomeToolMessages,
+} from "./shared/homeTool";
+import {
+  enPptLoadingMessages,
+  zhCNPptLoadingMessages,
+  zhHKPptLoadingMessages,
+  zhTWPptLoadingMessages,
+} from "./ppt/loading";
+import {
+  enPptRouteMessages,
+  zhCNPptRouteMessages,
+  zhHKPptRouteMessages,
+  zhTWPptRouteMessages,
+} from "./ppt/route";
+import {
+  enPptWorkflowMessages,
+  zhCNPptWorkflowMessages,
+  zhHKPptWorkflowMessages,
+  zhTWPptWorkflowMessages,
+} from "./ppt/workflow";
+import {
+  enPptUploadMessages,
+  zhCNPptUploadMessages,
+  zhHKPptUploadMessages,
+  zhTWPptUploadMessages,
+} from "./ppt/upload";
+import {
+  enPptDocumentsMessages,
+  zhCNPptDocumentsMessages,
+  zhHKPptDocumentsMessages,
+  zhTWPptDocumentsMessages,
+} from "./ppt/documents";
+import {
+  enPptOutlineMessages,
+  zhCNPptOutlineMessages,
+  zhHKPptOutlineMessages,
+  zhTWPptOutlineMessages,
+} from "./ppt/outline";
+import {
+  enPptDashboardMessages,
+  zhCNPptDashboardMessages,
+  zhHKPptDashboardMessages,
+  zhTWPptDashboardMessages,
+} from "./ppt/dashboard";
+import {
+  enPptTemplatesMessages,
+  zhCNPptTemplatesMessages,
+  zhHKPptTemplatesMessages,
+  zhTWPptTemplatesMessages,
+} from "./ppt/templates";
+import {
+  enPptTemplatePreviewMessages,
+  zhCNPptTemplatePreviewMessages,
+  zhHKPptTemplatePreviewMessages,
+  zhTWPptTemplatePreviewMessages,
+} from "./ppt/templatePreview";
+import {
+  enPptCustomTemplateMessages,
+  zhCNPptCustomTemplateMessages,
+  zhHKPptCustomTemplateMessages,
+  zhTWPptCustomTemplateMessages,
+} from "./ppt/customTemplate";
+import {
+  enPptSettingsMessages,
+  zhCNPptSettingsMessages,
+  zhHKPptSettingsMessages,
+  zhTWPptSettingsMessages,
+} from "./ppt/settings";
+import {
+  enPptThemeMessages,
+  zhCNPptThemeMessages,
+  zhHKPptThemeMessages,
+  zhTWPptThemeMessages,
+} from "./ppt/theme";
+import {
+  enPptWorkspaceMessages,
+  zhCNPptWorkspaceMessages,
+  zhHKPptWorkspaceMessages,
+  zhTWPptWorkspaceMessages,
+} from "./ppt/workspace";
+import {
+  enPptPresentationMessages,
+  zhCNPptPresentationMessages,
+  zhHKPptPresentationMessages,
+  zhTWPptPresentationMessages,
+} from "./ppt/presentation";
+import { enLegacyMessages, zhCNLegacyMessages, zhHKLegacyMessages, zhTWLegacyMessages } from "./legacy";
 
 export { extendMessages, mergeMessages } from './mergeMessages';
 export type { MessageDictionary } from './types';
@@ -100,4 +205,30 @@ export const zhHKMessages = extendMessages(
   zhHKPptWorkspaceMessages,
   zhHKPptPresentationMessages,
   zhHKLegacyMessages,
+);
+
+export const zhTWMessages = extendMessages(
+  enMessages,
+  zhTWSharedLanguageMessages,
+  zhTWSharedNavMessages,
+  zhTWSharedSidebarMessages,
+  zhTWSharedFooterMessages,
+  zhTWSharedNetworkMessages,
+  zhTWSharedErrorMessages,
+  zhTWSharedHomeToolMessages,
+  zhTWPptLoadingMessages,
+  zhTWPptRouteMessages,
+  zhTWPptWorkflowMessages,
+  zhTWPptUploadMessages,
+  zhTWPptDocumentsMessages,
+  zhTWPptOutlineMessages,
+  zhTWPptDashboardMessages,
+  zhTWPptTemplatesMessages,
+  zhTWPptTemplatePreviewMessages,
+  zhTWPptCustomTemplateMessages,
+  zhTWPptSettingsMessages,
+  zhTWPptThemeMessages,
+  zhTWPptWorkspaceMessages,
+  zhTWPptPresentationMessages,
+  zhTWLegacyMessages,
 );

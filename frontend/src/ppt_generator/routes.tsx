@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/shared/i18n";
 import { PptGeneratorScreen } from "@/ppt_generator/PptGeneratorScreen";
+import { PPT_GENERATOR_ROUTE_PATHS } from "@/ppt_generator/routeMeta";
 
 export { PptGeneratorScreen } from "@/ppt_generator/PptGeneratorScreen";
 
@@ -32,7 +33,7 @@ const CustomTemplatePage = lazy(
 );
 
 export function PptGeneratorLegacyRedirectRoute() {
-  return <Navigate to="/slides/ppt_generator" replace />;
+  return <Navigate to={PPT_GENERATOR_ROUTE_PATHS.canonicalBase} replace />;
 }
 
 export function PptGeneratorUploadRoute() {
@@ -71,7 +72,7 @@ export function PptGeneratorPresentationRoute() {
           <h1 className="text-2xl font-bold">{t("ppt_generator.route.missingId.title")}</h1>
           <p className="pb-4 text-gray-500">{t("ppt_generator.route.missingId.body")}</p>
           <Button asChild>
-            <a href="/slides/ppt_generator/dashboard">{t("ppt_generator.route.missingId.cta")}</a>
+            <a href={PPT_GENERATOR_ROUTE_PATHS.dashboard}>{t("ppt_generator.route.missingId.cta")}</a>
           </Button>
         </div>
       </PptGeneratorScreen>
@@ -98,7 +99,7 @@ export function PptGeneratorPdfMakerRoute() {
           <h1 className="text-2xl font-bold">{t("ppt_generator.route.missingId.title")}</h1>
           <p className="pb-4 text-gray-500">{t("ppt_generator.route.missingId.body")}</p>
           <Button asChild>
-            <a href="/slides/ppt_generator/dashboard">{t("ppt_generator.route.missingId.cta")}</a>
+            <a href={PPT_GENERATOR_ROUTE_PATHS.dashboard}>{t("ppt_generator.route.missingId.cta")}</a>
           </Button>
         </div>
       </>
@@ -135,4 +136,3 @@ export function PptGeneratorCustomTemplateRoute() {
     </PptGeneratorScreen>
   );
 }
-

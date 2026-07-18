@@ -11,11 +11,20 @@
     --stepper-accent: var(--ct-primary);
     --stepper-accent-light: var(--ct-primary-light);
     --stepper-accent-shadow: rgba(0, 123, 85, 0.2);
+    --ct-surface-radius: 24px;
+    --ct-surface-bg: rgba(255, 255, 255, 0.82);
+    --ct-surface-border: rgba(255, 255, 255, 0.78);
+    --ct-surface-shadow: 0 16px 30px -24px rgba(15, 23, 42, 0.18);
 }
 
 .shell :global(.page-header) {
-    background-image: linear-gradient(135deg, #0b6b57 0%, #0d5a4b 45%, #128068 100%);
-    box-shadow: 0 20px 44px -18px rgba(0, 95, 65, 0.36);
+    --banner-padding-block: 2.15rem;
+    --banner-intro-padding-block: 3.05rem;
+    margin-bottom: 0.1rem;
+    background-image: var(--primary-gradient-animated);
+    background-size: 300% 300%;
+    box-shadow: 0 20px 40px -10px rgba(0, 123, 85, 0.3);
+    animation: gradientFlow 8s ease infinite;
 }
 
 .page {
@@ -30,17 +39,30 @@
     justify-content: space-between;
     gap: 16px;
     align-items: flex-start;
-    padding: 18px 20px;
-    border: 1px solid var(--ct-border);
-    border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(21, 52, 45, 0.06);
+    padding: 1.35rem;
+    border: 1px solid var(--ct-surface-border);
+    border-radius: var(--ct-surface-radius);
+    background: var(--ct-surface-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--ct-surface-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.toolbar::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ct-primary), var(--accent-yellow, #f5c451));
+    opacity: 0.92;
 }
 
 .toolbarTitle {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     max-width: 760px;
 }
 
@@ -122,13 +144,13 @@
 }
 
 .buttonGhost {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.68);
     color: var(--ct-text);
-    border-color: var(--ct-border);
+    border-color: rgba(15, 23, 42, 0.08);
 }
 
 .buttonGhost:hover {
-    background: #f8fbfa;
+    background: rgba(255, 255, 255, 0.92);
 }
 
 .buttonPrimary:disabled,
@@ -165,10 +187,14 @@
 .statusCard,
 .panelCard,
 .previewCard {
-    border: 1px solid var(--ct-border);
-    border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(21, 52, 45, 0.06);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--ct-surface-border);
+    border-radius: var(--ct-surface-radius);
+    background: var(--ct-surface-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--ct-surface-shadow);
 }
 
 .card,
@@ -176,7 +202,23 @@
 .statusCard,
 .panelCard,
 .previewCard {
-    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 1.35rem;
+}
+
+.card::before,
+.summaryCard::before,
+.statusCard::before,
+.panelCard::before,
+.previewCard::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ct-primary), var(--accent-yellow, #f5c451));
+    opacity: 0.92;
 }
 
 .cardHeader,
@@ -186,7 +228,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
 }
 
 .cardHeader h2,
@@ -219,8 +261,8 @@
     gap: 12px;
     min-height: 240px;
     border: 2px dashed var(--ct-border-strong);
-    border-radius: 8px;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 250, 247, 0.92) 100%);
     text-align: center;
     cursor: pointer;
     padding: 24px;
@@ -386,9 +428,10 @@
 
 .previewTile {
     overflow: hidden;
-    border: 1px solid #dce8e2;
-    border-radius: 8px;
-    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.45);
 }
 
 .previewTileButton {
@@ -529,7 +572,7 @@
     padding: 16px;
     overflow: hidden;
     border: 1px solid var(--ct-border);
-    border-radius: 8px;
+    border-radius: 18px;
     background: #f7fbf9;
 }
 
@@ -560,10 +603,12 @@
 }
 
 .editorSidebarPanel {
-    border: 1px solid var(--ct-border);
-    border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(21, 52, 45, 0.06);
+    border: 1px solid var(--ct-surface-border);
+    border-radius: var(--ct-surface-radius);
+    background: var(--ct-surface-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--ct-surface-shadow);
     overflow: hidden;
     display: flex;
     flex: 1 1 auto;
@@ -659,9 +704,9 @@
     align-items: center;
     gap: 8px;
     min-height: 40px;
-    padding: 0 14px;
+    padding: 0 16px;
     border: 1px solid var(--ct-border);
-    border-radius: 8px;
+    border-radius: 14px;
     background: #ffffff;
     color: var(--ct-text);
     font-size: 0.92rem;
@@ -698,7 +743,7 @@
 
 @media (max-width: 768px) {
     .toolbar {
-        padding: 16px;
+        padding: 1rem;
     }
 
     .card,
@@ -706,7 +751,8 @@
     .statusCard,
     .panelCard,
     .previewCard {
-        padding: 16px;
+        gap: 16px;
+        padding: 1rem;
     }
 
     .statsGrid,
@@ -745,4 +791,3 @@
         order: -1;
     }
 }
-

@@ -943,6 +943,10 @@
   position: relative;
   flex: 0 0 auto;
   max-width: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 18px 30px -26px rgba(15, 23, 42, 0.28);
   transform: translateZ(0);
 }
 
@@ -1203,4 +1207,3 @@
     transform: none;
   }
 }
-

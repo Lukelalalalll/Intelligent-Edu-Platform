@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 from backend.config import Config
-from backend.core.ai_provider import resolve_provider
+from backend.core.ai_provider import list_provider_statuses, resolve_provider
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.schemas import (
@@ -29,6 +29,16 @@ from backend.services.questions import (
 from .router import _get_task
 
 router = APIRouter()
+
+
+@router.get("/providers")
+async def list_question_providers(user: dict = Depends(get_current_user)):
+    return {
+        "providers": [
+            status.public_dict()
+            for status in await list_provider_statuses(user, feature="questions.providers")
+        ]
+    }
 
 
 @router.post("/suggest_constraints")

@@ -58,6 +58,19 @@ export interface QuestionGenerationResponse extends Sub2GenerateResponse {
     history_id?: string;
     task_id?: string;
     source_kind?: string;
+    provider_source?: string;
+    effective_model?: string;
+}
+
+export interface QuestionProviderStatus {
+    id: AIProvider;
+    label: string;
+    available: boolean;
+    configured: boolean;
+    source: string;
+    model: string;
+    message: string;
+    is_recommended: boolean;
 }
 
 export type QuestionGenerationStreamEvent =
@@ -68,6 +81,8 @@ export type QuestionGenerationStreamEvent =
         task_id: string;
         history_id: string;
         provider: string;
+        provider_source?: string;
+        effective_model?: string;
         markdown: string;
         question_drafts: QuestionDraft[];
         source_kind: string;
@@ -87,6 +102,7 @@ export interface QuestionHistoryFinalizePayload {
 }
 
 const API_ROOT = resolveApiRoot();
+const QUESTION_API_PREFIX = '/sub2';
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 
@@ -101,7 +117,7 @@ function readCookie(name: string): string {
 export async function uploadFile(file: File): Promise<Sub2UploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await client.post('/questions/upload', formData, {
+    const res = await client.post(`${QUESTION_API_PREFIX}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
@@ -110,14 +126,14 @@ export async function uploadFile(file: File): Promise<Sub2UploadResponse> {
 export async function extractQuestions(
     payload: ExtractPayload,
 ): Promise<Sub2ExtractResponse> {
-    const res = await client.post('/questions/extract_questions', payload);
+    const res = await client.post(`${QUESTION_API_PREFIX}/extract_questions`, payload);
     return res.data;
 }
 
 export async function generateQuestions(
     payload: GeneratePayload,
 ): Promise<QuestionGenerationResponse> {
-    const res = await client.post('/questions/generate_questions', payload);
+    const res = await client.post(`${QUESTION_API_PREFIX}/generate_questions`, payload);
     return res.data;
 }
 
@@ -127,7 +143,7 @@ export async function streamGenerateQuestions(
     signal?: AbortSignal,
 ): Promise<void> {
     const csrfToken = readCookie(CSRF_COOKIE_NAME);
-    const response = await fetch(`${API_ROOT}/api/questions/generate_questions/stream`, {
+    const response = await fetch(`${API_ROOT}/api${QUESTION_API_PREFIX}/generate_questions/stream`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -140,7 +156,12 @@ export async function streamGenerateQuestions(
 
     if (!response.ok || !response.body) {
         const text = await response.text();
-        throw new Error(text || 'Failed to start question generation stream');
+        try {
+            const parsed = JSON.parse(text) as { error?: string; detail?: string };
+            throw new Error(parsed.error || parsed.detail || text || 'Failed to start question generation stream');
+        } catch {
+            throw new Error(text || 'Failed to start question generation stream');
+        }
     }
 
     const reader = response.body.getReader();
@@ -170,18 +191,18 @@ export async function streamGenerateQuestions(
 export async function suggestConstraints(
     payload: SuggestConstraintsPayload,
 ): Promise<SuggestConstraintsResponse> {
-    const res = await client.post('/questions/suggest_constraints', payload);
+    const res = await client.post(`${QUESTION_API_PREFIX}/suggest_constraints`, payload);
     return res.data;
 }
 
 export async function exportQuestions(taskId: string | null): Promise<Blob> {
     const params: { task_id?: string } = taskId ? { task_id: taskId } : {};
-    const res = await client.post('/questions/export_questions', {}, { params, responseType: 'blob' });
+    const res = await client.post(`${QUESTION_API_PREFIX}/export_questions`, {}, { params, responseType: 'blob' });
     return res.data;
 }
 
 export async function exportQuestionSelection(payload: QuestionExportPayload): Promise<Blob> {
-    const res = await client.post('/questions/export_selection', payload, { responseType: 'blob' });
+    const res = await client.post(`${QUESTION_API_PREFIX}/export_selection`, payload, { responseType: 'blob' });
     return res.data;
 }
 
@@ -189,25 +210,30 @@ export async function finalizeQuestionHistory(
     historyId: string,
     payload: QuestionHistoryFinalizePayload,
 ): Promise<{ success: boolean; history_id: string }> {
-    const res = await client.post(`/questions/generation_history/${historyId}/finalize`, payload);
+    const res = await client.post(`${QUESTION_API_PREFIX}/generation_history/${historyId}/finalize`, payload);
     return res.data;
 }
 
 export async function uploadScreenshot(
     payload: { image: string; chapter_number?: string; sub_chapter_number?: string; exercise_number?: string },
 ): Promise<{ success: boolean; filename: string; error?: string }> {
-    const res = await client.post('/questions/upload_screenshot', payload);
+    const res = await client.post(`${QUESTION_API_PREFIX}/upload_screenshot`, payload);
     return res.data;
 }
 
-const historyApi = createHistoryApi<GenerationHistoryItem>('/questions');
+export async function listQuestionProviders(): Promise<{ providers: QuestionProviderStatus[] }> {
+    const res = await client.get(`${QUESTION_API_PREFIX}/providers`);
+    return res.data;
+}
+
+const historyApi = createHistoryApi<GenerationHistoryItem>(QUESTION_API_PREFIX);
 
 export async function getGenerationHistory(page = 1, pageSize = 10) {
     return historyApi.getGenerationHistory(page, pageSize);
 }
 
 export async function getGenerationDetail(historyId: string): Promise<QuestionHistoryDetail> {
-    const res = await client.get(`/questions/generation_history/${historyId}`);
+    const res = await client.get(`${QUESTION_API_PREFIX}/generation_history/${historyId}`);
     return res.data;
 }
 
@@ -223,6 +249,6 @@ export interface GenerationReplaySessionResponse {
 }
 
 export async function replayGenerationHistory(historyId: string): Promise<GenerationReplaySessionResponse> {
-    const res = await client.post(`/questions/generation_history/${historyId}/replay`);
+    const res = await client.post(`${QUESTION_API_PREFIX}/generation_history/${historyId}/replay`);
     return res.data;
 }

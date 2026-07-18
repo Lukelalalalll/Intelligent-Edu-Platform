@@ -10,6 +10,7 @@ export const GENERATION_LANGUAGE_FOLLOW_LOCALE: Record<Locale, LanguageType> = {
   en: LanguageType.English,
   "zh-CN": LanguageType.ChineseSimplified,
   "zh-HK": LanguageType.CantoneseTraditional,
+  "zh-TW": LanguageType.ChineseTraditional,
 };
 
 export function getGenerationLanguageForLocale(locale: Locale): LanguageType {
@@ -57,4 +58,3 @@ export function getGenerationLanguageLabel(
 ): string {
   return normalizeGenerationLanguage(language) ?? String(language || "").trim();
 }
-

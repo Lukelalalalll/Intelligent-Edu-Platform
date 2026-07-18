@@ -1,5 +1,6 @@
 import type { ComponentType, LazyExoticComponent } from 'react';
 import { lazy } from 'react';
+import { PPT_GENERATOR_ROUTE_PATHS } from '@/ppt_generator/routeMeta';
 
 export type AuthMode = 'protected' | 'public' | 'none';
 
@@ -14,6 +15,7 @@ export interface RouteConfig {
 const PptGeneratorDashboardRoute = lazy(() => import('@/ppt_generator/routes/PptGeneratorDashboardRoute'));
 const PptGeneratorTemplatesRoute = lazy(() => import('@/ppt_generator/routes/PptGeneratorTemplatesRoute'));
 const PptGeneratorThemeRoute = lazy(() => import('@/ppt_generator/routes/PptGeneratorThemeRoute'));
+const toAppRoutePath = (path: string) => path.replace(/^\//, '');
 
 export const ROUTES: RouteConfig[] = [
   { path: '', Component: lazy(() => import('@/features/home/pages/HomePage')), auth: 'protected' },
@@ -38,30 +40,30 @@ export const ROUTES: RouteConfig[] = [
 
   { path: 'slides/highlighter', Component: lazy(() => import('@/features/slides/pages/Highlighter/HighlighterPage')), auth: 'protected' },
   { path: 'slides/specify', Component: lazy(() => import('@/features/slides/pages/Specify/SpecifyPage')), auth: 'protected' },
-  { path: 'slides/ppt_generator', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorUploadRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/documents-preview', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorDocumentsPreviewRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/outline', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorOutlineRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/presentation', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPresentationRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/dashboard', Component: PptGeneratorDashboardRoute, auth: 'protected' },
-  { path: 'slides/ppt_generator/templates', Component: PptGeneratorTemplatesRoute, auth: 'protected' },
-  { path: 'slides/ppt_generator/theme', Component: PptGeneratorThemeRoute, auth: 'protected' },
-  { path: 'slides/ppt_generator/settings', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorSettingsRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/template-preview', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorTemplatePreviewRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/custom-template', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorCustomTemplateRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/pdf-maker', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPdfMakerRoute }))), auth: 'none', fullScreen: true },
-  { path: 'slides/ppt_generator/workspace', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorLegacyRedirectRoute }))), auth: 'protected' },
-  { path: 'slides/ppt_generator/quick-process', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorLegacyRedirectRoute }))), auth: 'protected' },
-  { path: 'upload', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorUploadRoute }))), auth: 'protected' },
-  { path: 'documents-preview', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorDocumentsPreviewRoute }))), auth: 'protected' },
-  { path: 'outline', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorOutlineRoute }))), auth: 'protected' },
-  { path: 'presentation', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPresentationRoute }))), auth: 'protected' },
-  { path: 'dashboard', Component: PptGeneratorDashboardRoute, auth: 'protected' },
-  { path: 'templates', Component: PptGeneratorTemplatesRoute, auth: 'protected' },
-  { path: 'theme', Component: PptGeneratorThemeRoute, auth: 'protected' },
-  { path: 'settings', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorSettingsRoute }))), auth: 'protected' },
-  { path: 'template-preview', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorTemplatePreviewRoute }))), auth: 'protected' },
-  { path: 'custom-template', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorCustomTemplateRoute }))), auth: 'protected' },
-  { path: 'pdf-maker', Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPdfMakerRoute }))), auth: 'none', fullScreen: true },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.upload), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorUploadRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.documentsPreview), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorDocumentsPreviewRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.outline), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorOutlineRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.presentation), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPresentationRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.dashboard), Component: PptGeneratorDashboardRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.templates), Component: PptGeneratorTemplatesRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.theme), Component: PptGeneratorThemeRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.settings), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorSettingsRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.templatePreview), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorTemplatePreviewRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.customTemplate), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorCustomTemplateRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.pdfMaker), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPdfMakerRoute }))), auth: 'none', fullScreen: true },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyWorkspace), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorLegacyRedirectRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyQuickProcess), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorLegacyRedirectRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyUpload), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorUploadRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyDocumentsPreview), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorDocumentsPreviewRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyOutline), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorOutlineRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyPresentation), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPresentationRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyDashboard), Component: PptGeneratorDashboardRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyTemplates), Component: PptGeneratorTemplatesRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyTheme), Component: PptGeneratorThemeRoute, auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacySettings), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorSettingsRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyTemplatePreview), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorTemplatePreviewRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyCustomTemplate), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorCustomTemplateRoute }))), auth: 'protected' },
+  { path: toAppRoutePath(PPT_GENERATOR_ROUTE_PATHS.legacyPdfMaker), Component: lazy(() => import('@/ppt_generator/routes').then((module) => ({ default: module.PptGeneratorPdfMakerRoute }))), auth: 'none', fullScreen: true },
   { path: 'slides/quick-process', Component: lazy(() => import('@/features/slides/pages/QuickProcess/QuickProcessPage')), auth: 'protected' },
   { path: 'slides/generate-workbench', Component: lazy(() => import('@/features/slides/pages/GenerateWorkbench/GenerateWorkbenchPage')), auth: 'protected' },
   { path: 'slides/ppt-template', Component: lazy(() => import('@/features/slides/pages/PptTemplate/PptTemplatePage')), auth: 'protected' },
