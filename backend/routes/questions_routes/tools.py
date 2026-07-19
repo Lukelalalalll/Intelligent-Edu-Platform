@@ -22,7 +22,6 @@ from backend.schemas import (
 from backend.services.ai_gateway_service import get_ai_gateway_service
 from backend.services.questions import (
     build_questions_markdown,
-    build_questions_txt,
     extract_text_from_image, extract_pdf_text_with_loader,
     normalize_question_drafts,
 )
@@ -179,14 +178,9 @@ def export_selection_route(payload: QuestionExportSelectionSchema, user: dict = 
             return JSONResponse(content={"success": False, "error": "No questions selected"}, status_code=400)
 
         safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", str(payload.filename or "questions")).strip("._-") or "questions"
-        if payload.format == "txt":
-            content = build_questions_txt(questions)
-            media_type = "text/plain; charset=utf-8"
-            extension = "txt"
-        else:
-            content = build_questions_markdown(questions)
-            media_type = "text/markdown; charset=utf-8"
-            extension = "md"
+        content = build_questions_markdown(questions)
+        media_type = "text/markdown; charset=utf-8"
+        extension = "md"
 
         return Response(
             content=content.encode("utf-8"),

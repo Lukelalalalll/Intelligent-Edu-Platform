@@ -76,6 +76,7 @@ CORE_APP_MANIFEST = AppManifest(
         ai_gateway_router,
         chat_router,
         file_center_router,
+        questions_router,
         slides_router,
         legacy_sub1_router,
         video_router,

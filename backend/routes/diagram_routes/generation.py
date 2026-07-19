@@ -6,12 +6,12 @@ from typing import Optional
 
 from fastapi import Depends, File, Form, HTTPException, UploadFile
 
-from backend.core.ai_provider import resolve_provider
+from backend.core.ai_provider import resolve_provider_runtime
 from backend.core.database import compute_history_expires_at, db
 from backend.core.security import get_current_user
 from backend.infrastructure import TelemetryTimer
 from backend.services.ai_gateway_service import get_ai_gateway_service
-from backend.services.visual.diagram_service import generate_svg
+from backend.services.visual.diagram_service import generate_svg_with_runtime
 from .router import diagram_router
 
 logger = logging.getLogger(__name__)
@@ -36,21 +36,26 @@ async def generate_diagram(
         raise HTTPException(status_code=400, detail="Please provide a text file or enter text content")
 
     try:
-        resolved_provider = resolve_provider(provider, feature="diagram.generate_diagram", user=user)
+        runtime = await resolve_provider_runtime(
+            provider or "auto",
+            feature="diagram.generate_diagram",
+            user=user,
+            require_healthy=True,
+        )
         ai_service = get_ai_gateway_service()
 
         timer = TelemetryTimer(
-            provider=resolved_provider,
-            model="diagram-svg-generator",
+            provider=runtime.provider_id,
+            model=runtime.model,
             endpoint="sub4/generate_diagram",
             api_type="chat",
-            credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
+            credential_alias="COZE_TOKEN" if runtime.provider_id == "coze" else "OLLAMA_BASE_URL",
         )
         try:
             with timer:
-                result = await generate_svg(
+                result = await generate_svg_with_runtime(
                     text=text,
-                    provider=resolved_provider,
+                    runtime=runtime,
                     user_id=str(user.get("id", "anon")),
                     ai_service=ai_service,
                 )
@@ -71,13 +76,17 @@ async def generate_diagram(
                     "service_type": "generate",
                     "input_prompt": text[:200],
                     "provider": result["provider"],
+                    "provider_source": result.get("provider_source"),
+                    "requested_provider": result.get("requested_provider"),
+                    "model": result.get("model"),
                     "draft_quality": result["draft_quality"],
                     "refined": result["refined"],
                     "fallback_used": result["fallback_used"],
+                    "provider_switched": result["provider_switched"],
                 },
                 "source": {"prompt": text},
                 "result_preview": f"Generated diagram ({result['provider']}, quality={result['draft_quality']}): {text[:100]}",
-                "result_full": json.dumps({"svg": result["svg"]}),
+                "result_full": json.dumps({"svg": result["svg"], "meta": result}),
                 "created_at": datetime.now(timezone.utc),
             }
             if _exp is not None:
@@ -90,6 +99,9 @@ async def generate_diagram(
             "svg": result["svg"],
             "meta": {
                 "provider": result["provider"],
+                "provider_source": result.get("provider_source"),
+                "requested_provider": result.get("requested_provider"),
+                "model": result.get("model"),
                 "draft_quality": result["draft_quality"],
                 "refined": result["refined"],
                 "fallback_used": result["fallback_used"],
@@ -115,7 +127,12 @@ async def coze_generate_text(
     if not keywords:
         raise HTTPException(status_code=400, detail="Keywords are required")
 
-    resolved_provider = resolve_provider(provider, feature="diagram.generate_text", user=user)
+    runtime = await resolve_provider_runtime(
+        provider or "auto",
+        feature="diagram.generate_text",
+        user=user,
+        require_healthy=True,
+    )
 
     system_prompt = (
         "You are an expert educator and diagram designer. "
@@ -132,17 +149,17 @@ async def coze_generate_text(
     try:
         ai_service = get_ai_gateway_service()
         timer = TelemetryTimer(
-            provider=resolved_provider,
-            model="diagram-text-generator",
+            provider=runtime.provider_id,
+            model=runtime.model,
             endpoint="sub4/coze_generate_text",
             api_type="chat",
-            credential_alias="COZE_TOKEN" if resolved_provider == "coze" else "OLLAMA_BASE_URL",
+            credential_alias="COZE_TOKEN" if runtime.provider_id == "coze" else "OLLAMA_BASE_URL",
         )
         with timer:
-            answer = await ai_service.chat_with_provider(
+            answer = await ai_service.chat_with_runtime(
                 message=full_prompt,
                 context={"coze_user_id": f"sub4_{user.get('id', 'anon')}"},
-                provider=resolved_provider,
+                runtime=runtime,
             )
             await timer.save(
                 success=True,
@@ -150,7 +167,15 @@ async def coze_generate_text(
                 completion_tokens=max(1, len(answer) // 3),
             )
 
-        return {"text": answer.strip()}
+        return {
+            "text": answer.strip(),
+            "meta": {
+                "provider": runtime.provider_id,
+                "provider_source": runtime.config_source,
+                "requested_provider": runtime.requested_provider,
+                "model": runtime.model,
+            },
+        }
 
     except HTTPException:
         raise

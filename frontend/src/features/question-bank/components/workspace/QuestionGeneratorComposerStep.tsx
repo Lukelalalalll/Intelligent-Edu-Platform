@@ -1,14 +1,10 @@
 import { useRef } from 'react';
-import { ArrowLeft, FileUp, LoaderCircle, Sparkles } from 'lucide-react';
+import { FileUp, LoaderCircle, Sparkles } from 'lucide-react';
 
 import Button from '@/shared/components/Button/Button';
 
+import { HistoryStrip } from '../QuestionStudioCards';
 import type { QuestionGeneratorController } from '../../hooks/useQuestionGenerator';
-import {
-    formatQuestionProviderSource,
-    isAiConfigQuestionProvider,
-    type QuestionStudioProvider,
-} from '../../questionProviderConfig';
 import styles from '../../styles/questionStudio.module.css';
 
 interface QuestionGeneratorComposerStepProps {
@@ -18,32 +14,53 @@ interface QuestionGeneratorComposerStepProps {
 export default function QuestionGeneratorComposerStep({ controller }: QuestionGeneratorComposerStepProps) {
     const { state, derived, actions } = controller;
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const activeProviderId = state.provider || derived.preferredAiConfigOptions[0]?.id || '';
+    const hasProviderOptions = derived.preferredAiConfigOptions.length > 0;
+    const summaryItems = [
+        {
+            label: 'Text Model',
+            value: derived.currentResultModel || derived.selectedProviderStatus?.model || 'No model selected',
+        },
+        {
+            label: 'Questions',
+            value: `${state.numQuestions} questions`,
+        },
+        {
+            label: 'Language',
+            value: state.outputLanguage || 'English',
+        },
+        {
+            label: 'PDF Scope',
+            value: derived.pageScopeSummary,
+        },
+    ];
 
     return (
         <section className={styles.workspace}>
             <div className={styles.composerGrid}>
                 <div className={styles.panel}>
                     <div className={styles.panelTitleRow}>
-                        <h3 className={styles.panelTitle}>Source Composer</h3>
-                        <span className={styles.statusBadge}>Text + PDF</span>
+                        <h3 className={styles.panelTitle}>Question Source</h3>
+                        <span className={styles.statusBadge}>Prompt + PDF</span>
                     </div>
 
                     <div className={styles.fieldGroup}>
-                        <label className={styles.fieldLabel}>Instructor intent / text source</label>
+                        <label className={styles.fieldLabel} htmlFor="question-prompt">Prompt</label>
                         <textarea
+                            id="question-prompt"
                             className={styles.textArea}
-                            rows={8}
-                            placeholder="Paste course notes, describe what the questions should test, or add style and difficulty instructions."
+                            rows={10}
+                            placeholder="Write the question-making prompt, the teaching goal, tone, and any constraints you want the model to follow."
                             value={state.sourceText}
                             onChange={(event) => actions.setSourceText(event.target.value)}
                         />
                         <p className={styles.helperText}>
-                            If you also upload a PDF, this text becomes supplemental intent instead of replacing the document source.
+                            This prompt is sent as the instruction layer. You can use it alone or combine it with a PDF source.
                         </p>
                     </div>
 
                     <div className={styles.fieldGroup}>
-                        <label className={styles.fieldLabel}>PDF upload</label>
+                        <label className={styles.fieldLabel}>PDF Upload</label>
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -90,7 +107,7 @@ export default function QuestionGeneratorComposerStep({ controller }: QuestionGe
                         </div>
                     </div>
 
-                    {state.selectedFile && (
+                    {state.selectedFile ? (
                         <div className={styles.fieldGroup}>
                             <div className={styles.panelTitleRow}>
                                 <label className={styles.fieldLabel}>PDF Page Scope</label>
@@ -130,32 +147,118 @@ export default function QuestionGeneratorComposerStep({ controller }: QuestionGe
                                 </p>
                             )}
                         </div>
-                    )}
-
-                    <div className={styles.actionRow}>
-                        <Button type="button" variant="outline" onClick={() => actions.setWorkspaceStep('start')}>
-                            <ArrowLeft size={16} /> Back
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => void actions.handleGenerate()}
-                            disabled={state.isGenerating || !derived.hasGenerationInput}
-                        >
-                            <Sparkles size={16} /> Generate Questions
-                        </Button>
-                    </div>
+                    ) : null}
                 </div>
 
                 <aside className={styles.providerRail}>
                     <div className={styles.panel}>
                         <div className={styles.panelTitleRow}>
-                            <h3 className={styles.panelTitle}>Generation Settings</h3>
-                            <span className={styles.statusBadge}>Provider Runtime</span>
+                            <div className={styles.panelTitleStack}>
+                                <span className={styles.panelEyebrow}>Current AI Config</span>
+                                <h3 className={styles.panelTitle}>AI Model & Settings</h3>
+                            </div>
+                            <Button type="button" variant="outline" onClick={actions.navigateToAiConfig}>
+                                AI Config
+                            </Button>
                         </div>
 
                         <div className={styles.fieldGroup}>
-                            <label className={styles.fieldLabel}>Question Type</label>
-                            <select className={styles.selectInput} value={state.questionType} onChange={(event) => actions.setQuestionType(event.target.value)}>
+                            <div className={styles.panelTitleRow}>
+                                <label className={styles.fieldLabel}>Configured text models</label>
+                                <span className={styles.metaPill}>{derived.aiSelectorLabel}</span>
+                            </div>
+
+                            {state.providerLoading ? (
+                                <div className={styles.emptyState}>Loading AI models...</div>
+                            ) : state.providerError ? (
+                                <div className={styles.providerNotice}>
+                                    <div className={styles.providerMetaRow}>
+                                        <span className={styles.providerName}>Model status unavailable</span>
+                                        <span className={styles.metaPill}>AI Config</span>
+                                    </div>
+                                    <p className={styles.helperText}>{state.providerError}</p>
+                                </div>
+                            ) : !hasProviderOptions ? (
+                                <div className={styles.providerNotice}>
+                                    <div className={styles.providerMetaRow}>
+                                        <span className={styles.providerName}>No ready model</span>
+                                        <span className={styles.metaPill}>AI Config</span>
+                                    </div>
+                                    <p className={styles.helperText}>
+                                        No ready AI Config text model is available. Open AI Config and connect one, then come back here.
+                                    </p>
+                                    <div>
+                                        <Button type="button" variant="outline" onClick={actions.navigateToAiConfig}>
+                                            AI Config
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className={styles.providerList} aria-label="Configured AI models">
+                                    {derived.preferredAiConfigOptions.map((option) => {
+                                        const isActive = option.id === activeProviderId;
+                                        return (
+                                            <button
+                                                key={option.id}
+                                                type="button"
+                                                className={[
+                                                    styles.providerOption,
+                                                    isActive ? styles.providerOptionActive : '',
+                                                    !option.available ? styles.providerOptionDisabled : '',
+                                                ].filter(Boolean).join(' ')}
+                                                aria-pressed={isActive}
+                                                disabled={!option.available}
+                                                onClick={() => actions.setProvider(option.id)}
+                                            >
+                                                <div className={styles.providerCardTop}>
+                                                    <div className={styles.providerCardMain}>
+                                                        <span className={styles.providerName}>{option.label}</span>
+                                                        <span className={styles.providerModel}>{option.model || 'No model name'}</span>
+                                                    </div>
+                                                    <span
+                                                        className={[
+                                                            styles.providerStatusPill,
+                                                            option.available ? styles.providerStatusPillReady : styles.providerStatusPillMuted,
+                                                        ].filter(Boolean).join(' ')}
+                                                    >
+                                                        {option.available ? 'Configured' : 'Unavailable'}
+                                                    </span>
+                                                </div>
+                                                {isActive ? <span className={styles.providerSelectedMarker}>Selected</span> : null}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={styles.configSummaryGrid}>
+                            {summaryItems.map((item) => (
+                                <div key={item.label} className={styles.configSummaryItem}>
+                                    <p className={styles.configSummaryLabel}>{item.label}</p>
+                                    <p className={styles.configSummaryValue}>{item.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={styles.panel}>
+                        <div className={styles.panelTitleRow}>
+                            <div className={styles.panelTitleStack}>
+                                <span className={styles.panelEyebrow}>Generator</span>
+                                <h3 className={styles.panelTitle}>Question Settings</h3>
+                            </div>
+                            <span className={styles.statusBadge}>Prompt + PDF</span>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel} htmlFor="question-type">Question Type</label>
+                            <select
+                                id="question-type"
+                                className={styles.selectInput}
+                                value={state.questionType}
+                                onChange={(event) => actions.setQuestionType(event.target.value)}
+                            >
                                 <option>Multiple choice</option>
                                 <option>Short answer</option>
                                 <option>Fill in the blank</option>
@@ -164,101 +267,77 @@ export default function QuestionGeneratorComposerStep({ controller }: QuestionGe
                         </div>
 
                         <div className={styles.fieldGroup}>
-                            <label className={styles.fieldLabel}>Question Count</label>
-                            <input className={styles.textInput} type="number" min={1} max={30} value={state.numQuestions} onChange={(event) => actions.setNumQuestions(Number(event.target.value) || 1)} />
+                            <label className={styles.fieldLabel} htmlFor="question-count">Question Count</label>
+                            <input
+                                id="question-count"
+                                className={styles.textInput}
+                                type="number"
+                                min={1}
+                                max={30}
+                                value={state.numQuestions}
+                                onChange={(event) => actions.setNumQuestions(Number(event.target.value) || 1)}
+                            />
                         </div>
 
                         <div className={styles.fieldGroup}>
-                            <label className={styles.fieldLabel}>Difficulty (1-5)</label>
-                            <input className={styles.textInput} type="number" min={1} max={5} value={state.difficulty} onChange={(event) => actions.setDifficulty(Number(event.target.value) || 1)} />
+                            <label className={styles.fieldLabel} htmlFor="question-difficulty">Difficulty (1-5)</label>
+                            <input
+                                id="question-difficulty"
+                                className={styles.textInput}
+                                type="number"
+                                min={1}
+                                max={5}
+                                value={state.difficulty}
+                                onChange={(event) => actions.setDifficulty(Number(event.target.value) || 1)}
+                            />
                         </div>
 
                         <div className={styles.fieldGroup}>
-                            <label className={styles.fieldLabel}>Output Language</label>
-                            <input className={styles.textInput} value={state.outputLanguage} onChange={(event) => actions.setOutputLanguage(event.target.value)} />
+                            <label className={styles.fieldLabel} htmlFor="output-language">Output Language</label>
+                            <input
+                                id="output-language"
+                                className={styles.textInput}
+                                value={state.outputLanguage}
+                                onChange={(event) => actions.setOutputLanguage(event.target.value)}
+                            />
                         </div>
 
                         <div className={styles.fieldGroup}>
-                            <label className={styles.fieldLabel}>Additional Constraints</label>
+                            <label className={styles.fieldLabel} htmlFor="question-constraints">Additional Constraints</label>
                             <textarea
+                                id="question-constraints"
                                 className={styles.textArea}
-                                rows={5}
+                                rows={6}
                                 placeholder="One instruction per line."
                                 value={state.constraints}
                                 onChange={(event) => actions.setConstraints(event.target.value)}
                             />
                         </div>
 
-                        <div className={styles.fieldGroup}>
-                            <div className={styles.panelTitleRow}>
-                                <label className={styles.fieldLabel}>{derived.aiSelectorLabel}</label>
-                                <Button type="button" variant="outline" onClick={actions.navigateToAiConfig}>
-                                    AI Config
-                                </Button>
-                            </div>
-                            {state.providerLoading ? (
-                                <div className={styles.emptyState}>Loading AI models...</div>
-                            ) : state.providerError ? (
-                                <div className={styles.emptyState}>{state.providerError}</div>
-                            ) : derived.preferredProviderOptions.length === 0 ? (
-                                <div className={styles.emptyState}>
-                                    No available AI model is ready right now. Check your AI Config or runtime deployment.
-                                </div>
-                            ) : (
-                                <>
-                                    <select
-                                        className={styles.selectInput}
-                                        value={state.provider || derived.preferredProviderOptions[0]?.id || ''}
-                                        onChange={(event) => actions.setProvider(event.target.value as QuestionStudioProvider)}
-                                    >
-                                        {derived.preferredAiConfigOptions.length > 0 ? (
-                                            <optgroup label="AI Config Models">
-                                                {derived.preferredAiConfigOptions.map((option) => (
-                                                    <option key={option.id} value={option.id}>
-                                                        {option.label} · {option.model}
-                                                    </option>
-                                                ))}
-                                            </optgroup>
-                                        ) : null}
-                                        {derived.preferredProviderOptions.filter((option) => !isAiConfigQuestionProvider(option)).length > 0 ? (
-                                            <optgroup label={derived.preferredAiConfigOptions.length > 0 ? 'Other Available Runtimes' : 'Available Runtimes'}>
-                                                {derived.preferredProviderOptions
-                                                    .filter((option) => !isAiConfigQuestionProvider(option))
-                                                    .map((option) => (
-                                                        <option key={option.id} value={option.id}>
-                                                            {option.label}{option.model ? ` · ${option.model}` : ''}
-                                                        </option>
-                                                    ))}
-                                            </optgroup>
-                                        ) : null}
-                                    </select>
-                                    {derived.selectedProviderStatus ? (
-                                        <div className={styles.selectorInfo}>
-                                            <div className={styles.providerMetaRow}>
-                                                <span className={styles.providerName}>{derived.selectedProviderStatus.label}</span>
-                                                <span className={styles.metaPill}>
-                                                    {formatQuestionProviderSource(derived.selectedProviderStatus.source)}
-                                                </span>
-                                            </div>
-                                            <span className={styles.helperText}>
-                                                {derived.selectedProviderStatus.model ? derived.selectedProviderStatus.model : 'No model information'}
-                                            </span>
-                                            <span className={styles.helperText}>
-                                                {derived.selectedProviderStatus.message}
-                                            </span>
-                                        </div>
-                                    ) : null}
-                                    <p className={styles.helperText}>
-                                        {derived.preferredAiConfigOptions.length > 0
-                                            ? 'This selector prefers healthy models from your AI Config.'
-                                            : 'No healthy AI Config model is available, so the selector falls back to available runtimes.'}
-                                    </p>
-                                </>
-                            )}
+                        <div className={styles.actionRow}>
+                            <span className={styles.helperText}>
+                                {hasProviderOptions
+                                    ? 'Model selection stays on the AI Config side of the house.'
+                                    : 'Connect a ready AI Config model before generating.'}
+                            </span>
+                            <Button
+                                type="button"
+                                onClick={() => void actions.handleGenerate()}
+                                disabled={state.isGenerating || !derived.hasGenerationInput || !activeProviderId || !hasProviderOptions}
+                            >
+                                {state.isGenerating ? <LoaderCircle size={16} className={styles.spinner} /> : <Sparkles size={16} />}
+                                Generate Questions
+                            </Button>
                         </div>
                     </div>
                 </aside>
             </div>
+
+            <HistoryStrip
+                items={state.historyState.items}
+                loading={state.historyState.loading}
+                onOpen={(historyId) => void actions.hydrateHistoryResult(historyId)}
+            />
         </section>
     );
 }

@@ -21,8 +21,13 @@ async def mark_code_used(code: str, *, used_by: str, used_at: datetime):
     )
 
 
-async def list_codes(limit: int = 200) -> list[dict[str, Any]]:
-    return await db.staff_codes.find().sort("created_at", -1).to_list(length=limit)
+async def list_codes(*, skip: int = 0, limit: int = 200) -> list[dict[str, Any]]:
+    cursor = db.staff_codes.find().sort("created_at", -1)
+    if skip:
+        cursor = cursor.skip(skip)
+    if limit:
+        cursor = cursor.limit(limit)
+    return await cursor.to_list(length=limit or None)
 
 
 async def delete_unused_code(code: str):

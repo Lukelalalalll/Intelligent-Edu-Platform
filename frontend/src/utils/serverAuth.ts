@@ -1,3 +1,4 @@
+/* global process */
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAuthDisabled } from "@/utils/auth";
@@ -10,7 +11,7 @@ type AuthStatus = {
 };
 
 /**
- * Resolves the FastAPI base used from Next server components (same as start.js).
+ * Resolves the FastAPI base used by Next-compatible server components.
  */
 function getServerFastApiBase(): string {
   const internal = process.env.FAST_API_INTERNAL_URL?.trim();
@@ -28,9 +29,8 @@ function getServerFastApiBase(): string {
 }
 
 /**
- * Calls the same /api/v1/auth/status as the browser, using the incoming request cookies.
- * Used by server layouts so 404/unknown routes are not conflated with unauthenticated access
- * (the layout only runs for routes that exist and sit under the layout’s segment).
+ * Checks server-side auth status with the incoming request cookies.
+ * Server layouts use this so unknown routes are not conflated with unauthenticated access.
  */
 export async function getServerAuthStatus(): Promise<AuthStatus> {
   if (isAuthDisabled()) {
@@ -78,8 +78,8 @@ export async function getServerAuthStatus(): Promise<AuthStatus> {
 }
 
 /**
- * If credentials are not configured yet, send the user to `/` (setup in AuthGate).
- * If configured but not signed in, send to login with a query flag the client turns into a toast.
+ * Enforces an app session for Next-compatible server routes.
+ * Setup and unavailable auth states return to `/`; anonymous sessions receive an unauthorized hint.
  */
 export async function requireAppSession() {
   if (isAuthDisabled()) {

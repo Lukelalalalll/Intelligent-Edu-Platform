@@ -64,7 +64,7 @@ class QuestionHistoryFinalizeSchema(BaseModel):
 
 class QuestionExportSelectionSchema(BaseModel):
     questions: List[QuestionDraftSchema]
-    format: Literal['markdown', 'txt'] = 'markdown'
+    format: Literal['markdown', 'pdf'] = 'markdown'
     filename: str = "questions"
 
 

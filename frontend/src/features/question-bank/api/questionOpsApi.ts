@@ -1,6 +1,6 @@
 import client from '@/shared/api/client';
 
-const QUESTION_API_PREFIX = '/sub2';
+const QUESTION_API_PREFIX = '/questions';
 
 export interface QuestionOpsRunPayload {
     task_id?: string | null;

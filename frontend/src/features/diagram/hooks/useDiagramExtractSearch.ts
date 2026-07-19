@@ -162,6 +162,7 @@ export function useDiagramExtractSearch() {
     const [editorError, setEditorError] = useState('');
     const [editorFields, setEditorFields] = useState<any[]>([]);
     const [previewHtml, setPreviewHtml] = useState('');
+    const [currentSvg, setCurrentSvg] = useState('');
 
     const svgDocRef = useRef<Document | null>(null);
     const textNodesRef = useRef<Element[]>([]);
@@ -198,40 +199,45 @@ export function useDiagramExtractSearch() {
         }
     };
 
-    const updatePreviewHtml = useCallback(() => {
-        if (!svgDocRef.current) return;
-        const svgStr = new XMLSerializer().serializeToString(svgDocRef.current);
+    const syncPreviewFromDoc = useCallback((doc: Document) => {
+        const svgStr = new XMLSerializer().serializeToString(doc);
+        setCurrentSvg(svgStr);
         setPreviewHtml(`<!DOCTYPE html><html><head><style>body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }</style></head><body>${svgStr}</body></html>`);
     }, []);
+
+    const applySvgToEditor = useCallback((svgText: string) => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+        if (doc.querySelector('parsererror')) throw new Error('Failed to parse SVG file');
+
+        const validNodes = collectEditableTextNodes(doc);
+        svgDocRef.current = doc;
+        textNodesRef.current = validNodes;
+
+        if (validNodes.length === 0) {
+            const hasTextTags = doc.querySelector('text, tspan, textPath') !== null;
+            const hasPathsOnly = !hasTextTags && doc.querySelectorAll('path').length > 0;
+            const hint = hasPathsOnly
+                ? 'This SVG uses outlined paths for text (no editable text nodes). Try a different SVG.'
+                : 'No editable text fields found in this SVG.';
+            setEditorFields([{ id: 0, value: hint, _readonly: true }]);
+        } else {
+            setEditorFields(validNodes.map((n, i) => ({ id: i, value: normalizeText(n.textContent) })));
+        }
+
+        syncPreviewFromDoc(doc);
+    }, [syncPreviewFromDoc]);
+
+    const updatePreviewHtml = useCallback(() => {
+        if (!svgDocRef.current) return;
+        syncPreviewFromDoc(svgDocRef.current);
+    }, [syncPreviewFromDoc]);
 
     const loadEditor = async (url: string) => {
         setIsEditorVisible(true); setEditorLoading(true); setEditorError('');
         try {
             const res = await client.get(`/diagram/fetch_external_svg?url=${encodeURIComponent(url)}`, { responseType: 'text' });
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(res.data, 'image/svg+xml');
-            if (doc.querySelector('parsererror')) throw new Error('Failed to parse SVG file');
-
-            const validNodes = collectEditableTextNodes(doc);
-            svgDocRef.current = doc;
-            textNodesRef.current = validNodes;
-
-            // If no text nodes found, detect whether this is a path-only SVG (outlined text)
-            // so we can show a meaningful explanation instead of a blank fields panel.
-            if (validNodes.length === 0) {
-                const hasTextTags = doc.querySelector('text, tspan, textPath') !== null;
-                const hasPathsOnly = !hasTextTags && doc.querySelectorAll('path').length > 0;
-                const hint = hasPathsOnly
-                    ? 'This SVG uses outlined paths for text (no editable text nodes). Try a different SVG.'
-                    : 'No editable text fields found in this SVG.';
-                // Still open the editor so the user can preview; note is shown in fields panel
-                const fields: any[] = [{ id: 0, value: hint, _readonly: true }];
-                setEditorFields(fields);
-            } else {
-                const fields = validNodes.map((n, i) => ({ id: i, value: normalizeText(n.textContent) }));
-                setEditorFields(fields);
-            }
-            updatePreviewHtml();
+            applySvgToEditor(res.data);
         } catch (err) {
             setEditorError(extractErrorMessage(err));
         } finally {
@@ -255,6 +261,17 @@ export function useDiagramExtractSearch() {
         const newFields = editorFields.filter((_, i) => i !== idx).map((f, i) => ({ ...f, id: i }));
         setEditorFields(newFields);
         updatePreviewHtml();
+    };
+
+    const injectEditedSvg = (svgText: string) => {
+        setIsEditorVisible(true);
+        setEditorLoading(false);
+        setEditorError('');
+        try {
+            applySvgToEditor(svgText);
+        } catch (err) {
+            setEditorError(extractErrorMessage(err));
+        }
     };
 
     const downloadSvg = async () => {
@@ -289,11 +306,20 @@ export function useDiagramExtractSearch() {
             handleUpload: handleExtractUpload,
         },
         searchState: { query: searchQuery, setQuery: setSearchQuery, loading: searchLoading, results: searchResults, error: searchError },
-        searchHandlers: { handleSearch },
-        editorState: { isVisible: isEditorVisible, loading: editorLoading, fields: editorFields, previewHtml, error: editorError },
+        searchHandlers: {
+            handleSearch,
+            injectSearchResults: (results: any, query: string = '') => {
+                setSearchResults(Array.isArray(results) ? results : []);
+                if (query) setSearchQuery(query);
+                setSearchError('');
+                setIsEditorVisible(false);
+            },
+        },
+        editorState: { isVisible: isEditorVisible, loading: editorLoading, fields: editorFields, previewHtml, error: editorError, currentSvg },
         editorHandlers: {
             loadEditor, handleFieldChange: handleEditorFieldChange, handleRemoveField: handleEditorRemoveField,
             applyChanges: updatePreviewHtml, downloadSvg, setIsVisible: setIsEditorVisible,
+            injectEditedSvg,
         },
     };
 }

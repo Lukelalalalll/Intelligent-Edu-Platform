@@ -17,6 +17,10 @@ def _non_hard_deleted_status(status: str = "") -> str | dict[str, Any]:
     return status if status else {"$ne": "hard_deleted"}
 
 
+def _non_hard_deleted_query(status: str = "") -> dict[str, Any]:
+    return {"status": _non_hard_deleted_status(status)}
+
+
 async def find_assets_by_owner(owner_type: str, owner_id: str) -> list[dict[str, Any]]:
     cursor = db.file_assets.find(
         {
@@ -60,6 +64,26 @@ async def list_room_assets(
     return [item async for item in cursor]
 
 
+async def count_chat_group_assets_by_room_ids(room_ids: list[str]) -> dict[str, int]:
+    if not room_ids:
+        return {}
+
+    pipeline = [
+        {
+            "$match": {
+                "room_id": {"$in": room_ids},
+                "scope": "chat_group",
+                "status": {"$ne": "hard_deleted"},
+            }
+        },
+        {"$group": {"_id": "$room_id", "count": {"$sum": 1}}},
+    ]
+    counts: dict[str, int] = {}
+    async for item in db.file_assets.aggregate(pipeline):
+        counts[str(item["_id"])] = int(item.get("count", 0))
+    return counts
+
+
 async def list_ai_personal_assets_for_user(
     *,
     user_id: str,
@@ -73,6 +97,90 @@ async def list_ai_personal_assets_for_user(
         }
     ).sort("created_at", -1)
     return [item async for item in cursor]
+
+
+async def list_ai_personal_assets_page(
+    *,
+    user_id: str,
+    status: str = "",
+    group_by: str = "day",
+    skip: int = 0,
+    limit: int | None = 100,
+) -> tuple[int, list[dict[str, Any]]]:
+    query: dict[str, Any] = {
+        "scope": "ai_personal",
+        "user_id": user_id,
+        **_non_hard_deleted_query(status),
+    }
+    total = await db.file_assets.count_documents(query)
+    safe_skip = max(0, int(skip or 0))
+    safe_limit = None if limit is None or int(limit or 0) <= 0 else max(1, int(limit or 1))
+    bucket_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
+    bucket_len = 7 if group_by == "month" else 10
+
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1, "_id": -1}},
+        {"$skip": safe_skip},
+    ]
+    if safe_limit is not None:
+        pipeline.append({"$limit": safe_limit})
+    pipeline.extend([
+        {"$addFields": {"_bucket_source": {"$ifNull": ["$created_at", "$conversation_date"]}}},
+        {
+            "$addFields": {
+                "_bucket": {
+                    "$switch": {
+                        "branches": [
+                            {
+                                "case": {"$eq": [{"$type": "$_bucket_source"}, "date"]},
+                                "then": {
+                                    "$dateToString": {
+                                        "format": bucket_format,
+                                        "date": "$_bucket_source",
+                                        "timezone": "UTC",
+                                    }
+                                },
+                            },
+                            {
+                                "case": {"$eq": [{"$type": "$_bucket_source"}, "string"]},
+                                "then": {
+                                    "$cond": [
+                                        {"$gt": [{"$strLenCP": "$_bucket_source"}, 0]},
+                                        {"$substrCP": ["$_bucket_source", 0, bucket_len]},
+                                        "unknown",
+                                    ]
+                                },
+                            },
+                        ],
+                        "default": "unknown",
+                    }
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$_bucket",
+                "count": {"$sum": 1},
+                "total_size": {"$sum": {"$ifNull": ["$size", 0]}},
+                "items": {"$push": "$$ROOT"},
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "date": "$_id",
+                "count": 1,
+                "total_size": 1,
+                "items": 1,
+            }
+        },
+        {"$sort": {"date": -1}},
+    ])
+    groups: list[dict[str, Any]] = []
+    async for item in db.file_assets.aggregate(pipeline):
+        groups.append(item)
+    return total, groups
 
 
 async def count_ai_personal_assets_by_user_ids(user_ids: list[str]) -> dict[str, int]:

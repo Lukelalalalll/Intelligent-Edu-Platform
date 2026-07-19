@@ -8,6 +8,7 @@ from backend.core.database import (
     _create_client,
     _ensure_auth_security_indexes,
     _ensure_google_auth_ticket_indexes,
+    _ensure_rag_telemetry_indexes,
     _get_client,
     _ensure_users_indexes,
     _ensure_user_sessions_indexes,
@@ -65,12 +66,14 @@ class _FakeDatabase:
         auth_attempt_counters=None,
         security_audit_events=None,
         google_auth_tickets=None,
+        rag_telemetry=None,
     ):
         self.users = users
         self.user_sessions = user_sessions or _FakeCreateIndexesCollection()
         self.auth_attempt_counters = auth_attempt_counters or _FakeCreateIndexesCollection()
         self.security_audit_events = security_audit_events or _FakeCreateIndexesCollection()
         self.google_auth_tickets = google_auth_tickets or _FakeCreateIndexesCollection()
+        self.rag_telemetry = rag_telemetry or _FakeCreateIndexesCollection()
 
 
 class _FakeCreateIndexesCollection:
@@ -162,6 +165,7 @@ class _FakeEnsureIndexesDatabase:
             "grades": _FakeCreateIndexesCollection(),
             "courses": _FakeCreateIndexesCollection(),
             "llm_telemetry": _FakeCreateIndexesCollection(),
+            "rag_telemetry": _FakeCreateIndexesCollection(),
             "sub1_task_tracking": _FakeCreateIndexesCollection(),
             "sub1_checkpoints": _FakeCreateIndexesCollection(),
             "sub1_audit_log": _FakeCreateIndexesCollection(),
@@ -174,6 +178,8 @@ class _FakeEnsureIndexesDatabase:
             "chat_file_transfers": _FakeCreateIndexesCollection(),
             "indexing_jobs": _FakeCreateIndexesCollection(),
             "background_jobs": _FakeCreateIndexesCollection(),
+            "video_projects": _FakeCreateIndexesCollection(),
+            "video_script_jobs": _FakeCreateIndexesCollection(),
             "file_assets": _FakeCreateIndexesCollection(),
             "password_reset_tokens": _FakeCreateIndexesCollection(),
             "question_ops_runs": _FakeCreateIndexesCollection(),
@@ -268,6 +274,7 @@ def test_ensure_users_indexes_skips_duplicate_username_creation_when_equivalent_
             'unique': True,
             'partialFilterExpression': {'google_auth.sub': {'$exists': True, '$type': 'string', '$gt': ''}},
         }),
+        ([('role', 1), ('username', 1)], {}),
     ]
 
 
@@ -300,6 +307,7 @@ def test_ensure_users_indexes_reuses_equivalent_index_after_conflict(monkeypatch
             'unique': True,
             'partialFilterExpression': {'google_auth.sub': {'$exists': True, '$type': 'string', '$gt': ''}},
         }),
+        ([('role', 1), ('username', 1)], {}),
     ]
 
 
@@ -373,6 +381,34 @@ def test_ensure_auth_security_indexes_creates_expected_indexes(monkeypatch):
     assert len(fake_audit.create_indexes_calls[0]) == 3
 
 
+def test_ensure_rag_telemetry_indexes_creates_expected_indexes(monkeypatch):
+    fake_users = _FakeUsersCollection(indexes=[])
+    fake_rag = _FakeCreateIndexesCollection()
+    fake_audit = _FakeCreateIndexesCollection()
+    monkeypatch.setattr(
+        'backend.core.database.db',
+        _FakeDatabase(fake_users, rag_telemetry=fake_rag, security_audit_events=fake_audit),
+    )
+
+    asyncio.run(_ensure_rag_telemetry_indexes())
+
+    assert len(fake_rag.create_indexes_calls) == 1
+    created_specs = [index.document for index in fake_rag.create_indexes_calls[0]]
+    assert any(
+        list(spec["key"].items()) == [("timestamp", 1)]
+        and spec.get("expireAfterSeconds") == 90 * 24 * 3600
+        for spec in created_specs
+    )
+    assert any(
+        list(spec["key"].items()) == [("timestamp", -1), ("course_ids", 1)]
+        for spec in created_specs
+    )
+    assert any(
+        list(spec["key"].items()) == [("timestamp", -1), ("role", 1)]
+        for spec in created_specs
+    )
+
+
 def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypatch):
     fake_db = _FakeEnsureIndexesDatabase()
     monkeypatch.setattr("backend.core.database.db", fake_db)
@@ -407,7 +443,12 @@ def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypa
     indexing_job_specs = _index_specs("indexing_jobs")
     background_job_specs = _index_specs("background_jobs")
     file_asset_specs = _index_specs("file_assets")
+    rag_telemetry_specs = _index_specs("rag_telemetry")
 
+    assert any(
+        keys == [("role", 1), ("username", 1)]
+        for keys, kwargs in fake_db.users.create_index_calls
+    )
     assert _has_index(
         course_specs,
         [("courseCode", 1), ("semester", 1)],
@@ -484,6 +525,35 @@ def test_ensure_indexes_creates_expected_unique_indexes_for_flat_domain(monkeypa
     assert _has_index(
         file_asset_specs,
         [("file_type", 1), ("public_url", 1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("owner_type", 1), ("owner_id", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("room_id", 1), ("scope", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("user_id", 1), ("scope", 1), ("status", 1), ("created_at", -1)],
+    )
+    assert _has_index(
+        file_asset_specs,
+        [("file_type", 1), ("course_id", 1), ("filename", 1), ("status", 1)],
+    )
+    assert any(
+        list(spec["key"].items()) == [("timestamp", 1)]
+        and spec.get("expireAfterSeconds") == 90 * 24 * 3600
+        for spec in rag_telemetry_specs
+    )
+    assert _has_index(
+        rag_telemetry_specs,
+        [("timestamp", -1), ("course_ids", 1)],
+    )
+    assert _has_index(
+        rag_telemetry_specs,
+        [("timestamp", -1), ("role", 1)],
     )
 
 

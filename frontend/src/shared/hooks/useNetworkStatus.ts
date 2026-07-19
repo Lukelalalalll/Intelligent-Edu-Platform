@@ -18,8 +18,9 @@ import { useState, useEffect } from 'react';
 // ── Singleton event bus ──────────────────────────────────────────────────────
 
 type Listener = (offline: boolean) => void;
+const hasBrowserNetworkApis = typeof window !== 'undefined' && typeof navigator !== 'undefined';
 const listeners = new Set<Listener>();
-let _isOffline = !navigator.onLine;
+let _isOffline = hasBrowserNetworkApis ? !navigator.onLine : false;
 
 function notifyAll(offline: boolean) {
     _isOffline = offline;
@@ -46,8 +47,10 @@ export const networkBus = {
 };
 
 // Keep in sync with browser events as well
-window.addEventListener('online',  () => notifyAll(false));
-window.addEventListener('offline', () => notifyAll(true));
+if (hasBrowserNetworkApis) {
+    window.addEventListener('online', () => notifyAll(false));
+    window.addEventListener('offline', () => notifyAll(true));
+}
 
 // ── React hook ───────────────────────────────────────────────────────────────
 

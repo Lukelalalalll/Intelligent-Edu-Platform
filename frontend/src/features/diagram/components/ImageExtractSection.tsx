@@ -31,13 +31,13 @@ export default function ImageExtractSection({ imageState, imageHandlers }) {
     const {
         isDragging, uploadStatus, currentChapter, activeTab,
         imagesByChapter, selectedImages, aiPrompt, aiNum, aiImages,
-        loading, loadingText, lightboxImage, notifications,
+        aiProvider, aiMeta, loading, loadingText, lightboxImage, notifications,
     } = imageState;
 
     const {
         handleDragOver, handleDragLeave, handleDrop, handleFileInput,
         setCurrentChapter, setActiveTab, setAiPrompt, setAiNum,
-        generateAiImages, toggleImageSelection, removeSelectedImage,
+        setAiProvider, generateAiImages, toggleImageSelection, removeSelectedImage,
         setLightboxImage, exportZip, exportPDF,
     } = imageHandlers;
 
@@ -230,10 +230,29 @@ export default function ImageExtractSection({ imageState, imageHandlers }) {
                                 <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Count:</label>
                                 <input type="range" min="1" max="8" value={aiNum} onChange={e => setAiNum(e.target.value)} style={{ width: 80 }} />
                                 <span style={{ fontWeight: 700, color: 'var(--primary-color)', minWidth: 16 }}>{aiNum}</span>
+                                <select
+                                    value={aiProvider || 'auto'}
+                                    onChange={e => setAiProvider?.(e.target.value)}
+                                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1' }}
+                                    title="Image generation provider"
+                                >
+                                    <option value="auto">Auto</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="bigmodel">BigModel</option>
+                                    <option value="deepseek">DeepSeek</option>
+                                    <option value="local_ollama">Ollama</option>
+                                    <option value="coze">Coze</option>
+                                </select>
                                 <button className="btn" onClick={generateAiImages} disabled={loading}>
                                     <i className="fas fa-magic"></i> Generate
                                 </button>
                             </div>
+                            {aiMeta?.warning && (
+                                <div style={{ margin: '-4px 0 12px', color: '#92400e', fontSize: '0.85rem' }}>
+                                    <i className="fas fa-triangle-exclamation" style={{ marginRight: 6 }}></i>
+                                    {aiMeta.warning}
+                                </div>
+                            )}
                             <div className={styles.resultsContainer}>
                                 {aiImages.length > 0
                                     ? aiImages.map((img, idx) => (

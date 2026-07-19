@@ -61,6 +61,32 @@ export interface AIUserSummary {
     asset_count: number;
 }
 
+export interface PagedResponseMeta {
+    total: number;
+    skip: number;
+    limit: number;
+    hasMore?: boolean;
+    nextSkip?: number | null;
+}
+
+export interface AIUserAssetsResponse extends PagedResponseMeta {
+    user_id: string;
+    group_by: 'day' | 'month';
+    groups: AIFileGroup[];
+}
+
+export interface ChatRoomsResponse extends PagedResponseMeta {
+    rooms: ChatRoomAssetSummary[];
+}
+
+export interface AIUsersResponse extends PagedResponseMeta {
+    users: AIUserSummary[];
+}
+
+export interface FileAssetsResponse extends PagedResponseMeta {
+    assets: FileAsset[];
+}
+
 export const fileCenterApi = {
     listAssets: (params: {
         file_type?: string;
@@ -71,7 +97,7 @@ export const fileCenterApi = {
         q?: string;
         limit?: number;
         skip?: number;
-    }) => client.get('/admin/files/assets', { params }).then(r => r.data as { total: number; assets: FileAsset[] }),
+    }) => client.get('/admin/files/assets', { params }).then(r => r.data as FileAssetsResponse),
 
     getStats: () => client.get('/admin/files/stats').then(r => r.data as {
         rows: Array<{ file_type: string; status: string; count: number; total_size: number }>;
@@ -89,16 +115,17 @@ export const fileCenterApi = {
         client.post(`/admin/files/assets/${encodeURIComponent(fileId)}/hard-delete`).then(r => r.data),
 
     listChatRooms: (skip = 0, limit = 10) =>
-        client.get('/admin/files/chat/rooms', { params: { skip, limit } }).then(r => r.data as { rooms: ChatRoomAssetSummary[]; total: number }),
+        client.get('/admin/files/chat/rooms', { params: { skip, limit } }).then(r => r.data as ChatRoomsResponse),
 
     listChatRoomAssets: (roomId: string, status?: string) =>
         client.get(`/admin/files/chat/rooms/${encodeURIComponent(roomId)}/assets`, { params: { status } })
             .then(r => r.data as { room: Record<string, unknown>; assets: FileAsset[]; total: number }),
 
     listAIUsers: (role: 'teacher' | 'student', skip = 0, limit = 10) =>
-        client.get('/admin/files/ai/users', { params: { role, skip, limit } }).then(r => r.data as { users: AIUserSummary[]; total: number }),
+        client.get('/admin/files/ai/users', { params: { role, skip, limit } }).then(r => r.data as AIUsersResponse),
 
-    listAIUserAssets: (userId: string, groupBy: 'day' | 'month' = 'day', status?: string) =>
-        client.get(`/admin/files/ai/users/${encodeURIComponent(userId)}/assets`, { params: { group_by: groupBy, status } })
-            .then(r => r.data as { user_id: string; group_by: 'day' | 'month'; groups: AIFileGroup[]; total: number }),
+    listAIUserAssets: (userId: string, groupBy: 'day' | 'month' = 'day', status?: string, skip = 0, limit = 0) =>
+        client.get(`/admin/files/ai/users/${encodeURIComponent(userId)}/assets`, {
+            params: { group_by: groupBy, status, skip, limit },
+        }).then(r => r.data as AIUserAssetsResponse),
 };

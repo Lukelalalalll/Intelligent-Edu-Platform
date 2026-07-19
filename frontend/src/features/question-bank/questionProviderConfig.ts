@@ -51,6 +51,31 @@ export function getPreferredQuestionProviders(
     return readyAiConfig.length > 0 ? readyAiConfig : ready;
 }
 
+export function getReadyAiConfigQuestionProviders(
+    options: QuestionProviderStatus[] | null | undefined,
+): QuestionProviderStatus[] {
+    const normalized = Array.isArray(options) ? options : [];
+    return normalized.filter((item) => isQuestionProviderReady(item) && isAiConfigQuestionProvider(item));
+}
+
+export function resolveQuestionAiConfigProvider(
+    options: QuestionProviderStatus[] | null | undefined,
+): QuestionStudioProvider | null {
+    const normalized = getReadyAiConfigQuestionProviders(options);
+    if (!normalized.length) return null;
+
+    const stored = readStoredQuestionProvider();
+    const storedOption = stored
+        ? normalized.find((item) => item.id === stored)
+        : null;
+    if (storedOption) return storedOption.id;
+
+    const recommended = normalized.find((item) => item.is_recommended);
+    if (recommended) return recommended.id;
+
+    return normalized[0]?.id || null;
+}
+
 export function resolveQuestionProvider(
     options: QuestionProviderStatus[] | null | undefined,
 ): QuestionStudioProvider | null {

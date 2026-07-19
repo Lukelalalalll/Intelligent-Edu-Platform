@@ -1,10 +1,10 @@
-import { Download, FileText, History, LoaderCircle, PencilLine, ScrollText } from 'lucide-react';
+import { Download, FileText, History, LoaderCircle, PencilLine } from 'lucide-react';
 
 import Button from '@/shared/components/Button/Button';
 
+import QuestionMarkdown from '../QuestionMarkdown';
 import type { QuestionGeneratorController } from '../../hooks/useQuestionGenerator';
 import styles from '../../styles/questionStudio.module.css';
-import QuestionCard from './QuestionCard';
 
 interface QuestionGeneratorResultStepProps {
     controller: QuestionGeneratorController;
@@ -12,18 +12,23 @@ interface QuestionGeneratorResultStepProps {
 
 export default function QuestionGeneratorResultStep({ controller }: QuestionGeneratorResultStepProps) {
     const { state, derived, actions } = controller;
+    const hasMarkdown = state.resultMarkdown.trim().length > 0;
+    const showEditor = hasMarkdown || state.questions.length > 0 || state.isGenerating;
 
     return (
         <section className={styles.resultLayout}>
             <div className={styles.statusCard}>
                 <div className={styles.statusRow}>
                     <div>
-                        <span className={styles.statusBadge}>Streaming Result · {derived.streamPhaseLabel}</span>
-                        <h3 className={styles.panelTitle} style={{ marginTop: 10 }}>Question generation workspace</h3>
+                        <span className={styles.statusBadge}>
+                            {state.isGenerating ? `Streaming Result · ${derived.streamPhaseLabel}` : 'Markdown Workspace'}
+                        </span>
+                        <h3 className={styles.panelTitle} style={{ marginTop: 10 }}>
+                            Editable question markdown
+                        </h3>
                     </div>
                     <div className={styles.selectionSummary}>
-                        <span className={styles.metaPill}>{state.questions.length} generated</span>
-                        <span className={styles.metaPill}>{derived.selectedQuestions.length} selected</span>
+                        <span className={styles.metaPill}>{state.questions.length} parsed block{state.questions.length === 1 ? '' : 's'}</span>
                         <span className={styles.metaPill}>{derived.currentResultLabel}</span>
                         {derived.currentResultModel ? <span className={styles.metaPill}>{derived.currentResultModel}</span> : null}
                         {derived.currentResultSource ? <span className={styles.metaPill}>{derived.currentResultSource}</span> : null}
@@ -34,42 +39,66 @@ export default function QuestionGeneratorResultStep({ controller }: QuestionGene
                     <Button type="button" variant="outline" onClick={() => actions.setWorkspaceStep('composer')} disabled={state.isGenerating}>
                         <PencilLine size={16} /> Back to Composer
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => void actions.handleSaveHistory()} disabled={!state.historyId || state.isSavingHistory}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void actions.handleSaveHistory()}
+                        disabled={!state.historyId || state.isSavingHistory || !hasMarkdown}
+                    >
                         {state.isSavingHistory ? <LoaderCircle size={16} className={styles.spinner} /> : <History size={16} />}
                         Save to History
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => void actions.handleExport('markdown')} disabled={derived.selectedQuestions.length === 0}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void actions.handleExport('markdown')}
+                        disabled={!hasMarkdown}
+                    >
                         <FileText size={16} /> Export Markdown
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => void actions.handleExport('txt')} disabled={derived.selectedQuestions.length === 0}>
-                        <ScrollText size={16} /> Export TXT
-                    </Button>
-                    <Button type="button" onClick={() => void actions.handleExport('pdf')} disabled={derived.selectedQuestions.length === 0}>
+                    <Button type="button" onClick={() => void actions.handleExport('pdf')} disabled={!hasMarkdown}>
                         <Download size={16} /> Export PDF
                     </Button>
                 </div>
             </div>
 
-            {state.questions.length === 0 ? (
-                <div className={styles.emptyState}>
-                    {state.isGenerating ? 'Waiting for structured questions to stream in...' : 'No questions available yet.'}
-                </div>
-            ) : (
-                <div className={styles.questionList}>
-                    {state.questions.map((question, index) => (
-                        <QuestionCard
-                            key={question.id}
-                            index={index}
-                            question={question}
-                            selected={state.selectedQuestionIds.includes(question.id)}
-                            onToggle={() => actions.toggleSelectedQuestion(question.id)}
-                            onChange={(field, value, optionIndex) => actions.updateQuestion(question.id, field, value, optionIndex)}
-                            onAddOption={() => actions.addOption(question.id)}
-                            onRemoveOption={(optionIndex) => actions.removeOption(question.id, optionIndex)}
+            <div className={styles.resultGrid}>
+                <div className={styles.panel}>
+                    <div className={styles.panelTitleRow}>
+                        <h4 className={styles.panelTitle}>Markdown</h4>
+                        <span className={styles.statusBadge}>{state.isGenerating ? 'Streaming' : 'Editable'}</span>
+                    </div>
+                    {showEditor ? (
+                        <textarea
+                            id="question-markdown-editor"
+                            className={styles.markdownEditor}
+                            value={state.resultMarkdown}
+                            onChange={(event) => actions.setResultMarkdown(event.target.value)}
+                            readOnly={state.isGenerating}
+                            aria-label="Markdown editor"
+                            placeholder="The generated question markdown will appear here."
                         />
-                    ))}
+                    ) : (
+                        <div className={styles.emptyState}>
+                            {state.isGenerating ? 'Waiting for markdown to stream in...' : 'No markdown source yet.'}
+                        </div>
+                    )}
                 </div>
-            )}
+
+                <div className={styles.previewPanel}>
+                    <div className={styles.panelTitleRow}>
+                        <h4 className={styles.panelTitle}>Preview</h4>
+                        <span className={styles.statusBadge}>KaTeX Ready</span>
+                    </div>
+                    {hasMarkdown ? (
+                        <QuestionMarkdown markdown={state.resultMarkdown} />
+                    ) : (
+                        <div className={styles.emptyState}>
+                            {state.isGenerating ? 'Waiting for markdown to stream in...' : 'No markdown available yet.'}
+                        </div>
+                    )}
+                </div>
+            </div>
         </section>
     );
 }

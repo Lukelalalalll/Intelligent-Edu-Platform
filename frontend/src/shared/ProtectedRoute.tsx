@@ -5,6 +5,7 @@ import RouteSkeleton from './RouteSkeleton';
 import { useAuthStore } from './store/useAuthStore';
 import { isPptGeneratorRoutePath } from '@/ppt_generator/routeMeta';
 
+/** Blocks protected pages until session bootstrap resolves, then redirects anonymous users. */
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);

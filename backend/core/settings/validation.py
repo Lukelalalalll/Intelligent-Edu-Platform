@@ -61,6 +61,18 @@ class ValidationSettingsSegment(PathSettingsSegment):
 
         return [item.strip() for item in raw.split(",") if item.strip()]
 
+    @field_validator("ADMIN_DB_CONSOLE_ALLOWED_COLLECTIONS", mode="before")
+    @classmethod
+    def parse_db_console_allowed_collections(cls, value) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            return [str(item).strip() for item in value if str(item).strip()]
+        raw = str(value).strip()
+        if not raw:
+            return []
+        return [item.strip() for item in raw.split(",") if item.strip()]
+
     @model_validator(mode="after")
     def set_defaults_and_env_flags(self):
         sensitive = is_sensitive_env(self.ENV)
@@ -85,6 +97,9 @@ class ValidationSettingsSegment(PathSettingsSegment):
 
         if os.getenv("JWT_COOKIE_SECURE") is None:
             object.__setattr__(self, "JWT_COOKIE_SECURE", sensitive)
+
+        if sensitive and os.getenv("ADMIN_DB_CONSOLE_ENABLED") is None:
+            object.__setattr__(self, "ADMIN_DB_CONSOLE_ENABLED", False)
 
         def default_path(field: str, fallback: str) -> None:
             if not getattr(self, field):
@@ -119,17 +134,18 @@ class ValidationSettingsSegment(PathSettingsSegment):
         sensitive_env = is_sensitive_env(self.ENV)
         secret_issues = key_strength_issues(self.SECRET_KEY, "SECRET_KEY")
         jwt_issues = key_strength_issues(self.JWT_SECRET_KEY, "JWT_SECRET_KEY")
+        gateway_issues = key_strength_issues(self.INTERNAL_GATEWAY_TOKEN, "INTERNAL_GATEWAY_TOKEN")
 
-        for message in [*secret_issues, *jwt_issues]:
+        for message in [*secret_issues, *jwt_issues, *gateway_issues]:
             if sensitive_env:
                 logger.critical("CRITICAL CONFIG: %s", message)
             else:
                 logger.warning("DEV SECURITY WARNING: %s", message)
                 warnings.append(message)
 
-        if sensitive_env and (secret_issues or jwt_issues):
+        if sensitive_env and (secret_issues or jwt_issues or gateway_issues):
             raise SystemExit(
-                "Refusing to start: SECRET_KEY/JWT_SECRET_KEY failed security checks. "
+                "Refusing to start: SECRET_KEY/JWT_SECRET_KEY/INTERNAL_GATEWAY_TOKEN failed security checks. "
                 "Use strong random values with >=32 chars and high entropy."
             )
 
@@ -158,6 +174,22 @@ class ValidationSettingsSegment(PathSettingsSegment):
             raise SystemExit(
                 "Refusing to start: ALLOWED_ORIGINS must be explicit https origins for the deployed frontend."
             )
+
+        auth_bypass_value = str(os.getenv("VITE_DISABLE_AUTH") or os.getenv("DISABLE_AUTH") or "").strip().lower()
+        if sensitive_env and auth_bypass_value in {"1", "true", "yes", "on"}:
+            message = "VITE_DISABLE_AUTH/DISABLE_AUTH must not be enabled in production/staging environments"
+            logger.critical(message)
+            raise SystemExit(f"Refusing to start: {message}")
+
+        if sensitive_env and self.SEARXNG_FETCH_CONTENT:
+            message = "SEARXNG_FETCH_CONTENT must be false in production/staging environments"
+            logger.critical(message)
+            raise SystemExit(f"Refusing to start: {message}")
+
+        if sensitive_env and self.ADMIN_DB_CONSOLE_ENABLED:
+            message = "ADMIN_DB_CONSOLE_ENABLED must be false in production/staging environments"
+            logger.critical(message)
+            raise SystemExit(f"Refusing to start: {message}")
 
         optional_keys = {
             "DEEPSEEK_API_KEY": self.DEEPSEEK_API_KEY,

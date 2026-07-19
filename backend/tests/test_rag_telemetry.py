@@ -19,7 +19,22 @@ def telemetry():
 
 @pytest.fixture
 def mock_db():
-    with patch("backend.infrastructure.rag_telemetry.db") as mock:
+    collection = MagicMock()
+    collection.insert_one = AsyncMock()
+    collection.aggregate = MagicMock()
+    mock = MagicMock()
+    mock.__getitem__.return_value = collection
+
+    with patch("backend.infrastructure.rag_telemetry.telemetry_repo") as mock_repo:
+        async def _insert_rag(document):
+            return await collection.insert_one(document)
+
+        async def _aggregate_rag(pipeline, *, length=100):
+            cursor = collection.aggregate(pipeline)
+            return await cursor.to_list(length)
+
+        mock_repo.insert_rag = AsyncMock(side_effect=_insert_rag)
+        mock_repo.aggregate_rag = AsyncMock(side_effect=_aggregate_rag)
         yield mock
 
 

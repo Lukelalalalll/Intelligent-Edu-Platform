@@ -14,9 +14,10 @@ router = APIRouter()
 @router.get("/telemetry/stats")
 async def get_telemetry_stats(
     hours: int = Query(default=24, ge=1, le=720),
+    provider_limit: int = Query(default=100, ge=1, le=500),
     admin: dict = Depends(get_admin_user),
 ):
-    return await llm_telemetry.get_stats(hours=hours)
+    return await llm_telemetry.get_stats(hours=hours, provider_limit=provider_limit)
 
 
 @router.get("/telemetry/errors")
@@ -42,18 +43,20 @@ async def get_telemetry_timeseries(
 async def get_telemetry_breakdown(
     hours: int = Query(default=24, ge=1, le=720),
     group_by: str = Query(default="provider"),
+    limit: int = Query(default=200, ge=1, le=500),
     admin: dict = Depends(get_admin_user),
 ):
-    data = await llm_telemetry.get_breakdown(hours=hours, group_by=group_by)
+    data = await llm_telemetry.get_breakdown(hours=hours, group_by=group_by, limit=limit)
     return {"breakdown": data, "group_by": group_by}
 
 
 @router.get("/telemetry/cost")
 async def get_telemetry_cost(
     hours: int = Query(default=24, ge=1, le=720),
+    provider_limit: int = Query(default=50, ge=1, le=500),
     admin: dict = Depends(get_admin_user),
 ):
-    return await llm_telemetry.get_cost_summary(hours=hours)
+    return await llm_telemetry.get_cost_summary(hours=hours, provider_limit=provider_limit)
 
 
 # ── RAG Telemetry ──
@@ -69,17 +72,19 @@ async def rag_telemetry_stats(
 @router.get("/rag-telemetry/course-breakdown")
 async def rag_telemetry_course_breakdown(
     hours: int = Query(default=24, ge=1, le=720),
+    limit: int = Query(default=200, ge=1, le=500),
     admin: dict = Depends(get_admin_user),
 ):
-    return {"breakdown": await rag_telemetry.get_course_breakdown(hours)}
+    return {"breakdown": await rag_telemetry.get_course_breakdown(hours, limit=limit)}
 
 
 @router.get("/rag-telemetry/role-breakdown")
 async def rag_telemetry_role_breakdown(
     hours: int = Query(default=24, ge=1, le=720),
+    limit: int = Query(default=20, ge=1, le=100),
     admin: dict = Depends(get_admin_user),
 ):
-    return {"breakdown": await rag_telemetry.get_role_breakdown(hours)}
+    return {"breakdown": await rag_telemetry.get_role_breakdown(hours, limit=limit)}
 
 
 @router.get("/rag-telemetry/alerts")

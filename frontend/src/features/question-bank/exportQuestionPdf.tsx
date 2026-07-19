@@ -1,11 +1,12 @@
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import katexCssText from 'katex/dist/katex.min.css?inline';
 
-import type { QuestionDraft } from '@/types/api';
-
 import QuestionMarkdown from './components/QuestionMarkdown';
-import { buildQuestionsMarkdown } from './questionDraftUtils';
+
+export interface QuestionPdfExportMeta {
+    title?: string;
+    subtitle?: string;
+}
 
 const PRINT_CSS = `
   body {
@@ -35,18 +36,38 @@ const PRINT_CSS = `
     padding-top: 20px;
     margin-top: 20px;
   }
+  .question-print-markdown {
+    overflow-x: auto;
+  }
+  .question-print-markdown .markdownPreview {
+    max-width: 100%;
+  }
+  .question-print-markdown .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0;
+  }
+  .question-print-markdown .katex-display > .katex {
+    display: inline-block;
+  }
 `;
 
-export function openQuestionPdfExport(questions: QuestionDraft[]): void {
-    const markdown = buildQuestionsMarkdown(questions);
+export async function openQuestionPdfExport(markdown: string, meta: QuestionPdfExportMeta = {}): Promise<void> {
+    const rawMarkdown = String(markdown || '');
+    if (!rawMarkdown.trim()) {
+        throw new Error('No markdown available for export');
+    }
+
+    const { renderToStaticMarkup } = await import('react-dom/server');
+
     const markup = renderToStaticMarkup(
         <div className="question-print-shell">
             <div className="question-print-header">
-                <h1>Question Studio Export</h1>
-                <p>{questions.length} selected question{questions.length === 1 ? '' : 's'}</p>
+                <h1>{meta.title || 'Question Studio Export'}</h1>
+                <p>{meta.subtitle || 'Markdown preview ready for printing.'}</p>
             </div>
-            <div className="question-print-section">
-                <QuestionMarkdown markdown={markdown} />
+            <div className="question-print-section question-print-markdown">
+                <QuestionMarkdown markdown={rawMarkdown} />
             </div>
         </div>,
     );

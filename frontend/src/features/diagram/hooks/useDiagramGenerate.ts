@@ -4,15 +4,21 @@ import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../..
 import { beautifySvg } from '../../../features/diagram/utils/beautifySvg';
 import { extractErrorMessage } from '@/shared/utils/extractError';
 
+type DiagramGenerateResult = {
+    svg?: string;
+    meta?: Record<string, unknown>;
+    [key: string]: unknown;
+};
+
 export function useDiagramGenerate() {
     const [genFile, setGenFile] = useState(null);
     const [isGenDragging, setIsGenDragging] = useState(false);
     const [genLoading, setGenLoading] = useState(false);
-    const [genData, setGenData] = useState(null);
+    const [genData, setGenData] = useState<DiagramGenerateResult | null>(null);
     const [genError, setGenError] = useState('');
     const [genInputMode, setGenInputMode] = useState('file');
     const [genText, setGenText] = useState('');
-    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider());
+    const [provider, setProvider] = useState<AIProvider>(() => getStoredAIProvider('auto', { allowAuto: true }));
 
     // AI-expanded diagram description state
     const [aiDescription, setAiDescription] = useState('');
@@ -86,6 +92,16 @@ export function useDiagramGenerate() {
                 setGenText(text);
                 setGenInputMode('text');
                 setGenData(null);
+                setGenError('');
+                setAiDescription('');
+            },
+            injectGeneratedSvg: (svg: string, meta: any = {}, prompt: string = '') => {
+                const polishedSvg = svg ? beautifySvg(svg) : svg;
+                if (prompt) {
+                    setGenText(prompt);
+                    setGenInputMode('text');
+                }
+                setGenData({ svg: polishedSvg, meta });
                 setGenError('');
                 setAiDescription('');
             },

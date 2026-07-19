@@ -10,6 +10,7 @@ from typing import Optional
 
 from backend.core.database import db
 from backend.prompts import prompt_registry
+from backend.repositories import chat_message_repo
 from backend.services.ai_gateway_service import AIGatewayService
 from backend.services.ai_gateway_service.provider_factory import get_ai_gateway_service
 
@@ -56,13 +57,7 @@ async def _fetch_room_messages(
     since: Optional[str] = None,
 ) -> list[dict]:
     """Fetch recent messages from a room, optionally since a timestamp."""
-    query: dict = {"roomId": room_id}
-    if since:
-        query["sentAt"] = {"$gt": since}
-    cursor = db.chat_messages.find(query).sort("sentAt", -1).limit(limit)
-    messages = []
-    async for doc in cursor:
-        messages.append(doc)
+    messages = await chat_message_repo.list_room_messages(room_id=room_id, since=since, limit=limit)
     messages.reverse()
     return messages
 

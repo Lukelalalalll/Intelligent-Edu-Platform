@@ -7,20 +7,36 @@ function withLeadingSlash(path: string): string {
 }
 
 function getConfiguredFastApiUrl(): string | null {
-  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string> }).env || {};
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | boolean | undefined> }).env || {};
   const configured =
     viteEnv.VITE_FAST_API_URL ||
     viteEnv.VITE_NEXT_PUBLIC_FAST_API ||
     viteEnv.NEXT_PUBLIC_FAST_API;
-  if (configured) {
+  if (typeof configured === "string" && configured.trim()) {
     return configured;
   }
 
   return null;
 }
 
+function isProductionBuild(): boolean {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | boolean | undefined> }).env || {};
+  return (
+    viteEnv.PROD === true ||
+    viteEnv.MODE === "production" ||
+    viteEnv.VITE_APP_ENV === "production" ||
+    viteEnv.NEXT_PUBLIC_APP_ENV === "production"
+  );
+}
+
+function isLocalhostAllowedOrigin(url: URL): boolean {
+  const hostname = url.hostname.toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+}
+
 function getFastApiUrlFromQuery(): string | null {
   if (typeof window === "undefined") return null;
+  if (isProductionBuild()) return null;
   try {
     const params = new URLSearchParams(window.location.search);
     const value = params.get("fastapiUrl");
@@ -28,6 +44,9 @@ function getFastApiUrlFromQuery(): string | null {
 
     const parsed = new URL(value);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    if (!isLocalhostAllowedOrigin(parsed)) {
       return null;
     }
     return parsed.origin;
@@ -43,7 +62,7 @@ function shouldUseDirectFastApiOriginInBrowser(): boolean {
 function resolveBackendPathForRuntime(path: string): string {
   const normalizedPath = withLeadingSlash(path);
 
-  // Docker/web runtime should stay same-origin and use nginx reverse proxy.
+  // Keep browser requests same-origin unless a query override explicitly targets FastAPI.
   if (
     typeof window !== "undefined" &&
     !shouldUseDirectFastApiOriginInBrowser()
@@ -54,10 +73,10 @@ function resolveBackendPathForRuntime(path: string): string {
   return `${getFastAPIUrl()}${normalizedPath}`;
 }
 
-// Utility to get the backend base URL.
-// - Browser web/docker: same origin (nginx proxy).
-// - Browser query override: direct FastAPI origin.
-// - Server-side: configured FastAPI origin fallback.
+/**
+ * Resolves the FastAPI origin for the current runtime.
+ * Browser requests normally stay same-origin so nginx can proxy `/api/v1`.
+ */
 export function getFastAPIUrl(): string {
   const queryFastApiUrl = getFastApiUrlFromQuery();
   if (queryFastApiUrl) {
@@ -71,7 +90,10 @@ export function getFastAPIUrl(): string {
   return getConfiguredFastApiUrl() || "http://127.0.0.1:5009";
 }
 
-// Utility to construct API URL for Docker/web runtime.
+/**
+ * Resolves an API path to the URL form expected by the active runtime.
+ * Non-FastAPI paths are left relative so local app routes and static paths keep working.
+ */
 export function getApiUrl(path: string): string {
   if (isAbsoluteHttpUrl(path)) {
     return path;
@@ -91,9 +113,8 @@ export function getApiUrl(path: string): string {
 }
 
 /**
- * getApiUrl may return a path without host (e.g. `/api/v1/...`). A single-argument
- * `new URL("/api/...")` call is invalid; use this before `new URL(..., ...)`-style
- * builds or to obtain an absolute string for `URL` + `searchParams`.
+ * Returns an absolute URL even when getApiUrl resolves to a same-origin path.
+ * This is required before using URL APIs that reject single-argument relative paths.
  */
 export function buildAbsoluteApiRequestUrl(
   path: string,
@@ -116,7 +137,7 @@ function hasBackendAssetPrefix(path: string): boolean {
 function toBackendServedPath(rawPath: string): string {
   const normalized = rawPath.replace(/\\/g, "/");
 
-  // Never rewrite Next.js bundled/static assets.
+  // Preserve bundled assets emitted by the Next-compatible PPT generator shim.
   if (normalized.startsWith("/_next/static/")) {
     return normalized;
   }
@@ -169,7 +190,10 @@ function splitPathAndSuffix(value: string): { path: string; suffix: string } {
   };
 }
 
-// Resolve backend-served asset paths to the runtime-appropriate backend path.
+/**
+ * Resolves backend-served asset paths to the runtime-appropriate backend URL.
+ * Data, blob, and unrelated absolute URLs pass through untouched.
+ */
 export function resolveBackendAssetUrl(path?: string): string {
   if (!path) return "";
 
@@ -217,12 +241,16 @@ export function resolveBackendAssetUrl(path?: string): string {
   return trimmedPath;
 }
 
+/** Backend asset payload shape accepted by shared asset URL helpers. */
 export type BackendAssetLike = {
   file_url?: string | null;
   path?: string | null;
   url?: string | null;
 };
 
+/**
+ * Extracts the first supported asset URL field from backend payload shapes.
+ */
 export function getBackendAssetSource(
   asset: BackendAssetLike | string | null | undefined
 ): string {
@@ -237,12 +265,18 @@ export function getBackendAssetSource(
   return (asset.file_url || asset.path || asset.url || "").trim();
 }
 
+/**
+ * Extracts and resolves an asset source from either a string or backend payload object.
+ */
 export function resolveBackendAssetSource(
   asset: BackendAssetLike | string | null | undefined
 ): string {
   return resolveBackendAssetUrl(getBackendAssetSource(asset));
 }
 
+/**
+ * Recursively normalizes string values that may contain backend-served asset paths.
+ */
 export const normalizeBackendAssetUrls = <T,>(input: T): T => {
   if (Array.isArray(input)) {
     return input.map((item) => normalizeBackendAssetUrls(item)) as T;

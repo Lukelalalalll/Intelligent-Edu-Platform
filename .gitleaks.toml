@@ -1,0 +1,30 @@
+title = "Intelligent Edu Platform secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "hdgsb-api-key"
+description = "HDGSB/OpenAI-compatible API key"
+regex = '''sk-[A-Za-z0-9]{20,}'''
+keywords = ["sk-"]
+
+[[rules]]
+id = "serpapi-hex-key"
+description = "SerpAPI-style long hexadecimal API key"
+regex = '''(?i)(serpapi|serp_api|SERPAPI_KEY|api_key).{0,40}['"]?[a-f0-9]{48,}['"]?'''
+keywords = ["serpapi", "SERPAPI_KEY"]
+
+[allowlist]
+description = "Known test fixtures and placeholders"
+paths = [
+  '''frontend/src/shared/store/__tests__/adminStore\.test\.ts$''',
+  '''backend/\.env\..*\.example$''',
+  '''frontend/\.env\.example$''',
+  '''frontend/\.env\.production$''',
+  '''deploy/compose\.production\.env\.example$''',
+]
+regexes = [
+  '''CHANGE_ME_TO_[A-Z0-9_]+''',
+  '''sk-test[0-9A-Za-z_-]*''',
+]

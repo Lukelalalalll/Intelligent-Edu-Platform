@@ -16,10 +16,18 @@ export default function DiagramTool({
     extractHandlers, searchHandlers, genHandlers, editorHandlers, modalHandlers,
     imageState, imageHandlers,
     initialTab,
+    activeService: controlledActiveService,
+    onActiveServiceChange,
     viewSwitchSlot,
     hideBanner,
 }) {
-    const [activeService, setActiveService] = useState(initialTab || 'extract');
+    const [internalActiveService, setInternalActiveService] = useState(initialTab || 'extract');
+    const activeService = controlledActiveService || internalActiveService;
+
+    const setActiveService = (nextService) => {
+        setInternalActiveService(nextService);
+        onActiveServiceChange?.(nextService);
+    };
 
     useEffect(() => {
         if (initialTab) {

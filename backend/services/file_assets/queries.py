@@ -44,12 +44,23 @@ async def list_assets(
             {"course_id": {"$regex": escaped, "$options": "i"}},
         ]
 
-    total, docs = await file_asset_repo.list_assets_page(query, limit=limit, skip=skip)
+    safe_skip = max(0, int(skip or 0))
+    safe_limit = max(1, int(limit or 1))
+    total, docs = await file_asset_repo.list_assets_page(query, limit=safe_limit, skip=safe_skip)
     documents = [to_iso(item) for item in docs]
     for document in documents:
         path = absolute_from_storage_path(document.get("storage_path", ""))
         document["exists_on_disk"] = path.is_file() or path.is_dir()
-    return {"total": total, "assets": documents}
+    next_skip = safe_skip + len(documents)
+    has_more = next_skip < total
+    return {
+        "total": total,
+        "assets": documents,
+        "skip": safe_skip,
+        "limit": safe_limit,
+        "hasMore": has_more,
+        "nextSkip": next_skip if has_more else None,
+    }
 
 
 async def get_asset(asset_id: str) -> dict[str, Any] | None:

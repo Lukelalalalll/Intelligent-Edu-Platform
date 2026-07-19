@@ -2,7 +2,33 @@
 
 import mixpanel from 'mixpanel-browser';
 
-const MIXPANEL_TOKEN = 'd726e8bea8ec147f4c7720060cb2e6d1';
+function getMixpanelToken(): string {
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env || {};
+  return (
+    viteEnv.VITE_MIXPANEL_TOKEN ||
+    viteEnv.NEXT_PUBLIC_MIXPANEL_TOKEN ||
+    ''
+  ).trim();
+}
+
+const MIXPANEL_TOKEN = getMixpanelToken();
+const REDACTED_VALUE = '[redacted]';
+const MAX_TELEMETRY_STRING_LENGTH = 256;
+const SENSITIVE_PROP_PATTERNS = [
+  /authorization/i,
+  /cookie/i,
+  /csrf/i,
+  /api[_-]?key/i,
+  /secret/i,
+  /token/i,
+  /password/i,
+  /prompt/i,
+  /raw/i,
+  /content/i,
+  /body/i,
+  /file[_-]?name/i,
+  /filename/i,
+];
 
 export enum MixpanelEvent {
   PageView = 'Page View',
@@ -149,6 +175,37 @@ function canUseMixpanel(): boolean {
   return typeof window !== 'undefined' && Boolean(MIXPANEL_TOKEN);
 }
 
+function isSensitivePropKey(key: string): boolean {
+  return SENSITIVE_PROP_PATTERNS.some((pattern) => pattern.test(key));
+}
+
+function sanitizeTelemetryValue(value: unknown, depth = 0): unknown {
+  if (depth > 4) return '[truncated]';
+  if (typeof value === 'string') {
+    return value.length > MAX_TELEMETRY_STRING_LENGTH
+      ? `${value.slice(0, MAX_TELEMETRY_STRING_LENGTH)}...`
+      : value;
+  }
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => sanitizeTelemetryValue(item, depth + 1));
+  }
+  if (value && typeof value === 'object') {
+    return sanitizeMixpanelProps(value as MixpanelProps, depth + 1);
+  }
+  return value;
+}
+
+export function sanitizeMixpanelProps(props?: MixpanelProps, depth = 0): MixpanelProps | undefined {
+  if (!props) return undefined;
+  const sanitized: MixpanelProps = {};
+  for (const [key, value] of Object.entries(props)) {
+    sanitized[key] = isSensitivePropKey(key)
+      ? REDACTED_VALUE
+      : sanitizeTelemetryValue(value, depth);
+  }
+  return sanitized;
+}
+
 let trackingCheckPromise: Promise<boolean> | null = null;
 
 async function ensureTelemetryStatus(): Promise<boolean> {
@@ -178,7 +235,7 @@ export function initMixpanel(): void {
 
 function initializeMixpanelNow(): void {
   if (window.__mixpanel_initialized) return;
-  mixpanel.init(MIXPANEL_TOKEN as string, { track_pageview: false, api_host: 'https://api-eu.mixpanel.com', });
+  mixpanel.init(MIXPANEL_TOKEN, { track_pageview: false, api_host: 'https://api-eu.mixpanel.com', });
   const appVersion =
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_APP_VERSION ||
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.NEXT_PUBLIC_APP_VERSION;
@@ -191,6 +248,7 @@ function initializeMixpanelNow(): void {
 
 export function track(eventName: string, props?: Record<string, unknown>): void {
   if (!canUseMixpanel()) return;
+  const safeProps = sanitizeMixpanelProps(props);
   if (typeof window !== 'undefined' && window.__mixpanel_telemetry_enabled === false) {
     return;
   }
@@ -198,11 +256,11 @@ export function track(eventName: string, props?: Record<string, unknown>): void 
     void ensureTelemetryStatus().then((enabled) => {
       if (!enabled) return;
       initializeMixpanelNow();
-      mixpanel.track(eventName, props);
+      mixpanel.track(eventName, safeProps);
     });
     return;
   }
-  mixpanel.track(eventName, props);
+  mixpanel.track(eventName, safeProps);
 }
 
 export function trackEvent(event: MixpanelEvent, props?: MixpanelProps): void {
@@ -246,7 +304,7 @@ export function setTelemetryEnabled(enabled: boolean): void {
     window.__mixpanel_telemetry_enabled = enabled;
   }
   trackingCheckPromise = null;
-  if (enabled && !window?.__mixpanel_initialized) {
+  if (enabled && typeof window !== 'undefined' && !window.__mixpanel_initialized) {
     initMixpanel();
   }
 }
@@ -258,5 +316,6 @@ export default {
   getDistinctId,
   identifyAnonymous,
   resetTelemetryCache,
+  sanitizeMixpanelProps,
   setTelemetryEnabled,
 };

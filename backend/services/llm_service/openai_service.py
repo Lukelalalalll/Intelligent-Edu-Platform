@@ -26,10 +26,14 @@ class OpenAIService:
         api_key: str | None = None,
         base_url: str | None = None,
         model: str | None = None,
+        provider_id: str = "openai",
+        credential_alias: str = "OPENAI_API_KEY",
     ):
         self.api_key = (api_key or Config.OPENAI_API_KEY or "").strip()
         self.base_url = (base_url or Config.OPENAI_BASE_URL).rstrip("/")
         self.model = (model or Config.OPENAI_MODEL).strip()
+        self.provider_id = provider_id
+        self.credential_alias = credential_alias
         self.timeout_seconds = Config.OPENAI_REQUEST_TIMEOUT_SECONDS
 
     @classmethod
@@ -56,7 +60,7 @@ class OpenAIService:
 
     async def health_check(self) -> tuple[bool, str]:
         if not self.api_key:
-            return False, "OPENAI_API_KEY is not set"
+            return False, f"{self.credential_alias} is not set"
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
@@ -79,11 +83,11 @@ class OpenAIService:
 
     async def chat(self, message: str, context: Optional[Dict[str, Any]] = None) -> str:
         timer = TelemetryTimer(
-            provider="openai",
+            provider=self.provider_id,
             model=self.model,
             endpoint="chat",
             api_type="chat",
-            credential_alias="OPENAI_API_KEY",
+            credential_alias=self.credential_alias,
         )
         payload = {
             "model": self.model,
@@ -116,6 +120,63 @@ class OpenAIService:
             completion_tokens=usage.get("completion_tokens", max(1, len(content) // 3)),
         )
         return content
+
+    async def chat_with_tools(
+        self,
+        message: str,
+        tools: list[dict] | None = None,
+        context: Optional[Dict[str, Any]] = None,
+        raw_messages: list[dict] | None = None,
+    ) -> dict[str, Any]:
+        """Chat with OpenAI-compatible tool calling support."""
+        messages_payload = (
+            raw_messages
+            if raw_messages is not None
+            else self._build_messages(message=message, context=context)
+        )
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages_payload,
+            "temperature": Config.OPENAI_TEMPERATURE,
+            "max_tokens": Config.OPENAI_MAX_TOKENS,
+            "stream": False,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
+        timer = TelemetryTimer(
+            provider=self.provider_id,
+            model=self.model,
+            endpoint="chat_tools",
+            api_type="chat",
+            credential_alias=self.credential_alias,
+        )
+        with timer:
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                    resp = await client.post(
+                        self._chat_url,
+                        headers=self._auth_headers(),
+                        json=payload,
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+            except Exception as exc:  # noqa: BLE001
+                await timer.save(success=False, error=str(exc))
+                raise OpenAIUnavailableError(str(exc)) from exc
+
+        msg = data.get("choices", [{}])[0].get("message", {}) or {}
+        content = str(msg.get("content") or "")
+        usage = data.get("usage", {})
+        await timer.save(
+            prompt_tokens=usage.get("prompt_tokens", max(1, len(message) // 3)),
+            completion_tokens=usage.get("completion_tokens", max(1, len(content) // 3)),
+        )
+        return {
+            "content": content,
+            "tool_calls": msg.get("tool_calls"),
+        }
 
     async def chat_stream(
         self,

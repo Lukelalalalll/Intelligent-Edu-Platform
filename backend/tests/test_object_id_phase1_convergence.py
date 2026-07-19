@@ -9,6 +9,9 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from backend.repositories import user_repo
+from backend.repositories import chat_message_repo
+from backend.repositories import chat_room_repo
+from backend.repositories._helpers import coerce_utc_datetime
 from backend.services.chat_service import message_service, query_service
 from backend.services.files import file_center_service
 from backend.services.homework import homework_service
@@ -66,13 +69,37 @@ class _UnexpectedCollection:
 @pytest.mark.asyncio
 async def test_get_room_by_id_queries_with_object_id(monkeypatch):
     room_id = str(ObjectId())
-    fake_rooms = _FakeFindOneCollection({"_id": ObjectId(room_id), "name": "Course Chat"})
-    monkeypatch.setattr(query_service.db, "chat_rooms", fake_rooms, raising=False)
+    find_by_id = AsyncMock(return_value={"_id": ObjectId(room_id), "name": "Course Chat"})
+    monkeypatch.setattr(query_service.chat_room_repo, "find_by_id", find_by_id)
 
     room = await query_service.get_room_by_id(room_id, projection={"name": 1})
 
     assert room == {"_id": ObjectId(room_id), "name": "Course Chat"}
+    assert find_by_id.await_args.args == (room_id, {"name": 1})
+
+
+@pytest.mark.asyncio
+async def test_chat_room_repo_find_by_id_uses_shared_object_id_coercion(monkeypatch):
+    room_id = str(ObjectId())
+    fake_rooms = _FakeFindOneCollection({"_id": ObjectId(room_id), "name": "Course Chat"})
+    monkeypatch.setattr(chat_room_repo.db, "chat_rooms", fake_rooms, raising=False)
+
+    room = await chat_room_repo.find_by_id(room_id, {"name": 1})
+
+    assert room == {"_id": ObjectId(room_id), "name": "Course Chat"}
     assert fake_rooms.calls == [({"_id": ObjectId(room_id)}, {"name": 1})]
+
+
+@pytest.mark.asyncio
+async def test_chat_message_repo_find_by_id_uses_shared_object_id_coercion(monkeypatch):
+    message_id = str(ObjectId())
+    fake_messages = _FakeFindOneCollection({"_id": ObjectId(message_id), "content": "hello"})
+    monkeypatch.setattr(chat_message_repo.db, "chat_messages", fake_messages, raising=False)
+
+    result = await chat_message_repo.find_by_id(message_id, {"content": 1})
+
+    assert result == {"_id": ObjectId(message_id), "content": "hello"}
+    assert fake_messages.calls == [({"_id": ObjectId(message_id)}, {"content": 1})]
 
 
 @pytest.mark.asyncio
@@ -125,18 +152,7 @@ async def test_list_ai_user_assets_rejects_invalid_user_id_before_backfill(monke
 async def test_list_ai_user_assets_accepts_valid_object_id_and_reads_assets(monkeypatch):
     user_id = str(ObjectId())
     calls: list[str] = []
-    fake_assets = _FakeFileAssetsCollection(
-        [
-            {
-                "_id": ObjectId(),
-                "scope": "ai_personal",
-                "user_id": user_id,
-                "status": "active",
-                "size": 7,
-                "created_at": datetime(2026, 6, 1, tzinfo=timezone.utc),
-            }
-        ]
-    )
+    asset_id = ObjectId()
 
     async def _fake_ensure_ai_session_image_assets(resolved_user_id: str):
         calls.append(resolved_user_id)
@@ -146,7 +162,74 @@ async def test_list_ai_user_assets_accepts_valid_object_id_and_reads_assets(monk
         "ensure_ai_session_image_assets",
         _fake_ensure_ai_session_image_assets,
     )
-    monkeypatch.setattr(file_center_service.db, "file_assets", fake_assets, raising=False)
+    list_assets_page = AsyncMock(
+        return_value=(
+            3,
+            [
+                {
+                    "date": "2026-06-01",
+                    "count": 1,
+                    "total_size": 7,
+                    "items": [
+                        {
+                            "_id": asset_id,
+                            "scope": "ai_personal",
+                            "user_id": user_id,
+                            "status": "active",
+                            "size": 7,
+                            "created_at": datetime(2026, 6, 1, tzinfo=timezone.utc),
+                            "_bucket_source": datetime(2026, 6, 1, tzinfo=timezone.utc),
+                            "_bucket": "2026-06-01",
+                        }
+                    ],
+                }
+            ],
+        )
+    )
+    monkeypatch.setattr(
+        file_center_service.file_asset_repo,
+        "list_ai_personal_assets_page",
+        list_assets_page,
+    )
+
+    result = await file_center_service.list_ai_user_assets(
+        user_id=user_id,
+        group_by="day",
+        status="",
+        limit=1,
+    )
+
+    assert calls == [user_id]
+    assert list_assets_page.await_args.kwargs == {
+        "user_id": user_id,
+        "status": "",
+        "group_by": "day",
+        "skip": 0,
+        "limit": 1,
+    }
+    assert result["user_id"] == user_id
+    assert result["total"] == 3
+    assert result["skip"] == 0
+    assert result["limit"] == 1
+    assert result["hasMore"] is True
+    assert result["nextSkip"] == 1
+    item = result["groups"][0]["items"][0]
+    assert item["_id"] == str(asset_id)
+    assert item["created_at"] == "2026-06-01T00:00:00+00:00"
+    assert "_bucket_source" not in item
+    assert "_bucket" not in item
+
+
+@pytest.mark.asyncio
+async def test_list_ai_user_assets_default_limit_preserves_unpaged_response(monkeypatch):
+    user_id = str(ObjectId())
+    monkeypatch.setattr(file_center_service, "ensure_ai_session_image_assets", AsyncMock(return_value=0))
+    list_assets_page = AsyncMock(return_value=(0, []))
+    monkeypatch.setattr(
+        file_center_service.file_asset_repo,
+        "list_ai_personal_assets_page",
+        list_assets_page,
+    )
 
     result = await file_center_service.list_ai_user_assets(
         user_id=user_id,
@@ -154,13 +237,19 @@ async def test_list_ai_user_assets_accepts_valid_object_id_and_reads_assets(monk
         status="",
     )
 
-    assert calls == [user_id]
-    assert fake_assets.find_calls == [
-        {"scope": "ai_personal", "user_id": user_id, "status": {"$ne": "hard_deleted"}}
-    ]
-    assert result["user_id"] == user_id
-    assert result["total"] == 1
-    assert result["groups"][0]["items"][0]["_id"]
+    assert list_assets_page.await_args.kwargs["limit"] is None
+    assert result["limit"] == 0
+    assert result["hasMore"] is False
+
+
+def test_coerce_utc_datetime_accepts_legacy_strings_and_naive_values():
+    naive = datetime(2026, 6, 1, 8, 30)
+    aware = coerce_utc_datetime(naive)
+
+    assert aware == datetime(2026, 6, 1, 8, 30, tzinfo=timezone.utc)
+    assert coerce_utc_datetime("2026-06-01T08:30:00Z") == datetime(2026, 6, 1, 8, 30, tzinfo=timezone.utc)
+    assert coerce_utc_datetime("not-a-date") is None
+    assert coerce_utc_datetime("") is None
 
 
 @pytest.mark.asyncio

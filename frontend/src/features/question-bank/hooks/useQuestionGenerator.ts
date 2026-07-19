@@ -6,7 +6,6 @@ import type { QuestionDraft } from '@/types/api';
 
 import { transferApi } from '../../chat/api/transferApi';
 import {
-    exportQuestionSelection,
     finalizeQuestionHistory,
     getGenerationDetail,
     getGenerationHistory,
@@ -18,12 +17,17 @@ import { openQuestionPdfExport } from '../exportQuestionPdf';
 import {
     formatQuestionProviderSource,
     isQuestionProviderReady,
-    resolveQuestionProvider,
     type QuestionStudioProvider,
 } from '../questionProviderConfig';
-import { buildQuestionsMarkdown, normalizeQuestionDraft } from '../questionDraftUtils';
+import {
+    buildQuestionMarkdown,
+    buildQuestionsMarkdown,
+    normalizeQuestionDraft,
+    parseQuestionMarkdown,
+} from '../questionDraftUtils';
 import { downloadBlob } from '../utils/downloadBlob';
 import { formatPageRangeSummary, parsePageSelectionInput } from '../utils/pageSelection';
+import { getQuestionRequestErrorMessage } from '../utils/requestError';
 import type {
     HistoryState,
     QuestionExportFormat,
@@ -50,8 +54,8 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     const [searchParams, setSearchParams] = useSearchParams();
     const streamAbortRef = useRef<AbortController | null>(null);
 
-    const [view, setView] = useState<StudioView>('hub');
-    const [workspaceStep, setWorkspaceStep] = useState<WorkspaceStep>('start');
+    const [view, setView] = useState<StudioView>('generate');
+    const [workspaceStep, setWorkspaceStep] = useState<WorkspaceStep>('composer');
     const [historyState, setHistoryState] = useState<HistoryState>({ items: [], loading: true });
     const [sourceText, setSourceText] = useState('');
     const [questionType, setQuestionType] = useState('Multiple choice');
@@ -73,6 +77,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     const [isSavingHistory, setIsSavingHistory] = useState(false);
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
     const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+    const [resultMarkdown, setResultMarkdown] = useState('');
     const [resultProvider, setResultProvider] = useState<QuestionStudioProvider | null>(null);
     const [resultProviderSource, setResultProviderSource] = useState('');
     const [resultEffectiveModel, setResultEffectiveModel] = useState('');
@@ -85,7 +90,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
         selectedProviderStatus,
         preferredProviderOptions,
         preferredAiConfigOptions,
-    } = useQuestionGeneratorProviders(showToast);
+    } = useQuestionGeneratorProviders();
 
     const selectedQuestions = useMemo(
         () => questions.filter((question) => selectedQuestionIds.includes(question.id)),
@@ -119,6 +124,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     const resetResultState = useCallback(() => {
         setQuestions([]);
         setSelectedQuestionIds([]);
+        setResultMarkdown('');
         setHistoryId(null);
         setStreamPhase('idle');
         setStreamMessage(READY_MESSAGE);
@@ -146,7 +152,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             showToast(`Uploaded ${result.filename}.`, 'success');
         } catch (error) {
             console.error(error);
-            showToast(error instanceof Error ? error.message : 'Upload failed.', 'error');
+            showToast(getQuestionRequestErrorMessage(error, 'Upload failed.'), 'error');
         } finally {
             setUploading(false);
         }
@@ -181,14 +187,19 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     const hydrateHistoryResult = useCallback(async (targetHistoryId: string) => {
         try {
             const detail = await getGenerationDetail(targetHistoryId);
+            const historyMarkdown = String(detail.result_markdown || detail.result_data?.markdown || '');
             const sourceDrafts = Array.isArray(detail.question_drafts)
                 ? detail.question_drafts
                 : Array.isArray(detail.result_data?.questions)
                     ? detail.result_data.questions
                     : [];
-            const drafts = sourceDrafts.map((item, index) => normalizeQuestionDraft(item, index));
-            if (!drafts.length) {
-                showToast('This history item has no structured questions to reopen.', 'warning');
+            const draftsFromHistory = sourceDrafts.map((item, index) => normalizeQuestionDraft(item, index));
+            const drafts = draftsFromHistory.length > 0
+                ? draftsFromHistory
+                : parseQuestionMarkdown(historyMarkdown);
+            const nextMarkdown = historyMarkdown.trim() ? historyMarkdown : buildQuestionsMarkdown(drafts);
+            if (!nextMarkdown.trim() && !drafts.length) {
+                showToast('This history item has no markdown to reopen.', 'warning');
                 return;
             }
             const selectedIds = Array.isArray(detail.selected_question_ids)
@@ -198,6 +209,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             setView('generate');
             setWorkspaceStep('result');
             setQuestions(drafts);
+            setResultMarkdown(nextMarkdown);
             setSelectedQuestionIds(
                 Array.isArray(selectedIds) && selectedIds.length > 0
                     ? selectedIds
@@ -223,19 +235,26 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             return;
         }
         if (event.type === 'question') {
+            const previewDraft = normalizeQuestionDraft(event.question, event.index);
+            const previewMarkdown = buildQuestionMarkdown(previewDraft, event.index);
             setQuestions((current) => [...current, normalizeQuestionDraft(event.question, current.length)]);
+            setResultMarkdown((current) => (
+                [current.trimEnd(), previewMarkdown].filter(Boolean).join('\n\n')
+            ));
             return;
         }
         if (event.type === 'complete') {
             const drafts = Array.isArray(event.question_drafts)
                 ? event.question_drafts.map((item, index) => normalizeQuestionDraft(item, index))
                 : [];
+            const markdown = String(event.markdown || '').trim() || buildQuestionsMarkdown(drafts);
             setQuestions(drafts);
+            setResultMarkdown(markdown);
             setSelectedQuestionIds(drafts.map((item) => item.id));
             setHistoryId(event.history_id);
             setTaskId(event.task_id);
             setStreamPhase('complete');
-            setStreamMessage('Generation complete. Review and export the questions you want.');
+            setStreamMessage('Generation complete. Edit the markdown, preview formulas, then export.');
             setResultProvider((event.provider as QuestionStudioProvider) || null);
             setResultProviderSource(String(event.provider_source || ''));
             setResultEffectiveModel(String(event.effective_model || ''));
@@ -247,8 +266,10 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     }, [showToast]);
 
     const handleGenerate = useCallback(async () => {
-        const nextProvider = provider || resolveQuestionProvider(providerOptions);
-        const nextProviderStatus = providerOptions.find((option) => option.id === nextProvider) || null;
+        const nextProvider = provider && preferredAiConfigOptions.some((option) => option.id === provider)
+            ? provider
+            : preferredAiConfigOptions[0]?.id || null;
+        const nextProviderStatus = preferredAiConfigOptions.find((option) => option.id === nextProvider) || null;
 
         if (!nextProvider) {
             showToast('No available AI model found. Configure one in AI Config or check runtime availability.', 'warning');
@@ -300,7 +321,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             await loadHistory();
         } catch (error) {
             console.error(error);
-            showToast(error instanceof Error ? error.message : 'Question generation failed.', 'error');
+            showToast(getQuestionRequestErrorMessage(error, 'Question generation failed.'), 'error');
             setStreamPhase('error');
             setStreamMessage('Question generation failed.');
         } finally {
@@ -314,8 +335,8 @@ export function useQuestionGenerator(): QuestionGeneratorController {
         numQuestions,
         outputLanguage,
         pageSelectionInput,
+        preferredAiConfigOptions,
         provider,
-        providerOptions,
         resetResultState,
         selectedFile,
         setProvider,
@@ -328,18 +349,20 @@ export function useQuestionGenerator(): QuestionGeneratorController {
     ]);
 
     const persistHistory = useCallback(async () => {
-        if (!historyId) return;
+        if (!historyId || !resultMarkdown.trim()) return;
         setIsSavingHistory(true);
         try {
             await finalizeQuestionHistory(historyId, {
                 questions,
-                markdown: buildQuestionsMarkdown(questions),
-                selected_question_ids: selectedQuestionIds,
+                markdown: resultMarkdown,
+                selected_question_ids: selectedQuestionIds.length > 0
+                    ? selectedQuestionIds
+                    : questions.map((item) => item.id),
             });
         } finally {
             setIsSavingHistory(false);
         }
-    }, [historyId, questions, selectedQuestionIds]);
+    }, [historyId, questions, resultMarkdown, selectedQuestionIds]);
 
     const handleSaveHistory = useCallback(async () => {
         try {
@@ -348,32 +371,28 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             await loadHistory();
         } catch (error) {
             console.error(error);
-            showToast(error instanceof Error ? error.message : 'Failed to save history.', 'error');
+            showToast(getQuestionRequestErrorMessage(error, 'Failed to save history.'), 'error');
         }
     }, [loadHistory, persistHistory, showToast]);
 
     const handleExport = useCallback(async (format: QuestionExportFormat) => {
-        if (selectedQuestions.length === 0) {
-            showToast('Select at least one question before exporting.', 'warning');
+        if (!resultMarkdown.trim()) {
+            showToast('No markdown available to export.', 'warning');
             return;
         }
         try {
             await persistHistory();
             if (format === 'pdf') {
-                openQuestionPdfExport(selectedQuestions);
+                await openQuestionPdfExport(resultMarkdown);
                 return;
             }
-            const blob = await exportQuestionSelection({
-                questions: selectedQuestions,
-                format,
-                filename: 'question-studio',
-            });
-            downloadBlob(blob, format === 'markdown' ? 'question-studio.md' : 'question-studio.txt');
+            const blob = new Blob([resultMarkdown], { type: 'text/markdown;charset=utf-8' });
+            downloadBlob(blob, 'question-studio.md');
         } catch (error) {
             console.error(error);
-            showToast(error instanceof Error ? error.message : 'Export failed.', 'error');
+            showToast(getQuestionRequestErrorMessage(error, 'Export failed.'), 'error');
         }
-    }, [persistHistory, selectedQuestions, showToast]);
+    }, [persistHistory, resultMarkdown, showToast]);
 
     const {
         updateQuestion,
@@ -384,7 +403,9 @@ export function useQuestionGenerator(): QuestionGeneratorController {
 
     const currentResultLabel = resultProviderStatus?.label || selectedProviderStatus?.label || (resultProvider || provider || 'Provider');
     const currentResultModel = resultEffectiveModel || resultProviderStatus?.model || '';
-    const currentResultSource = resultProviderSource || (resultProviderStatus ? formatQuestionProviderSource(resultProviderStatus.source) : '');
+    const currentResultSource = resultProviderSource
+        ? formatQuestionProviderSource(resultProviderSource)
+        : (resultProviderStatus ? formatQuestionProviderSource(resultProviderStatus.source) : '');
     const hasGenerationInput = Boolean(sourceText.trim() || taskId);
     const aiSelectorLabel = preferredAiConfigOptions.length > 0 ? 'AI Model' : 'AI Runtime';
     const streamPhaseLabel = streamPhase.charAt(0).toUpperCase() + streamPhase.slice(1);
@@ -398,7 +419,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             : parsedComposerPageSelection.error
                 ? 'Choose pages'
                 : formatPageRangeSummary(parsedComposerPageSelection.pages);
-    const currentStepIndex = workspaceStep === 'start' ? 0 : workspaceStep === 'composer' ? 1 : 2;
+    const currentStepIndex = workspaceStep === 'result' ? 1 : 0;
 
     return {
         state: {
@@ -425,6 +446,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             streamMessage,
             isGenerating,
             isSavingHistory,
+            resultMarkdown,
             questions,
             selectedQuestionIds,
         },
@@ -453,6 +475,7 @@ export function useQuestionGenerator(): QuestionGeneratorController {
             setConstraints,
             setDragActive,
             setProvider,
+            setResultMarkdown,
             setUseAllPages,
             setPageSelectionInput,
             navigateToAiConfig: () => navigate('/ai-config'),

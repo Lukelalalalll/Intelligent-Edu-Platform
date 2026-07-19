@@ -13,7 +13,11 @@ router = APIRouter()
 
 @router.get("/relations/overview")
 async def get_relations_overview(admin: dict = Depends(get_admin_user)):
-    users = await db.users.find().to_list(2000)
+    cursor = user_repo.find_users_cursor(
+        projection={"username": 1, "email": 1, "role": 1, "teacherCourseIds": 1, "studentId": 1, "id": 1},
+        sort=[("role", 1), ("username", 1)],
+    )
+    users = [user async for user in cursor]
     teachers = [
         {
             "id": str(u.get("_id")),

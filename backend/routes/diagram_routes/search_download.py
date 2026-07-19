@@ -3,7 +3,6 @@ import logging
 import re
 from io import BytesIO
 
-import requests
 from fastapi import Depends, HTTPException
 from fastapi.responses import Response, StreamingResponse
 
@@ -18,10 +17,14 @@ logger = logging.getLogger(__name__)
 
 @diagram_router.post("/search_svg")
 def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
+    return search_svg_candidates((req.prompt or "").strip())
+
+
+def search_svg_candidates(query: str) -> list[dict]:
     if not Config.SERP_API_KEY:
         raise HTTPException(status_code=500, detail='SERP_API_KEY missing')
 
-    query = (req.prompt or '').strip()
+    query = (query or '').strip()
     if not query:
         raise HTTPException(status_code=400, detail='Prompt is required')
 
@@ -35,7 +38,13 @@ def search_svg(req: SearchSvgSchema, user: dict = Depends(get_current_user)):
     try:
         for q in query_variants:
             params = {'engine': 'google', 'q': q, 'tbm': 'isch', 'api_key': Config.SERP_API_KEY}
-            data = requests.get('https://serpapi.com/search', params=params, timeout=20).json()
+            data = safe_get(
+                'https://serpapi.com/search',
+                params=params,
+                timeout=20,
+                allowed_content_types=("application/json", "text/json"),
+                max_response_bytes=2 * 1024 * 1024,
+            ).json()
             if data.get('error'):
                 continue
 

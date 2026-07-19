@@ -171,13 +171,16 @@ async def test_generate_question_bundle_supports_prompt_only_and_records_runtime
         config_source="user_ai_config",
         model="gpt-5.5",
     )
+    raw_provider_markdown = (
+        "# Raw Provider Output\n\n"
+        "1. Question: Explain inertia with \\[F=ma\\].\n"
+        "Answer: Resistance to change in motion.\n"
+        "Explanation: Matter resists changes to its state of motion.\n\n"
+        "> Keep this provider-authored note."
+    )
     monkeypatch.setattr(question_generate_routes, "resolve_provider_runtime", AsyncMock(return_value=runtime))
     monkeypatch.setattr(question_generate_routes, "TelemetryTimer", DummyTimer)
-    monkeypatch.setattr(question_generate_routes, "call_provider_generate", AsyncMock(return_value=(
-        "1. Question: Explain inertia.\n"
-        "Answer: Resistance to change in motion.\n"
-        "Explanation: Matter resists changes to its state of motion."
-    )))
+    monkeypatch.setattr(question_generate_routes, "call_provider_generate", AsyncMock(return_value=raw_provider_markdown))
     monkeypatch.setattr(question_generate_routes, "save_history_record", AsyncMock(return_value="hist-1"))
     monkeypatch.setattr(question_generate_routes, "compute_history_expires_at", AsyncMock(return_value=None))
     monkeypatch.setattr(question_generate_routes.Config, "GENERATED_FOLDER_SUB2", str(tmp_path))
@@ -208,6 +211,8 @@ async def test_generate_question_bundle_supports_prompt_only_and_records_runtime
     assert payload["effective_model"] == "gpt-5.5"
     assert payload["source_kind"] == "text"
     assert payload["task_id"] in request.session["sub2_tasks"]
+    assert payload["markdown"] == raw_provider_markdown
+    assert payload["questions"] == payload["question_drafts"]
 
     generate_kwargs = question_generate_routes.call_provider_generate.await_args.kwargs
     assert generate_kwargs["runtime"] is runtime
@@ -218,6 +223,8 @@ async def test_generate_question_bundle_supports_prompt_only_and_records_runtime
     assert history_kwargs["params"]["provider_source"] == "user_ai_config"
     assert history_kwargs["params"]["effective_model"] == "gpt-5.5"
     assert history_kwargs["params"]["page_numbers"] == []
+    assert history_kwargs["result_full"]["markdown"] == raw_provider_markdown
+    assert history_kwargs["result_preview"] == raw_provider_markdown[:500]
     assert history_kwargs["source"]["effective_model"] == "gpt-5.5"
 
 

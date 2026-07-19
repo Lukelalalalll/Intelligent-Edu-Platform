@@ -54,10 +54,13 @@ export default function GenSection({ genState, genHandlers }) {
 
                 <div style={{ margin: '8px 0 12px 0' }}>
                     <label style={{ marginRight: 8 }}>Model</label>
-                    <select value={provider || 'local_ollama'} onChange={(e) => genHandlers.setProvider?.(e.target.value)}>
-                        <option value="coze">Coze</option>
-                        <option value="local_ollama">llama3.2</option>
+                    <select value={provider || 'auto'} onChange={(e) => genHandlers.setProvider?.(e.target.value)}>
+                        <option value="auto">Auto</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="bigmodel">BigModel</option>
                         <option value="deepseek">DeepSeek</option>
+                        <option value="local_ollama">llama3.2</option>
+                        <option value="coze">Coze</option>
                     </select>
                 </div>
 
@@ -159,6 +162,12 @@ export default function GenSection({ genState, genHandlers }) {
                                 <i className="fas fa-download"></i> Download SVG
                             </button>
                         </div>
+                        {data?.meta?.warning && (
+                            <p style={{ margin: '0 0 10px', fontSize: '0.85rem', color: '#92400e' }}>
+                                <i className="fas fa-triangle-exclamation" style={{ marginRight: 6 }}></i>
+                                {data.meta.warning}
+                            </p>
+                        )}
                         <div
                             className={genStyles.genSvgContainer}
                             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.svg, { USE_PROFILES: { svg: true } }) }}

@@ -16,12 +16,14 @@ Configuration (backend/.env):
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Literal
 
 import httpx
 
 from backend.config import Config
+from backend.core.safe_requests import safe_get
 
 logger = logging.getLogger(__name__)
 
@@ -109,12 +111,14 @@ async def _fetch_page_content(url: str) -> str:
     try:
         import trafilatura  # optional dependency
 
-        async with httpx.AsyncClient(
-            timeout=8.0,
-            follow_redirects=True,
+        resp = await asyncio.to_thread(
+            safe_get,
+            url,
+            timeout=8,
             headers={"User-Agent": "Mozilla/5.0 (compatible; EduBot/1.0)"},
-        ) as client:
-            resp = await client.get(url)
+            allowed_content_types=("text/html", "text/plain", "application/xhtml+xml"),
+            max_response_bytes=2 * 1024 * 1024,
+        )
         text: str = trafilatura.extract(resp.text) or ""
         return text[: Config.SEARXNG_CONTENT_MAX_CHARS]
     except Exception as exc:

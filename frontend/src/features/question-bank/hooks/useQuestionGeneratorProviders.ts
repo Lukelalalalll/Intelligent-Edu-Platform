@@ -1,20 +1,80 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Toast } from '@/types/api';
+import { aiConfigApi, type AIConfigResponse } from '@/features/ai-config/api/aiConfigApi';
 
-import { listQuestionProviders, type QuestionProviderStatus } from '../api/questionBankApi';
+import type { QuestionProviderStatus } from '../api/questionBankApi';
 import {
     getPreferredQuestionProviders,
     isAiConfigQuestionProvider,
     isQuestionProviderReady,
-    resolveQuestionProvider,
+    resolveQuestionAiConfigProvider,
     writeStoredQuestionProvider,
     type QuestionStudioProvider,
 } from '../questionProviderConfig';
+import { getQuestionRequestErrorMessage } from '../utils/requestError';
 
-type ShowToast = (message: string, type: Toast['type']) => void;
+type AiConfigTextProvider = Extract<QuestionStudioProvider, 'openai' | 'deepseek' | 'bigmodel'>;
 
-export function useQuestionGeneratorProviders(showToast: ShowToast) {
+const TEXT_PROVIDER_META: Record<AiConfigTextProvider, { label: string; order: number }> = {
+    openai: { label: 'OpenAI', order: 0 },
+    bigmodel: { label: 'BigModel / GLM', order: 1 },
+    deepseek: { label: 'DeepSeek', order: 2 },
+};
+
+function buildAiConfigTextProviders(config: AIConfigResponse): QuestionProviderStatus[] {
+    const rows: Array<{
+        id: AiConfigTextProvider;
+        model: string;
+        configured: boolean;
+        updatedAt?: string | null;
+    }> = [
+        {
+            id: 'openai',
+            model: config.text.openai.model,
+            configured: config.text.openai.api_key_set,
+            updatedAt: config.text.openai.updated_at,
+        },
+        {
+            id: 'bigmodel',
+            model: config.text.bigmodel.model,
+            configured: config.text.bigmodel.api_key_set,
+            updatedAt: config.text.bigmodel.updated_at,
+        },
+        {
+            id: 'deepseek',
+            model: config.text.deepseek.model,
+            configured: config.text.deepseek.api_key_set,
+            updatedAt: config.text.deepseek.updated_at,
+        },
+    ];
+
+    const readyRows = rows
+        .map((row) => ({ ...row, model: String(row.model || '').trim() }))
+        .filter((row) => row.configured && row.model)
+        .sort((a, b) => TEXT_PROVIDER_META[a.id].order - TEXT_PROVIDER_META[b.id].order);
+
+    return readyRows.map((row, index) => ({
+        id: row.id,
+        label: TEXT_PROVIDER_META[row.id].label,
+        available: true,
+        configured: true,
+        source: 'user_ai_config',
+        model: row.model,
+        message: row.updatedAt
+            ? `Configured in AI Config. Last updated ${new Date(row.updatedAt).toLocaleString()}.`
+            : 'Configured in AI Config and ready for text generation.',
+        is_recommended: index === 0,
+    }));
+}
+
+function getAiConfigLoadErrorMessage(error: unknown): string {
+    return getQuestionRequestErrorMessage(
+        error,
+        'Unable to load AI Config text models. Open AI Config and confirm your saved provider settings.',
+    );
+}
+
+export function useQuestionGeneratorProviders() {
     const [providerOptions, setProviderOptions] = useState<QuestionProviderStatus[]>([]);
     const [provider, setProvider] = useState<QuestionStudioProvider | null>(null);
     const [providerLoading, setProviderLoading] = useState(true);
@@ -37,20 +97,19 @@ export function useQuestionGeneratorProviders(showToast: ShowToast) {
         setProviderLoading(true);
         try {
             setProviderError('');
-            const data = await listQuestionProviders();
-            const nextOptions = Array.isArray(data.providers) ? data.providers : [];
+            const data = await aiConfigApi.get();
+            const nextOptions = buildAiConfigTextProviders(data);
             setProviderOptions(nextOptions);
-            setProvider(resolveQuestionProvider(nextOptions));
+            setProvider(resolveQuestionAiConfigProvider(nextOptions));
         } catch (error) {
             console.error(error);
             setProviderOptions([]);
             setProvider(null);
-            setProviderError(error instanceof Error ? error.message : 'Failed to load question providers.');
-            showToast('Failed to load question providers.', 'error');
+            setProviderError(getAiConfigLoadErrorMessage(error));
         } finally {
             setProviderLoading(false);
         }
-    }, [showToast]);
+    }, []);
 
     useEffect(() => {
         void loadProviders();
@@ -67,15 +126,13 @@ export function useQuestionGeneratorProviders(showToast: ShowToast) {
         if (
             current
             && isQuestionProviderReady(current)
-            && (preferredAiConfigOptions.length === 0 || preferredProviderOptions.some((item) => item.id === current.id))
+            && (preferredAiConfigOptions.length === 0 || preferredAiConfigOptions.some((item) => item.id === current.id))
         ) {
             return;
         }
-        const nextProvider = resolveQuestionProvider(providerOptions);
-        if (nextProvider) {
-            setProvider(nextProvider);
-        }
-    }, [preferredAiConfigOptions.length, preferredProviderOptions, provider, providerOptions]);
+        const nextProvider = resolveQuestionAiConfigProvider(providerOptions);
+        setProvider(nextProvider);
+    }, [preferredAiConfigOptions, provider, providerOptions]);
 
     return {
         providerOptions,

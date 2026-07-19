@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from backend.core.ai_provider import resolve_provider
 from backend.core.database import db
 from backend.core.utils import safe_object_id
-from backend.repositories import file_asset_repo
+from backend.repositories import chat_message_repo, file_asset_repo
 from backend.services.files.file_asset_service import register_file_asset
 
 from .query_service import get_message_by_id, get_room_for_member, serialize_doc, utcnow_iso
@@ -26,11 +26,13 @@ async def list_room_messages(
 ) -> dict[str, Any]:
     await get_room_for_member(room_id, user_id)
 
-    query: dict[str, Any] = {"roomId": room_id, "deletedFor": {"$ne": user_id}}
-    if before:
-        query["sentAt"] = {"$lt": before}
-
-    messages = [serialize_doc(doc) async for doc in db.chat_messages.find(query).sort("sentAt", -1).limit(limit + 1)]
+    raw_messages = await chat_message_repo.list_room_messages(
+        room_id=room_id,
+        before=before,
+        exclude_deleted_for=user_id,
+        limit=limit + 1,
+    )
+    messages = [serialize_doc(doc) for doc in raw_messages]
     has_more = len(messages) > limit
     messages = messages[:limit]
     messages.reverse()
@@ -246,7 +248,7 @@ async def forward_messages(
         raise HTTPException(status_code=400, detail="Too many messages (max 50)")
 
     message_oids = [get_message_oid(message_id) for message_id in message_ids]
-    originals = [doc async for doc in db.chat_messages.find({"_id": {"$in": message_oids}}).sort("sentAt", 1)]
+    originals = await chat_message_repo.list_by_ids(message_oids, sort=[("sentAt", 1)])
 
     now = utcnow_iso()
     forwarded_docs = []
@@ -297,4 +299,3 @@ async def forward_messages(
         )
 
     return {"room": room, "forwarded": forwarded}
-

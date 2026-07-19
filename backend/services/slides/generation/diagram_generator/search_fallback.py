@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-import requests
+from backend.core.safe_requests import safe_get
 
 
 def search_diagram_images(*, serp_api_key: str | None, prompt: str, max_results: int = 5) -> list[str]:
@@ -11,7 +11,7 @@ def search_diagram_images(*, serp_api_key: str | None, prompt: str, max_results:
         print("SerpAPI key not configured for search fallback")
         return []
     try:
-        response = requests.get(
+        response = safe_get(
             "https://serpapi.com/search",
             params={
                 "engine": "google",
@@ -21,6 +21,8 @@ def search_diagram_images(*, serp_api_key: str | None, prompt: str, max_results:
                 "num": max_results,
             },
             timeout=30,
+            allowed_content_types=("application/json", "text/json"),
+            max_response_bytes=2 * 1024 * 1024,
         )
         payload = response.json()
         if "error" in payload:
@@ -51,7 +53,12 @@ def search_diagram_fallback(
             return None
         image_url = search_results[0]
         image_path = os.path.join(output_dir, f"searched_diagram_{timestamp}_{random_num}.jpg")
-        response = requests.get(image_url, timeout=30)
+        response = safe_get(
+            image_url,
+            timeout=30,
+            allowed_content_types=("image/",),
+            max_response_bytes=10 * 1024 * 1024,
+        )
         if response.status_code == 200:
             with open(image_path, "wb") as handle:
                 handle.write(response.content)

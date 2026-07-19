@@ -1,6 +1,7 @@
 import client from '@/shared/api/client';
 import { resolveApiRoot } from '@/shared/api/root';
 import type { AIProvider } from '@/shared/aiProvider';
+import { getQuestionRequestErrorMessage } from '../utils/requestError';
 import { createHistoryApi } from '../../../api/historyApiFactory';
 import type {
     GenerationHistoryItem,
@@ -91,7 +92,7 @@ export type QuestionGenerationStreamEvent =
 
 export interface QuestionExportPayload {
     questions: QuestionDraft[];
-    format: 'markdown' | 'txt';
+    format: 'markdown' | 'pdf';
     filename?: string;
 }
 
@@ -102,7 +103,7 @@ export interface QuestionHistoryFinalizePayload {
 }
 
 const API_ROOT = resolveApiRoot();
-const QUESTION_API_PREFIX = '/sub2';
+const QUESTION_API_PREFIX = '/questions';
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 
@@ -156,12 +157,24 @@ export async function streamGenerateQuestions(
 
     if (!response.ok || !response.body) {
         const text = await response.text();
-        try {
-            const parsed = JSON.parse(text) as { error?: string; detail?: string };
-            throw new Error(parsed.error || parsed.detail || text || 'Failed to start question generation stream');
-        } catch {
-            throw new Error(text || 'Failed to start question generation stream');
+        let parsedBody: unknown = text;
+        if (text.trim()) {
+            try {
+                parsedBody = JSON.parse(text);
+            } catch {
+                parsedBody = text;
+            }
         }
+        throw new Error(getQuestionRequestErrorMessage(
+            {
+                response: {
+                    status: response.status,
+                    data: parsedBody,
+                },
+                message: text,
+            },
+            'Failed to start question generation stream',
+        ));
     }
 
     const reader = response.body.getReader();
@@ -218,11 +231,6 @@ export async function uploadScreenshot(
     payload: { image: string; chapter_number?: string; sub_chapter_number?: string; exercise_number?: string },
 ): Promise<{ success: boolean; filename: string; error?: string }> {
     const res = await client.post(`${QUESTION_API_PREFIX}/upload_screenshot`, payload);
-    return res.data;
-}
-
-export async function listQuestionProviders(): Promise<{ providers: QuestionProviderStatus[] }> {
-    const res = await client.get(`${QUESTION_API_PREFIX}/providers`);
     return res.data;
 }
 

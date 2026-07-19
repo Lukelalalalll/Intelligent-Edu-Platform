@@ -30,6 +30,7 @@ function toolLabel(item: any): string {
     if (tool === 'generate' || tool === 'ai_generate') return 'AI Generate';
     if (tool === 'extract_pdf_images') return 'Image Extract';
     if (tool === 'ai_image_generate') return 'AI Images';
+    if (tool === 'diagram_assistant' || tool === 'assistant') return 'Diagram Copilot';
     return fmt(tool, 'Visual Tool');
 }
 
@@ -354,10 +355,20 @@ export default function DiagramHistoryPanel({ onReplay }: { onReplay?: (item: an
                     return <ExtractedImageGrid images={parsed.ai_images} />;
                 }
 
+                // Diagram Copilot — replayable structured tool output
+                if (parsed?.ui_elements && Array.isArray(parsed.ui_elements)) {
+                    const svgElement = parsed.ui_elements.find((item: any) => item?.svg);
+                    const imageElement = parsed.ui_elements.find((item: any) => Array.isArray(item?.images));
+                    if (svgElement?.svg) return <SvgResult svgContent={svgElement.svg} />;
+                    if (imageElement?.images) return <ExtractedImageGrid images={imageElement.images} />;
+                    if (parsed.assistant_text) {
+                        return <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.88rem' }}>{parsed.assistant_text}</pre>;
+                    }
+                }
+
                 // Fallback: raw text
                 return <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.88rem' }}>{resultStr}</pre>;
             }}
         />
     );
 }
-

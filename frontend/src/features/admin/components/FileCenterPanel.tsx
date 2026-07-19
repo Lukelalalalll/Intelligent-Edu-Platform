@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { fileCenterApi, type FileAsset } from '@/features/admin-file-center/api/fileCenterApi';
-import { useAsyncLoader } from '@/shared/hooks/useAsyncLoader';
 import styles from '../styles/AdminDashboard.module.css';
 
 type Filters = {
@@ -16,6 +15,7 @@ type Filters = {
 const FILE_TYPES = ['', 'chat_attachment', 'submission_pdf', 'knowledge_source', 'knowledge_vectorstore'];
 const STATUSES = ['', 'active', 'soft_deleted', 'hard_deleted'];
 const OWNER_TYPES = ['', 'chat_message', 'submission_document', 'knowledge_document', 'course'];
+const ASSET_PAGE_LIMIT = 120;
 
 function formatBytes(num: number): string {
     const n = Number(num || 0);
@@ -38,33 +38,50 @@ export default function FileCenterPanel() {
     const [auditLoading, setAuditLoading] = useState(false);
     const [rows, setRows] = useState<Array<{ file_type: string; status: string; count: number; total_size: number }>>([]);
     const [audit, setAudit] = useState<{ counts?: { orphan_disk_files: number; dangling_registry: number } } | null>(null);
-
-    const loadAssets = useCallback(async () => {
-        const data = await fileCenterApi.listAssets({
-            file_type: filters.fileType,
-            status: filters.status,
-            owner_type: filters.ownerType,
-            course_id: filters.courseId,
-            q: filters.keyword,
-            limit: 120,
-            skip: 0,
-        });
-        return {
-            assets: data.assets || [],
-            total: Number(data.total || 0),
-        };
-    }, [filters]);
-
-    const {
-        data: assetData,
-        loading,
-        error,
-        reload: fetchAssets,
-        clearError,
-    } = useAsyncLoader({
-        initialData: { assets: [] as FileAsset[], total: 0 },
-        load: loadAssets,
+    const [assetData, setAssetData] = useState({
+        assets: [] as FileAsset[],
+        total: 0,
+        skip: 0,
+        limit: ASSET_PAGE_LIMIT,
+        hasMore: false,
+        nextSkip: null as number | null,
     });
+    const [assetLoading, setAssetLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [assetError, setAssetError] = useState('');
+
+    const fetchAssets = useCallback(async (nextSkip = 0, append = false) => {
+        if (append) {
+            setLoadingMore(true);
+        } else {
+            setAssetLoading(true);
+        }
+        setAssetError('');
+        try {
+            const data = await fileCenterApi.listAssets({
+                file_type: filters.fileType,
+                status: filters.status,
+                owner_type: filters.ownerType,
+                course_id: filters.courseId,
+                q: filters.keyword,
+                limit: ASSET_PAGE_LIMIT,
+                skip: nextSkip,
+            });
+            setAssetData((previous) => ({
+                assets: append ? [...previous.assets, ...(data.assets || [])] : (data.assets || []),
+                total: Number(data.total || 0),
+                skip: Number(data.skip ?? nextSkip),
+                limit: Number(data.limit || ASSET_PAGE_LIMIT),
+                hasMore: Boolean(data.hasMore),
+                nextSkip: typeof data.nextSkip === 'number' ? data.nextSkip : null,
+            }));
+        } catch (e: any) {
+            setAssetError(e?.response?.data?.detail || e?.message || 'Failed to load file assets');
+        } finally {
+            setAssetLoading(false);
+            setLoadingMore(false);
+        }
+    }, [filters]);
 
     const assets = assetData.assets;
     const total = assetData.total;
@@ -119,12 +136,16 @@ export default function FileCenterPanel() {
     };
 
     const handleApplyFilters = () => {
-        clearError();
-        void fetchAssets();
+        void fetchAssets(0, false);
+    };
+
+    const handleLoadMore = () => {
+        if (assetData.nextSkip == null || loadingMore) return;
+        void fetchAssets(assetData.nextSkip, true);
     };
 
     useEffect(() => {
-        void fetchAssets();
+        void fetchAssets(0, false);
     }, [fetchAssets]);
 
     useEffect(() => {
@@ -192,7 +213,7 @@ export default function FileCenterPanel() {
                 </div>
             </div>
 
-            {error && <div style={{ color: '#b42318', marginBottom: 10 }}>{error}</div>}
+            {assetError && <div style={{ color: '#b42318', marginBottom: 10 }}>{assetError}</div>}
 
             <div className={styles.tableResponsive}>
                 <table className={styles.customTable}>
@@ -209,7 +230,7 @@ export default function FileCenterPanel() {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? (
+                        {assetLoading ? (
                             <tr><td colSpan={8}>Loading...</td></tr>
                         ) : assets.length === 0 ? (
                             <tr><td colSpan={8}>No file assets found</td></tr>
@@ -237,6 +258,15 @@ export default function FileCenterPanel() {
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ color: '#64748b' }}>Loaded {assets.length} of {total}</span>
+                {assetData.hasMore && (
+                    <button className={styles.btnAdd} type="button" disabled={loadingMore} onClick={handleLoadMore}>
+                        {loadingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                )}
             </div>
 
             <div style={{ marginTop: 16 }}>

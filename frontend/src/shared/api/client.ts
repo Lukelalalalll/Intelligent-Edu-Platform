@@ -1,4 +1,3 @@
-// frontend/src/api/client.ts
 import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
 import toast from 'react-hot-toast';
 import { log } from '../utils/logger';
@@ -19,6 +18,7 @@ const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 let refreshPromise: Promise<void> | null = null;
 
+/** Request config marker used to prevent repeated refresh retries for one request. */
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retryAfterRefresh?: boolean };
 
 const readCookie = (name: string): string => {
@@ -46,6 +46,9 @@ const redirectToLogin = (): void => {
   }
 };
 
+/**
+ * Refreshes the auth session once and shares the in-flight refresh across failed requests.
+ */
 const refreshAuthSession = async (): Promise<void> => {
   if (!refreshPromise) {
     refreshPromise = client
@@ -65,6 +68,7 @@ const refreshAuthSession = async (): Promise<void> => {
   return refreshPromise;
 };
 
+// Attach CSRF credentials and fail fast while the browser reports offline.
 client.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (!navigator.onLine) {
@@ -91,6 +95,7 @@ client.interceptors.request.use(
   }
 );
 
+// Retry one 401 response after refreshing the session, then fall back to login redirect.
 client.interceptors.response.use(
   (response: AxiosResponse) => {
     const method = String(response?.config?.method || 'GET').toUpperCase();

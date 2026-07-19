@@ -6,19 +6,21 @@ It can be called by img_chart_processor to generate images based on prompts.
 """
 
 import os
-import tempfile
 import asyncio
 import random
 from io import BytesIO
 from PIL import Image
-import requests
-import time
 import json
+from datetime import datetime
+
+from backend.core.safe_requests import safe_get, safe_post
 
 # ========== 1. Google 搜图功能 ==========
 
 # === Google 搜图 ===
-SERPAPI_KEY = "044337361b95bae23c4338e45310aa83698d577782d660d6d6b278e7e291512f"
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "").strip()
+HDGSB_API_KEY = os.getenv("HDGSB_API_KEY", "").strip()
+IMAGE_DOWNLOAD_MAX_BYTES = 10 * 1024 * 1024
 
 def search_google_images(query, num_images=3):
     """使用 Google 搜索图片
@@ -30,6 +32,10 @@ def search_google_images(query, num_images=3):
     Returns:
         list: 图片URL列表
     """
+    if not SERPAPI_KEY:
+        print("[Google Image] SERPAPI_KEY is not configured; search fallback disabled")
+        return []
+
     url = "https://serpapi.com/search"
     params = {
         "engine": "google",
@@ -40,7 +46,8 @@ def search_google_images(query, num_images=3):
         "api_key": SERPAPI_KEY
     }
     try:
-        res = requests.get(url, params=params)
+        res = safe_get(url, params=params, timeout=15)
+        res.raise_for_status()
         data = res.json()
         images = []
         if "images_results" in data:
@@ -54,17 +61,17 @@ def search_google_images(query, num_images=3):
 # ========== 2. HDGSB AI 生图功能 ==========
 
 class HDGSBImageGenerator:
-    def __init__(self, api_key="sk-NqKNfPfPj8yQX6uRtJTVwLP7pX9BaKaPaMqhPHRKLHuuzRc1"):
+    def __init__(self, api_key=None):
         """
         初始化HDGSB图像生成器
         
         Args:
             api_key (str): API密钥
         """
-        self.api_key = api_key
+        self.api_key = (api_key or os.getenv("HDGSB_API_KEY", "")).strip()
         self.base_url = "https://api.hdgsb.com/v1/images/generations"
         self.headers = {
-            'Authorization': f'Bearer {api_key}',
+            'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
     
@@ -81,6 +88,10 @@ class HDGSBImageGenerator:
         Returns:
             list: 生成的图像列表 (PIL.Image对象)
         """
+        if not self.api_key:
+            print("[HDGSB Image] HDGSB_API_KEY is not configured; AI image generation disabled")
+            return []
+
         payload = json.dumps({
             "model": model,
             "prompt": prompt,
@@ -89,8 +100,8 @@ class HDGSBImageGenerator:
         })
         
         try:
-            print(f"🔄 Generating images: {prompt[:50]}...")
-            response = requests.post(self.base_url, headers=self.headers, data=payload)
+            print(f"Generating images: {prompt[:50]}...")
+            response = safe_post(self.base_url, headers=self.headers, data=payload, timeout=60)
             
             if response.status_code == 200:
                 # 处理返回的图像数据
@@ -103,7 +114,12 @@ class HDGSBImageGenerator:
                         for item in response_data['data']:
                             if 'url' in item:
                                 # 下载图像
-                                img_response = requests.get(item['url'])
+                                img_response = safe_get(
+                                    item['url'],
+                                    timeout=20,
+                                    allowed_content_types=("image/",),
+                                    max_response_bytes=IMAGE_DOWNLOAD_MAX_BYTES,
+                                )
                                 if img_response.status_code == 200:
                                     img = Image.open(BytesIO(img_response.content))
                                     if img.mode != "RGB":
@@ -116,15 +132,15 @@ class HDGSBImageGenerator:
                         img = img.convert("RGB")
                     images.append(img)
                 
-                print(f"✅ Successfully generated {len(images)} images")
+                print(f"Successfully generated {len(images)} images")
                 return images
             else:
-                print(f"❌ Request failed: {response.status_code}")
+                print(f"Request failed: {response.status_code}")
                 print(f"Error message: {response.text}")
                 return []
                 
         except Exception as e:
-            print(f"❌ Error generating images: {e}")
+            print(f"Error generating images: {e}")
             return []
 
 # 创建全局的HDGSB图像生成器实例
@@ -163,7 +179,7 @@ def generate_image_from_prompt(prompt, output_dir=None, ratio=0, num_images=1):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    print(f"🎨 Generating image for prompt: {prompt[:100]}...")
+    print(f"Generating image for prompt: {prompt[:100]}...")
     
     # 生成时间戳和随机数用于文件名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -177,32 +193,39 @@ def generate_image_from_prompt(prompt, output_dir=None, ratio=0, num_images=1):
             # 保存第一张AI生成的图片
             img_path = os.path.join(output_dir, f"generated_ai_{timestamp}_{random_num}.jpg")
             ai_images[0].save(img_path)
-            print(f"✅ AI image saved: {img_path}")
+            print(f"AI image saved: {img_path}")
             
             # 根据比例调整图片尺寸
             resized_path = resize_image_for_ratio(img_path, ratio)
             return resized_path
         except Exception as e:
-            print(f"❌ Error saving AI image: {e}")
+            print(f"Error saving AI image: {e}")
     
     # 如果AI生成失败，尝试Google搜索
     google_images = search_google_images(prompt, num_images=num_images)
     
     if google_images:
         try:
-            img_data = requests.get(google_images[0]).content
+            response = safe_get(
+                google_images[0],
+                timeout=20,
+                allowed_content_types=("image/",),
+                max_response_bytes=IMAGE_DOWNLOAD_MAX_BYTES,
+            )
+            response.raise_for_status()
+            img_data = response.content
             img_path = os.path.join(output_dir, f"generated_google_{timestamp}_{random_num}.jpg")
             with open(img_path, 'wb') as f:
                 f.write(img_data)
-            print(f"✅ Google image saved: {img_path}")
+            print(f"Google image saved: {img_path}")
             
             # 根据比例调整图片尺寸
             resized_path = resize_image_for_ratio(img_path, ratio)
             return resized_path
         except Exception as e:
-            print(f"❌ Error saving Google image: {e}")
+            print(f"Error saving Google image: {e}")
     
-    print("❌ Failed to generate image from both AI and Google search")
+    print("Failed to generate image from both AI and Google search")
     return None
 
 # ========== 3.1. 异步版本的图像生成函数 ==========
@@ -299,11 +322,8 @@ def resize_image_for_ratio(image_path, ratio=0):
             
             return resized_path
     except Exception as e:
-        print(f"❌ Error resizing image: {e}")
+        print(f"Error resizing image: {e}")
         return image_path
-
-# ========== 6. 导入必要的模块 ==========
-from datetime import datetime
 
 # ========== 7. 测试函数 ==========
 
@@ -311,13 +331,13 @@ def test_image_generation():
     """测试图像生成功能"""
     test_prompt = ("A cute baby sea otter floating on its back in crystal clear water")
     
-    print("🧪 Testing image generation...")
+    print("Testing image generation...")
     result = generate_image_from_prompt(test_prompt)
     
     if result:
-        print(f"✅ Test successful! Generated image: {result}")
+        print(f"Test successful! Generated image: {result}")
     else:
-        print("❌ Test failed!")
+        print("Test failed!")
 
 if __name__ == "__main__":
     test_image_generation()

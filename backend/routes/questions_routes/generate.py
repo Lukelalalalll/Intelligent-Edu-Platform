@@ -261,7 +261,7 @@ async def _generate_question_bundle(
                         result_text = _normalize_fill_in_blank_output(result_text)
 
             question_drafts = normalize_question_drafts(parse_question_markdown(result_text))
-            markdown = build_questions_markdown(question_drafts) or str(result_text or "").strip()
+            markdown = str(result_text or "").strip() or build_questions_markdown(question_drafts)
 
             generated_filename = f"generated_questions_{task_id}_{int(time.time())}.md"
             generated_path = os.path.join(Config.GENERATED_FOLDER_SUB2, generated_filename)
@@ -321,7 +321,7 @@ async def _generate_question_bundle(
         "provider_source": runtime.config_source,
         "effective_model": runtime.model,
         "markdown": markdown,
-        "questions": markdown,
+        "questions": question_drafts,
         "question_drafts": question_drafts,
         "history_id": history_id,
         "source_kind": source_meta["source_kind"],

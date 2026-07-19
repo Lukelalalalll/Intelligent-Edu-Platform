@@ -17,19 +17,19 @@ export function convertImageUrlsForEnvironment() {
 }
 
 /**
- * Setup a MutationObserver to automatically convert any dynamically added images
+ * Watches dynamically inserted images and normalizes their backend asset URLs.
  */
 export function setupImageUrlConverter() {
   convertImageUrlsForEnvironment();
   
-  // Watch for dynamically added images
+  // Re-run normalization when feature code injects rendered markdown or generated content.
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
           
-          // Any new <img> or descendants with src should be normalized
+          // Normalize either a directly inserted image or descendants inside inserted markup.
           if (element.tagName === "IMG") {
             convertImageUrlsForEnvironment();
           }

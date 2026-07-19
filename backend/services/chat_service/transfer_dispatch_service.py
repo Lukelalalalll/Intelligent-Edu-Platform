@@ -13,6 +13,7 @@ from typing import Optional
 
 from backend.config import Config
 from backend.core.database import db
+from backend.repositories import chat_message_repo
 from backend.repositories._helpers import coerce_object_id, utcnow
 
 logger = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ async def create_transfer(
     message_oid = coerce_object_id(message_id)
     if message_oid is None:
         raise ValueError(f"Invalid message_id: {message_id}")
-    msg = await db.chat_messages.find_one({"_id": message_oid})
+    msg = await chat_message_repo.find_by_id(message_oid)
 
     if not msg:
         raise ValueError("Source message not found")

@@ -59,24 +59,58 @@ def _serialize_mongo_value(value):
     if isinstance(value, list):
         return [_serialize_mongo_value(item) for item in value]
     if isinstance(value, dict):
-        return {k: _serialize_mongo_value(v) for k, v in value.items()}
+        return {
+            k: "[redacted]" if _is_sensitive_field_name(k) else _serialize_mongo_value(v)
+            for k, v in value.items()
+        }
     return value
+
+
+def _is_sensitive_field_name(name: str) -> bool:
+    normalized = str(name or "").strip().lower().replace("-", "_")
+    return any(
+        marker in normalized
+        for marker in (
+            "password",
+            "secret",
+            "token",
+            "api_key",
+            "apikey",
+            "authorization",
+            "cookie",
+            "csrf",
+        )
+    )
 
 
 def _validate_collection_name(name: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", name or ""):
         raise HTTPException(status_code=400, detail="Invalid collection name")
+    if name in DB_CONSOLE_BLOCKED_COLLECTIONS or name.startswith("system"):
+        raise HTTPException(status_code=403, detail="Collection is not accessible via DB console")
     return name
 
 
 # Collections that cannot be modified via the DB console (write-protect critical data)
-DB_CONSOLE_READONLY_COLLECTIONS = {"users"}
+DB_CONSOLE_READONLY_COLLECTIONS = {"users", "security_audit_events"}
 # Collections that cannot be listed or accessed via console at all
 DB_CONSOLE_BLOCKED_COLLECTIONS = {"system.profile", "system.version"}
 
 
+def _check_db_console_enabled() -> None:
+    if not Config.ADMIN_DB_CONSOLE_ENABLED:
+        raise HTTPException(status_code=404, detail="DB console is disabled")
+
+
+def _check_collection_read_access(collection_name: str) -> None:
+    allowed = {str(item).strip() for item in Config.ADMIN_DB_CONSOLE_ALLOWED_COLLECTIONS if str(item).strip()}
+    if allowed and collection_name not in allowed:
+        raise HTTPException(status_code=403, detail="Collection is not allowed via DB console")
+
+
 def _check_write_access(collection_name: str) -> None:
     """Block write operations on protected collections via DB console."""
+    _check_collection_read_access(collection_name)
     if collection_name in DB_CONSOLE_READONLY_COLLECTIONS:
         raise HTTPException(
             status_code=403,

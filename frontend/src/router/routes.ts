@@ -8,7 +8,9 @@ export interface RouteConfig {
   path: string;
   Component: ComponentType<any> | LazyExoticComponent<ComponentType<any>>;
   auth: AuthMode;
+  /** Renders outside the shared layout when the page needs the full viewport. */
   fullScreen?: boolean;
+  /** URL segment name that forces a route remount when its value changes. */
   keyParam?: string;
 }
 
@@ -17,6 +19,10 @@ const PptGeneratorTemplatesRoute = lazy(() => import('@/ppt_generator/routes/Ppt
 const PptGeneratorThemeRoute = lazy(() => import('@/ppt_generator/routes/PptGeneratorThemeRoute'));
 const toAppRoutePath = (path: string) => path.replace(/^\//, '');
 
+/**
+ * Central route registry consumed by AppShell.
+ * Each entry declares layout ownership and auth behavior beside the lazy page import.
+ */
 export const ROUTES: RouteConfig[] = [
   { path: '', Component: lazy(() => import('@/features/home/pages/HomePage')), auth: 'protected' },
 

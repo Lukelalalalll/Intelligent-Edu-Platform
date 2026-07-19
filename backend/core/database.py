@@ -187,6 +187,7 @@ async def _ensure_users_indexes() -> None:
         unique=True,
         partialFilterExpression={"google_auth.sub": {"$exists": True, "$type": "string", "$gt": ""}},
     )
+    await db.users.create_index([("role", ASCENDING), ("username", ASCENDING)])
 
 
 async def _ensure_google_auth_ticket_indexes() -> None:
@@ -222,6 +223,14 @@ async def _ensure_auth_security_indexes() -> None:
         IndexModel([("created_at", DESCENDING), ("user_id", ASCENDING)]),
         IndexModel([("action", ASCENDING), ("created_at", DESCENDING)]),
         IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=_TTL_ON_FIELD),
+    ])
+
+
+async def _ensure_rag_telemetry_indexes() -> None:
+    await db.rag_telemetry.create_indexes([
+        IndexModel([("timestamp", ASCENDING)], expireAfterSeconds=_TTL_90D),
+        IndexModel([("timestamp", DESCENDING), ("course_ids", ASCENDING)]),
+        IndexModel([("timestamp", DESCENDING), ("role", ASCENDING)]),
     ])
 
 
@@ -328,6 +337,7 @@ async def ensure_indexes() -> None:
             # TTL: auto-delete records older than 90 days
             IndexModel([("timestamp", ASCENDING)], expireAfterSeconds=_TTL_90D),
         ])
+        await _ensure_rag_telemetry_indexes()
 
         # ── sub1 task tracking ────────────────────────────────────────────────
         await db.sub1_task_tracking.create_indexes([
@@ -481,11 +491,12 @@ async def ensure_indexes() -> None:
             IndexModel([("file_id", ASCENDING)], unique=True),
             IndexModel([("file_type", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("file_type", ASCENDING), ("public_url", ASCENDING)]),
-            IndexModel([("owner_type", ASCENDING), ("owner_id", ASCENDING)]),
+            IndexModel([("owner_type", ASCENDING), ("owner_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("course_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
-            IndexModel([("room_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
-            IndexModel([("user_id", ASCENDING), ("scope", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("room_id", ASCENDING), ("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("user_id", ASCENDING), ("scope", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("file_type", ASCENDING), ("course_id", ASCENDING), ("filename", ASCENDING), ("status", ASCENDING)]),
             IndexModel([("session_id", ASCENDING), ("created_at", DESCENDING)]),
             IndexModel([("conversation_date", ASCENDING), ("user_id", ASCENDING), ("created_at", DESCENDING)]),
         ])

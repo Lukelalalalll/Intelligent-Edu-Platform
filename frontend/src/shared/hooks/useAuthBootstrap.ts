@@ -6,6 +6,7 @@ import { shouldBypassAuthBootstrap as shouldBypassPptGeneratorAuthBootstrap } fr
 
 let sessionCheckPromise: Promise<void> | null = null;
 
+/** Returns true when the current auth snapshot is missing or older than the refresh window. */
 function shouldRefreshSession() {
   const { user, status, isSessionLoading, lastValidatedAt } = useAuthStore.getState();
   if (isSessionLoading) return false;
@@ -14,6 +15,10 @@ function shouldRefreshSession() {
   return Date.now() - lastValidatedAt >= SESSION_CHECK_INTERVAL;
 }
 
+/**
+ * Validates the browser session while de-duplicating concurrent bootstrap checks.
+ * Non-401 failures keep the previous auth snapshot so transient outages do not log users out.
+ */
 async function ensureSession(force = false) {
   if (sessionCheckPromise) {
     return sessionCheckPromise;
@@ -53,10 +58,15 @@ async function ensureSession(force = false) {
   return sessionCheckPromise;
 }
 
+/** Returns true for routes that own auth/session handling outside the shared shell. */
 export function shouldBypassAuthBootstrap(pathname: string) {
   return shouldBypassPptGeneratorAuthBootstrap(pathname);
 }
 
+/**
+ * Keeps the auth store synchronized with the server session during app bootstrap.
+ * The hook also revalidates when the tab returns to the foreground.
+ */
 export function useAuthBootstrap(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
   const user = useAuthStore((s) => s.user);

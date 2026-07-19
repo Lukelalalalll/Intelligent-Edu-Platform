@@ -4,7 +4,7 @@ import shutil
 from typing import Any
 
 from backend.core.database import db
-from backend.repositories import ai_session_repo, file_asset_repo
+from backend.repositories import ai_session_repo, chat_message_repo, file_asset_repo
 from backend.repositories._helpers import coerce_object_id
 
 from .shared import absolute_from_storage_path, to_iso, utcnow
@@ -38,7 +38,7 @@ async def check_references(asset: dict) -> dict[str, Any]:
 
     if owner_type == "chat_message":
         if owner_oid is not None:
-            exists = await db.chat_messages.find_one({"_id": owner_oid})
+            exists = await chat_message_repo.find_by_id(owner_oid)
             return {"ok_to_delete": exists is None, "reason": "chat_message_reference" if exists else ""}
         return {"ok_to_delete": True, "reason": ""}
 

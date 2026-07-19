@@ -11,6 +11,7 @@ import { log } from './shared/utils/logger'
 import AppToaster from '@/components/ui/AppToaster'
 import { store } from '@/store/store'
 
+/** Minimal process shim required by browser-side code ported from Node-oriented tooling. */
 type BrowserProcessShim = {
   env: Record<string, string | undefined>
 }
@@ -19,14 +20,14 @@ const globalWithProcess = globalThis as typeof globalThis & {
   process?: BrowserProcessShim
 }
 
-// PPT Generator's browser-side AST editor code expects a minimal Node-like process.env.
+// Provide process.env before importing runtime paths that expect Node-like globals.
 if (!globalWithProcess.process) {
   globalWithProcess.process = { env: {} }
 } else if (!globalWithProcess.process.env) {
   globalWithProcess.process.env = {}
 }
 
-// Apply theme before first paint to prevent flash of wrong theme
+// Apply persisted theme before first paint to prevent a flash of the wrong theme.
 const storedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const theme = storedTheme || (prefersDark ? 'dark' : 'light');
@@ -60,5 +61,4 @@ createRoot(document.getElementById('root')!).render(
     </Provider>
   </StrictMode>,
 )
-
 

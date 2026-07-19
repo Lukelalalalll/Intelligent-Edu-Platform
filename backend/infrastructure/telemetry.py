@@ -33,16 +33,20 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from backend.core.database import db
 from backend.infrastructure.quantiles import TDigest
+from backend.repositories import telemetry_repo
 
 logger = logging.getLogger(__name__)
 
 COLLECTION = "llm_telemetry"
 
 
-async def _read_all(cursor):
-    return [doc async for doc in cursor]
+def _clamp_limit(value: int, *, default: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(1, min(maximum, parsed))
 
 # ---------------------------------------------------------------------------
 # Cost table  (USD per 1 000 tokens)
@@ -156,13 +160,14 @@ class LLMTelemetry:
             doc["metadata"] = metadata
 
         try:
-            await db[COLLECTION].insert_one(doc)
+            await telemetry_repo.insert_llm(doc)
         except Exception:
             logger.exception("Failed to record LLM telemetry")
 
     # ---- read: overview stats per provider ----
-    async def get_stats(self, hours: int = 24) -> dict[str, Any]:
+    async def get_stats(self, hours: int = 24, provider_limit: int = 100) -> dict[str, Any]:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        safe_limit = _clamp_limit(provider_limit, default=100, maximum=500)
         pipeline = [
             {"$match": {"timestamp": {"$gte": cutoff}}},
             {
@@ -183,7 +188,7 @@ class LLMTelemetry:
             },
         ]
 
-        results = await db[COLLECTION].aggregate(pipeline).to_list(100)
+        results = await telemetry_repo.aggregate_llm(pipeline, length=safe_limit)
         providers: dict[str, Any] = {}
         for r in results:
             digest = TDigest()
@@ -249,11 +254,11 @@ class LLMTelemetry:
                 }
             },
         ]
-        return await _read_all(db[COLLECTION].aggregate(pipeline))
+        return await telemetry_repo.aggregate_llm(pipeline, length=10_000)
 
     # ---- read: breakdown by arbitrary dimension ----
     async def get_breakdown(
-        self, *, hours: int = 24, group_by: str = "provider"
+        self, *, hours: int = 24, group_by: str = "provider", limit: int = 200
     ) -> list[dict[str, Any]]:
         """Group calls by dimension (provider / model / endpoint / api_type / error_code)."""
         allowed = {"provider", "model", "endpoint", "api_type", "error_code"}
@@ -261,6 +266,7 @@ class LLMTelemetry:
             group_by = "provider"
 
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        safe_limit = _clamp_limit(limit, default=200, maximum=500)
 
         pipeline = [
             {"$match": {"timestamp": {"$gte": cutoff}}},
@@ -287,12 +293,13 @@ class LLMTelemetry:
                 }
             },
         ]
-        return await db[COLLECTION].aggregate(pipeline).to_list(200)
+        return await telemetry_repo.aggregate_llm(pipeline, length=safe_limit)
 
     # ---- read: cost summary ----
-    async def get_cost_summary(self, *, hours: int = 24) -> dict[str, Any]:
+    async def get_cost_summary(self, *, hours: int = 24, provider_limit: int = 50) -> dict[str, Any]:
         """Total estimated cost grouped by provider."""
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        safe_limit = _clamp_limit(provider_limit, default=50, maximum=500)
         pipeline = [
             {"$match": {"timestamp": {"$gte": cutoff}}},
             {
@@ -305,7 +312,7 @@ class LLMTelemetry:
             },
             {"$sort": {"total_cost": -1}},
         ]
-        rows = await db[COLLECTION].aggregate(pipeline).to_list(50)
+        rows = await telemetry_repo.aggregate_llm(pipeline, length=safe_limit)
         by_provider = {
             r["_id"]: {
                 "cost": round(r["total_cost"], 6),
@@ -323,26 +330,22 @@ class LLMTelemetry:
 
     # ---- read: recent errors ----
     async def get_recent_errors(self, limit: int = 20) -> list[dict[str, Any]]:
-        cursor = (
-            db[COLLECTION]
-            .find(
-                {"success": False},
-                {
-                    "_id": 0,
-                    "provider": 1,
-                    "model": 1,
-                    "endpoint": 1,
-                    "error": 1,
-                    "error_code": 1,
-                    "latency_ms": 1,
-                    "timestamp": 1,
-                    "request_id": 1,
-                },
-            )
-            .sort("timestamp", -1)
-            .limit(limit)
+        return await telemetry_repo.find_llm(
+            {"success": False},
+            {
+                "_id": 0,
+                "provider": 1,
+                "model": 1,
+                "endpoint": 1,
+                "error": 1,
+                "error_code": 1,
+                "latency_ms": 1,
+                "timestamp": 1,
+                "request_id": 1,
+            },
+            sort="timestamp",
+            limit=limit,
         )
-        return await cursor.to_list(limit)
 
 
 # ---------------------------------------------------------------------------

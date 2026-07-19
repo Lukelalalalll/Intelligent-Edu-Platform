@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import client from '@/shared/api/client';
+import { getStoredAIProvider, setStoredAIProvider, type AIProvider } from '../../../shared/aiProvider';
 
 export function useDiagramImageExtract() {
     const [imgIsDragging, setImgIsDragging] = useState(false);
@@ -10,6 +11,8 @@ export function useDiagramImageExtract() {
     const [imgAiPrompt, setImgAiPrompt] = useState('');
     const [imgAiNum, setImgAiNum] = useState(4);
     const [imgAiImages, setImgAiImages] = useState<any[]>([]);
+    const [imgAiMeta, setImgAiMeta] = useState<any>(null);
+    const [imgAiProvider, setImgAiProvider] = useState<AIProvider>(() => getStoredAIProvider('auto', { allowAuto: true }));
     const [imgSelectedImages, setImgSelectedImages] = useState<any[]>([]);
     const [imgLoading, setImgLoading] = useState(false);
     const [imgLoadingText, setImgLoadingText] = useState('Processing...');
@@ -48,10 +51,19 @@ export function useDiagramImageExtract() {
         if (!imgAiPrompt.trim()) { imgNotify('Please enter a prompt', 'error'); return; }
         setImgLoading(true); setImgLoadingText('AI is generating images...');
         try {
-            const res = await client.post('/image-extractor/generate-ai-images', { prompt: imgAiPrompt, num_images: Number(imgAiNum) });
+            const res = await client.post('/image-extractor/generate-ai-images', {
+                prompt: imgAiPrompt,
+                num_images: Number(imgAiNum),
+                provider: imgAiProvider || 'auto',
+            });
             if (res.data.success) {
                 setImgAiImages(res.data.images || []);
+                setImgAiMeta(res.data.meta || null);
                 imgNotify(`Generated ${res.data.images.length} images`, 'success');
+                if (res.data?.meta?.warning) {
+                    imgNotify(String(res.data.meta.warning), 'info');
+                }
+                setImgActiveTab('ai');
             }
         } catch (error: any) {
             imgNotify(error.response?.data?.error || 'Failed to generate images', 'error');
@@ -85,7 +97,7 @@ export function useDiagramImageExtract() {
     const imageState = {
         isDragging: imgIsDragging, uploadStatus: imgUploadStatus, currentChapter: imgCurrentChapter,
         activeTab: imgActiveTab, imagesByChapter: imgImagesByChapter, selectedImages: imgSelectedImages,
-        aiPrompt: imgAiPrompt, aiNum: imgAiNum, aiImages: imgAiImages,
+        aiPrompt: imgAiPrompt, aiNum: imgAiNum, aiImages: imgAiImages, aiMeta: imgAiMeta, aiProvider: imgAiProvider,
         loading: imgLoading, loadingText: imgLoadingText, lightboxImage: imgLightboxImage,
         notifications: imgNotifications,
     };
@@ -104,8 +116,24 @@ export function useDiagramImageExtract() {
             setImgCurrentChapter(Object.keys(imagesByChapter)[0] || 'None');
             setImgActiveTab('uploaded');
         },
+        injectAiImages: (images: any[], prompt: string, meta: any = null) => {
+            setImgAiImages(Array.isArray(images) ? images : []);
+            setImgAiPrompt(prompt);
+            setImgAiMeta(meta);
+            setImgActiveTab('ai');
+            if (meta?.warning) {
+                imgNotify(String(meta.warning), 'info');
+            }
+            if (Array.isArray(images) && images.length > 0) {
+                imgNotify(`Generated ${images.length} teaching images`, 'success');
+            }
+        },
         setCurrentChapter: setImgCurrentChapter, setActiveTab: setImgActiveTab,
         setAiPrompt: setImgAiPrompt, setAiNum: setImgAiNum,
+        setAiProvider: (provider: AIProvider) => {
+            setImgAiProvider(provider);
+            setStoredAIProvider(provider);
+        },
         generateAiImages: imgGenerateAi,
         toggleImageSelection: imgToggleSelection,
         removeSelectedImage: (imgObj: any) => { setImgSelectedImages(prev => (prev as any[]).filter(s => s.src !== imgObj.src)); imgNotify('Image removed', 'info'); },

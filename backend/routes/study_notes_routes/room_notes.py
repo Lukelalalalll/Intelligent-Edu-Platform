@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from pydantic import BaseModel, Field
 
 from backend.core.security import get_current_user
@@ -28,9 +28,11 @@ class RoomNoteUpsert(BaseModel):
 @study_notes_router.get("/room-notes")
 async def list_room_notes(
     source_doc: Optional[str] = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
     user: dict = Depends(get_current_user),
 ):
-    return await list_room_notes_service(source_doc=source_doc, user=user)
+    return await list_room_notes_service(source_doc=source_doc, user=user, skip=skip, limit=limit)
 
 
 @study_notes_router.post("/room-notes")
@@ -47,4 +49,3 @@ async def delete_room_note(
     user: dict = Depends(get_current_user),
 ):
     return await delete_room_note_service(note_id=note_id, user=user)
-

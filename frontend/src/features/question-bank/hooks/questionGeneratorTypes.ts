@@ -8,7 +8,7 @@ import type { QuestionStudioProvider } from '../questionProviderConfig';
 
 export type StudioView = 'hub' | 'generate';
 export type WorkspaceStep = 'start' | 'composer' | 'result';
-export type QuestionExportFormat = 'markdown' | 'txt' | 'pdf';
+export type QuestionExportFormat = 'markdown' | 'pdf';
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
 
@@ -42,6 +42,7 @@ export interface QuestionGeneratorController {
         streamMessage: string;
         isGenerating: boolean;
         isSavingHistory: boolean;
+        resultMarkdown: string;
         questions: QuestionDraft[];
         selectedQuestionIds: string[];
     };
@@ -70,6 +71,7 @@ export interface QuestionGeneratorController {
         setConstraints: StateSetter<string>;
         setDragActive: StateSetter<boolean>;
         setProvider: StateSetter<QuestionStudioProvider | null>;
+        setResultMarkdown: StateSetter<string>;
         setUseAllPages: StateSetter<boolean>;
         setPageSelectionInput: StateSetter<string>;
         navigateToAiConfig: () => void;

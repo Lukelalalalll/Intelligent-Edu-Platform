@@ -24,8 +24,8 @@ async def generate_staff_code(*, admin_user_id: str) -> dict:
     return {"code": code, "expires_at": document["expires_at"].isoformat()}
 
 
-async def list_staff_codes() -> list[dict]:
-    codes = await staff_code_repo.list_codes(limit=200)
+async def list_staff_codes(*, skip: int = 0, limit: int = 200) -> list[dict]:
+    codes = await staff_code_repo.list_codes(skip=skip, limit=limit)
     return [
         {
             "code": code["code"],

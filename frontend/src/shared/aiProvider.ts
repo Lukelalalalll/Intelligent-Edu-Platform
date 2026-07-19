@@ -2,8 +2,12 @@ export type AIProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai
 
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider';
 
-export function getStoredAIProvider(): AIProvider {
-    if (typeof window === 'undefined') return 'local_ollama';
+type StoredAIProviderOptions = {
+    allowAuto?: boolean;
+};
+
+export function getStoredAIProvider(defaultProvider: AIProvider = 'local_ollama', options: StoredAIProviderOptions = {}): AIProvider {
+    if (typeof window === 'undefined') return defaultProvider;
     const raw = (() => {
         try {
             return window.localStorage?.getItem(AI_PROVIDER_STORAGE_KEY) ?? null;
@@ -11,12 +15,13 @@ export function getStoredAIProvider(): AIProvider {
             return null;
         }
     })();
+    if (raw === 'auto') return options.allowAuto ? 'auto' : defaultProvider;
     if (raw === 'local_ollama') return 'local_ollama';
     if (raw === 'coze') return 'coze';
     if (raw === 'deepseek') return 'deepseek';
     if (raw === 'openai') return 'openai';
     if (raw === 'bigmodel') return 'bigmodel';
-    return 'local_ollama';
+    return defaultProvider;
 }
 
 export function setStoredAIProvider(provider: AIProvider): void {

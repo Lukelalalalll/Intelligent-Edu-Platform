@@ -41,12 +41,18 @@ class BaseSettingsSegment(BaseSettings):
     CHAT_AI_CONTEXT_WINDOW: int = 50
     CHAT_FILE_MAX_MB: int = 20
 
+    ADMIN_DB_CONSOLE_ENABLED: bool = True
+    ADMIN_DB_CONSOLE_ALLOWED_COLLECTIONS: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
     SEARXNG_ENABLED: bool = False
     SEARXNG_BASE_URL: str = "http://localhost:8080"
     SEARXNG_MAX_RESULTS: int = 5
     SEARXNG_TIMEOUT_SECONDS: float = 6.0
     SEARXNG_FETCH_CONTENT: bool = False
     SEARXNG_CONTENT_MAX_CHARS: int = 1200
+
+    SERPAPI_KEY: str = ""
+    HDGSB_API_KEY: str = ""
 
     ALLOWED_ORIGINS: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]

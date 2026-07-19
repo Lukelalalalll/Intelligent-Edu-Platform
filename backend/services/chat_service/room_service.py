@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from pymongo import ReturnDocument
 
 from backend.core.database import db
-from backend.repositories import user_repo
+from backend.repositories import chat_room_repo, user_repo
 from backend.repositories._helpers import coerce_object_id, require_object_id
 
 from .query_service import get_room_for_member, get_user_map, hash_color, serialize_doc, utcnow_iso
@@ -19,12 +19,27 @@ def _http_object_id(value: str, *, detail: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+async def _find_existing_group_rooms_by_course_ids(course_ids: list[str]) -> dict[str, str]:
+    normalized_ids = [str(course_id).strip() for course_id in course_ids if str(course_id).strip()]
+    if not normalized_ids:
+        return {}
+
+    room_by_course_id: dict[str, str] = {}
+    for room in await chat_room_repo.find_group_rooms_by_course_ids(
+        normalized_ids,
+        projection={"_id": 1, "courseId": 1},
+    ):
+        course_id = str(room.get("courseId", "")).strip()
+        if course_id:
+            room_by_course_id[course_id] = str(room["_id"])
+    return room_by_course_id
+
+
 async def list_rooms_for_user(user_id: str) -> list[dict[str, Any]]:
-    cursor = db.chat_rooms.find({"members": user_id}).sort("createdAt", -1)
     rooms: list[dict[str, Any]] = []
     other_user_ids: set[str] = set()
 
-    async for doc in cursor:
+    for doc in await chat_room_repo.list_rooms_for_member(user_id):
         room = serialize_doc(doc) or {}
         if room.get("type") == "direct" and not room.get("name"):
             other_id = next((member_id for member_id in room.get("members", []) if member_id != user_id), None)
@@ -220,7 +235,7 @@ async def create_course_group_room(*, course_id: str, user: dict[str, Any]) -> d
         }
     )
 
-    new_room = await db.chat_rooms.find_one({"_id": _http_object_id(room_id, detail=f"Invalid room: {room_id!r}")})
+    new_room = await chat_room_repo.find_by_id(_http_object_id(room_id, detail=f"Invalid room: {room_id!r}"))
     return {
         "roomId": room_id,
         "isExisting": False,
@@ -250,30 +265,45 @@ async def list_courses_for_group(user: dict[str, Any]) -> list[dict[str, Any]]:
 
     if section_ids:
         oid_ids = [section_oid for section_id in section_ids if (section_oid := coerce_object_id(section_id)) is not None]
-        async for course in db.course_sections.find(
-            {"_id": {"$in": oid_ids}},
-            {"_id": 1, "courseCode": 1, "courseName": 1},
-        ):
+        course_docs = [
+            course
+            async for course in db.course_sections.find(
+                {"_id": {"$in": oid_ids}},
+                {"_id": 1, "courseCode": 1, "courseName": 1},
+            )
+        ]
+        existing_rooms = await _find_existing_group_rooms_by_course_ids(
+            [str(course["_id"]) for course in course_docs]
+        )
+        for course in course_docs:
             course_identity = str(course["_id"])
-            existing = await db.chat_rooms.find_one({"courseId": course_identity, "type": "group"}, {"_id": 1})
             courses.append(
                 {
                     "id": course_identity,
                     "name": course.get("courseName") or course.get("courseCode") or "Untitled",
-                    "existingRoomId": str(existing["_id"]) if existing else None,
+                    "existingRoomId": existing_rooms.get(course_identity),
                 }
             )
 
     if not courses and role in ("teacher", "admin"):
         query = {} if role == "admin" else {"teacherId": user_id}
-        async for course in db.courses.find(query, {"_id": 1, "name": 1, "title": 1}):
+        legacy_docs = [
+            course
+            async for course in db.courses.find(
+                query,
+                {"_id": 1, "name": 1, "title": 1},
+            )
+        ]
+        existing_rooms = await _find_existing_group_rooms_by_course_ids(
+            [str(course["_id"]) for course in legacy_docs]
+        )
+        for course in legacy_docs:
             course_identity = str(course["_id"])
-            existing = await db.chat_rooms.find_one({"courseId": course_identity, "type": "group"}, {"_id": 1})
             courses.append(
                 {
                     "id": course_identity,
                     "name": course.get("name") or course.get("title") or "Untitled",
-                    "existingRoomId": str(existing["_id"]) if existing else None,
+                    "existingRoomId": existing_rooms.get(course_identity),
                 }
             )
 
@@ -413,4 +443,3 @@ async def delete_room(*, room_id: str, actor_id: str) -> dict[str, Any]:
     await db.chat_rooms.delete_one({"_id": room["_id"]})
     await db.chat_messages.delete_many({"roomId": room_id})
     return {"broadcastMembers": list(room.get("members", []))}
-

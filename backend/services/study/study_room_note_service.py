@@ -20,8 +20,13 @@ def _user_id(user: dict) -> str:
     return str(user.get("_id") or user.get("id") or "")
 
 
-async def list_room_notes(*, source_doc: str | None, user: dict) -> list[dict]:
-    docs = await study_room_note_repo.list_notes(user_id=_user_id(user), source_doc=source_doc)
+async def list_room_notes(*, source_doc: str | None, user: dict, skip: int = 0, limit: int = 200) -> list[dict]:
+    docs = await study_room_note_repo.list_notes(
+        user_id=_user_id(user),
+        source_doc=source_doc,
+        skip=skip,
+        limit=limit,
+    )
     return [_serialize_note(doc) for doc in docs]
 
 

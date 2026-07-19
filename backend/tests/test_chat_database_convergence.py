@@ -13,6 +13,7 @@ from backend.services.chat_service import contact_service, message_service, quer
 from backend.services.file_assets import lifecycle
 from backend.services.file_assets import backfill_ai_chat, queries
 from backend.services.files import file_center_service
+from backend.services.llm_service import chat_ai_service
 
 
 class _FakeBucketCollection:
@@ -108,6 +109,94 @@ class _AsyncSequenceCursor:
             return next(self._iter)
         except StopIteration as exc:
             raise StopAsyncIteration from exc
+
+
+class _PagedAsyncCursor(_AsyncSequenceCursor):
+    def __init__(self, docs: list[dict]):
+        super().__init__(docs)
+        self.sort_calls: list[tuple] = []
+        self.skip_value: int | None = None
+        self.limit_value: int | None = None
+
+    def sort(self, *args):
+        self.sort_calls.append(args)
+        return self
+
+    def skip(self, value: int):
+        self.skip_value = value
+        return self
+
+    def limit(self, value: int):
+        self.limit_value = value
+        return self
+
+
+class _FakePagedCollection:
+    def __init__(self, docs: list[dict], *, total: int):
+        self.cursor = _PagedAsyncCursor(docs)
+        self.total = total
+        self.find_calls: list[tuple[dict, dict | None]] = []
+        self.count_calls: list[dict] = []
+
+    def find(self, query: dict, projection: dict | None = None):
+        self.find_calls.append((query, projection))
+        return self.cursor
+
+    async def count_documents(self, query: dict):
+        self.count_calls.append(query)
+        return self.total
+
+
+class _FakeCourseSectionsCollection:
+    def __init__(self, docs: list[dict]):
+        self.docs = docs
+        self.find_calls: list[tuple[dict, dict | None]] = []
+
+    def find(self, query: dict, projection: dict | None = None):
+        self.find_calls.append((query, projection))
+        if query == {}:
+            return _AsyncSequenceCursor([{"_id": doc["_id"]} for doc in self.docs])
+        if "_id" in query:
+            return _AsyncSequenceCursor(self.docs)
+        return _AsyncSequenceCursor([])
+
+
+class _FakeRoomsByCourseCollection:
+    def __init__(self, docs: list[dict]):
+        self.docs = docs
+        self.find_calls: list[tuple[dict, dict | None]] = []
+        self.find_one_calls: list[tuple[dict, dict | None]] = []
+
+    def find(self, query: dict, projection: dict | None = None):
+        self.find_calls.append((query, projection))
+        return _AsyncSequenceCursor(self.docs)
+
+    async def find_one(self, query: dict, projection: dict | None = None):
+        self.find_one_calls.append((query, projection))
+        raise AssertionError("list_courses_for_group should batch room lookups with find()")
+
+
+class _FakeAggregateFileAssetsCollection:
+    def __init__(self):
+        self.count_queries: list[dict] = []
+        self.aggregate_pipelines: list[list[dict]] = []
+
+    async def count_documents(self, query: dict):
+        self.count_queries.append(query)
+        return 12
+
+    def aggregate(self, pipeline: list[dict]):
+        self.aggregate_pipelines.append(pipeline)
+        return _AsyncSequenceCursor(
+            [
+                {
+                    "date": "2026-06",
+                    "count": 2,
+                    "total_size": 9,
+                    "items": [],
+                }
+            ]
+        )
 
 
 async def test_append_messages_bucketed_promotes_messages_with_aware_utc(monkeypatch):
@@ -221,6 +310,33 @@ async def test_find_asset_by_identifier_uses_object_id_when_valid_and_file_id_wh
 
     assert fake_assets.calls[0] == {"_id": ObjectId(valid_id)}
     assert fake_assets.calls[1] == {"file_id": "legacy-file-id"}
+
+
+async def test_list_ai_personal_assets_page_builds_paged_grouping_pipeline(monkeypatch):
+    fake_assets = _FakeAggregateFileAssetsCollection()
+    monkeypatch.setattr(file_asset_repo.db, "file_assets", fake_assets, raising=False)
+
+    total, groups = await file_asset_repo.list_ai_personal_assets_page(
+        user_id="user-1",
+        status="",
+        group_by="month",
+        skip=5,
+        limit=10,
+    )
+
+    expected_query = {
+        "scope": "ai_personal",
+        "user_id": "user-1",
+        "status": {"$ne": "hard_deleted"},
+    }
+    assert total == 12
+    assert groups == [{"date": "2026-06", "count": 2, "total_size": 9, "items": []}]
+    assert fake_assets.count_queries == [expected_query]
+    pipeline = fake_assets.aggregate_pipelines[0]
+    assert pipeline[0] == {"$match": expected_query}
+    assert pipeline[1] == {"$sort": {"created_at": -1, "_id": -1}}
+    assert {"$skip": 5} in pipeline
+    assert {"$limit": 10} in pipeline
 
 
 async def test_ensure_ai_session_image_assets_uses_shared_object_id_helper(monkeypatch):
@@ -355,6 +471,70 @@ async def test_get_chat_user_by_id_preserves_id_field_via_user_repo(monkeypatch)
     assert result is user_doc
     assert result["id"] == user_id
     assert result["_id"] == ObjectId(user_id)
+
+
+async def test_get_message_by_id_uses_chat_message_repo_object_id(monkeypatch):
+    message_id = str(ObjectId())
+    find_by_id = AsyncMock(return_value={"_id": ObjectId(message_id), "content": "hello"})
+    monkeypatch.setattr(query_service.chat_message_repo, "find_by_id", find_by_id)
+
+    result = await query_service.get_message_by_id(message_id, projection={"content": 1})
+
+    assert result == {"_id": ObjectId(message_id), "content": "hello"}
+    assert find_by_id.await_args.args == (ObjectId(message_id), {"content": 1})
+
+
+async def test_list_room_messages_uses_repo_with_page_guard(monkeypatch):
+    room = {"_id": ObjectId(), "courseId": "course-1"}
+    list_room_messages = AsyncMock(
+        return_value=[
+            {"_id": ObjectId(), "content": "newest", "sentAt": "2026-06-02T10:00:00Z"},
+            {"_id": ObjectId(), "content": "older", "sentAt": "2026-06-02T09:00:00Z"},
+            {"_id": ObjectId(), "content": "oldest", "sentAt": "2026-06-02T08:00:00Z"},
+        ]
+    )
+
+    monkeypatch.setattr(message_service, "get_room_for_member", AsyncMock(return_value=room))
+    monkeypatch.setattr(message_service.chat_message_repo, "list_room_messages", list_room_messages)
+
+    result = await message_service.list_room_messages(
+        room_id="room-1",
+        user_id="user-1",
+        before="2026-06-02T11:00:00Z",
+        limit=2,
+    )
+
+    assert list_room_messages.await_args.kwargs == {
+        "room_id": "room-1",
+        "before": "2026-06-02T11:00:00Z",
+        "exclude_deleted_for": "user-1",
+        "limit": 3,
+    }
+    assert result["hasMore"] is True
+    assert [msg["content"] for msg in result["messages"]] == ["older", "newest"]
+
+
+async def test_fetch_room_messages_uses_repo_since_and_limit(monkeypatch):
+    list_room_messages = AsyncMock(
+        return_value=[
+            {"_id": ObjectId(), "content": "newest"},
+            {"_id": ObjectId(), "content": "older"},
+        ]
+    )
+    monkeypatch.setattr(chat_ai_service.chat_message_repo, "list_room_messages", list_room_messages)
+
+    messages = await chat_ai_service._fetch_room_messages(
+        "room-1",
+        limit=2,
+        since="2026-06-01T00:00:00Z",
+    )
+
+    assert list_room_messages.await_args.kwargs == {
+        "room_id": "room-1",
+        "since": "2026-06-01T00:00:00Z",
+        "limit": 2,
+    }
+    assert [msg["content"] for msg in messages] == ["older", "newest"]
 
 
 async def test_search_users_for_contacts_preserves_shape_and_skips_self(monkeypatch):
@@ -527,3 +707,83 @@ async def test_list_ai_users_preserves_admin_file_center_shape_with_repo_counts(
         "skip": 10,
         "limit": 2,
     }
+
+
+async def test_list_chat_rooms_pages_before_counting_room_assets(monkeypatch):
+    room_a = ObjectId()
+    room_b = ObjectId()
+    room_docs = [
+        {
+            "_id": room_a,
+            "name": "Room A",
+            "type": "group",
+            "courseId": "course-a",
+            "members": ["u1", "u2"],
+            "createdAt": datetime(2026, 6, 2, tzinfo=timezone.utc),
+        },
+        {
+            "_id": room_b,
+            "name": "Room B",
+            "type": "group",
+            "courseId": "course-b",
+            "members": ["u1"],
+            "createdAt": datetime(2026, 6, 1, tzinfo=timezone.utc),
+        },
+    ]
+    list_group_rooms_page = AsyncMock(return_value=(5, room_docs))
+    count_assets = AsyncMock(return_value={str(room_a): 3, str(room_b): 1})
+
+    monkeypatch.setattr(
+        file_center_service.chat_room_repo,
+        "list_group_rooms_page",
+        list_group_rooms_page,
+    )
+    monkeypatch.setattr(
+        file_center_service.file_asset_repo,
+        "count_chat_group_assets_by_room_ids",
+        count_assets,
+    )
+
+    result = await file_center_service.list_chat_rooms(skip=2, limit=2)
+
+    assert list_group_rooms_page.await_args.kwargs == {
+        "skip": 2,
+        "limit": 2,
+        "projection": {"name": 1, "type": 1, "courseId": 1, "members": 1, "createdAt": 1},
+    }
+    assert count_assets.await_args.args == ([str(room_a), str(room_b)],)
+    assert result["rooms"][0]["asset_count"] == 3
+    assert result["rooms"][0]["created_at"] == "2026-06-02T00:00:00+00:00"
+    assert result["total"] == 5
+    assert result["hasMore"] is True
+    assert result["nextSkip"] == 4
+
+
+async def test_list_courses_for_group_batches_existing_room_lookup(monkeypatch):
+    course_a = ObjectId()
+    course_b = ObjectId()
+    room_a = ObjectId()
+    fake_sections = _FakeCourseSectionsCollection(
+        [
+            {"_id": course_a, "courseCode": "CS101", "courseName": "Algorithms"},
+            {"_id": course_b, "courseCode": "CS102", "courseName": "Databases"},
+        ]
+    )
+    fake_rooms = _FakeRoomsByCourseCollection(
+        [{"_id": room_a, "courseId": str(course_a)}]
+    )
+
+    monkeypatch.setattr(room_service.db, "course_sections", fake_sections, raising=False)
+    monkeypatch.setattr(room_service.db, "chat_rooms", fake_rooms, raising=False)
+
+    result = await room_service.list_courses_for_group({"id": str(ObjectId()), "role": "admin"})
+
+    assert result == [
+        {"id": str(course_a), "name": "Algorithms", "existingRoomId": str(room_a)},
+        {"id": str(course_b), "name": "Databases", "existingRoomId": None},
+    ]
+    assert len(fake_rooms.find_calls) == 1
+    room_query, room_projection = fake_rooms.find_calls[0]
+    assert room_query == {"courseId": {"$in": [str(course_a), str(course_b)]}, "type": "group"}
+    assert room_projection == {"_id": 1, "courseId": 1}
+    assert fake_rooms.find_one_calls == []

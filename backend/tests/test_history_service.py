@@ -79,10 +79,17 @@ def test_list_history_single_tool_uses_shared_repo(monkeypatch):
     assert items[0]["_collection_name"] == "video_generation_history"
 
     find_args = find_many.await_args.args
+    find_kwargs = find_many.await_args.kwargs
     assert find_args[0] == "video_generation_history"
     assert find_args[1]["user_id"] == "user-1"
     assert find_args[1]["deleted_at"] == {"$exists": False}
     assert "$or" in find_args[1]
+    assert find_kwargs == {
+        "projection": {"result_full": 0},
+        "skip": 5,
+        "limit": 5,
+        "sort": [("created_at", -1)],
+    }
     count.assert_awaited_once()
 
 
@@ -254,4 +261,3 @@ def test_save_history_record_writes_aware_utc_created_at(monkeypatch):
     assert inserted["created_at"].tzinfo == timezone.utc
     assert inserted["source"] == {"source_filename": "deck.md"}
     assert inserted["tool"] == "generate_render"
-

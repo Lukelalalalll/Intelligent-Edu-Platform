@@ -48,7 +48,8 @@ async def list_ai_user_assets_for_admin(
     user_id: str,
     group_by: str = Query(default="day", pattern="^(day|month)$"),
     status: str = Query(default="", max_length=32),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=0, ge=0, le=500),
     admin: dict = Depends(get_admin_user),
 ):
-    return await list_ai_user_assets(user_id=user_id, group_by=group_by, status=status)
-
+    return await list_ai_user_assets(user_id=user_id, group_by=group_by, status=status, skip=skip, limit=limit)

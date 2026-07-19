@@ -12,6 +12,18 @@ def _user_oid(user_id: str | ObjectId) -> ObjectId | None:
     return coerce_object_id(user_id)
 
 
+def find_users_cursor(
+    *,
+    filt: dict[str, Any] | None = None,
+    projection: dict[str, Any] | None = None,
+    sort: list[tuple[str, int]] | None = None,
+):
+    cursor = db.users.find(filt or {}, projection)
+    if sort:
+        cursor = cursor.sort(sort)
+    return cursor
+
+
 async def find_by_username(username: str, projection: dict[str, Any] | None = None) -> dict[str, Any] | None:
     return await db.users.find_one({"username": username}, projection)
 
@@ -68,14 +80,12 @@ async def list_users(
     limit: int = 0,
     sort: list[tuple[str, int]] | None = None,
 ) -> list[dict[str, Any]]:
-    cursor = db.users.find(filt or {}, projection)
-    if sort:
-        cursor = cursor.sort(sort)
+    cursor = find_users_cursor(filt=filt, projection=projection, sort=sort)
     if skip:
         cursor = cursor.skip(skip)
     if limit:
         cursor = cursor.limit(limit)
-    return await cursor.to_list(length=limit or 0)
+    return await cursor.to_list(length=limit or None)
 
 
 async def count_users(filt: dict[str, Any] | None = None) -> int:

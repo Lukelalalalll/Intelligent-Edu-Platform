@@ -58,6 +58,11 @@ class TestValidateUrl:
             _validate_url("http://[::1]:8080/")
         assert "private" in str(exc.value.detail).lower() or "reserved" in str(exc.value.detail).lower()
 
+    def test_rejects_documentation_reserved_ip(self):
+        with pytest.raises(Exception) as exc:
+            _validate_url("http://192.0.2.10/example")
+        assert "private" in str(exc.value.detail).lower() or "reserved" in str(exc.value.detail).lower()
+
 
 class TestFollowRedirectsSafely:
     """Tests for _follow_redirects_safely with redirect validation."""
@@ -120,12 +125,32 @@ class TestFollowRedirectsSafely:
         resp = MagicMock()
         resp.is_redirect = False
         resp.is_permanent_redirect = False
+        resp.url = "https://example.com/large"
+        resp.headers = {}
         resp.content = b"x" * (MAX_RESPONSE_BYTES + 1)
         mock_get.return_value = resp
 
         with pytest.raises(Exception) as exc:
             _follow_redirects_safely(mock_get, "https://example.com/large")
         assert "too large" in str(exc.value.detail).lower()
+
+    def test_rejects_unexpected_content_type(self):
+        mock_get = MagicMock()
+        resp = MagicMock()
+        resp.is_redirect = False
+        resp.is_permanent_redirect = False
+        resp.url = "https://example.com/file"
+        resp.headers = {"Content-Type": "text/html"}
+        resp.content = b"<html></html>"
+        mock_get.return_value = resp
+
+        with pytest.raises(Exception) as exc:
+            _follow_redirects_safely(
+                mock_get,
+                "https://example.com/file",
+                allowed_content_types=("image/",),
+            )
+        assert "content type" in str(exc.value.detail).lower()
 
     def test_safe_get_uses_follow_redirects(self):
         with patch("backend.core.safe_requests._follow_redirects_safely") as mock_follow:

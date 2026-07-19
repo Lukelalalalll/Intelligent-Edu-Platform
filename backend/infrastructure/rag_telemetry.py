@@ -20,8 +20,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from backend.core.database import db
 from backend.infrastructure.quantiles import TDigest
+from backend.repositories import telemetry_repo
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,14 @@ DEFAULT_THRESHOLDS: Dict[str, float] = {
     "empty_retrieval_rate": 0.25,   # > 25 %
     "hit_rate_drop_pct": 10,        # > 10 % drop vs baseline
 }
+
+
+def _clamp_limit(value: int, *, default: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(1, min(maximum, parsed))
 
 
 class RAGTelemetry:
@@ -67,7 +75,7 @@ class RAGTelemetry:
         if metadata:
             doc["metadata"] = metadata
         try:
-            await db[COLLECTION].insert_one(doc)
+            await telemetry_repo.insert_rag(doc)
         except Exception:
             logger.exception("Failed to record RAG telemetry")
 
@@ -88,7 +96,7 @@ class RAGTelemetry:
                 }
             },
         ]
-        rows = await db[COLLECTION].aggregate(pipeline).to_list(1)
+        rows = await telemetry_repo.aggregate_rag(pipeline, length=1)
         if not rows:
             return {"period_hours": hours, "total": 0}
 
@@ -112,8 +120,9 @@ class RAGTelemetry:
         }
 
     # ── read: per-course breakdown ──────────────────────────────────
-    async def get_course_breakdown(self, hours: int = 24) -> List[Dict[str, Any]]:
+    async def get_course_breakdown(self, hours: int = 24, limit: int = 200) -> List[Dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        safe_limit = _clamp_limit(limit, default=200, maximum=500)
         pipeline = [
             {"$match": {"timestamp": {"$gte": cutoff}}},
             {"$unwind": "$course_ids"},
@@ -139,11 +148,12 @@ class RAGTelemetry:
                 }
             },
         ]
-        return await db[COLLECTION].aggregate(pipeline).to_list(200)
+        return await telemetry_repo.aggregate_rag(pipeline, length=safe_limit)
 
     # ── read: per-role breakdown ────────────────────────────────────
-    async def get_role_breakdown(self, hours: int = 24) -> List[Dict[str, Any]]:
+    async def get_role_breakdown(self, hours: int = 24, limit: int = 20) -> List[Dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        safe_limit = _clamp_limit(limit, default=20, maximum=100)
         pipeline = [
             {"$match": {"timestamp": {"$gte": cutoff}}},
             {
@@ -165,7 +175,7 @@ class RAGTelemetry:
                 }
             },
         ]
-        return await db[COLLECTION].aggregate(pipeline).to_list(20)
+        return await telemetry_repo.aggregate_rag(pipeline, length=safe_limit)
 
     # ── helpers ──────────────────────────────────────────────────────
     async def _get_hit_rate(self, start: datetime, end: datetime) -> float | None:
@@ -180,7 +190,7 @@ class RAGTelemetry:
                 }
             },
         ]
-        rows = await db[COLLECTION].aggregate(pipeline).to_list(1)
+        rows = await telemetry_repo.aggregate_rag(pipeline, length=1)
         if not rows or rows[0]["total"] == 0:
             return None
         return rows[0]["hits"] / rows[0]["total"]

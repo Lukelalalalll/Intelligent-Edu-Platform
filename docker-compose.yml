@@ -39,6 +39,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -128,6 +129,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -175,6 +177,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -224,6 +227,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -275,6 +279,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -328,6 +333,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"
@@ -378,6 +384,7 @@ services:
       SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY via docker compose --env-file /secure/path/compose.prod.env}"
       JWT_COOKIE_SECURE: "true"
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
       JWT_COOKIE_CSRF_PROTECT: "true"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to your production origin list}"
       INTERNAL_GATEWAY_TOKEN: "${INTERNAL_GATEWAY_TOKEN:?Set INTERNAL_GATEWAY_TOKEN via docker compose --env-file /secure/path/compose.prod.env}"

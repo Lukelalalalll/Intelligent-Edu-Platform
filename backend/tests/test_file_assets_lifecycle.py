@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from bson import ObjectId
 
@@ -35,15 +36,15 @@ class _FakeAISessionCollection:
 
 async def test_check_references_uses_shared_object_id_helper(monkeypatch):
     owner_oid = ObjectId()
-    fake_chat_messages = _FakeFindOneCollection({"_id": owner_oid})
-    monkeypatch.setattr(lifecycle.db, "chat_messages", fake_chat_messages, raising=False)
+    find_by_id = AsyncMock(return_value={"_id": owner_oid})
+    monkeypatch.setattr(lifecycle.chat_message_repo, "find_by_id", find_by_id)
 
     result = await lifecycle.check_references(
         {"owner_type": "chat_message", "owner_id": str(owner_oid)}
     )
 
     assert result == {"ok_to_delete": False, "reason": "chat_message_reference"}
-    assert fake_chat_messages.calls == [{"_id": owner_oid}]
+    find_by_id.assert_awaited_once_with(owner_oid)
 
 
 async def test_delete_ai_session_image_updates_messages_with_aware_timestamp(monkeypatch):

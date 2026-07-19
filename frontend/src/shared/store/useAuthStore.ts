@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 
+/** Auth state before and after the browser session has been checked. */
 export type AuthStatus = 'unknown' | 'authenticated' | 'anonymous';
+
+/** Maximum age of a validated browser session before it is refreshed. */
 export const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
 
+/** Authenticated user shape consumed by route guards and shared navigation. */
 export interface User {
     id: string;
     username: string;
@@ -14,6 +18,7 @@ export interface User {
     [key: string]: any;
 }
 
+/** Global auth store contract used by guards, API interceptors, and profile flows. */
 interface AuthState {
     user: User | null;
     status: AuthStatus;
@@ -26,6 +31,7 @@ interface AuthState {
     completeSessionCheck: (userData: User | null, options?: { validatedAt?: number }) => void;
 }
 
+/** Centralized browser auth state for session bootstrap and route protection. */
 export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     status: 'unknown',

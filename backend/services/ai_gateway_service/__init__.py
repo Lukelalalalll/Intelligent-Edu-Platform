@@ -1,5 +1,6 @@
 """AIGatewayService — thin facade delegating to sub-modules."""
 import os
+import json
 import logging
 from typing import AsyncGenerator, Optional, Dict, Any
 
@@ -44,7 +45,10 @@ class AIGatewayService:
         if p == "deepseek":
             return await self.deepseek.health_check()
         if p in {"openai", "bigmodel"}:
-            return await OpenAIService().health_check()
+            return await OpenAIService(
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+            ).health_check()
         return False, "Unknown provider"
 
     async def check_runtime_health(self, runtime) -> tuple[bool, str]:
@@ -54,6 +58,8 @@ class AIGatewayService:
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).health_check()
         if p == "deepseek":
             return await DeepSeekService(
@@ -131,7 +137,10 @@ class AIGatewayService:
         if p in {"openai", "bigmodel"}:
             logger.info("Using %s provider", p)
             try:
-                service = OpenAIService()
+                service = OpenAIService(
+                    provider_id=p,
+                    credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                )
                 return await service.chat(message=message, context=context)
             except OpenAIUnavailableError as e:
                 if not allow_fallback:
@@ -186,6 +195,8 @@ class AIGatewayService:
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat(message=message, context=context)
         if p == "deepseek":
             return await DeepSeekService(
@@ -199,6 +210,127 @@ class AIGatewayService:
             provider=p,
             allow_fallback=allow_fallback,
         )
+
+    async def chat_with_tools_runtime(
+        self,
+        *,
+        runtime,
+        messages: list[dict],
+        tools: list[dict],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        """Run tool calling against a resolved provider runtime.
+
+        OpenAI-compatible providers use native tools. Coze does not expose a
+        compatible function-calling surface here, so it uses a strict JSON
+        planner fallback that the caller can execute.
+        """
+        p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
+        user_message = next(
+            (str(item.get("content") or "") for item in reversed(messages) if item.get("role") == "user"),
+            "",
+        )
+        if p in {"openai", "bigmodel"}:
+            return await OpenAIService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+            ).chat_with_tools(
+                message=user_message,
+                tools=tools,
+                context=context,
+                raw_messages=messages,
+            )
+        if p == "deepseek":
+            return await DeepSeekService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+            ).chat_with_tools(
+                message=user_message,
+                tools=tools,
+                context=context,
+                raw_messages=messages,
+            )
+        if p == "local_ollama":
+            return await self.local_llm.chat_with_tools(
+                message=user_message,
+                tools=tools,
+                context=context,
+                raw_messages=messages,
+            )
+
+        return await self._chat_with_tools_json_planner(
+            messages=messages,
+            tools=tools,
+            runtime=runtime,
+            context=context,
+        )
+
+    async def _chat_with_tools_json_planner(
+        self,
+        *,
+        messages: list[dict],
+        tools: list[dict],
+        runtime,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        tool_specs = []
+        for tool in tools or []:
+            function = tool.get("function") or {}
+            tool_specs.append({
+                "name": function.get("name"),
+                "description": function.get("description"),
+                "parameters": function.get("parameters"),
+            })
+        planner_prompt = (
+            "You are a tool planner. Decide whether to call one of the allowed tools.\n"
+            "Return ONLY compact JSON with this exact shape:\n"
+            "{\"content\":\"short user-facing message\",\"tool_calls\":["
+            "{\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"tool_name\",\"arguments\":\"{}\"}}"
+            "]}\n"
+            "Use an empty tool_calls array only when no tool is needed.\n\n"
+            f"Allowed tools:\n{json.dumps(tool_specs, ensure_ascii=False)}\n\n"
+            f"Conversation:\n{json.dumps(messages, ensure_ascii=False)}"
+        )
+        raw = await self.chat_with_runtime(
+            message=planner_prompt,
+            context=context,
+            runtime=runtime,
+            allow_fallback=False,
+        )
+        parsed = self._parse_json_object(raw)
+        if not isinstance(parsed, dict):
+            return {"content": raw, "tool_calls": None}
+        return {
+            "content": str(parsed.get("content") or ""),
+            "tool_calls": parsed.get("tool_calls"),
+        }
+
+    @staticmethod
+    def _parse_json_object(raw: str) -> dict[str, Any] | None:
+        text = str(raw or "").strip()
+        if not text:
+            return None
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.lower().startswith("json"):
+                text = text[4:].strip()
+        try:
+            value = json.loads(text)
+            return value if isinstance(value, dict) else None
+        except json.JSONDecodeError:
+            start = text.find("{")
+            end = text.rfind("}")
+            if start >= 0 and end > start:
+                try:
+                    value = json.loads(text[start:end + 1])
+                    return value if isinstance(value, dict) else None
+                except json.JSONDecodeError:
+                    return None
+        return None
 
     async def chat_stream_with_provider(
         self,
@@ -216,7 +348,10 @@ class AIGatewayService:
             return
 
         if p in {"openai", "bigmodel"}:
-            async for chunk in OpenAIService().chat_stream(message=message, context=context):
+            async for chunk in OpenAIService(
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+            ).chat_stream(message=message, context=context):
                 yield chunk
             return
 
@@ -254,6 +389,8 @@ class AIGatewayService:
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
+                provider_id=p,
+                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat_stream(message=message, context=context):
                 yield chunk
             return

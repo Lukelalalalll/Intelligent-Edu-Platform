@@ -56,9 +56,13 @@ function wrapRoute(route: RouteConfig) {
   return element;
 }
 
+/** Routes rendered inside the shared app shell keep the sidebar and top-level layout. */
 const layoutRoutes = ROUTES.filter((r) => !r.fullScreen);
+
+/** Full-screen routes opt out of layout chrome for editors, renderers, and exports. */
 const fullScreenRoutes = ROUTES.filter((r) => r.fullScreen);
 
+/** Bootstraps session state and renders the route tree for the current location. */
 function AppShell() {
   const location = useLocation();
   useAuthBootstrap({ enabled: !shouldBypassAuthBootstrap(location.pathname) });
@@ -91,11 +95,11 @@ function AppShell() {
                   element={wrapRoute(route)}
                 />
               ))}
-              {/* Catch-all: redirect unknown paths under layout to home */}
+              {/* Keep unknown in-layout routes inside the authenticated shell. */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
 
-            {/* Full-screen routes - outside <Layout> (no sidebar/navbar) */}
+            {/* Full-screen routes render outside <Layout> so canvas-like tools own the viewport. */}
             {fullScreenRoutes.map((route) => (
               <Route
                 key={route.path}
@@ -110,6 +114,7 @@ function AppShell() {
   );
 }
 
+/** Mounts global providers that must wrap all feature routes. */
 function App() {
   return (
     <BrowserRouter>

@@ -4,9 +4,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from backend.core.database import db
 from backend.core.utils import safe_object_id
-from backend.repositories import user_repo
+from backend.repositories import chat_message_repo, chat_room_repo, user_repo
 from backend.repositories._helpers import utcnow
 
 
@@ -43,10 +42,8 @@ async def get_room_for_member(
     projection: dict[str, Any] | None = None,
     raise_not_found: bool = True,
 ) -> dict[str, Any] | None:
-    room = await db.chat_rooms.find_one(
-        {"_id": safe_object_id(room_id, label="room"), "members": user_id},
-        projection,
-    )
+    safe_object_id(room_id, label="room")
+    room = await chat_room_repo.find_for_member(room_id, user_id, projection)
     if not room and raise_not_found:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
@@ -57,7 +54,8 @@ async def get_room_by_id(
     *,
     projection: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    return await db.chat_rooms.find_one({"_id": safe_object_id(room_id, label="room")}, projection)
+    safe_object_id(room_id, label="room")
+    return await chat_room_repo.find_by_id(room_id, projection)
 
 
 async def get_message_by_id(
@@ -65,7 +63,8 @@ async def get_message_by_id(
     *,
     projection: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    return await db.chat_messages.find_one({"_id": safe_object_id(message_id, label="message")}, projection)
+    oid = safe_object_id(message_id, label="message")
+    return await chat_message_repo.find_by_id(oid, projection)
 
 
 async def get_user_map(user_ids: list[str]) -> dict[str, dict[str, Any]]:
@@ -82,4 +81,3 @@ async def get_user_map(user_ids: list[str]) -> dict[str, dict[str, Any]]:
             "role": user.get("role", "student"),
         }
     return user_map
-
