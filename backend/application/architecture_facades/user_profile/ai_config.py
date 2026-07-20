@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from backend.core.database import db
+from backend.core.openai_base_url import normalize_openai_base_url
 from backend.services.secret_storage import decrypt_secret, encrypt_secret
 
 _DEFAULT_DEEPSEEK_CONFIG = {
@@ -15,13 +16,13 @@ _DEFAULT_DEEPSEEK_CONFIG = {
 
 _DEFAULT_OPENAI_CONFIG = {
     "base_url": "https://api.openai.com/v1",
-    "model": "gpt-5.5",
+    "model": "gpt-5.6",
     "stream": False,
 }
 
 _DEFAULT_MULTIMODAL_OPENAI_CONFIG = {
     "base_url": "https://api.openai.com/v1",
-    "model": "gpt-4o",
+    "model": "gpt-5.6",
     "stream": False,
 }
 
@@ -68,6 +69,7 @@ def build_openai_response(
     raw = raw_config or {}
     encrypted_key = raw.get("api_key_encrypted") or raw.get("api_key") or ""
     config_defaults = defaults or _DEFAULT_OPENAI_CONFIG
+    raw_base_url = raw.get("base_url") or config_defaults["base_url"]
     return {
         **config_defaults,
         **{
@@ -75,6 +77,7 @@ def build_openai_response(
             for key in config_defaults
             if raw.get(key) is not None
         },
+        "base_url": normalize_openai_base_url(raw_base_url),
         "api_key": decrypt_secret(encrypted_key) if include_api_key else "",
         "api_key_set": bool(decrypt_secret(encrypted_key)),
         "updated_at": raw.get("updated_at"),

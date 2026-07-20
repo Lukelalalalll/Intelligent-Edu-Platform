@@ -120,7 +120,7 @@ export function useUploadPageController() {
         id: "openai" as const,
         label: "OpenAI",
         configured: Boolean(aiConfig?.openai?.api_key_set),
-        model: aiConfig?.openai?.model || llmConfig.OPENAI_MODEL || "gpt-5.5",
+        model: aiConfig?.openai?.model || llmConfig.OPENAI_MODEL || "gpt-5.6",
       },
       {
         id: "bigmodel" as const,
@@ -148,7 +148,7 @@ export function useUploadPageController() {
   const multimodalSummary = useMemo(() => {
     const multimodalOptions = [
       aiConfig?.multimodal?.openai?.api_key_set
-        ? `OpenAI (${aiConfig.multimodal.openai.model || "gpt-4o"})`
+        ? `OpenAI (${aiConfig.multimodal.openai.model || "gpt-5.6"})`
         : null,
       aiConfig?.multimodal?.bigmodel?.api_key_set
         ? `BigModel (${aiConfig.multimodal.bigmodel.model || "glm-5v-flash"})`

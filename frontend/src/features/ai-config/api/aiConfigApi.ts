@@ -85,7 +85,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
     base_url: 'https://api.openai.com/v1',
     api_key: '',
     api_key_set: false,
-    model: 'gpt-5.5',
+    model: 'gpt-5.6',
     stream: false,
     updated_at: null,
 };
@@ -94,7 +94,7 @@ export const DEFAULT_MULTIMODAL_OPENAI_CONFIG: MultimodalOpenAIConfig = {
     base_url: 'https://api.openai.com/v1',
     api_key: '',
     api_key_set: false,
-    model: 'gpt-4o',
+    model: 'gpt-5.6',
     stream: false,
     updated_at: null,
 };

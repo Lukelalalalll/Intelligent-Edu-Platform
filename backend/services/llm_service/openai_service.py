@@ -9,6 +9,7 @@ import json
 import httpx
 
 from backend.config import Config
+from backend.core.openai_base_url import normalize_openai_base_url
 from backend.infrastructure import TelemetryTimer
 from backend.services.llm_service.message_builder import build_llm_messages
 
@@ -30,7 +31,7 @@ class OpenAIService:
         credential_alias: str = "OPENAI_API_KEY",
     ):
         self.api_key = (api_key or Config.OPENAI_API_KEY or "").strip()
-        self.base_url = (base_url or Config.OPENAI_BASE_URL).rstrip("/")
+        self.base_url = normalize_openai_base_url(base_url or Config.OPENAI_BASE_URL)
         self.model = (model or Config.OPENAI_MODEL).strip()
         self.provider_id = provider_id
         self.credential_alias = credential_alias

@@ -4,6 +4,8 @@ from typing import ClassVar
 
 from pydantic import field_validator
 
+from backend.core.openai_base_url import normalize_openai_base_url
+
 from .security import SecuritySettingsSegment
 
 
@@ -39,7 +41,7 @@ class ProviderSettingsSegment(SecuritySettingsSegment):
 
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "gpt-5.5"
+    OPENAI_MODEL: str = "gpt-5.6"
     OPENAI_REQUEST_TIMEOUT_SECONDS: float = 120.0
     OPENAI_TEMPERATURE: float = 0.4
     OPENAI_MAX_TOKENS: int = 4096
@@ -81,6 +83,11 @@ class ProviderSettingsSegment(SecuritySettingsSegment):
     @classmethod
     def strip_ollama_url(cls, value: str) -> str:
         return (str(value or "http://localhost:11434") or "").strip().rstrip("/")
+
+    @field_validator("OPENAI_BASE_URL", mode="before")
+    @classmethod
+    def normalize_openai_url(cls, value: str) -> str:
+        return normalize_openai_base_url(str(value or "https://api.openai.com/v1"))
 
     @field_validator("COMFYUI_BASE_URL", mode="before")
     @classmethod

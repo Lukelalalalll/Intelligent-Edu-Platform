@@ -80,7 +80,7 @@ def build_ppt_generator_user_config_summary(
     return {
         "LLM": selected_llm if selected_llm in {"openai", "deepseek", "bigmodel"} else "openai",
         "OPENAI_API_KEY": CONFIGURED_SENTINEL if has_openai else "",
-        "OPENAI_MODEL": openai_runtime.get("model") or "gpt-5.5",
+        "OPENAI_MODEL": openai_runtime.get("model") or "gpt-5.6",
         "DEEPSEEK_API_KEY": CONFIGURED_SENTINEL if has_deepseek else "",
         "DEEPSEEK_MODEL": deepseek_runtime.get("model") or "deepseek-v4-pro",
         "DEEPSEEK_BASE_URL": deepseek_runtime.get("base_url") or "https://api.deepseek.com",
@@ -169,7 +169,7 @@ async def load_ppt_generator_host_config(
         "OPENAI_MODEL": (
             resolved_runtime.model
             if resolved_runtime and resolved_runtime.provider_id == "openai"
-            else openai_runtime.get("model") or "gpt-5.5"
+            else openai_runtime.get("model") or "gpt-5.6"
         ),
         "OPENAI_BASE_URL": (
             resolved_runtime.base_url
@@ -224,7 +224,7 @@ async def load_ppt_generator_host_config(
                 {
                     "LLM": "openai",
                     "OPENAI_API_KEY": multimodal_openai_runtime.get("api_key") or "",
-                    "OPENAI_MODEL": multimodal_openai_runtime.get("model") or "gpt-4o",
+                    "OPENAI_MODEL": multimodal_openai_runtime.get("model") or "gpt-5.6",
                     "OPENAI_BASE_URL": multimodal_openai_runtime.get("base_url")
                     or "https://api.openai.com/v1",
                 }

@@ -46,14 +46,21 @@ export const DEEPSEEK_MODEL_OPTIONS = [
 ];
 
 export const OPENAI_MODEL_OPTIONS = [
+    'gpt-5.6',
+    'gpt-5.6-terra',
+    'gpt-5.6-luna',
     'gpt-5.5',
-    'gpt-5.5-mini',
+    'gpt-5-mini',
     'gpt-4.1',
-    'gpt-4o',
+    'gpt-4.1-mini',
 ];
 
 export const MULTIMODAL_OPENAI_MODEL_OPTIONS = [
-    'gpt-4o',
+    'gpt-5.6',
+    'gpt-5.6-terra',
+    'gpt-5.6-luna',
+    'gpt-5.5',
+    'gpt-5-mini',
     'gpt-4.1',
     'gpt-4o-mini',
 ];

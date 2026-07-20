@@ -3,6 +3,8 @@ from typing import List, Optional, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from backend.core.openai_base_url import normalize_openai_base_url
+
 
 def _camel_to_snake(name: str) -> str:
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
@@ -183,16 +185,16 @@ class OpenAIConfigSchema(BaseModel):
     base_url: str = Field(default="https://api.openai.com/v1", max_length=240)
     api_key: Optional[str] = Field(default=None, max_length=4096)
     clear_api_key: bool = False
-    model: str = Field(default="gpt-5.5", min_length=1, max_length=80)
+    model: str = Field(default="gpt-5.6", min_length=1, max_length=80)
     stream: bool = False
 
     @field_validator("base_url")
     @classmethod
     def validate_url(cls, value: str) -> str:
-        cleaned = value.strip().rstrip("/")
+        cleaned = value.strip()
         if not cleaned.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
-        return cleaned
+        return normalize_openai_base_url(cleaned)
 
     @field_validator("model")
     @classmethod
@@ -204,16 +206,16 @@ class MultimodalOpenAIConfigSchema(BaseModel):
     base_url: str = Field(default="https://api.openai.com/v1", max_length=240)
     api_key: Optional[str] = Field(default=None, max_length=4096)
     clear_api_key: bool = False
-    model: str = Field(default="gpt-4o", min_length=1, max_length=80)
+    model: str = Field(default="gpt-5.6", min_length=1, max_length=80)
     stream: bool = False
 
     @field_validator("base_url")
     @classmethod
     def validate_url(cls, value: str) -> str:
-        cleaned = value.strip().rstrip("/")
+        cleaned = value.strip()
         if not cleaned.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
-        return cleaned
+        return normalize_openai_base_url(cleaned)
 
     @field_validator("model")
     @classmethod

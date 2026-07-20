@@ -103,7 +103,7 @@ async def _runtime_for_provider(
             provider_id="openai",
             requested_provider=requested,
             config_source=source,
-            model=str(config.get("model") or getattr(Config, "OPENAI_MODEL", "gpt-5.5")),
+            model=str(config.get("model") or getattr(Config, "OPENAI_MODEL", "gpt-5.6")),
             base_url=str(config.get("base_url") or getattr(Config, "OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip("/"),
             stream=bool(config.get("stream", False)),
             capabilities=_capabilities("openai"),
