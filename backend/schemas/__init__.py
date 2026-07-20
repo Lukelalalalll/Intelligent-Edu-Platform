@@ -22,7 +22,9 @@ from backend.schemas.auth import (  # noqa: F401
     StepUpVerifySchema,
     TeacherPreferencesSchema,
     BigModelConfigSchema,
+    ClaudeConfigSchema,
     DeepSeekConfigSchema,
+    MiniMaxConfigSchema,
     MultimodalOpenAIConfigSchema,
     OpenAIConfigSchema,
 )
@@ -119,4 +121,3 @@ from backend.schemas.chat import (  # noqa: F401
     ChatAiAssistantSchema,
     ChatTransferStartSchema,
 )
-

@@ -93,6 +93,8 @@ export interface UploadStatusItem {
   value: string;
 }
 
+type UploadTranslationFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
 export function getInitialPresentationConfig(locale: Locale): PresentationConfig {
   return {
     slides: null,
@@ -151,6 +153,10 @@ export const getSelectedTextModel = (config?: LLMConfig): string => {
       return config.OPENAI_MODEL || "";
     case "deepseek":
       return config.DEEPSEEK_MODEL || "";
+    case "bigmodel":
+      return config.BIGMODEL_MODEL || "";
+    case "minimax":
+      return config.MINIMAX_MODEL || "";
     case "google":
       return config.GOOGLE_MODEL || "";
     case "vertex":
@@ -257,7 +263,7 @@ export function buildUploadActionSummary({
   inputReady: boolean;
   filesCount: number;
   nextStepLabel: string;
-  t: (key: TranslationKey) => string;
+  t: UploadTranslationFn;
 }): UploadActionItem[] {
   return [
     {
@@ -292,7 +298,7 @@ export function buildUploadStatusCards({
   generationPathLabel: string;
   slides: string | null;
   language: string | null;
-  t: (key: TranslationKey) => string;
+  t: UploadTranslationFn;
 }): UploadStatusItem[] {
   return [
     {
@@ -314,4 +320,3 @@ export function buildUploadStatusCards({
     },
   ];
 }
-

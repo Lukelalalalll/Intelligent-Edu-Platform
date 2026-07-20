@@ -1,4 +1,4 @@
-export type AIProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'bigmodel';
+export type AIProvider = 'auto' | 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'claude' | 'bigmodel' | 'minimax';
 
 const AI_PROVIDER_STORAGE_KEY = 'ai_provider';
 
@@ -20,7 +20,9 @@ export function getStoredAIProvider(defaultProvider: AIProvider = 'local_ollama'
     if (raw === 'coze') return 'coze';
     if (raw === 'deepseek') return 'deepseek';
     if (raw === 'openai') return 'openai';
+    if (raw === 'claude') return 'claude';
     if (raw === 'bigmodel') return 'bigmodel';
+    if (raw === 'minimax') return 'minimax';
     return defaultProvider;
 }
 

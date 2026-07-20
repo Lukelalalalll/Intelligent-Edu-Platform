@@ -27,12 +27,31 @@ const buildConfig = (): AIConfigResponse => ({
         stream: false,
         updated_at: null,
     },
+    claude: {
+        base_url: 'https://api.anthropic.com/v1',
+        api_key: '',
+        api_key_set: true,
+        model: 'claude-sonnet-5',
+        stream: false,
+        updated_at: null,
+    },
     bigmodel: {
         base_url: 'https://open.bigmodel.cn/api/paas/v4',
         api_key: '',
         api_key_set: true,
         text_model: 'glm-4.5-flash',
         image_model: 'glm-5v-flash',
+        stream: false,
+        updated_at: null,
+    },
+    minimax: {
+        base_url: 'https://api.minimaxi.com/v1',
+        image_base_url: 'https://api.minimaxi.com/v1',
+        api_key: '',
+        api_key_set: true,
+        text_model: 'MiniMax-M2.7',
+        multimodal_model: 'MiniMax-M3',
+        image_model: 'image-01',
         stream: false,
         updated_at: null,
     },
@@ -55,11 +74,27 @@ const buildConfig = (): AIConfigResponse => ({
             stream: false,
             updated_at: null,
         },
+        claude: {
+            base_url: 'https://api.anthropic.com/v1',
+            api_key: '',
+            api_key_set: true,
+            model: 'claude-sonnet-5',
+            stream: false,
+            updated_at: null,
+        },
         bigmodel: {
             base_url: 'https://open.bigmodel.cn/api/paas/v4',
             api_key: '',
             api_key_set: true,
             model: 'glm-4.5-flash',
+            stream: false,
+            updated_at: null,
+        },
+        minimax: {
+            base_url: 'https://api.minimaxi.com/v1',
+            api_key: '',
+            api_key_set: true,
+            model: 'MiniMax-M2.7',
             stream: false,
             updated_at: null,
         },
@@ -73,11 +108,37 @@ const buildConfig = (): AIConfigResponse => ({
             stream: false,
             updated_at: null,
         },
+        claude: {
+            base_url: 'https://api.anthropic.com/v1',
+            api_key: '',
+            api_key_set: true,
+            model: 'claude-sonnet-5',
+            stream: false,
+            updated_at: null,
+        },
         bigmodel: {
             base_url: 'https://open.bigmodel.cn/api/paas/v4',
             api_key: '',
             api_key_set: true,
             model: 'glm-5v-flash',
+            stream: false,
+            updated_at: null,
+        },
+        minimax: {
+            base_url: 'https://api.minimaxi.com/v1',
+            api_key: '',
+            api_key_set: true,
+            model: 'MiniMax-M3',
+            stream: false,
+            updated_at: null,
+        },
+    },
+    image: {
+        minimax: {
+            base_url: 'https://api.minimaxi.com/v1',
+            api_key: '',
+            api_key_set: true,
+            model: 'image-01',
             stream: false,
             updated_at: null,
         },
@@ -100,9 +161,21 @@ describe('chatModelOptions', () => {
                 source: 'ai_config',
             },
             {
+                provider: 'claude',
+                modelLabel: 'claude-sonnet-5',
+                providerLabel: 'Claude',
+                source: 'ai_config',
+            },
+            {
                 provider: 'bigmodel',
                 modelLabel: 'glm-4.5-flash',
                 providerLabel: 'BigModel / GLM',
+                source: 'ai_config',
+            },
+            {
+                provider: 'minimax',
+                modelLabel: 'MiniMax-M2.7',
+                providerLabel: 'MiniMax',
                 source: 'ai_config',
             },
         ]);
@@ -111,7 +184,9 @@ describe('chatModelOptions', () => {
     it('skips providers without configured credentials', () => {
         const config = buildConfig();
         config.text.openai.api_key_set = false;
+        config.text.claude.api_key_set = false;
         config.text.bigmodel.api_key_set = false;
+        config.text.minimax.api_key_set = false;
 
         expect(buildConfiguredChatModelOptions(config)).toEqual([
             {

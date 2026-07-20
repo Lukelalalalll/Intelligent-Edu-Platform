@@ -79,8 +79,18 @@ export function useCustomTemplatePageController() {
   );
   const multimodalConfig = multimodalProvider === "bigmodel"
     ? aiConfig?.multimodal?.bigmodel ?? null
-    : aiConfig?.multimodal?.openai ?? null;
+    : multimodalProvider === "minimax"
+      ? aiConfig?.multimodal?.minimax ?? null
+      : aiConfig?.multimodal?.openai ?? null;
   const multimodalConfigured = Boolean(multimodalConfig?.api_key_set && multimodalProvider);
+  const multimodalProviderLabel =
+    multimodalProvider === "bigmodel"
+      ? "BigModel / GLM"
+      : multimodalProvider === "minimax"
+        ? "MiniMax"
+        : multimodalProvider === "openai"
+          ? "OpenAI"
+          : "";
 
   const isProcessingSlides = useMemo(
     () => slides.some((slide) => slide.processing),
@@ -222,12 +232,7 @@ export function useCustomTemplatePageController() {
       handleDrop: fileUpload.handleDrop,
       multimodalConfigured,
       multimodalModel: multimodalConfig?.model || "",
-      multimodalProviderLabel:
-        multimodalProvider === "bigmodel"
-          ? "BigModel / GLM"
-          : multimodalProvider === "openai"
-            ? "OpenAI"
-            : "",
+      multimodalProviderLabel,
     },
     fontManagementStepProps: {
       fontsData: state.fontsData,

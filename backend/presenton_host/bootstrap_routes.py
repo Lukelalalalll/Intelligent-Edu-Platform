@@ -23,6 +23,9 @@ async def ppt_generator_bootstrap(
     ai_config = await load_ai_config(current_user)
     has_required_key = bool(
         ai_config.get("openai", {}).get("api_key_set")
+        or ai_config.get("claude", {}).get("api_key_set")
+        or ai_config.get("bigmodel", {}).get("api_key_set")
+        or ai_config.get("minimax", {}).get("api_key_set")
         or ai_config.get("deepseek", {}).get("api_key_set")
     )
     return {

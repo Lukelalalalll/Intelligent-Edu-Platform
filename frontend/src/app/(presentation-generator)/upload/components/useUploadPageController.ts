@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { notify } from "@/components/ui/sonner";
 import { aiConfigApi, type AIConfigResponse } from "@/features/ai-config/api/aiConfigApi";
 import {
+  applyPptGeneratorProviderOverride,
   getConfiguredPptGeneratorProviders,
   resolvePptGeneratorProviderOverride,
   writeStoredPptGeneratorProviderOverride,
@@ -104,15 +105,14 @@ export function useUploadPageController() {
     [aiConfig]
   );
   useEffect(() => {
-    if (!selectedProvider || llmConfig.LLM === selectedProvider) {
+    const currentProvider =
+      llmConfig.LLM === "anthropic"
+        ? "claude"
+        : (llmConfig.LLM as PptGeneratorSelectableProvider | undefined);
+    if (!selectedProvider || currentProvider === selectedProvider) {
       return;
     }
-    dispatch(
-      setLLMConfig({
-        ...llmConfig,
-        LLM: selectedProvider,
-      })
-    );
+    dispatch(setLLMConfig(applyPptGeneratorProviderOverride(llmConfig, selectedProvider)));
   }, [dispatch, llmConfig, selectedProvider]);
   const providerCards = useMemo(
     () => [
@@ -123,11 +123,24 @@ export function useUploadPageController() {
         model: aiConfig?.openai?.model || llmConfig.OPENAI_MODEL || "gpt-5.6",
       },
       {
+        id: "claude" as const,
+        label: "Claude",
+        configured: Boolean(aiConfig?.claude?.api_key_set),
+        model: aiConfig?.claude?.model || llmConfig.ANTHROPIC_MODEL || "claude-sonnet-5",
+      },
+      {
         id: "bigmodel" as const,
         label: "BigModel / GLM",
         configured: Boolean(aiConfig?.bigmodel?.api_key_set),
         model:
           aiConfig?.bigmodel?.text_model || llmConfig.BIGMODEL_MODEL || "glm-4.5-flash",
+      },
+      {
+        id: "minimax" as const,
+        label: "MiniMax",
+        configured: Boolean(aiConfig?.minimax?.api_key_set),
+        model:
+          aiConfig?.minimax?.text_model || llmConfig.MINIMAX_MODEL || "MiniMax-M2.7",
       },
       {
         id: "deepseek" as const,
@@ -137,7 +150,7 @@ export function useUploadPageController() {
           aiConfig?.deepseek?.model || llmConfig.DEEPSEEK_MODEL || "deepseek-v4-pro",
       },
     ],
-    [aiConfig, llmConfig.BIGMODEL_MODEL, llmConfig.DEEPSEEK_MODEL, llmConfig.OPENAI_MODEL]
+    [aiConfig, llmConfig.ANTHROPIC_MODEL, llmConfig.BIGMODEL_MODEL, llmConfig.DEEPSEEK_MODEL, llmConfig.MINIMAX_MODEL, llmConfig.OPENAI_MODEL]
   );
   const generationDisabledReason = useMemo(() => {
     if (aiConfig && configuredProviders.length === 0) {
@@ -150,8 +163,14 @@ export function useUploadPageController() {
       aiConfig?.multimodal?.openai?.api_key_set
         ? `OpenAI (${aiConfig.multimodal.openai.model || "gpt-5.6"})`
         : null,
+      aiConfig?.multimodal?.claude?.api_key_set
+        ? `Claude (${aiConfig.multimodal.claude.model || "claude-sonnet-5"})`
+        : null,
       aiConfig?.multimodal?.bigmodel?.api_key_set
         ? `BigModel (${aiConfig.multimodal.bigmodel.model || "glm-5v-flash"})`
+        : null,
+      aiConfig?.multimodal?.minimax?.api_key_set
+        ? `MiniMax (${aiConfig.multimodal.minimax.model || "MiniMax-M3"})`
         : null,
     ].filter(Boolean);
     if (multimodalOptions.length === 0) {
@@ -236,12 +255,7 @@ export function useUploadPageController() {
         return;
       }
       writeStoredPptGeneratorProviderOverride(provider);
-      dispatch(
-        setLLMConfig({
-          ...llmConfig,
-          LLM: provider,
-        })
-      );
+      dispatch(setLLMConfig(applyPptGeneratorProviderOverride(llmConfig, provider)));
     },
     [configuredProviders, dispatch, llmConfig]
   );
@@ -485,4 +499,3 @@ export function useUploadPageController() {
     },
   };
 }
-

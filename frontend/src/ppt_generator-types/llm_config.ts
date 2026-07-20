@@ -15,6 +15,14 @@ export interface LLMConfig {
   BIGMODEL_MODEL?: string;
   BIGMODEL_BASE_URL?: string;
 
+  // MiniMax
+  MINIMAX_API_KEY?: string;
+  MINIMAX_MODEL?: string;
+  MINIMAX_BASE_URL?: string;
+  MINIMAX_IMAGE_API_KEY?: string;
+  MINIMAX_IMAGE_MODEL?: string;
+  MINIMAX_IMAGE_BASE_URL?: string;
+
   // Google
   GOOGLE_API_KEY?: string;
   GOOGLE_MODEL?: string;

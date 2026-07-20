@@ -202,6 +202,27 @@ class OpenAIConfigSchema(BaseModel):
         return value.strip()
 
 
+class ClaudeConfigSchema(BaseModel):
+    base_url: str = Field(default="https://api.anthropic.com/v1", max_length=240)
+    api_key: Optional[str] = Field(default=None, max_length=4096)
+    clear_api_key: bool = False
+    model: str = Field(default="claude-sonnet-5", min_length=1, max_length=120)
+    stream: bool = False
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return cleaned
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value: str) -> str:
+        return value.strip()
+
+
 class MultimodalOpenAIConfigSchema(BaseModel):
     base_url: str = Field(default="https://api.openai.com/v1", max_length=240)
     api_key: Optional[str] = Field(default=None, max_length=4096)
@@ -240,6 +261,30 @@ class BigModelConfigSchema(BaseModel):
         return cleaned
 
     @field_validator("text_model", "image_model")
+    @classmethod
+    def validate_model(cls, value: str) -> str:
+        return value.strip()
+
+
+class MiniMaxConfigSchema(BaseModel):
+    base_url: str = Field(default="https://api.minimaxi.com/v1", max_length=240)
+    image_base_url: str = Field(default="https://api.minimaxi.com/v1", max_length=240)
+    api_key: Optional[str] = Field(default=None, max_length=4096)
+    clear_api_key: bool = False
+    text_model: str = Field(default="MiniMax-M2.7", min_length=1, max_length=120)
+    multimodal_model: str = Field(default="MiniMax-M3", min_length=1, max_length=120)
+    image_model: str = Field(default="image-01", min_length=1, max_length=120)
+    stream: bool = False
+
+    @field_validator("base_url", "image_base_url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return cleaned
+
+    @field_validator("text_model", "multimodal_model", "image_model")
     @classmethod
     def validate_model(cls, value: str) -> str:
         return value.strip()

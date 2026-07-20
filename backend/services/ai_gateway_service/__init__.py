@@ -7,6 +7,7 @@ from typing import AsyncGenerator, Optional, Dict, Any
 import httpx
 from backend.config import Config
 from backend.infrastructure import llm_telemetry, TelemetryTimer
+from backend.services.llm_service.claude_service import ClaudeService, ClaudeUnavailableError
 from backend.services.llm_service.local_llm_service import LocalLLMService, LocalLLMUnavailableError
 from backend.services.llm_service.deepseek_service import DeepSeekService, DeepSeekUnavailableError
 from backend.services.llm_service.openai_service import OpenAIService, OpenAIUnavailableError
@@ -44,22 +45,35 @@ class AIGatewayService:
             return True, "ok"
         if p == "deepseek":
             return await self.deepseek.health_check()
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            return await ClaudeService(
+                provider_id="claude",
+                credential_alias="ANTHROPIC_API_KEY",
+            ).health_check()
+        if p in {"openai", "bigmodel", "minimax"}:
             return await OpenAIService(
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).health_check()
         return False, "Unknown provider"
 
     async def check_runtime_health(self, runtime) -> tuple[bool, str]:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            return await ClaudeService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+                provider_id="claude",
+                credential_alias="ANTHROPIC_API_KEY",
+            ).health_check()
+        if p in {"openai", "bigmodel", "minimax"}:
             return await OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).health_check()
         if p == "deepseek":
             return await DeepSeekService(
@@ -134,12 +148,29 @@ class AIGatewayService:
                 context["fallback_from"] = "deepseek"
                 p = "coze"
 
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            logger.info("Using claude provider")
+            try:
+                service = ClaudeService(
+                    provider_id="claude",
+                    credential_alias="ANTHROPIC_API_KEY",
+                )
+                return await service.chat(message=message, context=context)
+            except ClaudeUnavailableError as e:
+                if not allow_fallback:
+                    raise
+                logger.error("%s unavailable: %s. Falling back to Coze.", p, e)
+                if context is None:
+                    context = {}
+                context["fallback_from"] = p
+                p = "coze"
+
+        if p in {"openai", "bigmodel", "minimax"}:
             logger.info("Using %s provider", p)
             try:
                 service = OpenAIService(
                     provider_id=p,
-                    credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                    credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
                 )
                 return await service.chat(message=message, context=context)
             except OpenAIUnavailableError as e:
@@ -190,13 +221,21 @@ class AIGatewayService:
         allow_fallback: bool = False,
     ) -> str:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            return await ClaudeService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+                provider_id="claude",
+                credential_alias="ANTHROPIC_API_KEY",
+            ).chat(message=message, context=context)
+        if p in {"openai", "bigmodel", "minimax"}:
             return await OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat(message=message, context=context)
         if p == "deepseek":
             return await DeepSeekService(
@@ -230,13 +269,13 @@ class AIGatewayService:
             (str(item.get("content") or "") for item in reversed(messages) if item.get("role") == "user"),
             "",
         )
-        if p in {"openai", "bigmodel"}:
+        if p in {"openai", "bigmodel", "minimax"}:
             return await OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat_with_tools(
                 message=user_message,
                 tools=tools,
@@ -347,10 +386,18 @@ class AIGatewayService:
                 yield chunk
             return
 
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            async for chunk in ClaudeService(
+                provider_id="claude",
+                credential_alias="ANTHROPIC_API_KEY",
+            ).chat_stream(message=message, context=context):
+                yield chunk
+            return
+
+        if p in {"openai", "bigmodel", "minimax"}:
             async for chunk in OpenAIService(
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat_stream(message=message, context=context):
                 yield chunk
             return
@@ -384,13 +431,23 @@ class AIGatewayService:
         runtime,
     ) -> AsyncGenerator[str, None]:
         p = str(getattr(runtime, "provider_id", "") or "").strip().lower()
-        if p in {"openai", "bigmodel"}:
+        if p == "claude":
+            async for chunk in ClaudeService(
+                api_key=getattr(runtime, "api_key", ""),
+                base_url=getattr(runtime, "base_url", ""),
+                model=getattr(runtime, "model", ""),
+                provider_id="claude",
+                credential_alias="ANTHROPIC_API_KEY",
+            ).chat_stream(message=message, context=context):
+                yield chunk
+            return
+        if p in {"openai", "bigmodel", "minimax"}:
             async for chunk in OpenAIService(
                 api_key=getattr(runtime, "api_key", ""),
                 base_url=getattr(runtime, "base_url", ""),
                 model=getattr(runtime, "model", ""),
                 provider_id=p,
-                credential_alias="BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
+                credential_alias="MINIMAX_API_KEY" if p == "minimax" else "BIGMODEL_API_KEY" if p == "bigmodel" else "OPENAI_API_KEY",
             ).chat_stream(message=message, context=context):
                 yield chunk
             return

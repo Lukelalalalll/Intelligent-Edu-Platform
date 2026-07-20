@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 from fastapi import Request
+import pytest
 
 from backend.application.architecture_facades.user_profile.ai_config import load_ai_config
 from backend.presenton_host.config_bridge import load_ppt_generator_host_config
@@ -60,6 +61,14 @@ async def _load_deepseek_config(_user):
     }
 
 
+async def _load_claude_config(_user):
+    return {
+        "api_key": "claude-key",
+        "model": "claude-sonnet-5",
+        "base_url": "https://api.anthropic.com/v1",
+    }
+
+
 async def _load_multimodal_openai_config(_user):
     return {
         "api_key": "multimodal-openai-key",
@@ -84,6 +93,30 @@ async def _load_multimodal_bigmodel_config(_user):
     }
 
 
+async def _load_minimax_config(_user):
+    return {
+        "api_key": "minimax-key",
+        "model": "MiniMax-M2.7",
+        "base_url": "https://api.minimaxi.com/v1",
+    }
+
+
+async def _load_multimodal_minimax_config(_user):
+    return {
+        "api_key": "multimodal-minimax-key",
+        "model": "MiniMax-M3",
+        "base_url": "https://api.minimaxi.com/v1",
+    }
+
+
+async def _load_minimax_image_config(_user):
+    return {
+        "api_key": "image-minimax-key",
+        "model": "image-01",
+        "base_url": "https://api.minimaxi.com/v1",
+    }
+
+
 async def _load_deepseek_unconfigured(_user):
     return {
         "api_key": "",
@@ -92,10 +125,34 @@ async def _load_deepseek_unconfigured(_user):
     }
 
 
+def _patch_minimax_loaders(monkeypatch):
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_minimax_runtime_config",
+        _load_minimax_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_minimax_runtime_config",
+        _load_multimodal_minimax_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_minimax_image_runtime_config",
+        _load_minimax_image_config,
+    )
+
+
+@pytest.fixture(autouse=True)
+def _auto_patch_minimax_loaders(monkeypatch):
+    _patch_minimax_loaders(monkeypatch)
+
+
 async def test_ppt_generator_provider_override_prefers_valid_configured_header(monkeypatch):
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_openai_runtime_config",
         _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
     )
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
@@ -138,6 +195,10 @@ async def test_ppt_generator_provider_override_ignores_unconfigured_provider(mon
         _load_openai_config,
     )
     monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
         _load_deepseek_unconfigured,
     )
@@ -175,6 +236,10 @@ async def test_ppt_generator_provider_override_reads_query_param_for_sse(monkeyp
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_openai_runtime_config",
         _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
     )
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
@@ -216,6 +281,10 @@ async def test_ppt_generator_multimodal_override_uses_multimodal_openai_runtime(
         _load_openai_config,
     )
     monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
         _load_deepseek_config,
     )
@@ -255,10 +324,61 @@ async def test_ppt_generator_multimodal_override_uses_multimodal_openai_runtime(
     assert overrides["OPENAI_API_KEY"] == "multimodal-openai-key"
 
 
+async def test_ppt_generator_provider_override_bridges_claude_to_anthropic(monkeypatch):
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_openai_runtime_config",
+        _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
+        _load_deepseek_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_bigmodel_runtime_config",
+        _load_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_openai_runtime_config",
+        _load_multimodal_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_bigmodel_runtime_config",
+        _load_multimodal_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_request_public_origin",
+        lambda _request: "http://localhost:5173",
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_provider_runtime",
+        _resolve_runtime,
+    )
+
+    summary, overrides = await load_ppt_generator_host_config(
+        _request_with_headers(provider_header="claude"),
+        {"id": "user-1"},
+    )
+
+    assert summary["LLM"] == "anthropic"
+    assert summary["ANTHROPIC_API_KEY"] == "__configured__"
+    assert summary["ANTHROPIC_MODEL"] == "claude-sonnet-5"
+    assert overrides["LLM"] == "anthropic"
+    assert overrides["ANTHROPIC_API_KEY"] == "claude-key"
+    assert overrides["ANTHROPIC_MODEL"] == "claude-model"
+
+
 async def test_ppt_generator_provider_override_supports_bigmodel(monkeypatch):
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_openai_runtime_config",
         _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
     )
     monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
@@ -302,6 +422,10 @@ async def test_ppt_generator_multimodal_override_supports_bigmodel(monkeypatch):
         _load_openai_config,
     )
     monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
         "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
         _load_deepseek_config,
     )
@@ -341,6 +465,100 @@ async def test_ppt_generator_multimodal_override_supports_bigmodel(monkeypatch):
     assert overrides["OPENAI_API_KEY"] == "multimodal-bigmodel-key"
 
 
+async def test_ppt_generator_provider_override_supports_minimax(monkeypatch):
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_openai_runtime_config",
+        _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
+        _load_deepseek_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_bigmodel_runtime_config",
+        _load_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_openai_runtime_config",
+        _load_multimodal_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_bigmodel_runtime_config",
+        _load_multimodal_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_request_public_origin",
+        lambda _request: "http://localhost:5173",
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_provider_runtime",
+        _resolve_runtime,
+    )
+
+    summary, overrides = await load_ppt_generator_host_config(
+        _request_with_headers(provider_header="minimax"),
+        {"id": "user-1"},
+    )
+
+    assert summary["LLM"] == "minimax"
+    assert overrides["LLM"] == "minimax"
+    assert overrides["MINIMAX_MODEL"] == "minimax-model"
+    assert overrides["MINIMAX_API_KEY"] == "minimax-key"
+
+
+async def test_ppt_generator_multimodal_override_supports_minimax(monkeypatch):
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_openai_runtime_config",
+        _load_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_claude_runtime_config",
+        _load_claude_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_deepseek_runtime_config",
+        _load_deepseek_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_bigmodel_runtime_config",
+        _load_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_openai_runtime_config",
+        _load_multimodal_openai_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.load_multimodal_bigmodel_runtime_config",
+        _load_multimodal_bigmodel_config,
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_request_public_origin",
+        lambda _request: "http://localhost:5173",
+    )
+    monkeypatch.setattr(
+        "backend.presenton_host.config_bridge.resolve_provider_runtime",
+        _resolve_runtime,
+    )
+
+    _summary, overrides = await load_ppt_generator_host_config(
+        _request_with_headers(
+            extra_headers=[
+                (b"x-ppt-generator-capability", b"multimodal"),
+                (b"x-ppt-generator-multimodal-provider", b"minimax"),
+            ]
+        ),
+        {"id": "user-1"},
+    )
+
+    assert overrides["LLM"] == "minimax"
+    assert overrides["OPENAI_MODEL"] == "MiniMax-M3"
+    assert overrides["OPENAI_API_KEY"] == "multimodal-minimax-key"
+
+
 async def test_load_ai_config_returns_text_aliases_and_multimodal_groups(monkeypatch):
     async def _find_one(_query, _projection):
         return {
@@ -353,16 +571,30 @@ async def test_load_ai_config_returns_text_aliases_and_multimodal_groups(monkeyp
                     "api_key": "legacy-openai-key",
                     "model": "gpt-5.5",
                 },
+                "claude": {
+                    "api_key": "claude-key",
+                    "model": "claude-sonnet-5",
+                },
                 "multimodal": {
                     "openai": {
                         "api_key": "multimodal-openai-key",
                         "model": "gpt-4o",
-                    }
+                    },
+                    "claude": {
+                        "api_key": "claude-key",
+                        "model": "claude-sonnet-5",
+                    },
                 },
                 "bigmodel": {
                     "api_key": "bigmodel-key",
                     "text_model": "glm-4.5-flash",
                     "image_model": "glm-5v-flash",
+                },
+                "minimax": {
+                    "api_key": "minimax-key",
+                    "text_model": "MiniMax-M2.7",
+                    "multimodal_model": "MiniMax-M3",
+                    "image_model": "image-01",
                 }
             }
         }
@@ -380,11 +612,17 @@ async def test_load_ai_config_returns_text_aliases_and_multimodal_groups(monkeyp
 
     assert result["deepseek"]["api_key"] == "legacy-deepseek-key"
     assert result["openai"]["api_key"] == "legacy-openai-key"
+    assert result["claude"]["api_key"] == "claude-key"
     assert result["text"]["deepseek"]["model"] == "deepseek-v4-pro"
     assert result["text"]["openai"]["model"] == "gpt-5.5"
+    assert result["text"]["claude"]["model"] == "claude-sonnet-5"
     assert result["bigmodel"]["api_key"] == "bigmodel-key"
     assert result["text"]["bigmodel"]["model"] == "glm-4.5-flash"
+    assert result["minimax"]["api_key"] == "minimax-key"
+    assert result["text"]["minimax"]["model"] == "MiniMax-M2.7"
     assert result["multimodal"]["openai"]["api_key"] == "multimodal-openai-key"
     assert result["multimodal"]["openai"]["model"] == "gpt-4o"
+    assert result["multimodal"]["claude"]["model"] == "claude-sonnet-5"
+    assert result["multimodal"]["minimax"]["model"] == "MiniMax-M3"
+    assert result["image"]["minimax"]["model"] == "image-01"
     assert result["multimodal"]["bigmodel"]["model"] == "glm-5v-flash"
-

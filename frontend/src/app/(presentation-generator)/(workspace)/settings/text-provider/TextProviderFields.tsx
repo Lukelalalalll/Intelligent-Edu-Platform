@@ -26,6 +26,8 @@ interface TextProviderFieldsProps {
   selectedProvider: string;
   currentApiKey: string;
   currentCustomUrl: string;
+  currentBigModelBaseUrl: string;
+  currentMiniMaxBaseUrl: string;
   currentOllamaUrl: string;
   onInputChange: TextProviderInputChange;
   showApiKey: boolean;
@@ -79,6 +81,8 @@ const TextProviderFields = ({
   selectedProvider,
   currentApiKey,
   currentCustomUrl,
+  currentBigModelBaseUrl,
+  currentMiniMaxBaseUrl,
   currentOllamaUrl,
   onInputChange,
   showApiKey,
@@ -183,6 +187,26 @@ const TextProviderFields = ({
             }
             className={`${inputClassName} mt-2`}
             placeholder="OpenAI-compatible URL"
+          />
+        ) : null}
+
+        {selectedProvider === "bigmodel" ? (
+          <LabeledTextField
+            label="BigModel base URL"
+            value={currentBigModelBaseUrl}
+            onChange={(value) => onInputChange(value, "BIGMODEL_BASE_URL")}
+            placeholder="https://open.bigmodel.cn/api/paas/v4"
+            helperText="OpenAI-compatible endpoint used for GLM text model lookup and generation."
+          />
+        ) : null}
+
+        {selectedProvider === "minimax" ? (
+          <LabeledTextField
+            label="MiniMax base URL"
+            value={currentMiniMaxBaseUrl}
+            onChange={(value) => onInputChange(value, "MINIMAX_BASE_URL")}
+            placeholder="https://api.minimaxi.com/v1"
+            helperText="OpenAI-compatible endpoint for MiniMax text and multimodal models."
           />
         ) : null}
 
@@ -301,4 +325,3 @@ const TextProviderFields = ({
 };
 
 export default TextProviderFields;
-

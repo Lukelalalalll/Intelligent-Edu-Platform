@@ -149,7 +149,9 @@ const SettingsPage = () => {
       if (
         selectedProvider === "image-provider" &&
         ((llmConfig.LLM === "openai" && !String(llmConfig.OPENAI_MODEL || "").trim()) ||
-          (llmConfig.LLM === "deepseek" && !String(llmConfig.DEEPSEEK_MODEL || "").trim()))
+          (llmConfig.LLM === "deepseek" && !String(llmConfig.DEEPSEEK_MODEL || "").trim()) ||
+          (llmConfig.LLM === "bigmodel" && !String(llmConfig.BIGMODEL_MODEL || "").trim()) ||
+          (llmConfig.LLM === "minimax" && !String(llmConfig.MINIMAX_MODEL || "").trim()))
       ) {
         setSelectedProvider("text-provider");
       }
@@ -225,6 +227,10 @@ const SettingsPage = () => {
       ? llmConfig.OPENAI_MODEL
       : textProviderKey === "deepseek"
         ? llmConfig.DEEPSEEK_MODEL
+      : textProviderKey === "bigmodel"
+        ? llmConfig.BIGMODEL_MODEL
+        : textProviderKey === "minimax"
+          ? llmConfig.MINIMAX_MODEL
       : textProviderKey === "google"
         ? llmConfig.GOOGLE_MODEL
         : textProviderKey === "vertex"
@@ -276,6 +282,8 @@ const SettingsPage = () => {
       (llmConfig.LLM === "codex" && !llmConfig.CODEX_MODEL) ||
       (llmConfig.LLM === "openai" && !llmConfig.OPENAI_MODEL) ||
       (llmConfig.LLM === "deepseek" && !llmConfig.DEEPSEEK_MODEL) ||
+      (llmConfig.LLM === "bigmodel" && !llmConfig.BIGMODEL_MODEL) ||
+      (llmConfig.LLM === "minimax" && !llmConfig.MINIMAX_MODEL) ||
       (llmConfig.LLM === "google" && !llmConfig.GOOGLE_MODEL) ||
       (llmConfig.LLM === "vertex" && !llmConfig.VERTEX_MODEL) ||
       (llmConfig.LLM === "azure" && !llmConfig.AZURE_OPENAI_MODEL) ||
@@ -429,4 +437,3 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
-

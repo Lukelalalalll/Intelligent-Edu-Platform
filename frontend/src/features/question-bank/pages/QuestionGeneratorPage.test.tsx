@@ -87,12 +87,16 @@ function renderPage() {
 
 function makeAiConfig(options: {
     openaiConfigured?: boolean;
+    claudeConfigured?: boolean;
     bigmodelConfigured?: boolean;
+    minimaxConfigured?: boolean;
     deepseekConfigured?: boolean;
 } = {}) {
     const {
         openaiConfigured = true,
+        claudeConfigured = false,
         bigmodelConfigured = false,
+        minimaxConfigured = false,
         deepseekConfigured = false,
     } = options;
     const openai = {
@@ -113,6 +117,14 @@ function makeAiConfig(options: {
         thinking_type: 'enabled',
         updated_at: null,
     };
+    const claude = {
+        base_url: 'https://api.anthropic.com/v1',
+        api_key: '',
+        api_key_set: claudeConfigured,
+        model: 'claude-sonnet-5',
+        stream: false,
+        updated_at: null,
+    };
     const bigmodelText = {
         base_url: 'https://open.bigmodel.cn/api/paas/v4',
         api_key: '',
@@ -130,15 +142,37 @@ function makeAiConfig(options: {
         stream: false,
         updated_at: null,
     };
+    const minimax = {
+        base_url: 'https://api.minimaxi.com/v1',
+        image_base_url: 'https://api.minimaxi.com/v1',
+        api_key: '',
+        api_key_set: minimaxConfigured,
+        text_model: 'MiniMax-M2.7',
+        multimodal_model: 'MiniMax-M3',
+        image_model: 'image-01',
+        stream: false,
+        updated_at: null,
+    };
 
     return {
         deepseek,
         openai,
+        claude,
         bigmodel,
+        minimax,
         text: {
             deepseek,
             openai,
+            claude,
             bigmodel: bigmodelText,
+            minimax: {
+                base_url: 'https://api.minimaxi.com/v1',
+                api_key: '',
+                api_key_set: minimaxConfigured,
+                model: 'MiniMax-M2.7',
+                stream: false,
+                updated_at: null,
+            },
         },
         multimodal: {
             openai: {
@@ -146,7 +180,26 @@ function makeAiConfig(options: {
                 api_key_set: false,
                 model: 'gpt-4o',
             },
+            claude,
             bigmodel: bigmodelText,
+            minimax: {
+                base_url: 'https://api.minimaxi.com/v1',
+                api_key: '',
+                api_key_set: minimaxConfigured,
+                model: 'MiniMax-M3',
+                stream: false,
+                updated_at: null,
+            },
+        },
+        image: {
+            minimax: {
+                base_url: 'https://api.minimaxi.com/v1',
+                api_key: '',
+                api_key_set: minimaxConfigured,
+                model: 'image-01',
+                stream: false,
+                updated_at: null,
+            },
         },
     };
 }

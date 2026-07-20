@@ -24,7 +24,9 @@ type WorkbenchLocationState = {
 const DEFAULT_PROVIDERS: SlidesProviderStatus[] = [
     { id: 'auto', label: 'Auto', available: true, configured: true, source: 'auto', model: 'auto', message: 'Use best available provider', is_recommended: true },
     { id: 'openai', label: 'OpenAI', available: false, configured: false, source: 'user_ai_config', model: '', message: 'Not checked', is_recommended: false },
+    { id: 'claude', label: 'Claude', available: false, configured: false, source: 'user_ai_config', model: '', message: 'Not checked', is_recommended: false },
     { id: 'bigmodel', label: 'BigModel / GLM', available: false, configured: false, source: 'user_ai_config', model: '', message: 'Not checked', is_recommended: false },
+    { id: 'minimax', label: 'MiniMax', available: false, configured: false, source: 'user_ai_config', model: '', message: 'Not checked', is_recommended: false },
     { id: 'deepseek', label: 'DeepSeek', available: false, configured: false, source: 'user_ai_config', model: '', message: 'Not checked', is_recommended: false },
     { id: 'local_ollama', label: 'Local Ollama', available: false, configured: true, source: 'global_service', model: '', message: 'Not checked', is_recommended: false },
     { id: 'coze', label: 'Coze', available: false, configured: false, source: 'global_service', model: '', message: 'Not checked', is_recommended: false },

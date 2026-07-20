@@ -7,17 +7,22 @@ import { useAuthStore } from '@/shared/store/useAuthStore';
 import {
     aiConfigApi,
     DEFAULT_BIGMODEL_CONFIG,
+    DEFAULT_CLAUDE_CONFIG,
     DEFAULT_DEEPSEEK_CONFIG,
+    DEFAULT_MINIMAX_CONFIG,
     DEFAULT_MULTIMODAL_OPENAI_CONFIG,
     DEFAULT_OPENAI_CONFIG,
     type BigModelConfig,
+    type ClaudeConfig,
     type DeepSeekConfig,
+    type MiniMaxConfig,
     type MultimodalOpenAIConfig,
     type OpenAIConfig,
 } from '../api/aiConfigApi';
 import {
     BigModelConfigCard,
     DeepSeekConfigCard,
+    MiniMaxConfigCard,
     MultimodalOpenAIConfigCard,
     OpenAIConfigCard,
 } from '../components/ProviderConfigCards';
@@ -26,19 +31,25 @@ import {
     CAPABILITY_PROVIDER_OPTIONS,
     type CapabilityId,
     type BigModelField,
+    type ClaudeField,
     type DeepSeekField,
+    type MiniMaxField,
     type MultimodalOpenAIField,
     type OpenAIField,
     type ProviderId,
     buildBigModelPayload,
+    buildClaudePayload,
+    buildMiniMaxPayload,
     normalizeBigModelConfig,
+    normalizeClaudeConfig,
     normalizeDeepSeekConfig,
+    normalizeMiniMaxConfig,
     normalizeMultimodalOpenAIConfig,
     normalizeOpenAIConfig,
+    CLAUDE_MODEL_OPTIONS,
     buildDeepSeekPayload,
     buildMultimodalOpenAIPayload,
     buildOpenAIPayload,
-    formatUpdatedAt,
 } from '../utils/aiConfigHelpers';
 import styles from '../styles/aiConfig.module.css';
 
@@ -69,7 +80,9 @@ export default function AIConfigPage() {
     const [activeCapability, setActiveCapability] = useState<CapabilityId>('text');
     const [activeProvider, setActiveProvider] = useState<ProviderId>('deepseek');
     const [bigModelForm, setBigModelForm] = useState<BigModelConfig>(DEFAULT_BIGMODEL_CONFIG);
+    const [claudeForm, setClaudeForm] = useState<ClaudeConfig>(DEFAULT_CLAUDE_CONFIG);
     const [deepSeekForm, setDeepSeekForm] = useState<DeepSeekConfig>(DEFAULT_DEEPSEEK_CONFIG);
+    const [miniMaxForm, setMiniMaxForm] = useState<MiniMaxConfig>(DEFAULT_MINIMAX_CONFIG);
     const [openAIForm, setOpenAIForm] = useState<OpenAIConfig>(DEFAULT_OPENAI_CONFIG);
     const [multimodalOpenAIForm, setMultimodalOpenAIForm] = useState<MultimodalOpenAIConfig>(
         DEFAULT_MULTIMODAL_OPENAI_CONFIG,
@@ -93,7 +106,9 @@ export default function AIConfigPage() {
         try {
             const data = await aiConfigApi.get();
             setBigModelForm(normalizeBigModelConfig(data.bigmodel, DEFAULT_BIGMODEL_CONFIG));
+            setClaudeForm(normalizeClaudeConfig(data.text.claude, DEFAULT_CLAUDE_CONFIG));
             setDeepSeekForm(normalizeDeepSeekConfig(data.text.deepseek, DEFAULT_DEEPSEEK_CONFIG));
+            setMiniMaxForm(normalizeMiniMaxConfig(data.minimax, DEFAULT_MINIMAX_CONFIG));
             setOpenAIForm(normalizeOpenAIConfig(data.text.openai, DEFAULT_OPENAI_CONFIG));
             setMultimodalOpenAIForm(
                 normalizeMultimodalOpenAIConfig(
@@ -116,8 +131,16 @@ export default function AIConfigPage() {
         setDeepSeekForm((current) => ({ ...current, [field]: value }));
     }, []);
 
+    const updateClaudeField = useCallback(<K extends ClaudeField>(field: K, value: ClaudeConfig[K]) => {
+        setClaudeForm((current) => ({ ...current, [field]: value }));
+    }, []);
+
     const updateBigModelField = useCallback(<K extends BigModelField>(field: K, value: BigModelConfig[K]) => {
         setBigModelForm((current) => ({ ...current, [field]: value }));
+    }, []);
+
+    const updateMiniMaxField = useCallback(<K extends MiniMaxField>(field: K, value: MiniMaxConfig[K]) => {
+        setMiniMaxForm((current) => ({ ...current, [field]: value }));
     }, []);
 
     const updateOpenAIField = useCallback(<K extends OpenAIField>(field: K, value: OpenAIConfig[K]) => {
@@ -170,6 +193,20 @@ export default function AIConfigPage() {
         }
     };
 
+    const saveClaude = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSaving(true);
+        try {
+            const data = await aiConfigApi.updateClaude(buildClaudePayload(claudeForm, false));
+            setClaudeForm(normalizeClaudeConfig(data.claude, DEFAULT_CLAUDE_CONFIG));
+            toast.success(activeCapability === 'multimodal' ? 'Claude multimodal config saved' : 'Claude text config saved');
+        } catch {
+            toast.error('Failed to save Claude config');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const saveBigModel = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setSaving(true);
@@ -179,6 +216,20 @@ export default function AIConfigPage() {
             toast.success('BigModel / GLM config saved');
         } catch {
             toast.error('Failed to save BigModel config');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const saveMiniMax = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSaving(true);
+        try {
+            const data = await aiConfigApi.updateMiniMax(buildMiniMaxPayload(miniMaxForm, false));
+            setMiniMaxForm(normalizeMiniMaxConfig(data.minimax, DEFAULT_MINIMAX_CONFIG));
+            toast.success('MiniMax config saved');
+        } catch {
+            toast.error('Failed to save MiniMax config');
         } finally {
             setSaving(false);
         }
@@ -230,6 +281,20 @@ export default function AIConfigPage() {
         }
     };
 
+    const clearClaudeApiKey = async () => {
+        if (!claudeForm.api_key_set) return;
+        setSaving(true);
+        try {
+            const data = await aiConfigApi.updateClaude(buildClaudePayload(claudeForm, true));
+            setClaudeForm(normalizeClaudeConfig(data.claude, DEFAULT_CLAUDE_CONFIG));
+            toast.success('API key cleared');
+        } catch {
+            toast.error('Failed to clear API key');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const clearMultimodalOpenAIApiKey = async () => {
         if (!multimodalOpenAIForm.api_key_set) return;
         setSaving(true);
@@ -262,6 +327,20 @@ export default function AIConfigPage() {
         }
     };
 
+    const clearMiniMaxApiKey = async () => {
+        if (!miniMaxForm.api_key_set) return;
+        setSaving(true);
+        try {
+            const data = await aiConfigApi.updateMiniMax(buildMiniMaxPayload(miniMaxForm, true));
+            setMiniMaxForm(normalizeMiniMaxConfig(data.minimax, DEFAULT_MINIMAX_CONFIG));
+            toast.success('API key cleared');
+        } catch {
+            toast.error('Failed to clear API key');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const resetDeepSeekDefaults = () => {
         setDeepSeekForm((current) => ({
             ...DEFAULT_DEEPSEEK_CONFIG,
@@ -280,9 +359,27 @@ export default function AIConfigPage() {
         }));
     };
 
+    const resetClaudeDefaults = () => {
+        setClaudeForm((current) => ({
+            ...DEFAULT_CLAUDE_CONFIG,
+            api_key: current.api_key,
+            api_key_set: current.api_key_set,
+            updated_at: current.updated_at,
+        }));
+    };
+
     const resetBigModelDefaults = () => {
         setBigModelForm((current) => ({
             ...DEFAULT_BIGMODEL_CONFIG,
+            api_key: current.api_key,
+            api_key_set: current.api_key_set,
+            updated_at: current.updated_at,
+        }));
+    };
+
+    const resetMiniMaxDefaults = () => {
+        setMiniMaxForm((current) => ({
+            ...DEFAULT_MINIMAX_CONFIG,
             api_key: current.api_key,
             api_key_set: current.api_key_set,
             updated_at: current.updated_at,
@@ -314,6 +411,16 @@ export default function AIConfigPage() {
     const openAIPreview = useMemo(
         () => buildPreviewRows('OPENAI_API_KEY', openAIForm, DEFAULT_OPENAI_CONFIG.model),
         [openAIForm],
+    );
+
+    const claudePreview = useMemo(
+        () => buildPreviewRows(
+            'ANTHROPIC_API_KEY',
+            claudeForm,
+            DEFAULT_CLAUDE_CONFIG.model,
+            activeCapability === 'multimodal' ? [['mode', 'vision + text']] : [],
+        ),
+        [activeCapability, claudeForm],
     );
 
     const multimodalOpenAIPreview = useMemo(
@@ -351,13 +458,51 @@ export default function AIConfigPage() {
         [activeCapability, bigModelForm],
     );
 
+    const miniMaxPreview = useMemo(() => {
+        const activeModel = activeCapability === 'image'
+            ? miniMaxForm.image_model
+            : activeCapability === 'multimodal'
+                ? miniMaxForm.multimodal_model
+                : miniMaxForm.text_model;
+        const activeBaseUrl = activeCapability === 'image' ? miniMaxForm.image_base_url : miniMaxForm.base_url;
+        const activeKeyLabel = activeCapability === 'image'
+            ? 'MINIMAX_IMAGE_API_KEY'
+            : activeCapability === 'multimodal'
+                ? 'MINIMAX_MULTIMODAL_API_KEY'
+                : 'MINIMAX_API_KEY';
+        const activeMode = activeCapability === 'image'
+            ? 'image-only'
+            : activeCapability === 'multimodal'
+                ? 'multimodal'
+                : 'text';
+        return buildPreviewRows(
+            activeKeyLabel,
+            {
+                api_key: miniMaxForm.api_key,
+                api_key_set: miniMaxForm.api_key_set,
+                base_url: activeBaseUrl,
+                model: activeModel,
+                stream: miniMaxForm.stream,
+            },
+            activeModel,
+            [
+                ['mode', activeMode],
+                ['text_model', miniMaxForm.text_model || DEFAULT_MINIMAX_CONFIG.text_model],
+                ['multimodal_model', miniMaxForm.multimodal_model || DEFAULT_MINIMAX_CONFIG.multimodal_model],
+                ['image_model', miniMaxForm.image_model || DEFAULT_MINIMAX_CONFIG.image_model],
+            ],
+        );
+    }, [activeCapability, miniMaxForm]);
+
     const capabilitySummary = useMemo(() => {
         const multimodalStatus = multimodalOpenAIForm.api_key_set
             ? `Configured · ${multimodalOpenAIForm.model || DEFAULT_MULTIMODAL_OPENAI_CONFIG.model}`
             : 'Not configured';
         const textStatus = [
             bigModelForm.api_key_set ? 'BigModel' : null,
+            claudeForm.api_key_set ? 'Claude' : null,
             deepSeekForm.api_key_set ? 'DeepSeek' : null,
+            miniMaxForm.api_key_set ? 'MiniMax' : null,
             openAIForm.api_key_set ? 'OpenAI' : null,
         ].filter(Boolean).join(' / ') || 'No text providers configured';
 
@@ -365,19 +510,37 @@ export default function AIConfigPage() {
             multimodalOpenAIForm.api_key_set
                 ? `OpenAI (${multimodalOpenAIForm.model || DEFAULT_MULTIMODAL_OPENAI_CONFIG.model})`
                 : null,
+            claudeForm.api_key_set
+                ? `Claude (${claudeForm.model || DEFAULT_CLAUDE_CONFIG.model})`
+                : null,
             bigModelForm.api_key_set
                 ? `BigModel (${bigModelForm.image_model || DEFAULT_BIGMODEL_CONFIG.image_model})`
+                : null,
+            miniMaxForm.api_key_set
+                ? `MiniMax (${miniMaxForm.multimodal_model || DEFAULT_MINIMAX_CONFIG.multimodal_model})`
+                : null,
+        ].filter(Boolean).join(' / ');
+
+        const imageProviders = [
+            miniMaxForm.api_key_set
+                ? `MiniMax (${miniMaxForm.image_model || DEFAULT_MINIMAX_CONFIG.image_model})`
                 : null,
         ].filter(Boolean).join(' / ');
 
         return {
             text: textStatus,
             multimodal: multimodalProviders || multimodalStatus,
+            image: imageProviders || 'No image-only providers configured',
         };
     }, [
         bigModelForm.api_key_set,
         bigModelForm.image_model,
+        claudeForm.api_key_set,
+        claudeForm.model,
         deepSeekForm.api_key_set,
+        miniMaxForm.api_key_set,
+        miniMaxForm.image_model,
+        miniMaxForm.multimodal_model,
         multimodalOpenAIForm.api_key_set,
         multimodalOpenAIForm.model,
         openAIForm.api_key_set,
@@ -390,13 +553,51 @@ export default function AIConfigPage() {
                     accountLabel={accountLabel}
                     form={bigModelForm}
                     preview={bigModelPreview}
-                    activeCapability={activeCapability}
+                    activeCapability={activeCapability === 'text' ? 'text' : 'multimodal'}
                     loading={loading}
                     saving={saving}
                     onFieldChange={updateBigModelField}
                     onSubmit={saveBigModel}
                     onResetDefaults={resetBigModelDefaults}
                     onClearApiKey={clearBigModelApiKey}
+                />
+            );
+        }
+
+        if (activeProvider === 'minimax') {
+            return (
+                <MiniMaxConfigCard
+                    accountLabel={accountLabel}
+                    form={miniMaxForm}
+                    preview={miniMaxPreview}
+                    activeCapability={activeCapability}
+                    loading={loading}
+                    saving={saving}
+                    onFieldChange={updateMiniMaxField}
+                    onSubmit={saveMiniMax}
+                    onResetDefaults={resetMiniMaxDefaults}
+                    onClearApiKey={clearMiniMaxApiKey}
+                />
+            );
+        }
+
+        if (activeProvider === 'claude') {
+            return (
+                <OpenAIConfigCard
+                    accountLabel={accountLabel}
+                    form={claudeForm}
+                    preview={claudePreview}
+                    loading={loading}
+                    saving={saving}
+                    onFieldChange={updateClaudeField}
+                    onSubmit={saveClaude}
+                    onResetDefaults={resetClaudeDefaults}
+                    onClearApiKey={clearClaudeApiKey}
+                    title={activeCapability === 'multimodal' ? 'Claude Vision' : 'Claude'}
+                    eyebrow={activeCapability === 'multimodal' ? 'Multimodal Model' : 'Pure Text Model'}
+                    ariaLabel="Claude configuration"
+                    iconClassName="fa-comment-dots"
+                    modelOptions={CLAUDE_MODEL_OPTIONS}
                 />
             );
         }
@@ -471,8 +672,8 @@ export default function AIConfigPage() {
                         <strong>{capabilitySummary.multimodal}</strong>
                     </div>
                     <div className={styles.capabilitySummaryCard}>
-                        <span>Last GLM save</span>
-                        <strong>{formatUpdatedAt(bigModelForm.updated_at)}</strong>
+                        <span>Image-only Models</span>
+                        <strong>{capabilitySummary.image}</strong>
                     </div>
                 </section>
 
@@ -514,7 +715,13 @@ export default function AIConfigPage() {
                                     </span>
                                     <span className={styles.providerRailText}>
                                         <strong>{provider.label}</strong>
-                                        <small>{activeCapability === 'multimodal' ? 'Vision + text' : 'Text generation'}</small>
+                                        <small>
+                                            {activeCapability === 'image'
+                                                ? 'Image generation'
+                                                : activeCapability === 'multimodal'
+                                                    ? 'Vision + text'
+                                                    : 'Text generation'}
+                                        </small>
                                     </span>
                                 </button>
                             );

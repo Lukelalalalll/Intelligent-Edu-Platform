@@ -56,6 +56,17 @@ async def provider_health(provider: str = "local_ollama", user: dict = Depends(g
         set_provider_health_cache(user, selected, result)
         return result
 
+    if selected == "claude":
+        from backend.services.auth.user_profile_service import load_claude_runtime_config
+        from backend.services.llm_service.claude_service import ClaudeService
+
+        ok, detail = await ClaudeService.from_config(
+            await load_claude_runtime_config(user)
+        ).health_check()
+        result = {"provider": selected, "ok": ok, "detail": detail}
+        set_provider_health_cache(user, selected, result)
+        return result
+
     if selected == "bigmodel":
         from backend.services.auth.user_profile_service import load_bigmodel_runtime_config
         from backend.services.llm_service.openai_service import OpenAIService
@@ -154,4 +165,3 @@ async def update_ai_memory(body: dict, user: dict = Depends(get_current_user)):
     invalidate_role_info_cache(user)
     invalidate_provider_health_cache(user)
     return {"memory": sanitized}
-

@@ -22,7 +22,7 @@ async def resolve_ppt_generator_runtime_impl(
         )
 
     if user:
-        for candidate in ("openai", "bigmodel", "deepseek"):
+        for candidate in ("openai", "claude", "bigmodel", "minimax", "deepseek"):
             try:
                 runtime = await resolve_provider_runtime(
                     candidate,
@@ -53,4 +53,3 @@ async def resolve_ppt_generator_runtime_impl(
         user=user,
         require_healthy=require_healthy,
     )
-

@@ -13,12 +13,14 @@ import {
 } from '../questionProviderConfig';
 import { getQuestionRequestErrorMessage } from '../utils/requestError';
 
-type AiConfigTextProvider = Extract<QuestionStudioProvider, 'openai' | 'deepseek' | 'bigmodel'>;
+type AiConfigTextProvider = Extract<QuestionStudioProvider, 'openai' | 'claude' | 'deepseek' | 'bigmodel' | 'minimax'>;
 
 const TEXT_PROVIDER_META: Record<AiConfigTextProvider, { label: string; order: number }> = {
     openai: { label: 'OpenAI', order: 0 },
-    bigmodel: { label: 'BigModel / GLM', order: 1 },
-    deepseek: { label: 'DeepSeek', order: 2 },
+    claude: { label: 'Claude', order: 1 },
+    bigmodel: { label: 'BigModel / GLM', order: 2 },
+    minimax: { label: 'MiniMax', order: 3 },
+    deepseek: { label: 'DeepSeek', order: 4 },
 };
 
 function buildAiConfigTextProviders(config: AIConfigResponse): QuestionProviderStatus[] {
@@ -35,10 +37,22 @@ function buildAiConfigTextProviders(config: AIConfigResponse): QuestionProviderS
             updatedAt: config.text.openai.updated_at,
         },
         {
+            id: 'claude',
+            model: config.text.claude.model,
+            configured: config.text.claude.api_key_set,
+            updatedAt: config.text.claude.updated_at,
+        },
+        {
             id: 'bigmodel',
             model: config.text.bigmodel.model,
             configured: config.text.bigmodel.api_key_set,
             updatedAt: config.text.bigmodel.updated_at,
+        },
+        {
+            id: 'minimax',
+            model: config.text.minimax.model,
+            configured: config.text.minimax.api_key_set,
+            updatedAt: config.text.minimax.updated_at,
         },
         {
             id: 'deepseek',

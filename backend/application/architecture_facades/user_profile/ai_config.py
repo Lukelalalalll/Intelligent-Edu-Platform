@@ -20,6 +20,12 @@ _DEFAULT_OPENAI_CONFIG = {
     "stream": False,
 }
 
+_DEFAULT_CLAUDE_CONFIG = {
+    "base_url": "https://api.anthropic.com/v1",
+    "model": "claude-sonnet-5",
+    "stream": False,
+}
+
 _DEFAULT_MULTIMODAL_OPENAI_CONFIG = {
     "base_url": "https://api.openai.com/v1",
     "model": "gpt-5.6",
@@ -30,6 +36,15 @@ _DEFAULT_BIGMODEL_CONFIG = {
     "base_url": "https://open.bigmodel.cn/api/paas/v4",
     "text_model": "glm-4.5-flash",
     "image_model": "glm-5v-flash",
+    "stream": False,
+}
+
+_DEFAULT_MINIMAX_CONFIG = {
+    "base_url": "https://api.minimaxi.com/v1",
+    "image_base_url": "https://api.minimaxi.com/v1",
+    "text_model": "MiniMax-M2.7",
+    "multimodal_model": "MiniMax-M3",
+    "image_model": "image-01",
     "stream": False,
 }
 
@@ -96,6 +111,28 @@ def build_multimodal_openai_response(
     )
 
 
+def build_claude_response(
+    raw_config: dict | None,
+    *,
+    include_api_key: bool = False,
+) -> dict:
+    raw = raw_config or {}
+    encrypted_key = raw.get("api_key_encrypted") or raw.get("api_key") or ""
+    raw_base_url = raw.get("base_url") or _DEFAULT_CLAUDE_CONFIG["base_url"]
+    return {
+        **_DEFAULT_CLAUDE_CONFIG,
+        **{
+            key: raw.get(key)
+            for key in _DEFAULT_CLAUDE_CONFIG
+            if raw.get(key) is not None
+        },
+        "base_url": str(raw_base_url or _DEFAULT_CLAUDE_CONFIG["base_url"]).strip().rstrip("/"),
+        "api_key": decrypt_secret(encrypted_key) if include_api_key else "",
+        "api_key_set": bool(decrypt_secret(encrypted_key)),
+        "updated_at": raw.get("updated_at"),
+    }
+
+
 def build_bigmodel_response(
     raw_config: dict | None,
     *,
@@ -148,14 +185,89 @@ def build_bigmodel_multimodal_runtime_response(
     }
 
 
+def build_minimax_response(
+    raw_config: dict | None,
+    *,
+    include_api_key: bool = False,
+) -> dict:
+    raw = raw_config or {}
+    encrypted_key = raw.get("api_key_encrypted") or raw.get("api_key") or ""
+    return {
+        **_DEFAULT_MINIMAX_CONFIG,
+        **{
+            key: raw.get(key)
+            for key in _DEFAULT_MINIMAX_CONFIG
+            if raw.get(key) is not None
+        },
+        "api_key": decrypt_secret(encrypted_key) if include_api_key else "",
+        "api_key_set": bool(decrypt_secret(encrypted_key)),
+        "updated_at": raw.get("updated_at"),
+    }
+
+
+def build_minimax_text_runtime_response(
+    raw_config: dict | None,
+    *,
+    include_api_key: bool = False,
+) -> dict:
+    config = build_minimax_response(raw_config, include_api_key=include_api_key)
+    return {
+        "base_url": config["base_url"],
+        "api_key": config["api_key"],
+        "api_key_set": config["api_key_set"],
+        "model": config["text_model"],
+        "stream": config["stream"],
+        "updated_at": config["updated_at"],
+    }
+
+
+def build_minimax_multimodal_runtime_response(
+    raw_config: dict | None,
+    *,
+    include_api_key: bool = False,
+) -> dict:
+    config = build_minimax_response(raw_config, include_api_key=include_api_key)
+    return {
+        "base_url": config["base_url"],
+        "api_key": config["api_key"],
+        "api_key_set": config["api_key_set"],
+        "model": config["multimodal_model"],
+        "stream": config["stream"],
+        "updated_at": config["updated_at"],
+    }
+
+
+def build_minimax_image_runtime_response(
+    raw_config: dict | None,
+    *,
+    include_api_key: bool = False,
+) -> dict:
+    config = build_minimax_response(raw_config, include_api_key=include_api_key)
+    return {
+        "base_url": config["image_base_url"],
+        "api_key": config["api_key"],
+        "api_key_set": config["api_key_set"],
+        "model": config["image_model"],
+        "stream": False,
+        "updated_at": config["updated_at"],
+    }
+
+
 async def load_ai_config(current_user: dict, *, include_api_keys: bool = False) -> dict:
     user_doc = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
     ai_config = (user_doc or {}).get("ai_config") or {}
     text_config = ai_config.get("text") or {}
     multimodal_config = ai_config.get("multimodal") or {}
+    image_config = ai_config.get("image") or {}
     deepseek_raw = text_config.get("deepseek") or ai_config.get("deepseek")
     openai_raw = text_config.get("openai") or ai_config.get("openai")
+    claude_raw = (
+        text_config.get("claude")
+        or (multimodal_config.get("claude") if not text_config.get("claude") else None)
+        or ai_config.get("claude")
+    )
     bigmodel_raw = ai_config.get("bigmodel")
+    minimax_raw = ai_config.get("minimax") or text_config.get("minimax") or multimodal_config.get("minimax") or image_config.get("minimax")
     multimodal_openai_raw = multimodal_config.get("openai")
     deepseek = build_deepseek_response(
         deepseek_raw,
@@ -163,6 +275,10 @@ async def load_ai_config(current_user: dict, *, include_api_keys: bool = False) 
     )
     openai = build_openai_response(
         openai_raw,
+        include_api_key=include_api_keys,
+    )
+    claude = build_claude_response(
+        claude_raw,
         include_api_key=include_api_keys,
     )
     multimodal_openai = build_multimodal_openai_response(
@@ -181,18 +297,43 @@ async def load_ai_config(current_user: dict, *, include_api_keys: bool = False) 
         bigmodel_raw,
         include_api_key=include_api_keys,
     )
+    minimax = build_minimax_response(
+        minimax_raw,
+        include_api_key=include_api_keys,
+    )
+    minimax_text = build_minimax_text_runtime_response(
+        minimax_raw,
+        include_api_key=include_api_keys,
+    )
+    minimax_multimodal = build_minimax_multimodal_runtime_response(
+        minimax_raw,
+        include_api_key=include_api_keys,
+    )
+    minimax_image = build_minimax_image_runtime_response(
+        minimax_raw,
+        include_api_key=include_api_keys,
+    )
     return {
         "deepseek": deepseek,
         "openai": openai,
+        "claude": claude,
         "bigmodel": bigmodel,
+        "minimax": minimax,
         "text": {
             "deepseek": deepseek,
             "openai": openai,
+            "claude": claude,
             "bigmodel": bigmodel_text,
+            "minimax": minimax_text,
         },
         "multimodal": {
             "openai": multimodal_openai,
+            "claude": claude,
             "bigmodel": bigmodel_multimodal,
+            "minimax": minimax_multimodal,
+        },
+        "image": {
+            "minimax": minimax_image,
         },
     }
 
@@ -219,6 +360,24 @@ async def load_openai_runtime_config(current_user: dict) -> dict:
     text_config = ai_config.get("text") or {}
     return build_openai_response(
         text_config.get("openai") or ai_config.get("openai"),
+        include_api_key=True,
+    )
+
+
+async def load_claude_runtime_config(current_user: dict) -> dict:
+    user_doc = await db.users.find_one(
+        {"_id": current_user["_id"]},
+        {
+            "ai_config.claude": 1,
+            "ai_config.text.claude": 1,
+            "ai_config.multimodal.claude": 1,
+        },
+    )
+    ai_config = (user_doc or {}).get("ai_config") or {}
+    text_config = ai_config.get("text") or {}
+    multimodal_config = ai_config.get("multimodal") or {}
+    return build_claude_response(
+        text_config.get("claude") or multimodal_config.get("claude") or ai_config.get("claude"),
         include_api_key=True,
     )
 
@@ -256,6 +415,45 @@ async def load_multimodal_bigmodel_runtime_config(current_user: dict) -> dict:
     ai_config = (user_doc or {}).get("ai_config") or {}
     return build_bigmodel_multimodal_runtime_response(
         ai_config.get("bigmodel"),
+        include_api_key=True,
+    )
+
+
+async def load_minimax_runtime_config(current_user: dict) -> dict:
+    user_doc = await db.users.find_one(
+        {"_id": current_user["_id"]},
+        {"ai_config.minimax": 1, "ai_config.text.minimax": 1},
+    )
+    ai_config = (user_doc or {}).get("ai_config") or {}
+    text_config = ai_config.get("text") or {}
+    return build_minimax_text_runtime_response(
+        ai_config.get("minimax") or text_config.get("minimax"),
+        include_api_key=True,
+    )
+
+
+async def load_multimodal_minimax_runtime_config(current_user: dict) -> dict:
+    user_doc = await db.users.find_one(
+        {"_id": current_user["_id"]},
+        {"ai_config.minimax": 1, "ai_config.multimodal.minimax": 1},
+    )
+    ai_config = (user_doc or {}).get("ai_config") or {}
+    multimodal_config = ai_config.get("multimodal") or {}
+    return build_minimax_multimodal_runtime_response(
+        ai_config.get("minimax") or multimodal_config.get("minimax"),
+        include_api_key=True,
+    )
+
+
+async def load_minimax_image_runtime_config(current_user: dict) -> dict:
+    user_doc = await db.users.find_one(
+        {"_id": current_user["_id"]},
+        {"ai_config.minimax": 1, "ai_config.image.minimax": 1},
+    )
+    ai_config = (user_doc or {}).get("ai_config") or {}
+    image_config = ai_config.get("image") or {}
+    return build_minimax_image_runtime_response(
+        ai_config.get("minimax") or image_config.get("minimax"),
         include_api_key=True,
     )
 
@@ -322,6 +520,46 @@ async def save_openai_config(current_user: dict, payload) -> dict:
     }
 
 
+async def save_claude_config(current_user: dict, payload) -> dict:
+    existing_user = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
+    ai_config = (existing_user or {}).get("ai_config") or {}
+    existing = (
+        ((ai_config.get("text") or {}).get("claude"))
+        or ((ai_config.get("multimodal") or {}).get("claude"))
+        or ai_config.get("claude")
+        or {}
+    )
+    update_doc = {
+        **_DEFAULT_CLAUDE_CONFIG,
+        **existing,
+        "base_url": payload.base_url,
+        "model": payload.model,
+        "stream": payload.stream,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    if payload.clear_api_key:
+        update_doc["api_key_encrypted"] = ""
+    elif payload.api_key is not None and payload.api_key.strip():
+        update_doc["api_key_encrypted"] = encrypt_secret(payload.api_key.strip())
+
+    update_doc.pop("api_key", None)
+
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {
+                "ai_config.claude": update_doc,
+                "ai_config.text.claude": update_doc,
+                "ai_config.multimodal.claude": update_doc,
+            }
+        },
+    )
+    return {
+        "message": "Claude config updated",
+        "claude": build_claude_response(update_doc, include_api_key=True),
+    }
+
+
 async def save_multimodal_openai_config(current_user: dict, payload) -> dict:
     existing_user = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
     ai_config = (existing_user or {}).get("ai_config") or {}
@@ -378,4 +616,43 @@ async def save_bigmodel_config(current_user: dict, payload) -> dict:
     return {
         "message": "BigModel config updated",
         "bigmodel": build_bigmodel_response(update_doc, include_api_key=True),
+    }
+
+
+async def save_minimax_config(current_user: dict, payload) -> dict:
+    existing_user = await db.users.find_one({"_id": current_user["_id"]}, {"ai_config": 1})
+    ai_config = (existing_user or {}).get("ai_config") or {}
+    existing = ai_config.get("minimax") or {}
+    update_doc = {
+        **_DEFAULT_MINIMAX_CONFIG,
+        **existing,
+        "base_url": payload.base_url,
+        "image_base_url": payload.image_base_url,
+        "text_model": payload.text_model,
+        "multimodal_model": payload.multimodal_model,
+        "image_model": payload.image_model,
+        "stream": payload.stream,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    if payload.clear_api_key:
+        update_doc["api_key_encrypted"] = ""
+    elif payload.api_key is not None and payload.api_key.strip():
+        update_doc["api_key_encrypted"] = encrypt_secret(payload.api_key.strip())
+
+    update_doc.pop("api_key", None)
+
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {
+                "ai_config.minimax": update_doc,
+                "ai_config.text.minimax": update_doc,
+                "ai_config.multimodal.minimax": update_doc,
+                "ai_config.image.minimax": update_doc,
+            }
+        },
+    )
+    return {
+        "message": "MiniMax config updated",
+        "minimax": build_minimax_response(update_doc, include_api_key=True),
     }

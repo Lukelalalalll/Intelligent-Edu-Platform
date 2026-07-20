@@ -202,6 +202,22 @@ export const LLM_PROVIDERS: Record<string, LLMProviderOption> = {
     icon: "/providers/openai.png",
     getApiKeyUrl: "https://platform.deepseek.com/api_keys",
   },
+  bigmodel: {
+    value: "bigmodel",
+    label: "BigModel / GLM",
+    description: "GLM text models via BigModel's OpenAI-compatible API",
+    url: "https://open.bigmodel.cn/api/paas/v4",
+    icon: "/providers/openai.png",
+    getApiKeyUrl: "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys",
+  },
+  minimax: {
+    value: "minimax",
+    label: "MiniMax",
+    description: "MiniMax text, multimodal, and image models via MiniMax APIs",
+    url: "https://api.minimaxi.com/v1",
+    icon: "/providers/openai.png",
+    getApiKeyUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+  },
   google: {
     value: "google",
     label: "Google",

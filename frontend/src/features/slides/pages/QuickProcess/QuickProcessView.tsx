@@ -122,6 +122,7 @@ export default function QuickProcess({
                                                 {(providerOptions?.length ? providerOptions : [
                                                     { id: 'auto', label: 'Auto', available: true, configured: true, message: 'Use best available provider' },
                                                     { id: 'openai', label: 'OpenAI', available: false, configured: false, message: 'Not checked' },
+                                                    { id: 'claude', label: 'Claude', available: false, configured: false, message: 'Not checked' },
                                                     { id: 'deepseek', label: 'DeepSeek', available: false, configured: false, message: 'Not checked' },
                                                     { id: 'local_ollama', label: 'Local Ollama', available: false, configured: true, message: 'Not checked' },
                                                     { id: 'coze', label: 'Coze', available: false, configured: false, message: 'Not checked' },

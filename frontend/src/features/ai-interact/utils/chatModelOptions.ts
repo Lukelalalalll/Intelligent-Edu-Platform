@@ -3,7 +3,7 @@ import type { AIConfigResponse } from '@/features/ai-config/api/aiConfigApi';
 import type { AIProvider } from '../api/aiApi';
 
 export interface ChatModelOption {
-    provider: Extract<AIProvider, 'deepseek' | 'openai' | 'bigmodel' | 'local_ollama'>;
+    provider: Extract<AIProvider, 'deepseek' | 'openai' | 'claude' | 'bigmodel' | 'minimax' | 'local_ollama'>;
     modelLabel: string;
     providerLabel: string;
     source: 'ai_config' | 'fallback';
@@ -41,11 +41,29 @@ export function buildConfiguredChatModelOptions(config: AIConfigResponse | null 
         });
     }
 
+    if (config.text.claude.api_key_set && config.text.claude.model.trim()) {
+        options.push({
+            provider: 'claude',
+            modelLabel: config.text.claude.model.trim(),
+            providerLabel: 'Claude',
+            source: 'ai_config',
+        });
+    }
+
     if (config.text.bigmodel.api_key_set && config.text.bigmodel.model.trim()) {
         options.push({
             provider: 'bigmodel',
             modelLabel: config.text.bigmodel.model.trim(),
             providerLabel: 'BigModel / GLM',
+            source: 'ai_config',
+        });
+    }
+
+    if (config.text.minimax.api_key_set && config.text.minimax.model.trim()) {
+        options.push({
+            provider: 'minimax',
+            modelLabel: config.text.minimax.model.trim(),
+            providerLabel: 'MiniMax',
             source: 'ai_config',
         });
     }

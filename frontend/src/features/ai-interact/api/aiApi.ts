@@ -4,7 +4,7 @@ import type { AISession, AISessionListResponse, AIMemory, ChatMessage } from '..
 
 const API_ROOT = resolveApiRoot();
 
-export type AIProvider = 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'bigmodel';
+export type AIProvider = 'coze' | 'local_ollama' | 'deepseek' | 'openai' | 'claude' | 'bigmodel' | 'minimax';
 export type AITutorMode = 'tutor' | 'hint_only';
 export type AISearchEngine = 'auto' | 'google' | 'bing' | 'duckduckgo' | 'wikipedia' | 'arxiv' | 'google_scholar';
 

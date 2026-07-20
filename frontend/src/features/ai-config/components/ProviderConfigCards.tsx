@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type {
     BigModelConfig,
     DeepSeekConfig,
+    MiniMaxConfig,
     MultimodalOpenAIConfig,
     OpenAIConfig,
 } from '../api/aiConfigApi';
@@ -11,6 +12,8 @@ import type {
     BigModelCatalogEntry,
     BigModelField,
     DeepSeekField,
+    MiniMaxField,
+    CapabilityId,
     MultimodalOpenAIField,
     OpenAIField,
 } from '../utils/aiConfigHelpers';
@@ -18,6 +21,9 @@ import {
     BIGMODEL_IMAGE_MODEL_OPTIONS,
     BIGMODEL_TEXT_MODEL_OPTIONS,
     DEEPSEEK_MODEL_OPTIONS,
+    MINIMAX_IMAGE_MODEL_OPTIONS,
+    MINIMAX_MULTIMODAL_MODEL_OPTIONS,
+    MINIMAX_TEXT_MODEL_OPTIONS,
     MULTIMODAL_OPENAI_MODEL_OPTIONS,
     OPENAI_MODEL_OPTIONS,
     formatUpdatedAt,
@@ -67,6 +73,16 @@ interface BigModelCardProps extends SharedCardProps {
     preview: Array<[string, string]>;
     activeCapability: BigModelCapability;
     onFieldChange: <K extends BigModelField>(field: K, value: BigModelConfig[K]) => void;
+    onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+    onResetDefaults: () => void;
+    onClearApiKey: () => void;
+}
+
+interface MiniMaxCardProps extends SharedCardProps {
+    form: MiniMaxConfig;
+    preview: Array<[string, string]>;
+    activeCapability: CapabilityId;
+    onFieldChange: <K extends MiniMaxField>(field: K, value: MiniMaxConfig[K]) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
     onResetDefaults: () => void;
     onClearApiKey: () => void;
@@ -364,6 +380,143 @@ export function BigModelConfigCard({
                                     disabled={loading || saving}
                                 />
                             </label>
+                            <label className={styles.field}>
+                                <span>api_key</span>
+                                <ApiKeyField
+                                    value={form.api_key}
+                                    onChange={(value) => onFieldChange('api_key', value)}
+                                    placeholder={form.api_key_set ? 'Saved key is kept unless replaced' : 'sk-...'}
+                                    disabled={loading || saving}
+                                />
+                            </label>
+                            <label className={styles.toggleRow}>
+                                <input
+                                    type="checkbox"
+                                    checked={form.stream}
+                                    onChange={(event) => onFieldChange('stream', event.target.checked)}
+                                    disabled={loading || saving}
+                                />
+                                <span>stream</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <aside className={styles.sideColumn}>
+                        <ProviderPreview rows={preview} />
+
+                        <div className={styles.cardFooter}>
+                            <span className={styles.savedAt}>
+                                <i className="fas fa-clock" /> {formatUpdatedAt(form.updated_at)}
+                            </span>
+                            <div className={styles.actionGroup}>
+                                <button type="button" className={styles.secondaryButton} onClick={onResetDefaults} disabled={loading || saving}>
+                                    <i className="fas fa-undo" /> Defaults
+                                </button>
+                                <button type="button" className={styles.secondaryButton} onClick={onClearApiKey} disabled={loading || saving || !form.api_key_set}>
+                                    <i className="fas fa-key" /> Clear Key
+                                </button>
+                                <button type="submit" className={styles.primaryButton} disabled={loading || saving}>
+                                    <i className="fas fa-save" /> {saving ? 'Saving' : 'Save'}
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </form>
+        </section>
+    );
+}
+
+export function MiniMaxConfigCard({
+    accountLabel,
+    form,
+    preview,
+    activeCapability,
+    loading,
+    saving,
+    onFieldChange,
+    onSubmit,
+    onResetDefaults,
+    onClearApiKey,
+}: MiniMaxCardProps) {
+    const isTextCapability = activeCapability === 'text';
+    const isMultimodalCapability = activeCapability === 'multimodal';
+    const activeLabel = isTextCapability
+        ? 'text defaults'
+        : isMultimodalCapability
+            ? 'multimodal defaults'
+            : 'image defaults';
+    const activeModelOptions = isTextCapability
+        ? MINIMAX_TEXT_MODEL_OPTIONS
+        : isMultimodalCapability
+            ? MINIMAX_MULTIMODAL_MODEL_OPTIONS
+            : MINIMAX_IMAGE_MODEL_OPTIONS;
+    const activeModelField = isTextCapability
+        ? 'text_model'
+        : isMultimodalCapability
+            ? 'multimodal_model'
+            : 'image_model';
+    const activeModelValue = isTextCapability
+        ? form.text_model
+        : isMultimodalCapability
+            ? form.multimodal_model
+            : form.image_model;
+    const activeUrlField = activeCapability === 'image' ? 'image_base_url' : 'base_url';
+    const activeUrlValue = activeCapability === 'image' ? form.image_base_url : form.base_url;
+
+    return (
+        <section className={`${styles.providerCard} ${styles.openaiCard}`} aria-label="MiniMax configuration">
+            <form className={styles.configForm} onSubmit={onSubmit}>
+                <div className={styles.cardBody}>
+                    <div className={styles.formColumn}>
+                        <div className={styles.cardTop}>
+                            <div className={styles.providerIdentity}>
+                                <span className={styles.providerIcon}>
+                                    <i className="fas fa-wand-magic-sparkles" />
+                                </span>
+                                <div>
+                                    <p className={styles.eyebrow}>OpenAI-Compatible MiniMax</p>
+                                    <h2>MiniMax</h2>
+                                </div>
+                            </div>
+                            <div className={styles.statusStack}>
+                                <span><i className="fas fa-user" /> {accountLabel}</span>
+                                <span className={form.api_key_set ? styles.statusOk : styles.statusWarn}>
+                                    <i className={`fas ${form.api_key_set ? 'fa-key' : 'fa-exclamation-triangle'}`} />
+                                    {form.api_key_set ? 'API key saved' : 'API key missing'}
+                                </span>
+                                <span><i className="fas fa-route" /> Editing {activeLabel}</span>
+                            </div>
+                        </div>
+
+                        <div className={styles.formGrid}>
+                            <div className={`${styles.field} ${styles.fullWidthField}`}>
+                                <span>{activeModelField}</span>
+                                {renderModelButtons(
+                                    activeModelOptions,
+                                    activeModelValue,
+                                    (value) => onFieldChange(activeModelField, value),
+                                    loading || saving,
+                                )}
+                            </div>
+                            <label className={styles.field}>
+                                <span>{activeUrlField}</span>
+                                <input
+                                    value={activeUrlValue}
+                                    onChange={(event) => onFieldChange(activeUrlField, event.target.value)}
+                                    disabled={loading || saving}
+                                />
+                            </label>
+                            {activeCapability !== 'image' ? (
+                                <label className={styles.field}>
+                                    <span>image_base_url</span>
+                                    <input
+                                        value={form.image_base_url}
+                                        onChange={(event) => onFieldChange('image_base_url', event.target.value)}
+                                        disabled={loading || saving}
+                                    />
+                                </label>
+                            ) : null}
                             <label className={styles.field}>
                                 <span>api_key</span>
                                 <ApiKeyField

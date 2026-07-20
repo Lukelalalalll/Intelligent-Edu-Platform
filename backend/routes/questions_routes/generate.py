@@ -62,6 +62,8 @@ def _credential_alias_for_provider(provider: str) -> str:
         return "COZE_TOKEN"
     if provider == "openai":
         return "OPENAI_API_KEY"
+    if provider == "claude":
+        return "ANTHROPIC_API_KEY"
     if provider == "deepseek":
         return "DEEPSEEK_API_KEY"
     if provider == "bigmodel":

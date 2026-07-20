@@ -97,6 +97,20 @@ export const getLLMConfigValidationError = (
     if (!isProvided(llmConfig.DEEPSEEK_MODEL)) {
       return 'No DeepSeek model selected. Use "Check models" after entering your API key, then choose a model.';
     }
+  } else if (llm === "bigmodel") {
+    if (!isProvided(llmConfig.BIGMODEL_API_KEY)) {
+      return "BigModel API key is required.";
+    }
+    if (!isProvided(llmConfig.BIGMODEL_MODEL)) {
+      return 'No BigModel model selected. Use "Check models" after entering your API key, then choose a model.';
+    }
+  } else if (llm === "minimax") {
+    if (!isProvided(llmConfig.MINIMAX_API_KEY)) {
+      return "MiniMax API key is required.";
+    }
+    if (!isProvided(llmConfig.MINIMAX_MODEL)) {
+      return 'No MiniMax model selected. Use "Check models" after entering your API key, then choose a model.';
+    }
   } else if (llm === "google") {
     if (!isProvided(llmConfig.GOOGLE_API_KEY)) {
       return "Google API key is required.";

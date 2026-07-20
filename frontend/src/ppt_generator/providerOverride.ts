@@ -1,22 +1,22 @@
 ﻿import type { AIConfigResponse } from "@/features/ai-config/api/aiConfigApi";
 import type { LLMConfig } from "@/types/llm_config";
 
-export type PptGeneratorSelectableProvider = "openai" | "deepseek" | "bigmodel";
-export type PptGeneratorSelectableMultimodalProvider = "openai" | "bigmodel";
-type ProviderAvailabilityConfig = Pick<AIConfigResponse, "openai" | "deepseek" | "bigmodel">;
+export type PptGeneratorSelectableProvider = "openai" | "claude" | "deepseek" | "bigmodel" | "minimax";
+export type PptGeneratorSelectableMultimodalProvider = "openai" | "bigmodel" | "minimax";
+type ProviderAvailabilityConfig = Pick<AIConfigResponse, "openai" | "claude" | "deepseek" | "bigmodel" | "minimax">;
 type MultimodalAvailabilityConfig = Pick<AIConfigResponse, "multimodal">;
 
 const STORAGE_KEY = "ppt_generator_provider_override";
 const MULTIMODAL_STORAGE_KEY = "ppt_generator_multimodal_provider_override";
 
 function isProvider(value: unknown): value is PptGeneratorSelectableProvider {
-  return value === "openai" || value === "deepseek" || value === "bigmodel";
+  return value === "openai" || value === "claude" || value === "deepseek" || value === "bigmodel" || value === "minimax";
 }
 
 function isMultimodalProvider(
   value: unknown
 ): value is PptGeneratorSelectableMultimodalProvider {
-  return value === "openai" || value === "bigmodel";
+  return value === "openai" || value === "bigmodel" || value === "minimax";
 }
 
 export function getConfiguredPptGeneratorProviders(
@@ -26,11 +26,17 @@ export function getConfiguredPptGeneratorProviders(
   if (aiConfig?.openai?.api_key_set) {
     providers.push("openai");
   }
+  if (aiConfig?.claude?.api_key_set) {
+    providers.push("claude");
+  }
   if (aiConfig?.deepseek?.api_key_set) {
     providers.push("deepseek");
   }
   if (aiConfig?.bigmodel?.api_key_set) {
     providers.push("bigmodel");
+  }
+  if (aiConfig?.minimax?.api_key_set) {
+    providers.push("minimax");
   }
   return providers;
 }
@@ -91,7 +97,7 @@ export function applyPptGeneratorProviderOverride(
 
   return {
     ...hostConfig,
-    LLM: provider,
+    LLM: provider === "claude" ? "anthropic" : provider,
   };
 }
 
@@ -125,6 +131,9 @@ export function getConfiguredPptGeneratorMultimodalProviders(
   }
   if (aiConfig?.multimodal?.bigmodel?.api_key_set) {
     providers.push("bigmodel");
+  }
+  if (aiConfig?.multimodal?.minimax?.api_key_set) {
+    providers.push("minimax");
   }
   return providers;
 }
@@ -187,4 +196,3 @@ export function getPptGeneratorMultimodalHeaders(
     "X-Ppt-Generator-Multimodal-Provider": provider,
   };
 }
-

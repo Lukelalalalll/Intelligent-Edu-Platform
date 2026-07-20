@@ -31,6 +31,8 @@ const TextProvider = ({ onInputChange, llmConfig }: TextProviderProps) => {
   const currentApiKey = getConfigString(llmConfig, currentApiKeyField);
   const currentCustomUrl = llmConfig.CUSTOM_LLM_URL || "";
   const currentDeepseekBaseUrl = (llmConfig.DEEPSEEK_BASE_URL || "").trim();
+  const currentBigModelBaseUrl = (llmConfig.BIGMODEL_BASE_URL || "").trim();
+  const currentMiniMaxBaseUrl = (llmConfig.MINIMAX_BASE_URL || "").trim();
   const currentLitellmUrl = (llmConfig.LITELLM_BASE_URL || "").trim();
   const currentLmStudioUrl = (llmConfig.LMSTUDIO_BASE_URL || "").trim();
   const currentFireworksUrl = (llmConfig.FIREWORKS_BASE_URL || "").trim();
@@ -55,6 +57,8 @@ const TextProvider = ({ onInputChange, llmConfig }: TextProviderProps) => {
     currentApiKey,
     currentCustomUrl,
     currentDeepseekBaseUrl,
+    currentBigModelBaseUrl,
+    currentMiniMaxBaseUrl,
     currentLitellmUrl,
     currentLmStudioUrl,
     currentFireworksUrl,
@@ -98,6 +102,8 @@ const TextProvider = ({ onInputChange, llmConfig }: TextProviderProps) => {
                 selectedProvider={selectedProvider}
                 currentApiKey={currentApiKey}
                 currentCustomUrl={currentCustomUrl}
+                currentBigModelBaseUrl={currentBigModelBaseUrl}
+                currentMiniMaxBaseUrl={currentMiniMaxBaseUrl}
                 currentOllamaUrl={currentOllamaUrl}
                 onInputChange={onInputChange}
                 showApiKey={showApiKey}
@@ -142,4 +148,3 @@ const TextProvider = ({ onInputChange, llmConfig }: TextProviderProps) => {
 };
 
 export default TextProvider;
-

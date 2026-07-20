@@ -9,6 +9,12 @@ import { SchemaEditorPanel } from "../SchemaEditorPanel";
 import type { PptGeneratorSelectableMultimodalProvider } from "@/ppt_generator/providerOverride";
 import styles from "../../customTemplateWorkbench.module.css";
 
+const MULTIMODAL_PROVIDER_LABELS: Record<PptGeneratorSelectableMultimodalProvider, string> = {
+  openai: "OpenAI",
+  bigmodel: "BigModel / GLM",
+  minimax: "MiniMax",
+};
+
 interface Step4TemplateCreationProps {
   slides: ProcessedSlide[];
   setSlides: React.Dispatch<React.SetStateAction<ProcessedSlide[]>>;
@@ -142,7 +148,7 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
             <div className="mt-4 space-y-3">
               <div className={styles.statusRow}>
                 <strong>Provider</strong>
-                <span>{multimodalProvider === "openai" ? "OpenAI" : multimodalProvider}</span>
+                <span>{MULTIMODAL_PROVIDER_LABELS[multimodalProvider]}</span>
               </div>
               <div className={styles.statusRow}>
                 <strong>Status</strong>
@@ -175,15 +181,18 @@ export const Step4TemplateCreation: React.FC<Step4TemplateCreationProps> = ({
               </div>
 
               <div className={styles.toolbarActions}>
-                <button
-                  type="button"
-                  className={styles.buttonSecondary}
-                  onClick={() => onSelectMultimodalProvider("openai")}
-                  disabled={isProcessingSlides}
-                >
-                  <Images className="h-4 w-4" />
-                  OpenAI
-                </button>
+                {(Object.keys(MULTIMODAL_PROVIDER_LABELS) as PptGeneratorSelectableMultimodalProvider[]).map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    className={provider === multimodalProvider ? styles.buttonSecondary : styles.buttonGhost}
+                    onClick={() => onSelectMultimodalProvider(provider)}
+                    disabled={isProcessingSlides}
+                  >
+                    <Images className="h-4 w-4" />
+                    {MULTIMODAL_PROVIDER_LABELS[provider]}
+                  </button>
+                ))}
                 <button
                   type="button"
                   className={styles.buttonGhost}

@@ -29,7 +29,9 @@ export function useAIChatPreferences() {
         if (stored === 'coze') return 'coze';
         if (stored === 'deepseek') return 'deepseek';
         if (stored === 'openai') return 'openai';
+        if (stored === 'claude') return 'claude';
         if (stored === 'bigmodel') return 'bigmodel';
+        if (stored === 'minimax') return 'minimax';
         return 'local_ollama';
     });
     const [configuredChatModels, setConfiguredChatModels] = useState<ChatModelOption[]>([]);

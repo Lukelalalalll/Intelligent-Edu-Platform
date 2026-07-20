@@ -7,11 +7,11 @@ from fastapi import HTTPException
 
 from backend.config import Config
 
-AIProvider = Literal["auto", "coze", "local_ollama", "deepseek", "openai", "bigmodel"]
-ConcreteAIProvider = Literal["coze", "local_ollama", "deepseek", "openai", "bigmodel"]
+AIProvider = Literal["auto", "coze", "local_ollama", "deepseek", "openai", "claude", "bigmodel", "minimax"]
+ConcreteAIProvider = Literal["coze", "local_ollama", "deepseek", "openai", "claude", "bigmodel", "minimax"]
 ProviderConfigSource = Literal["user_ai_config", "env_default", "global_service", "auto_fallback"]
-_SUPPORTED_PROVIDERS = {"auto", "coze", "local_ollama", "deepseek", "openai", "bigmodel"}
-_CONCRETE_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai", "bigmodel"}
+_SUPPORTED_PROVIDERS = {"auto", "coze", "local_ollama", "deepseek", "openai", "claude", "bigmodel", "minimax"}
+_CONCRETE_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai", "claude", "bigmodel", "minimax"}
 
 
 @dataclass(slots=True)
@@ -70,8 +70,8 @@ def _capabilities(provider: str) -> dict[str, bool]:
     return {
         "json": True,
         "reasoning": provider == "deepseek",
-        "streaming": provider in {"local_ollama", "coze", "deepseek", "openai", "bigmodel"},
-        "vision": provider in {"local_ollama", "bigmodel"},
+        "streaming": provider in {"local_ollama", "coze", "deepseek", "openai", "claude", "bigmodel", "minimax"},
+        "vision": provider in {"local_ollama", "claude", "bigmodel", "minimax"},
     }
 
 
@@ -111,6 +111,25 @@ async def _runtime_for_provider(
             api_key=api_key,
         )
 
+    if provider == "claude":
+        config = {}
+        if user:
+            from backend.services.auth.user_profile_service import load_claude_runtime_config
+            config = await load_claude_runtime_config(user)
+        user_key = str(config.get("api_key") or "").strip()
+        api_key = user_key
+        return ResolvedProviderRuntime(
+            provider_id="claude",
+            requested_provider=requested,
+            config_source="user_ai_config",
+            model=str(config.get("model") or "claude-sonnet-5"),
+            base_url=str(config.get("base_url") or "https://api.anthropic.com/v1").rstrip("/"),
+            stream=bool(config.get("stream", False)),
+            capabilities=_capabilities("claude"),
+            health_status={"configured": bool(api_key)},
+            api_key=api_key,
+        )
+
     if provider == "bigmodel":
         config = {}
         if user:
@@ -131,6 +150,25 @@ async def _runtime_for_provider(
             base_url=str(config.get("base_url") or "https://open.bigmodel.cn/api/paas/v4").rstrip("/"),
             stream=bool(config.get("stream", False)),
             capabilities=_capabilities("bigmodel"),
+            health_status={"configured": bool(api_key)},
+            api_key=api_key,
+        )
+
+    if provider == "minimax":
+        config = {}
+        if user:
+            from backend.services.auth.user_profile_service import load_minimax_runtime_config
+            config = await load_minimax_runtime_config(user)
+        user_key = str(config.get("api_key") or "").strip()
+        api_key = user_key
+        return ResolvedProviderRuntime(
+            provider_id="minimax",
+            requested_provider=requested,
+            config_source="user_ai_config",
+            model=str(config.get("model") or "MiniMax-M2.7"),
+            base_url=str(config.get("base_url") or "https://api.minimaxi.com/v1").rstrip("/"),
+            stream=bool(config.get("stream", False)),
+            capabilities=_capabilities("minimax"),
             health_status={"configured": bool(api_key)},
             api_key=api_key,
         )
@@ -203,7 +241,7 @@ async def resolve_provider_runtime(
     provider = resolve_provider(raw_provider, feature=feature, user=user) if raw_provider != "auto" else "auto"
     if provider != "auto":
         config_source: ProviderConfigSource | None = None
-        if provider in {"openai", "deepseek", "bigmodel"}:
+        if provider in {"openai", "claude", "deepseek", "bigmodel", "minimax"}:
             config_source = "user_ai_config" if user else "env_default"
         runtime = await _runtime_for_provider(provider, requested=provider, user=user, config_source=config_source)
         if require_healthy:
@@ -214,7 +252,9 @@ async def resolve_provider_runtime(
     if user:
         candidates.extend([
             ("openai", user, "user_ai_config"),
+            ("claude", user, "user_ai_config"),
             ("bigmodel", user, "user_ai_config"),
+            ("minimax", user, "user_ai_config"),
             ("deepseek", user, "user_ai_config"),
         ])
     candidates.extend([
@@ -256,11 +296,11 @@ async def list_provider_statuses(
     *,
     feature: str = "ai.providers",
 ) -> list[ProviderStatus]:
-    requested: list[ConcreteAIProvider] = ["openai", "bigmodel", "deepseek", "local_ollama", "coze"]
+    requested: list[ConcreteAIProvider] = ["openai", "claude", "bigmodel", "minimax", "deepseek", "local_ollama", "coze"]
     statuses: list[ProviderStatus] = []
     for provider in requested:
         config_source: ProviderConfigSource | None = None
-        if provider in {"openai", "deepseek", "bigmodel"}:
+        if provider in {"openai", "claude", "deepseek", "bigmodel", "minimax"}:
             config_source = "user_ai_config" if user else "env_default"
         runtime = await _runtime_for_provider(
             provider,
@@ -275,7 +315,9 @@ async def list_provider_statuses(
                 id=provider,  # type: ignore[arg-type]
                 label={
                     "openai": "OpenAI",
+                    "claude": "Claude",
                     "bigmodel": "BigModel / GLM",
+                    "minimax": "MiniMax",
                     "deepseek": "DeepSeek",
                     "local_ollama": "Local Ollama",
                     "coze": "Coze",

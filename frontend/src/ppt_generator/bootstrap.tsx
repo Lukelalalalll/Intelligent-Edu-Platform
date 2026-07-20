@@ -26,17 +26,41 @@ let cachedLoad: Promise<PptGeneratorHostConfig> | null = null;
 const mapHostAiConfigToPptGenerator = async (): Promise<PptGeneratorHostConfig> => {
   const hostConfig = await aiConfigApi.get();
   const hasOpenAi = !!hostConfig.openai.api_key_set;
+  const hasClaude = !!hostConfig.claude.api_key_set;
+  const hasBigModel = !!hostConfig.bigmodel.api_key_set;
+  const hasMiniMax = !!hostConfig.minimax.api_key_set;
   const hasDeepSeek = !!hostConfig.deepseek.api_key_set;
 
   const llmConfig: LLMConfig = {
-    LLM: hasOpenAi ? "openai" : hasDeepSeek ? "deepseek" : "openai",
-    OPENAI_MODEL: hostConfig.openai.model || "gpt-5.5",
+    LLM: hasOpenAi
+      ? "openai"
+      : hasClaude
+        ? "anthropic"
+      : hasBigModel
+        ? "bigmodel"
+        : hasMiniMax
+          ? "minimax"
+          : hasDeepSeek
+            ? "deepseek"
+            : "openai",
+    OPENAI_MODEL: hostConfig.openai.model || "gpt-5.6",
     OPENAI_API_KEY: hasOpenAi ? CONFIGURED_SENTINEL : "",
+    ANTHROPIC_MODEL: hostConfig.claude.model || "claude-sonnet-5",
+    ANTHROPIC_API_KEY: hasClaude ? CONFIGURED_SENTINEL : "",
+    BIGMODEL_MODEL: hostConfig.bigmodel.text_model || "glm-4.5-flash",
+    BIGMODEL_API_KEY: hasBigModel ? CONFIGURED_SENTINEL : "",
+    BIGMODEL_BASE_URL: hostConfig.bigmodel.base_url || "https://open.bigmodel.cn/api/paas/v4",
+    MINIMAX_MODEL: hostConfig.minimax.text_model || "MiniMax-M2.7",
+    MINIMAX_API_KEY: hasMiniMax ? CONFIGURED_SENTINEL : "",
+    MINIMAX_BASE_URL: hostConfig.minimax.base_url || "https://api.minimaxi.com/v1",
+    MINIMAX_IMAGE_API_KEY: hasMiniMax ? CONFIGURED_SENTINEL : "",
+    MINIMAX_IMAGE_MODEL: hostConfig.minimax.image_model || "image-01",
+    MINIMAX_IMAGE_BASE_URL: hostConfig.minimax.image_base_url || "https://api.minimaxi.com/v1",
     DEEPSEEK_MODEL: hostConfig.deepseek.model || "deepseek-v4-pro",
     DEEPSEEK_API_KEY: hasDeepSeek ? CONFIGURED_SENTINEL : "",
     DEEPSEEK_BASE_URL: hostConfig.deepseek.base_url || "https://api.deepseek.com",
-    DISABLE_IMAGE_GENERATION: !hasOpenAi,
-    IMAGE_PROVIDER: hasOpenAi ? "gpt-image-1.5" : undefined,
+    DISABLE_IMAGE_GENERATION: !(hasOpenAi || hasBigModel),
+    IMAGE_PROVIDER: hasOpenAi ? "gpt-image-1.5" : hasBigModel ? "glm-5v-flash" : undefined,
     WEB_GROUNDING: false,
     WEB_SEARCH_PROVIDER: "auto",
   };
@@ -141,5 +165,3 @@ export function PptGeneratorBootstrap({
 
   return <>{children}</>;
 }
-
-

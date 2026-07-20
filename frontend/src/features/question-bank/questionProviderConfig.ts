@@ -12,7 +12,9 @@ function isProvider(value: unknown): value is QuestionStudioProvider {
         || value === 'local_ollama'
         || value === 'deepseek'
         || value === 'openai'
-        || value === 'bigmodel';
+        || value === 'claude'
+        || value === 'bigmodel'
+        || value === 'minimax';
 }
 
 export function readStoredQuestionProvider(): QuestionStudioProvider | null {

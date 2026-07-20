@@ -26,20 +26,24 @@ describe("providerOverride", () => {
       getConfiguredPptGeneratorMultimodalProviders({
         multimodal: {
           openai: { api_key_set: true } as never,
+          claude: { api_key_set: false } as never,
           bigmodel: { api_key_set: true } as never,
+          minimax: { api_key_set: true } as never,
         },
       })
-    ).toEqual(["openai", "bigmodel"]);
+    ).toEqual(["openai", "bigmodel", "minimax"]);
   });
 
   it("returns configured providers from AI config", () => {
     expect(
       getConfiguredPptGeneratorProviders({
         openai: { api_key_set: true } as never,
+        claude: { api_key_set: true } as never,
         deepseek: { api_key_set: false } as never,
         bigmodel: { api_key_set: true } as never,
+        minimax: { api_key_set: true } as never,
       })
-    ).toEqual(["openai", "bigmodel"]);
+    ).toEqual(["openai", "claude", "bigmodel", "minimax"]);
   });
 
   it("stores and reads a valid provider override", () => {
@@ -51,8 +55,10 @@ describe("providerOverride", () => {
     window.sessionStorage.setItem("ppt_generator_provider_override", "bad");
     const provider = resolvePptGeneratorProviderOverride({
       openai: { api_key_set: true } as never,
+      claude: { api_key_set: true } as never,
       deepseek: { api_key_set: true } as never,
       bigmodel: { api_key_set: true } as never,
+      minimax: { api_key_set: true } as never,
     });
     expect(provider).toBe("openai");
     expect(readStoredPptGeneratorProviderOverride()).toBe("openai");
@@ -62,8 +68,10 @@ describe("providerOverride", () => {
     writeStoredPptGeneratorProviderOverride("openai");
     const provider = resolvePptGeneratorProviderOverride({
       openai: { api_key_set: false } as never,
+      claude: { api_key_set: false } as never,
       deepseek: { api_key_set: false } as never,
       bigmodel: { api_key_set: false } as never,
+      minimax: { api_key_set: false } as never,
     });
     expect(provider).toBeNull();
     expect(readStoredPptGeneratorProviderOverride()).toBeNull();
@@ -78,6 +86,18 @@ describe("providerOverride", () => {
     ).toEqual({
       LLM: "deepseek",
       OPENAI_MODEL: "gpt-5.5",
+    });
+  });
+
+  it("maps Claude overrides to anthropic runtime config", () => {
+    expect(
+      applyPptGeneratorProviderOverride(
+        { LLM: "openai", ANTHROPIC_MODEL: "claude-sonnet-5" },
+        "claude"
+      )
+    ).toEqual({
+      LLM: "anthropic",
+      ANTHROPIC_MODEL: "claude-sonnet-5",
     });
   });
 
@@ -102,7 +122,9 @@ describe("providerOverride", () => {
       resolvePptGeneratorMultimodalProviderOverride({
         multimodal: {
           openai: { api_key_set: true } as never,
+          claude: { api_key_set: false } as never,
           bigmodel: { api_key_set: true } as never,
+          minimax: { api_key_set: true } as never,
         },
       })
     ).toBe("bigmodel");
@@ -114,7 +136,9 @@ describe("providerOverride", () => {
       resolvePptGeneratorMultimodalProviderOverride({
         multimodal: {
           openai: { api_key_set: false } as never,
+          claude: { api_key_set: false } as never,
           bigmodel: { api_key_set: false } as never,
+          minimax: { api_key_set: false } as never,
         },
       })
     ).toBeNull();
@@ -122,4 +146,3 @@ describe("providerOverride", () => {
     clearStoredPptGeneratorMultimodalProviderOverride();
   });
 });
-

@@ -10,5 +10,5 @@ _DEFAULT_TITLE = "New Conversation"
 _ERR_INVALID_ID = "Invalid session id"
 _ERR_NOT_FOUND = "Session not found"
 _ERR_FORBIDDEN = "Not your session"
-_SUPPORTED_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai", "bigmodel"}
+_SUPPORTED_PROVIDERS = {"coze", "local_ollama", "deepseek", "openai", "claude", "bigmodel", "minimax"}
 _PDF_EXTRACT_MAX_CHARS = 20000

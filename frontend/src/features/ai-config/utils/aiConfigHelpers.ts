@@ -1,40 +1,54 @@
 import type {
     BigModelConfig,
     BigModelConfigUpdate,
+    ClaudeConfig,
+    ClaudeConfigUpdate,
     DeepSeekConfig,
     DeepSeekConfigUpdate,
+    MiniMaxConfig,
+    MiniMaxConfigUpdate,
     MultimodalOpenAIConfig,
     MultimodalOpenAIConfigUpdate,
     OpenAIConfig,
     OpenAIConfigUpdate,
 } from '../api/aiConfigApi';
 
-export type CapabilityId = 'text' | 'multimodal';
-export type ProviderId = 'deepseek' | 'openai' | 'bigmodel';
+export type CapabilityId = 'text' | 'multimodal' | 'image';
+export type ProviderId = 'deepseek' | 'openai' | 'claude' | 'bigmodel' | 'minimax';
 export type SlideDirection = 'left' | 'right';
 export type BigModelField = keyof BigModelConfig;
+export type ClaudeField = keyof ClaudeConfig;
 export type DeepSeekField = keyof DeepSeekConfig;
 export type OpenAIField = keyof OpenAIConfig;
 export type MultimodalOpenAIField = keyof MultimodalOpenAIConfig;
+export type MiniMaxField = keyof MiniMaxConfig;
 export type BigModelCapability = 'text' | 'multimodal';
 export type BigModelModelGroup = 'text' | 'general' | 'vision';
 
 export const CAPABILITY_OPTIONS: Array<{ id: CapabilityId; label: string; icon: string }> = [
     { id: 'text', label: 'Pure Text Models', icon: 'fa-align-left' },
     { id: 'multimodal', label: 'Multimodal Models', icon: 'fa-images' },
+    { id: 'image', label: 'Image Models', icon: 'fa-image' },
 ];
 
 export const PROVIDER_OPTIONS: Array<{ id: ProviderId; label: string; icon: string }> = [
     { id: 'deepseek', label: 'DeepSeek', icon: 'fa-brain' },
     { id: 'openai', label: 'OpenAI', icon: 'fa-magic' },
+    { id: 'claude', label: 'Claude', icon: 'fa-comment-dots' },
     { id: 'bigmodel', label: 'BigModel / GLM', icon: 'fa-layer-group' },
+    { id: 'minimax', label: 'MiniMax', icon: 'fa-wand-magic-sparkles' },
 ];
 
 export const CAPABILITY_PROVIDER_OPTIONS: Record<CapabilityId, Array<{ id: ProviderId; label: string; icon: string }>> = {
     text: PROVIDER_OPTIONS,
     multimodal: [
         { id: 'openai', label: 'OpenAI', icon: 'fa-images' },
+        { id: 'claude', label: 'Claude', icon: 'fa-comment-dots' },
         { id: 'bigmodel', label: 'BigModel / GLM', icon: 'fa-layer-group' },
+        { id: 'minimax', label: 'MiniMax', icon: 'fa-wand-magic-sparkles' },
+    ],
+    image: [
+        { id: 'minimax', label: 'MiniMax', icon: 'fa-image' },
     ],
 };
 
@@ -55,6 +69,13 @@ export const OPENAI_MODEL_OPTIONS = [
     'gpt-4.1-mini',
 ];
 
+export const CLAUDE_MODEL_OPTIONS = [
+    'claude-sonnet-5',
+    'claude-opus-4-8',
+    'claude-haiku-4-5',
+    'claude-fable-5',
+];
+
 export const MULTIMODAL_OPENAI_MODEL_OPTIONS = [
     'gpt-5.6',
     'gpt-5.6-terra',
@@ -62,7 +83,26 @@ export const MULTIMODAL_OPENAI_MODEL_OPTIONS = [
     'gpt-5.5',
     'gpt-5-mini',
     'gpt-4.1',
-    'gpt-4o-mini',
+    'gpt-4.1-mini',
+];
+
+export const MINIMAX_TEXT_MODEL_OPTIONS = [
+    'MiniMax-M2.7',
+    'MiniMax-M2.7-highspeed',
+    'MiniMax-M2.5',
+    'MiniMax-M2.5-highspeed',
+    'MiniMax-M2.1',
+    'MiniMax-M2.1-highspeed',
+    'MiniMax-M2',
+];
+
+export const MINIMAX_MULTIMODAL_MODEL_OPTIONS = [
+    'MiniMax-M3',
+];
+
+export const MINIMAX_IMAGE_MODEL_OPTIONS = [
+    'image-01',
+    'image-01-live',
 ];
 
 export type BigModelCatalogEntry = {
@@ -71,6 +111,20 @@ export type BigModelCatalogEntry = {
     group: BigModelModelGroup;
     allowedCapabilities: BigModelCapability[];
 };
+
+export type MiniMaxModelGroup = 'text' | 'multimodal' | 'image';
+
+export type MiniMaxCatalogEntry = {
+    id: string;
+    label: string;
+    group: MiniMaxModelGroup;
+};
+
+export const MINIMAX_MODEL_CATALOG: MiniMaxCatalogEntry[] = [
+    ...MINIMAX_TEXT_MODEL_OPTIONS.map((id) => ({ id, label: id, group: 'text' as const })),
+    ...MINIMAX_MULTIMODAL_MODEL_OPTIONS.map((id) => ({ id, label: id, group: 'multimodal' as const })),
+    ...MINIMAX_IMAGE_MODEL_OPTIONS.map((id) => ({ id, label: id, group: 'image' as const })),
+];
 
 function buildBigModelCatalogEntries(
     ids: string[],
@@ -147,6 +201,15 @@ export function normalizeOpenAIConfig(config: OpenAIConfig, fallback: OpenAIConf
     };
 }
 
+export function normalizeClaudeConfig(config: ClaudeConfig, fallback: ClaudeConfig): ClaudeConfig {
+    return {
+        ...fallback,
+        ...config,
+        api_key: config?.api_key ?? '',
+        api_key_set: Boolean(config?.api_key_set),
+    };
+}
+
 export function normalizeMultimodalOpenAIConfig(
     config: MultimodalOpenAIConfig,
     fallback: MultimodalOpenAIConfig,
@@ -160,6 +223,15 @@ export function normalizeMultimodalOpenAIConfig(
 }
 
 export function normalizeBigModelConfig(config: BigModelConfig, fallback: BigModelConfig): BigModelConfig {
+    return {
+        ...fallback,
+        ...config,
+        api_key: config?.api_key ?? '',
+        api_key_set: Boolean(config?.api_key_set),
+    };
+}
+
+export function normalizeMiniMaxConfig(config: MiniMaxConfig, fallback: MiniMaxConfig): MiniMaxConfig {
     return {
         ...fallback,
         ...config,
@@ -197,6 +269,16 @@ export function buildOpenAIPayload(form: OpenAIConfig, clearApiKey = false): Ope
     };
 }
 
+export function buildClaudePayload(form: ClaudeConfig, clearApiKey = false): ClaudeConfigUpdate {
+    return {
+        base_url: form.base_url.trim(),
+        api_key: clearApiKey ? '' : form.api_key.trim(),
+        clear_api_key: clearApiKey,
+        model: form.model.trim(),
+        stream: form.stream,
+    };
+}
+
 export function buildMultimodalOpenAIPayload(
     form: MultimodalOpenAIConfig,
     clearApiKey = false,
@@ -216,6 +298,19 @@ export function buildBigModelPayload(form: BigModelConfig, clearApiKey = false):
         api_key: clearApiKey ? '' : form.api_key.trim(),
         clear_api_key: clearApiKey,
         text_model: form.text_model.trim(),
+        image_model: form.image_model.trim(),
+        stream: form.stream,
+    };
+}
+
+export function buildMiniMaxPayload(form: MiniMaxConfig, clearApiKey = false): MiniMaxConfigUpdate {
+    return {
+        base_url: form.base_url.trim(),
+        image_base_url: form.image_base_url.trim(),
+        api_key: clearApiKey ? '' : form.api_key.trim(),
+        clear_api_key: clearApiKey,
+        text_model: form.text_model.trim(),
+        multimodal_model: form.multimodal_model.trim(),
         image_model: form.image_model.trim(),
         stream: form.stream,
     };

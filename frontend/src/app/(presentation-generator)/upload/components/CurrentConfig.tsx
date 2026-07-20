@@ -32,8 +32,14 @@ function getSelectedTextModel(
   switch (provider) {
     case "openai":
       return llmConfig.OPENAI_MODEL || "";
+    case "claude":
+      return llmConfig.ANTHROPIC_MODEL || "";
     case "deepseek":
       return llmConfig.DEEPSEEK_MODEL || "";
+    case "bigmodel":
+      return llmConfig.BIGMODEL_MODEL || "";
+    case "minimax":
+      return llmConfig.MINIMAX_MODEL || "";
     case "google":
       return llmConfig.GOOGLE_MODEL || "";
     case "vertex":
@@ -76,8 +82,10 @@ const CurrentConfig = ({
   onProviderSelect,
 }: CurrentConfigProps) => {
   const { t } = useI18n();
-  const textProviderKey = llmConfig.LLM || "openai";
-  const textProviderLabel = LLM_PROVIDERS[textProviderKey]?.label || textProviderKey;
+  const textProviderKey = llmConfig.LLM === "anthropic" ? "claude" : (llmConfig.LLM || "openai");
+  const textProviderLabel = textProviderKey === "claude"
+    ? "Claude"
+    : (LLM_PROVIDERS[textProviderKey]?.label || textProviderKey);
   const selectedTextModel = getSelectedTextModel(llmConfig, textProviderKey);
   const textSummary = selectedTextModel
     ? `${textProviderLabel} (${selectedTextModel})`
@@ -172,4 +180,3 @@ const CurrentConfig = ({
 };
 
 export default CurrentConfig;
-

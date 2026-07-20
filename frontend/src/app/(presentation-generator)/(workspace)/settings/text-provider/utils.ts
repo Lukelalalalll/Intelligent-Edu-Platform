@@ -8,6 +8,8 @@ import { TextProviderField, TextProviderInputChange } from "./types";
 const PROVIDER_MODEL_FIELDS: Record<string, TextProviderField> = {
   openai: "OPENAI_MODEL",
   deepseek: "DEEPSEEK_MODEL",
+  bigmodel: "BIGMODEL_MODEL",
+  minimax: "MINIMAX_MODEL",
   google: "GOOGLE_MODEL",
   vertex: "VERTEX_MODEL",
   azure: "AZURE_OPENAI_MODEL",
@@ -27,6 +29,8 @@ const PROVIDER_MODEL_FIELDS: Record<string, TextProviderField> = {
 const PROVIDER_API_KEY_FIELDS: Record<string, TextProviderField> = {
   openai: "OPENAI_API_KEY",
   deepseek: "DEEPSEEK_API_KEY",
+  bigmodel: "BIGMODEL_API_KEY",
+  minimax: "MINIMAX_API_KEY",
   google: "GOOGLE_API_KEY",
   vertex: "VERTEX_API_KEY",
   azure: "AZURE_OPENAI_API_KEY",
@@ -44,6 +48,8 @@ const PROVIDER_API_KEY_FIELDS: Record<string, TextProviderField> = {
 const PROVIDER_API_KEY_LABELS: Record<string, string> = {
   custom: "Custom LLM API Key",
   deepseek: "DeepSeek API Key",
+  bigmodel: "BigModel API Key",
+  minimax: "MiniMax API Key",
   vertex: "Vertex API Key",
   azure: "Azure OpenAI API Key",
   bedrock: "Bedrock API Key (optional)",
@@ -58,6 +64,8 @@ const PROVIDER_API_KEY_LABELS: Record<string, string> = {
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4.1",
   deepseek: "deepseek-chat",
+  bigmodel: "glm-4.5-flash",
+  minimax: "MiniMax-M2.7",
   google: "models/gemini-2.5-flash",
   anthropic: "claude-sonnet-4-20250514",
   openrouter: "openai/gpt-4o",
@@ -71,6 +79,8 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
 const API_KEY_REQUIRED_PROVIDERS = new Set([
   "openai",
   "deepseek",
+  "bigmodel",
+  "minimax",
   "google",
   "anthropic",
   "openrouter",
@@ -162,6 +172,8 @@ export const getOpenAiCompatibleUrl = ({
   selectedProviderMeta,
   currentCustomUrl,
   currentDeepseekBaseUrl,
+  currentBigModelBaseUrl,
+  currentMiniMaxBaseUrl,
   currentLitellmUrl,
   currentLmStudioUrl,
   currentFireworksUrl,
@@ -171,6 +183,8 @@ export const getOpenAiCompatibleUrl = ({
   selectedProviderMeta?: LLMProviderOption;
   currentCustomUrl: string;
   currentDeepseekBaseUrl: string;
+  currentBigModelBaseUrl: string;
+  currentMiniMaxBaseUrl: string;
   currentLitellmUrl: string;
   currentLmStudioUrl: string;
   currentFireworksUrl: string;
@@ -182,6 +196,14 @@ export const getOpenAiCompatibleUrl = ({
 
   if (selectedProvider === "deepseek") {
     return currentDeepseekBaseUrl || selectedProviderMeta?.url || "";
+  }
+
+  if (selectedProvider === "bigmodel") {
+    return currentBigModelBaseUrl || selectedProviderMeta?.url || "";
+  }
+
+  if (selectedProvider === "minimax") {
+    return currentMiniMaxBaseUrl || selectedProviderMeta?.url || "";
   }
 
   if (selectedProvider === "litellm") {
@@ -225,4 +247,3 @@ export const applyConfigPatch = (
     }
   }
 };
-

@@ -5,7 +5,9 @@ from fastapi import Depends
 from backend.core.security import get_current_user
 from backend.schemas import (
     BigModelConfigSchema,
+    ClaudeConfigSchema,
     DeepSeekConfigSchema,
+    MiniMaxConfigSchema,
     MultimodalOpenAIConfigSchema,
     OpenAIConfigSchema,
 )
@@ -13,7 +15,9 @@ from backend.services.ai.ai_interact_runtime_cache import invalidate_provider_he
 from backend.services.auth.user_profile_service import (
     load_ai_config,
     save_bigmodel_config,
+    save_claude_config,
     save_deepseek_config,
+    save_minimax_config,
     save_multimodal_openai_config,
     save_openai_config,
 )
@@ -47,6 +51,16 @@ async def update_openai_config(
     return result
 
 
+@router.post("/profile/ai-config/claude")
+async def update_claude_config(
+    payload: ClaudeConfigSchema,
+    current_user: dict = Depends(get_current_user),
+):
+    result = await save_claude_config(current_user, payload)
+    invalidate_provider_health_cache(current_user, "claude")
+    return result
+
+
 @router.post("/profile/ai-config/bigmodel")
 async def update_bigmodel_config(
     payload: BigModelConfigSchema,
@@ -54,6 +68,16 @@ async def update_bigmodel_config(
 ):
     result = await save_bigmodel_config(current_user, payload)
     invalidate_provider_health_cache(current_user, "bigmodel")
+    return result
+
+
+@router.post("/profile/ai-config/minimax")
+async def update_minimax_config(
+    payload: MiniMaxConfigSchema,
+    current_user: dict = Depends(get_current_user),
+):
+    result = await save_minimax_config(current_user, payload)
+    invalidate_provider_health_cache(current_user, "minimax")
     return result
 
 
@@ -65,4 +89,3 @@ async def update_multimodal_openai_config(
     result = await save_multimodal_openai_config(current_user, payload)
     invalidate_provider_health_cache(current_user, "openai")
     return result
-

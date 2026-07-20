@@ -18,6 +18,8 @@ interface UseTextProviderModelsParams {
   currentApiKey: string;
   currentCustomUrl: string;
   currentDeepseekBaseUrl: string;
+  currentBigModelBaseUrl: string;
+  currentMiniMaxBaseUrl: string;
   currentLitellmUrl: string;
   currentLmStudioUrl: string;
   currentFireworksUrl: string;
@@ -43,6 +45,8 @@ export const useTextProviderModels = ({
   currentApiKey,
   currentCustomUrl,
   currentDeepseekBaseUrl,
+  currentBigModelBaseUrl,
+  currentMiniMaxBaseUrl,
   currentLitellmUrl,
   currentLmStudioUrl,
   currentFireworksUrl,
@@ -83,6 +87,8 @@ export const useTextProviderModels = ({
     currentApiKey,
     currentCustomUrl,
     currentDeepseekBaseUrl,
+    currentBigModelBaseUrl,
+    currentMiniMaxBaseUrl,
     currentLitellmUrl,
     currentLmStudioUrl,
     currentFireworksUrl,
@@ -140,6 +146,8 @@ export const useTextProviderModels = ({
                 selectedProviderMeta,
                 currentCustomUrl,
                 currentDeepseekBaseUrl,
+                currentBigModelBaseUrl,
+                currentMiniMaxBaseUrl,
                 currentLitellmUrl,
                 currentLmStudioUrl,
                 currentFireworksUrl,
@@ -205,10 +213,12 @@ export const useTextProviderModels = ({
     canFetchModels,
     currentApiKey,
     currentCustomUrl,
+    currentBigModelBaseUrl,
     currentDeepseekBaseUrl,
     currentFireworksUrl,
     currentLitellmUrl,
     currentLmStudioUrl,
+    currentMiniMaxBaseUrl,
     currentModel,
     currentModelField,
     currentTogetherUrl,
@@ -225,4 +235,3 @@ export const useTextProviderModels = ({
     modelsLoading,
   };
 };
-
