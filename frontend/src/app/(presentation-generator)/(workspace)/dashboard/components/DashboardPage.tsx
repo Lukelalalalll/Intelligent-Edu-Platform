@@ -28,6 +28,7 @@ import {
 } from "@/app/(presentation-generator)/(workspace)/dashboard/components/dashboardUtils";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { usePathname } from "@/ppt_generator/shims/next-navigation";
+import { PPT_GENERATOR_ROUTE_PATHS } from "@/ppt_generator/routeMeta";
 import { cn } from "@/lib/utils";
 import entranceStyles from "@/shared/page-entrance/PageEntrance.module.css";
 import {
@@ -184,7 +185,7 @@ const DashboardPage: React.FC = () => {
   const pptGeneratorNavItems = useMemo(
     () => [
       {
-        href: "/dashboard",
+        href: PPT_GENERATOR_ROUTE_PATHS.dashboard,
         label: t("ppt_generator.workspace.nav.dashboard"),
         renderIcon: (active: boolean) => (
           <LayoutDashboard
@@ -194,12 +195,12 @@ const DashboardPage: React.FC = () => {
         ),
       },
       {
-        href: "/templates",
+        href: PPT_GENERATOR_ROUTE_PATHS.templates,
         label: t("ppt_generator.workspace.nav.templates"),
         renderIcon: (active: boolean) => <TemplateNavIcon active={active} />,
       },
       {
-        href: "/theme",
+        href: PPT_GENERATOR_ROUTE_PATHS.theme,
         label: t("ppt_generator.workspace.nav.theme"),
         renderIcon: (active: boolean) => (
           <Palette className={styles.navIcon} color={active ? "#007b55" : "#667085"} />
@@ -432,4 +433,3 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
-

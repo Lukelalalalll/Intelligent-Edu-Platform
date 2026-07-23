@@ -11,6 +11,7 @@ import { useAuthStore } from './shared/store/useAuthStore';
 import { ROUTES, type RouteConfig } from './router/routes';
 import RouteSkeleton from './shared/RouteSkeleton';
 import { isPptGeneratorRoutePath } from './ppt_generator/routeMeta';
+import CookieConsentBanner from './shared/privacy/CookieConsentBanner';
 
 /** Forces a full remount of children when the given URL param changes. */
 function KeyedByParam({ param, children }: { param: string; children: ReactNode }) {
@@ -110,6 +111,7 @@ function AppShell() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      <CookieConsentBanner />
     </>
   );
 }

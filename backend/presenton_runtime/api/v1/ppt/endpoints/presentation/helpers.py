@@ -4,17 +4,13 @@ import asyncio
 import logging
 import uuid
 from contextlib import suppress
-from typing import AsyncIterator, List, Optional
+from typing import AsyncIterator, Optional
 
 from fastapi import Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
 from backend.presenton_runtime_context import resolve_presenton_owner_user_id
+from api.v1.ppt.endpoints.presentation_fonts import resolve_presentation_fonts
 from models.presentation_structure_model import PresentationStructureModel
-from models.sql.presentation import PresentationModel
-from models.sql.presentation_layout_code import PresentationLayoutCodeModel
-from models.sql.slide import SlideModel
 from models.sse_response import SSEStatusResponse
 from utils.export_utils import resolve_web_origin
 from utils.simple_auth import (
@@ -50,45 +46,6 @@ async def with_sse_heartbeats(
         next_frame_task.cancel()
         with suppress(asyncio.CancelledError, StopAsyncIteration):
             await next_frame_task
-
-
-def extract_custom_template_id(layout_name: Optional[str]) -> Optional[uuid.UUID]:
-    if not layout_name or not layout_name.startswith("custom-"):
-        return None
-    try:
-        return uuid.UUID(layout_name.replace("custom-", ""))
-    except Exception:
-        return None
-
-
-async def resolve_presentation_fonts(
-    presentation: PresentationModel,
-    slides: List[SlideModel],
-    sql_session: AsyncSession,
-):
-    candidate_template_ids: List[uuid.UUID] = []
-    seen: set[uuid.UUID] = set()
-    layout_name = presentation.layout.get("name") if isinstance(presentation.layout, dict) else None
-    layout_template_id = extract_custom_template_id(layout_name)
-    if layout_template_id and layout_template_id not in seen:
-        candidate_template_ids.append(layout_template_id)
-        seen.add(layout_template_id)
-
-    for slide in slides:
-        template_id = extract_custom_template_id(slide.layout_group)
-        if template_id and template_id not in seen:
-            candidate_template_ids.append(template_id)
-            seen.add(template_id)
-
-    for template_id in candidate_template_ids:
-        result = await sql_session.execute(
-            select(PresentationLayoutCodeModel.fonts).where(PresentationLayoutCodeModel.presentation == template_id)
-        )
-        fonts_list = result.scalars().all()
-        for fonts in fonts_list:
-            if fonts is not None:
-                return fonts
-    return None
 
 
 def insert_toc_layouts(

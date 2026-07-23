@@ -30,6 +30,7 @@ export const ROUTES: RouteConfig[] = [
   { path: 'register', Component: lazy(() => import('@/features/auth/pages/RegisterPage')), auth: 'public' },
   { path: 'forgot-password', Component: lazy(() => import('@/features/auth/pages/ForgotPage')), auth: 'public' },
   { path: 'profile', Component: lazy(() => import('@/features/auth/pages/ProfilePage')), auth: 'protected' },
+  { path: 'cookie-policy', Component: lazy(() => import('@/features/privacy/pages/CookiePolicyPage')), auth: 'none' },
 
   { path: 'home_student', Component: lazy(() => import('@/features/study-room/pages/HomeStudentPage')), auth: 'protected' },
 

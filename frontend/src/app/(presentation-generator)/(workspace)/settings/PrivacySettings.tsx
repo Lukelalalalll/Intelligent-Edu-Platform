@@ -1,51 +1,24 @@
 ﻿"use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Switch } from "@/components/ui/switch";
-import { setTelemetryEnabled } from "@/utils/mixpanel";
 import { Loader2 } from "lucide-react";
+import { useCookieConsent } from "@/shared/privacy/CookieConsentContext";
+import { Link } from "react-router-dom";
+import { useI18n } from "@/shared/i18n";
 
 const PrivacySettings = () => {
-  const [trackingEnabled, setTrackingEnabled] = useState<boolean | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { t } = useI18n();
+  const {
+    analyticsEnabled,
+    consentState,
+    isPreferencesOpen,
+    isResolved,
+    isSaving,
+    openPreferences,
+    savePreferences,
+  } = useCookieConsent();
 
-  useEffect(() => {
-    async function fetchStatus() {
-      try {
-        const data = await fetch("/api/v1/app/bootstrap", {
-          cache: "no-store",
-        }).then((res) => res.json());
-        setTrackingEnabled(data.telemetryEnabled);
-      } catch {
-        setTrackingEnabled(true);
-      }
-    }
-    fetchStatus();
-  }, []);
-
-  const handleTrackingToggle = async (enabled: boolean) => {
-    const prev = trackingEnabled;
-    setTrackingEnabled(enabled);
-    setTelemetryEnabled(enabled);
-    setSaving(true);
-    try {
-      await fetch("/api/v1/app/user-config", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          DISABLE_ANONYMOUS_TRACKING: enabled ? undefined : "true",
-        }),
-      });
-    } catch {
-      setTrackingEnabled(prev);
-      setTelemetryEnabled(prev ?? true);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (trackingEnabled === null) {
+  if (!isResolved) {
     return (
       <div className="w-full bg-[#F9F8F8] p-7 rounded-[20px] flex items-center justify-center min-h-[200px]">
         <Loader2 className="w-5 h-5 animate-spin text-[#5146E5]" />
@@ -57,10 +30,10 @@ const PrivacySettings = () => {
     <div className="w-full space-y-6">
       <div className="bg-[#F9F8F8] p-7 rounded-[20px]">
         <h4 className="text-sm font-semibold text-[#191919] mb-1">
-          Usage analytics
+          {t('privacy.settings.title')}
         </h4>
         <p className="text-xs text-[#6B7280] mb-6 leading-relaxed max-w-lg">
-          Share anonymous usage data to help us improve PPT Generator. No personal information or presentation content is collected.
+          {t('privacy.settings.description')}
         </p>
 
         <div className="flex items-center justify-between gap-4 rounded-[10px] bg-white border border-[#EDEEEF] p-4">
@@ -69,25 +42,40 @@ const PrivacySettings = () => {
               htmlFor="tracking-toggle"
               className="text-sm font-medium text-[#191919] cursor-pointer select-none block"
             >
-              Share anonymous usage data
+              {t('privacy.settings.toggleLabel')}
             </label>
             <p className="text-xs text-[#9CA3AF] mt-0.5">
-              {trackingEnabled
-                ? "Anonymous usage data is being shared."
-                : "Anonymous usage data is not being shared"}
+              {consentState === "pending"
+                ? t('privacy.settings.pending')
+                : analyticsEnabled
+                  ? t('privacy.settings.enabled')
+                  : t('privacy.settings.disabled')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {saving && (
+            {isSaving && (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9CA3AF]" />
             )}
             <Switch
               id="tracking-toggle"
-              checked={trackingEnabled}
-              onCheckedChange={handleTrackingToggle}
-              disabled={saving}
+              checked={analyticsEnabled}
+              onCheckedChange={(checked) => void savePreferences(checked)}
+              disabled={isSaving}
             />
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[#6B7280]">
+          <button
+            type="button"
+            className="font-medium text-[#5146E5] hover:underline"
+            onClick={openPreferences}
+          >
+            {isPreferencesOpen ? t('privacy.settings.openPreferencesActive') : t('privacy.settings.openPreferences')}
+          </button>
+          <Link to="/cookie-policy" className="font-medium text-[#5146E5] hover:underline">
+            {t('privacy.settings.readPolicy')}
+          </Link>
         </div>
       </div>
     </div>
@@ -95,4 +83,3 @@ const PrivacySettings = () => {
 };
 
 export default PrivacySettings;
-

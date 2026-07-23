@@ -42,6 +42,12 @@ vi.mock('../layout/Footer', () => ({
   default: () => <div data-testid="footer" />,
 }));
 
+vi.mock('../privacy/CookieConsentContext', () => ({
+  useCookieConsent: () => ({
+    openPreferences: vi.fn(),
+  }),
+}));
+
 describe('Layout edge-to-edge routing', () => {
   beforeEach(() => {
     mockStore.logout.mockReset();

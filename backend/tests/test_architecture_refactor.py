@@ -171,6 +171,13 @@ def test_backend_main_aliases_core_app():
     assert legacy_app is core_app
 
 
+def test_app_main_aliases_backend_app():
+    from app.main import app as legacy_app
+    from backend.main import app as backend_app
+
+    assert legacy_app is backend_app
+
+
 def test_provider_factory_returns_cached_singleton(monkeypatch):
     from backend.services.ai_gateway_service import provider_factory
 

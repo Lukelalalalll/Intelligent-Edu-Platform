@@ -1,17 +1,24 @@
 'use client';
 
 import mixpanel from 'mixpanel-browser';
+import { getCookieConsentState, type CookieConsentState } from '@/shared/privacy/cookieConsent';
 
 function getMixpanelToken(): string {
   const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env || {};
+  const processEnv =
+    typeof globalThis !== 'undefined' && 'process' in globalThis
+      ? (globalThis.process as { env?: Record<string, string | undefined> } | undefined)?.env || {}
+      : {};
+
   return (
     viteEnv.VITE_MIXPANEL_TOKEN ||
     viteEnv.NEXT_PUBLIC_MIXPANEL_TOKEN ||
+    processEnv.VITE_MIXPANEL_TOKEN ||
+    processEnv.NEXT_PUBLIC_MIXPANEL_TOKEN ||
     ''
   ).trim();
 }
 
-const MIXPANEL_TOKEN = getMixpanelToken();
 const REDACTED_VALUE = '[redacted]';
 const MAX_TELEMETRY_STRING_LENGTH = 256;
 const SENSITIVE_PROP_PATTERNS = [
@@ -172,7 +179,11 @@ declare global {
 }
 
 function canUseMixpanel(): boolean {
-  return typeof window !== 'undefined' && Boolean(MIXPANEL_TOKEN);
+  return typeof window !== 'undefined' && Boolean(getMixpanelToken());
+}
+
+function hasTelemetryConsent(): boolean {
+  return getCookieConsentState() === 'granted';
 }
 
 function isSensitivePropKey(key: string): boolean {
@@ -206,36 +217,42 @@ export function sanitizeMixpanelProps(props?: MixpanelProps, depth = 0): Mixpane
   return sanitized;
 }
 
-let trackingCheckPromise: Promise<boolean> | null = null;
+function applyMixpanelConsent(consentState: CookieConsentState): void {
+  if (typeof window !== 'undefined') {
+    window.__mixpanel_telemetry_enabled = consentState === 'granted';
+  }
 
-async function ensureTelemetryStatus(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
-  if (typeof window.__mixpanel_telemetry_enabled === 'boolean') {
-    return window.__mixpanel_telemetry_enabled;
+  if (!canUseMixpanel()) return;
+
+  if (consentState !== 'granted') {
+    if (window.__mixpanel_initialized) {
+      mixpanel.opt_out_tracking({ clear_persistence: true } as Parameters<typeof mixpanel.opt_out_tracking>[0]);
+    }
+    return;
   }
-  if (!trackingCheckPromise) {
-    trackingCheckPromise = Promise.resolve(true).then((enabled) => {
-      window.__mixpanel_telemetry_enabled = enabled;
-      return enabled;
-    });
-  }
-  return trackingCheckPromise;
+
+  initializeMixpanelNow();
+  mixpanel.opt_in_tracking();
 }
 
 export function initMixpanel(): void {
   if (!canUseMixpanel()) return;
+  if (!hasTelemetryConsent()) return;
   if (window.__mixpanel_initialized) return;
-  // Ensure telemetry is allowed before initializing
-  void ensureTelemetryStatus().then((enabled) => {
-    if (!enabled) return;
-    if (window.__mixpanel_initialized) return;
-    initializeMixpanelNow();
-  });
+  initializeMixpanelNow();
+  mixpanel.opt_in_tracking();
 }
 
 function initializeMixpanelNow(): void {
   if (window.__mixpanel_initialized) return;
-  mixpanel.init(MIXPANEL_TOKEN, { track_pageview: false, api_host: 'https://api-eu.mixpanel.com', });
+  const mixpanelToken = getMixpanelToken();
+  if (!mixpanelToken) return;
+
+  mixpanel.init(mixpanelToken, {
+    track_pageview: false,
+    api_host: 'https://api-eu.mixpanel.com',
+    opt_out_tracking_by_default: true,
+  });
   const appVersion =
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_APP_VERSION ||
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.NEXT_PUBLIC_APP_VERSION;
@@ -249,15 +266,13 @@ function initializeMixpanelNow(): void {
 export function track(eventName: string, props?: Record<string, unknown>): void {
   if (!canUseMixpanel()) return;
   const safeProps = sanitizeMixpanelProps(props);
-  if (typeof window !== 'undefined' && window.__mixpanel_telemetry_enabled === false) {
+  if (!hasTelemetryConsent()) {
     return;
   }
   if (!window.__mixpanel_initialized) {
-    void ensureTelemetryStatus().then((enabled) => {
-      if (!enabled) return;
-      initializeMixpanelNow();
-      mixpanel.track(eventName, safeProps);
-    });
+    initializeMixpanelNow();
+    mixpanel.opt_in_tracking();
+    mixpanel.track(eventName, safeProps);
     return;
   }
   mixpanel.track(eventName, safeProps);
@@ -269,7 +284,7 @@ export function trackEvent(event: MixpanelEvent, props?: MixpanelProps): void {
 
 export function getDistinctId(): string | undefined {
   if (!canUseMixpanel()) return undefined;
-  if (typeof window !== 'undefined' && window.__mixpanel_telemetry_enabled === false) {
+  if (!hasTelemetryConsent()) {
     return undefined;
   }
   if (!window.__mixpanel_initialized) {
@@ -282,7 +297,7 @@ export function getDistinctId(): string | undefined {
 
 export function identifyAnonymous(): void {
   if (!canUseMixpanel()) return;
-  if (typeof window !== 'undefined' && window.__mixpanel_telemetry_enabled === false) {
+  if (!hasTelemetryConsent()) {
     return;
   }
   if (!window.__mixpanel_initialized) {
@@ -293,20 +308,17 @@ export function identifyAnonymous(): void {
 }
 
 export function resetTelemetryCache(): void {
-  trackingCheckPromise = null;
   if (typeof window !== 'undefined') {
     delete window.__mixpanel_telemetry_enabled;
   }
 }
 
 export function setTelemetryEnabled(enabled: boolean): void {
-  if (typeof window !== 'undefined') {
-    window.__mixpanel_telemetry_enabled = enabled;
-  }
-  trackingCheckPromise = null;
-  if (enabled && typeof window !== 'undefined' && !window.__mixpanel_initialized) {
-    initMixpanel();
-  }
+  applyMixpanelConsent(enabled ? 'granted' : 'denied');
+}
+
+export function syncTelemetryConsentState(consentState: CookieConsentState): void {
+  applyMixpanelConsent(consentState);
 }
 
 export default {
@@ -318,4 +330,5 @@ export default {
   resetTelemetryCache,
   sanitizeMixpanelProps,
   setTelemetryEnabled,
+  syncTelemetryConsentState,
 };

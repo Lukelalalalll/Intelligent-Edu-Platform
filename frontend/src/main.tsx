@@ -10,6 +10,7 @@ import { applyLocale, detectInitialLocale, I18nProvider } from '@/shared/i18n'
 import { log } from './shared/utils/logger'
 import AppToaster from '@/components/ui/AppToaster'
 import { store } from '@/store/store'
+import { CookieConsentProvider } from '@/shared/privacy/CookieConsentContext'
 
 /** Minimal process shim required by browser-side code ported from Node-oriented tooling. */
 type BrowserProcessShim = {
@@ -22,7 +23,11 @@ const globalWithProcess = globalThis as typeof globalThis & {
 
 // Provide process.env before importing runtime paths that expect Node-like globals.
 if (!globalWithProcess.process) {
-  globalWithProcess.process = { env: {} }
+  Object.defineProperty(globalThis, 'process', {
+    value: { env: {} satisfies BrowserProcessShim['env'] },
+    configurable: true,
+    writable: true,
+  })
 } else if (!globalWithProcess.process.env) {
   globalWithProcess.process.env = {}
 }
@@ -55,10 +60,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <I18nProvider>
-        <App />
-        <AppToaster />
+        <CookieConsentProvider>
+          <App />
+          <AppToaster />
+        </CookieConsentProvider>
       </I18nProvider>
     </Provider>
   </StrictMode>,
 )
-

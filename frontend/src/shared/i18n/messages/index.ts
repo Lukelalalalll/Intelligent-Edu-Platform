@@ -42,6 +42,12 @@ import {
   zhTWSharedHomeToolMessages,
 } from "./shared/homeTool";
 import {
+  enSharedPrivacyMessages,
+  zhCNSharedPrivacyMessages,
+  zhHKSharedPrivacyMessages,
+  zhTWSharedPrivacyMessages,
+} from "./shared/privacy";
+import {
   enPptLoadingMessages,
   zhCNPptLoadingMessages,
   zhHKPptLoadingMessages,
@@ -138,6 +144,7 @@ export const enMessages = mergeMessages(
   enSharedNetworkMessages,
   enSharedErrorMessages,
   enSharedHomeToolMessages,
+  enSharedPrivacyMessages,
   enPptLoadingMessages,
   enPptRouteMessages,
   enPptWorkflowMessages,
@@ -164,6 +171,7 @@ export const zhCNMessages = extendMessages(
   zhCNSharedNetworkMessages,
   zhCNSharedErrorMessages,
   zhCNSharedHomeToolMessages,
+  zhCNSharedPrivacyMessages,
   zhCNPptLoadingMessages,
   zhCNPptRouteMessages,
   zhCNPptWorkflowMessages,
@@ -190,6 +198,7 @@ export const zhHKMessages = extendMessages(
   zhHKSharedNetworkMessages,
   zhHKSharedErrorMessages,
   zhHKSharedHomeToolMessages,
+  zhHKSharedPrivacyMessages,
   zhHKPptLoadingMessages,
   zhHKPptRouteMessages,
   zhHKPptWorkflowMessages,
@@ -216,6 +225,7 @@ export const zhTWMessages = extendMessages(
   zhTWSharedNetworkMessages,
   zhTWSharedErrorMessages,
   zhTWSharedHomeToolMessages,
+  zhTWSharedPrivacyMessages,
   zhTWPptLoadingMessages,
   zhTWPptRouteMessages,
   zhTWPptWorkflowMessages,

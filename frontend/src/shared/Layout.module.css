@@ -261,6 +261,35 @@
     text-align: center;
     color: var(--text-sub);
     font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.footerLinks {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.footerLink,
+.footerLinkButton {
+    font-size: 0.86rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.footerLink:hover,
+.footerLinkButton:hover {
+    text-decoration: underline;
 }
 
 /* ─── Persistent Sidebar ─── */

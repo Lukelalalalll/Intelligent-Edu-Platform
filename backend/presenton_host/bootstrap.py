@@ -24,7 +24,7 @@ def load_ppt_generator_runtime() -> SimpleNamespace:
         PresentationWithSlides=import_module("models.presentation_with_slides").PresentationWithSlides,
         PresentationModel=import_module("models.sql.presentation").PresentationModel,
         SlideModel=import_module("models.sql.slide").SlideModel,
-        _resolve_presentation_fonts=import_module("api.v1.ppt.endpoints.presentation")._resolve_presentation_fonts,
+        _resolve_presentation_fonts=import_module("api.v1.ppt.endpoints.presentation_fonts").resolve_presentation_fonts,
         create_db_and_tables=import_module("services.database").create_db_and_tables,
         get_async_session=import_module("services.database").get_async_session,
         TEMP_FILE_SERVICE=import_module("services.temp_file_service").TEMP_FILE_SERVICE,

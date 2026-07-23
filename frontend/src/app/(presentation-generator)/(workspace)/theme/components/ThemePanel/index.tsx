@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import Link from '@/ppt_generator/shims/next-link'
+import { PPT_GENERATOR_ROUTE_PATHS } from '@/ppt_generator/routeMeta'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
 import WorkspaceCard from '@/shared/components/Card/Card'
 import WelcomeBanner from '@/shared/components/WelcomeBanner'
@@ -44,19 +45,19 @@ const TemplateNavIcon = ({ active }: { active: boolean }) => (
 
 const pptGeneratorNavItems = [
   {
-    href: '/dashboard',
+    href: PPT_GENERATOR_ROUTE_PATHS.dashboard,
     label: 'Dashboard',
     renderIcon: (active: boolean) => (
       <LayoutDashboard className={styles.navIcon} color={active ? '#007b55' : '#667085'} />
     ),
   },
   {
-    href: '/templates',
+    href: PPT_GENERATOR_ROUTE_PATHS.templates,
     label: 'Templates',
     renderIcon: (active: boolean) => <TemplateNavIcon active={active} />,
   },
   {
-    href: '/theme',
+    href: PPT_GENERATOR_ROUTE_PATHS.theme,
     label: 'Themes',
     renderIcon: (active: boolean) => (
       <Palette className={styles.navIcon} color={active ? '#007b55' : '#667085'} />
@@ -126,17 +127,17 @@ const ThemePanel: React.FC = () => {
 
   const navItems = [
     {
-      href: '/dashboard',
+      href: PPT_GENERATOR_ROUTE_PATHS.dashboard,
       label: t('ppt_generator.workspace.nav.dashboard'),
       renderIcon: pptGeneratorNavItems[0].renderIcon,
     },
     {
-      href: '/templates',
+      href: PPT_GENERATOR_ROUTE_PATHS.templates,
       label: t('ppt_generator.workspace.nav.templates'),
       renderIcon: pptGeneratorNavItems[1].renderIcon,
     },
     {
-      href: '/theme',
+      href: PPT_GENERATOR_ROUTE_PATHS.theme,
       label: t('ppt_generator.workspace.nav.theme'),
       renderIcon: pptGeneratorNavItems[2].renderIcon,
     },
